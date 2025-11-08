@@ -1,7 +1,7 @@
-import { SignupForm } from "@/components/auth/signup-form";
+import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { Logo } from "@/components/logo";
 
-export default function SignupPage() {
+export default function ResetPasswordPage() {
   return (
     <div className="grid min-h-svh lg:grid-cols-[60%_40%]">
       <div className="flex flex-col gap-4 p-6 md:p-10">
@@ -12,8 +12,8 @@ export default function SignupPage() {
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xl">
-            <SignupForm />
+          <div className="w-full max-w-xs">
+            <ResetPasswordForm />
           </div>
         </div>
       </div>
