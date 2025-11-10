@@ -75,17 +75,17 @@ export function Gauge({
   const color = getColor();
 
   return (
-    <Card className={className}>
+    <Card className={cn("h-full flex flex-col", className)}>
       {(title || description) && (
-        <CardHeader>
+        <CardHeader className="flex-shrink-0">
           {title && <CardTitle>{title}</CardTitle>}
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </CardHeader>
       )}
-      <CardContent className="flex flex-col items-center justify-center py-8">
-        <div className="relative w-48 h-24">
+      <CardContent className="flex-1 min-h-0 flex flex-col items-center justify-center py-4">
+        <div className="relative w-full max-w-[300px] aspect-[2/1]">
           {/* Background arc */}
           <svg
             className="w-full h-full"

@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   ChartContainer,
   ChartTooltip,
@@ -86,17 +87,17 @@ export function ClusteredBarChart({
   );
 
   return (
-    <Card className={className}>
+    <Card className={cn("h-full flex flex-col", className)}>
       {(title || description) && (
-        <CardHeader>
+        <CardHeader className="flex-shrink-0">
           {title && <CardTitle>{title}</CardTitle>}
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </CardHeader>
       )}
-      <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
+      <CardContent className="flex-1 min-h-0">
+        <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsBarChart
             accessibilityLayer
             data={data}

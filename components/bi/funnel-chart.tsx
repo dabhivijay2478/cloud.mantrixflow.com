@@ -65,16 +65,16 @@ export function FunnelChart({
   };
 
   return (
-    <Card className={className}>
+    <Card className={cn("h-full flex flex-col", className)}>
       {(title || description) && (
-        <CardHeader>
+        <CardHeader className="flex-shrink-0">
           {title && <CardTitle>{title}</CardTitle>}
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </CardHeader>
       )}
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 overflow-auto">
         <div className="space-y-3">
           {data.map((stage, index) => {
             const widthPercent = (stage.value / maxValue) * 100;

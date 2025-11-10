@@ -307,14 +307,14 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
       minConstraints={[200, 150]}
       maxConstraints={[800, 600]}
       resizeHandles={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
-      className="group"
+      className="group border border-border rounded-lg"
       style={{ position: 'relative' }}
     >
       <div
         ref={setNodeRef}
         style={style}
         className={cn(
-          "relative bg-card border rounded-lg shadow-sm w-full h-full",
+          "relative bg-card rounded-lg shadow-sm w-full h-full",
           isDragging && "z-50 opacity-50"
         )}
       >
@@ -348,8 +348,10 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
         </Button>
 
         {/* Component Content */}
-        <div className="p-4 h-full overflow-auto">
-          {renderComponent()}
+        <div className="p-4 h-full overflow-auto flex flex-col">
+          <div className="flex-1 min-h-0 w-full">
+            {renderComponent()}
+          </div>
         </div>
       </div>
     </ResizableBox>

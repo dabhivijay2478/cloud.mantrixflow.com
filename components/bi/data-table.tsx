@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 /**
  * DataTable
@@ -145,16 +146,16 @@ export function DataTable<TData>({
   });
 
   return (
-    <Card className={className}>
+    <Card className={cn("h-full flex flex-col", className)}>
       {(title || description) && (
-        <CardHeader>
+        <CardHeader className="flex-shrink-0">
           {title && <CardTitle>{title}</CardTitle>}
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </CardHeader>
       )}
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 overflow-auto">
         {/* Filters and controls */}
         {(filterable || columnVisibility) && (
           <div className="flex items-center justify-between py-4 gap-2">

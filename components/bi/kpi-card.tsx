@@ -58,7 +58,7 @@ export function KPICard({
   const isNegative = trendDirection === "down";
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card className={cn("h-full overflow-hidden", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{label}</CardTitle>
         {Icon && (
