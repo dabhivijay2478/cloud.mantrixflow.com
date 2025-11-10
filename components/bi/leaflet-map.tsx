@@ -4,18 +4,36 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 
-// Fix for default marker icons in Next.js
-if (typeof window !== "undefined") {
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  });
-}
+// Dynamic import for Leaflet to avoid SSR issues
+let L: any = null;
+let leafletLoaded = false;
+
+const loadLeaflet = async () => {
+  if (typeof window === "undefined" || leafletLoaded) return L;
+  
+  try {
+    const leafletModule = await import("leaflet");
+    await import("leaflet/dist/leaflet.css");
+    
+    L = leafletModule.default || leafletModule;
+    
+    // Fix for default marker icons in Next.js
+    if (L.Icon && L.Icon.Default) {
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+    }
+    leafletLoaded = true;
+  } catch (error) {
+    console.error("Failed to load Leaflet:", error);
+  }
+  
+  return L;
+};
 
 export interface LeafletMarker {
   lat: number;
@@ -24,7 +42,7 @@ export interface LeafletMarker {
   value?: number | string;
   popup?: string | React.ReactNode;
   color?: string;
-  icon?: L.Icon | L.DivIcon;
+  icon?: any;
 }
 
 export interface City {
@@ -59,32 +77,46 @@ export function BasicLeafletMap({
   maxBounds,
   maxBoundsViscosity = 1.0,
 }: BasicLeafletMapProps) {
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center,
-      zoom,
-      maxBounds,
-      maxBoundsViscosity,
-    });
+    const initMap = async () => {
+      const Leaflet = await loadLeaflet();
+      if (!Leaflet) {
+        setIsLoading(false);
+        return;
+      }
 
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      minZoom: 2,
-      attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
+      const map = Leaflet.map(mapContainerRef.current!, {
+        center,
+        zoom,
+        maxBounds,
+        maxBoundsViscosity,
+      });
 
-    mapRef.current = map;
+      Leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
+
+      mapRef.current = map;
+      setIsLoading(false);
+    };
+
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
-  }, []);
+  }, [center, zoom, maxBounds, maxBoundsViscosity]);
 
   return (
     <Card className={className}>
@@ -97,10 +129,15 @@ export function BasicLeafletMap({
         </CardHeader>
       )}
       <CardContent>
+        {isLoading && (
+          <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
         <div
           ref={mapContainerRef}
           className="w-full rounded-lg"
-          style={{ height: `${height}px` }}
+          style={{ height: `${height}px`, display: isLoading ? "none" : "block" }}
         />
       </CardContent>
     </Card>
@@ -130,47 +167,61 @@ export function LeafletMapWithPin({
   height = 400,
   className,
 }: LeafletMapWithPinProps) {
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center: marker ? [marker.lat, marker.lng] : center,
-      zoom,
-      maxBounds: [
-        [40, -10],
-        [60, 10],
-      ],
-      maxBoundsViscosity: 1.0,
-    });
-
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      minZoom: 2,
-      attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
-
-    if (marker) {
-      const leafletMarker = L.marker([marker.lat, marker.lng]).addTo(map);
-      if (marker.popup) {
-        leafletMarker.bindPopup(
-          typeof marker.popup === "string" ? marker.popup : String(marker.popup)
-        );
-      } else if (marker.label) {
-        leafletMarker.bindPopup(marker.label);
+    const initMap = async () => {
+      const Leaflet = await loadLeaflet();
+      if (!Leaflet) {
+        setIsLoading(false);
+        return;
       }
-      markerRef.current = leafletMarker;
-    }
 
-    mapRef.current = map;
+      const map = Leaflet.map(mapContainerRef.current!, {
+        center: marker ? [marker.lat, marker.lng] : center,
+        zoom,
+        maxBounds: [
+          [40, -10],
+          [60, 10],
+        ],
+        maxBoundsViscosity: 1.0,
+      });
+
+      Leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
+
+      if (marker) {
+        const leafletMarker = Leaflet.marker([marker.lat, marker.lng]).addTo(map);
+        if (marker.popup) {
+          leafletMarker.bindPopup(
+            typeof marker.popup === "string" ? marker.popup : String(marker.popup)
+          );
+        } else if (marker.label) {
+          leafletMarker.bindPopup(marker.label);
+        }
+        markerRef.current = leafletMarker;
+      }
+
+      mapRef.current = map;
+      setIsLoading(false);
+    };
+
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markerRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
     };
   }, [center, zoom, marker]);
 
@@ -185,10 +236,15 @@ export function LeafletMapWithPin({
         </CardHeader>
       )}
       <CardContent>
+        {isLoading && (
+          <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
         <div
           ref={mapContainerRef}
           className="w-full rounded-lg"
-          style={{ height: `${height}px` }}
+          style={{ height: `${height}px`, display: isLoading ? "none" : "block" }}
         />
       </CardContent>
     </Card>
@@ -218,44 +274,58 @@ export function LeafletMapGrayscale({
   height = 400,
   className,
 }: LeafletMapGrayscaleProps) {
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center,
-      zoom,
-    });
-
-    // Grayscale tile layer (CARTO Positron)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      minZoom: 2,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
-
-    // Add markers
-    markers.forEach((marker) => {
-      const leafletMarker = L.marker([marker.lat, marker.lng]).addTo(map);
-      if (marker.popup) {
-        leafletMarker.bindPopup(
-          typeof marker.popup === "string" ? marker.popup : String(marker.popup)
-        );
-      } else if (marker.label) {
-        leafletMarker.bindPopup(marker.label);
+    const initMap = async () => {
+      const Leaflet = await loadLeaflet();
+      if (!Leaflet) {
+        setIsLoading(false);
+        return;
       }
-      markersRef.current.push(leafletMarker);
-    });
 
-    mapRef.current = map;
+      const map = Leaflet.map(mapContainerRef.current!, {
+        center,
+        zoom,
+      });
+
+      // Grayscale tile layer (CARTO Positron)
+      Leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+
+      // Add markers
+      markers.forEach((marker) => {
+        const leafletMarker = Leaflet.marker([marker.lat, marker.lng]).addTo(map);
+        if (marker.popup) {
+          leafletMarker.bindPopup(
+            typeof marker.popup === "string" ? marker.popup : String(marker.popup)
+          );
+        } else if (marker.label) {
+          leafletMarker.bindPopup(marker.label);
+        }
+        markersRef.current.push(leafletMarker);
+      });
+
+      mapRef.current = map;
+      setIsLoading(false);
+    };
+
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markersRef.current = [];
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markersRef.current = [];
+      }
     };
   }, [center, zoom, markers]);
 
@@ -270,10 +340,15 @@ export function LeafletMapGrayscale({
         </CardHeader>
       )}
       <CardContent>
+        {isLoading && (
+          <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
         <div
           ref={mapContainerRef}
           className="w-full rounded-lg"
-          style={{ height: `${height}px` }}
+          style={{ height: `${height}px`, display: isLoading ? "none" : "block" }}
         />
       </CardContent>
     </Card>
@@ -303,79 +378,93 @@ export function LeafletMapCustomPin({
   height = 400,
   className,
 }: LeafletMapCustomPinProps) {
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center,
-      zoom,
-    });
+    const initMap = async () => {
+      const Leaflet = await loadLeaflet();
+      if (!Leaflet) {
+        setIsLoading(false);
+        return;
+      }
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      minZoom: 2,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
+      const map = Leaflet.map(mapContainerRef.current!, {
+        center,
+        zoom,
+      });
 
-    // Add markers with custom icons
-    markers.forEach((marker) => {
-      let icon: L.Icon | L.DivIcon;
-      
-      if (marker.icon) {
-        icon = marker.icon;
-      } else {
-        // Create custom icon with color
-        icon = L.divIcon({
-          className: "custom-pin",
-          html: `
-            <div style="
-              background-color: ${marker.color || "#ef4444"};
-              width: 30px;
-              height: 30px;
-              border-radius: 50% 50% 50% 0;
-              transform: rotate(-45deg);
-              border: 3px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            ">
+      Leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+
+      // Add markers with custom icons
+      markers.forEach((marker) => {
+        let icon: any;
+        
+        if (marker.icon) {
+          icon = marker.icon;
+        } else {
+          // Create custom icon with color
+          icon = Leaflet.divIcon({
+            className: "custom-pin",
+            html: `
               <div style="
-                transform: rotate(45deg);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 100%;
-                height: 100%;
-                color: white;
-                font-weight: bold;
-                font-size: 12px;
-              ">${marker.label?.[0] || "📍"}</div>
-            </div>
-          `,
-          iconSize: [30, 30],
-          iconAnchor: [15, 30],
-        });
-      }
+                background-color: ${marker.color || "#ef4444"};
+                width: 30px;
+                height: 30px;
+                border-radius: 50% 50% 50% 0;
+                transform: rotate(-45deg);
+                border: 3px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              ">
+                <div style="
+                  transform: rotate(45deg);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 100%;
+                  height: 100%;
+                  color: white;
+                  font-weight: bold;
+                  font-size: 12px;
+                ">${marker.label?.[0] || "📍"}</div>
+              </div>
+            `,
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+          });
+        }
 
-      const leafletMarker = L.marker([marker.lat, marker.lng], { icon }).addTo(map);
-      if (marker.popup) {
-        leafletMarker.bindPopup(
-          typeof marker.popup === "string" ? marker.popup : String(marker.popup)
-        );
-      } else if (marker.label) {
-        leafletMarker.bindPopup(marker.label);
-      }
-      markersRef.current.push(leafletMarker);
-    });
+        const leafletMarker = Leaflet.marker([marker.lat, marker.lng], { icon }).addTo(map);
+        if (marker.popup) {
+          leafletMarker.bindPopup(
+            typeof marker.popup === "string" ? marker.popup : String(marker.popup)
+          );
+        } else if (marker.label) {
+          leafletMarker.bindPopup(marker.label);
+        }
+        markersRef.current.push(leafletMarker);
+      });
 
-    mapRef.current = map;
+      mapRef.current = map;
+      setIsLoading(false);
+    };
+
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markersRef.current = [];
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markersRef.current = [];
+      }
     };
   }, [center, zoom, markers]);
 
@@ -390,10 +479,15 @@ export function LeafletMapCustomPin({
         </CardHeader>
       )}
       <CardContent>
+        {isLoading && (
+          <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
         <div
           ref={mapContainerRef}
           className="w-full rounded-lg"
-          style={{ height: `${height}px` }}
+          style={{ height: `${height}px`, display: isLoading ? "none" : "block" }}
         />
       </CardContent>
     </Card>
@@ -423,61 +517,75 @@ export function LeafletMapCustomPopover({
   height = 400,
   className,
 }: LeafletMapCustomPopoverProps) {
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center,
-      zoom,
-    });
-
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      minZoom: 2,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
-
-    // Custom popup class
-    const CustomPopup = L.popup({
-      className: "custom-popup",
-      maxWidth: 300,
-    });
-
-    // Add markers with custom popups
-    markers.forEach((marker) => {
-      const leafletMarker = L.marker([marker.lat, marker.lng]).addTo(map);
-      
-      const popupContent = marker.popup
-        ? typeof marker.popup === "string"
-          ? marker.popup
-          : String(marker.popup)
-        : marker.label
-        ? `
-          <div style="padding: 8px;">
-            <h3 style="margin: 0 0 8px 0; font-weight: 600; font-size: 16px;">${marker.label}</h3>
-            ${marker.value ? `<p style="margin: 0; color: #666; font-size: 14px;">Value: ${marker.value}</p>` : ""}
-          </div>
-        `
-        : "";
-
-      if (popupContent) {
-        leafletMarker.bindPopup(popupContent, {
-          className: "custom-popup",
-        });
+    const initMap = async () => {
+      const Leaflet = await loadLeaflet();
+      if (!Leaflet) {
+        setIsLoading(false);
+        return;
       }
-      markersRef.current.push(leafletMarker);
-    });
 
-    mapRef.current = map;
+      const map = Leaflet.map(mapContainerRef.current!, {
+        center,
+        zoom,
+      });
+
+      Leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+
+      // Custom popup class
+      const CustomPopup = Leaflet.popup({
+        className: "custom-popup",
+        maxWidth: 300,
+      });
+
+      // Add markers with custom popups
+      markers.forEach((marker) => {
+        const leafletMarker = Leaflet.marker([marker.lat, marker.lng]).addTo(map);
+        
+        const popupContent = marker.popup
+          ? typeof marker.popup === "string"
+            ? marker.popup
+            : String(marker.popup)
+          : marker.label
+          ? `
+            <div style="padding: 8px;">
+              <h3 style="margin: 0 0 8px 0; font-weight: 600; font-size: 16px;">${marker.label}</h3>
+              ${marker.value ? `<p style="margin: 0; color: #666; font-size: 14px;">Value: ${marker.value}</p>` : ""}
+            </div>
+          `
+          : "";
+
+        if (popupContent) {
+          leafletMarker.bindPopup(popupContent, {
+            className: "custom-popup",
+          });
+        }
+        markersRef.current.push(leafletMarker);
+      });
+
+      mapRef.current = map;
+      setIsLoading(false);
+    };
+
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markersRef.current = [];
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markersRef.current = [];
+      }
     };
   }, [center, zoom, markers]);
 
@@ -492,10 +600,15 @@ export function LeafletMapCustomPopover({
         </CardHeader>
       )}
       <CardContent>
+        {isLoading && (
+          <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
         <div
           ref={mapContainerRef}
           className="w-full rounded-lg"
-          style={{ height: `${height}px` }}
+          style={{ height: `${height}px`, display: isLoading ? "none" : "block" }}
         />
       </CardContent>
     </Card>
@@ -529,49 +642,66 @@ export function LeafletMapChangeCity({
   height = 400,
   className,
 }: LeafletMapChangeCityProps) {
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [selectedCity, setSelectedCity] = useState(
     defaultCity || cities[0]?.name || ""
   );
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const currentCity = cities.find((c) => c.name === selectedCity) || cities[0];
-    if (!currentCity) return;
-
-    const map = L.map(mapContainerRef.current, {
-      center: [currentCity.lat, currentCity.lng],
-      zoom: currentCity.zoom || 14,
-    });
-
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      minZoom: 2,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
-
-    // Add markers
-    markers.forEach((marker) => {
-      const leafletMarker = L.marker([marker.lat, marker.lng]).addTo(map);
-      if (marker.popup) {
-        leafletMarker.bindPopup(
-          typeof marker.popup === "string" ? marker.popup : String(marker.popup)
-        );
-      } else if (marker.label) {
-        leafletMarker.bindPopup(marker.label);
+    const initMap = async () => {
+      const Leaflet = await loadLeaflet();
+      if (!Leaflet) {
+        setIsLoading(false);
+        return;
       }
-      markersRef.current.push(leafletMarker);
-    });
 
-    mapRef.current = map;
+      const currentCity = cities.find((c) => c.name === selectedCity) || cities[0];
+      if (!currentCity) {
+        setIsLoading(false);
+        return;
+      }
+
+      const map = Leaflet.map(mapContainerRef.current!, {
+        center: [currentCity.lat, currentCity.lng],
+        zoom: currentCity.zoom || 14,
+      });
+
+      Leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+
+      // Add markers
+      markers.forEach((marker) => {
+        const leafletMarker = Leaflet.marker([marker.lat, marker.lng]).addTo(map);
+        if (marker.popup) {
+          leafletMarker.bindPopup(
+            typeof marker.popup === "string" ? marker.popup : String(marker.popup)
+          );
+        } else if (marker.label) {
+          leafletMarker.bindPopup(marker.label);
+        }
+        markersRef.current.push(leafletMarker);
+      });
+
+      mapRef.current = map;
+      setIsLoading(false);
+    };
+
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markersRef.current = [];
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markersRef.current = [];
+      }
     };
   }, []);
 
@@ -610,10 +740,15 @@ export function LeafletMapChangeCity({
             </Button>
           ))}
         </div>
+        {isLoading && (
+          <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
         <div
           ref={mapContainerRef}
           className="w-full rounded-lg"
-          style={{ height: `${height}px` }}
+          style={{ height: `${height}px`, display: isLoading ? "none" : "block" }}
         />
       </CardContent>
     </Card>
@@ -647,75 +782,89 @@ export function LeafletMapBubbles({
   minBubbleSize = 10,
   maxBubbleSize = 50,
 }: LeafletMapBubblesProps) {
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.CircleMarker[]>([]);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapContainerRef.current, {
-      center,
-      zoom,
-    });
+    const initMap = async () => {
+      const Leaflet = await loadLeaflet();
+      if (!Leaflet) {
+        setIsLoading(false);
+        return;
+      }
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      minZoom: 2,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
+      const map = Leaflet.map(mapContainerRef.current!, {
+        center,
+        zoom,
+      });
 
-    // Calculate value range for bubble sizing
-    const values = markers
-      .map((m) => (typeof m.value === "number" ? m.value : 0))
-      .filter((v) => v > 0);
-    const minValue = Math.min(...values, 1);
-    const maxValue = Math.max(...values, 1);
-
-    // Add bubble markers
-    markers.forEach((marker) => {
-      const value = typeof marker.value === "number" ? marker.value : 0;
-      const size =
-        value > 0
-          ? minBubbleSize +
-            ((value - minValue) / (maxValue - minValue)) *
-              (maxBubbleSize - minBubbleSize)
-          : minBubbleSize;
-
-      const bubble = L.circleMarker([marker.lat, marker.lng], {
-        radius: size,
-        fillColor: marker.color || "#ef4444",
-        color: "#fff",
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.6,
+      Leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        minZoom: 2,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
       }).addTo(map);
 
-      const popupContent = marker.popup
-        ? typeof marker.popup === "string"
-          ? marker.popup
-          : String(marker.popup)
-        : marker.label
-        ? `
-          <div style="padding: 8px;">
-            <h3 style="margin: 0 0 8px 0; font-weight: 600; font-size: 16px;">${marker.label}</h3>
-            ${value > 0 ? `<p style="margin: 0; color: #666; font-size: 14px;">Value: ${value.toLocaleString()}</p>` : ""}
-          </div>
-        `
-        : "";
+      // Calculate value range for bubble sizing
+      const values = markers
+        .map((m) => (typeof m.value === "number" ? m.value : 0))
+        .filter((v) => v > 0);
+      const minValue = Math.min(...values, 1);
+      const maxValue = Math.max(...values, 1);
 
-      if (popupContent) {
-        bubble.bindPopup(popupContent);
-      }
-      markersRef.current.push(bubble);
-    });
+      // Add bubble markers
+      markers.forEach((marker) => {
+        const value = typeof marker.value === "number" ? marker.value : 0;
+        const size =
+          value > 0
+            ? minBubbleSize +
+              ((value - minValue) / (maxValue - minValue)) *
+                (maxBubbleSize - minBubbleSize)
+            : minBubbleSize;
 
-    mapRef.current = map;
+        const bubble = Leaflet.circleMarker([marker.lat, marker.lng], {
+          radius: size,
+          fillColor: marker.color || "#ef4444",
+          color: "#fff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.6,
+        }).addTo(map);
+
+        const popupContent = marker.popup
+          ? typeof marker.popup === "string"
+            ? marker.popup
+            : String(marker.popup)
+          : marker.label
+          ? `
+            <div style="padding: 8px;">
+              <h3 style="margin: 0 0 8px 0; font-weight: 600; font-size: 16px;">${marker.label}</h3>
+              ${value > 0 ? `<p style="margin: 0; color: #666; font-size: 14px;">Value: ${value.toLocaleString()}</p>` : ""}
+            </div>
+          `
+          : "";
+
+        if (popupContent) {
+          bubble.bindPopup(popupContent);
+        }
+        markersRef.current.push(bubble);
+      });
+
+      mapRef.current = map;
+      setIsLoading(false);
+    };
+
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
-      markersRef.current = [];
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markersRef.current = [];
+      }
     };
   }, [center, zoom, markers, minBubbleSize, maxBubbleSize]);
 
@@ -730,13 +879,17 @@ export function LeafletMapBubbles({
         </CardHeader>
       )}
       <CardContent>
+        {isLoading && (
+          <div className="flex items-center justify-center" style={{ height: `${height}px` }}>
+            <p className="text-sm text-muted-foreground">Loading map...</p>
+          </div>
+        )}
         <div
           ref={mapContainerRef}
           className="w-full rounded-lg"
-          style={{ height: `${height}px` }}
+          style={{ height: `${height}px`, display: isLoading ? "none" : "block" }}
         />
       </CardContent>
     </Card>
   );
 }
-
