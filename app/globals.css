@@ -183,3 +183,6 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Leaflet CSS - imported via component, but ensure styles are available */
+@import "leaflet/dist/leaflet.css";

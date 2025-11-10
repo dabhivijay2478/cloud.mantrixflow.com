@@ -154,6 +154,28 @@ export type { MapProps, MapMarker } from "./map";
 export { FilledMap } from "./filled-map";
 export type { FilledMapProps, MapRegion } from "./filled-map";
 
+// Leaflet Map Components
+export {
+  BasicLeafletMap,
+  LeafletMapWithPin,
+  LeafletMapGrayscale,
+  LeafletMapCustomPin,
+  LeafletMapCustomPopover,
+  LeafletMapChangeCity,
+  LeafletMapBubbles,
+} from "./leaflet-map";
+export type {
+  BasicLeafletMapProps,
+  LeafletMapWithPinProps,
+  LeafletMapGrayscaleProps,
+  LeafletMapCustomPinProps,
+  LeafletMapCustomPopoverProps,
+  LeafletMapChangeCityProps,
+  LeafletMapBubblesProps,
+  LeafletMarker,
+  City,
+} from "./leaflet-map";
+
 export { Matrix } from "./matrix";
 export type { MatrixProps } from "./matrix";
 

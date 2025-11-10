@@ -25,6 +25,14 @@ import {
   ExportPDF,
   FeedbackThumbs,
   FilledMap,
+  // Leaflet Maps
+  BasicLeafletMap,
+  LeafletMapWithPin,
+  LeafletMapGrayscale,
+  LeafletMapCustomPin,
+  LeafletMapCustomPopover,
+  LeafletMapChangeCity,
+  LeafletMapBubbles,
   // Advanced Analytics
   ForecastLine,
   FunnelChart,
@@ -760,33 +768,246 @@ export default function DemoPage() {
         ======================================== */}
         <Section
           title="🗺️ Maps & Geographic"
-          description="Geographic data visualization"
+          description="Geographic data visualization with Leaflet maps"
         >
-          <GridLayout cols={2} gap="lg">
-            <Map
-              title="Sales by Location"
-              description="Store locations with sales data"
-              markers={[
-                { lat: 40.7128, lng: -74.0060, label: "New York", value: 1000 },
-                { lat: 34.0522, lng: -118.2437, label: "Los Angeles", value: 800 },
-                { lat: 41.8781, lng: -87.6298, label: "Chicago", value: 600 },
-                { lat: 29.7604, lng: -95.3698, label: "Houston", value: 500 },
-              ]}
-              height={400}
-            />
-            <FilledMap
-              title="Regional Sales Distribution"
-              description="Sales by region (choropleth map)"
-              regions={[
-                { id: "US", name: "United States", value: 1000 },
-                { id: "CA", name: "Canada", value: 800 },
-                { id: "MX", name: "Mexico", value: 600 },
-                { id: "BR", name: "Brazil", value: 500 },
-                { id: "UK", name: "United Kingdom", value: 700 },
-              ]}
-              height={400}
-            />
-          </GridLayout>
+          <div className="space-y-8">
+            {/* Basic Maps */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Basic Maps</h3>
+              <GridLayout cols={2} gap="lg">
+                <Map
+                  title="Sales by Location"
+                  description="Store locations with sales data"
+                  markers={[
+                    { lat: 40.7128, lng: -74.0060, label: "New York", value: 1000 },
+                    { lat: 34.0522, lng: -118.2437, label: "Los Angeles", value: 800 },
+                    { lat: 41.8781, lng: -87.6298, label: "Chicago", value: 600 },
+                    { lat: 29.7604, lng: -95.3698, label: "Houston", value: 500 },
+                  ]}
+                  height={400}
+                />
+                <FilledMap
+                  title="Regional Sales Distribution"
+                  description="Sales by region (choropleth map)"
+                  regions={[
+                    { id: "US", name: "United States", value: 1000 },
+                    { id: "CA", name: "Canada", value: 800 },
+                    { id: "MX", name: "Mexico", value: 600 },
+                    { id: "BR", name: "Brazil", value: 500 },
+                    { id: "UK", name: "United Kingdom", value: 700 },
+                  ]}
+                  height={400}
+                />
+              </GridLayout>
+            </div>
+
+            {/* Leaflet Maps */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Leaflet Interactive Maps</h3>
+              <GridLayout cols={2} gap="lg">
+                <BasicLeafletMap
+                  title="Basic Leaflet Map"
+                  description="Interactive map with OpenStreetMap tiles"
+                  center={[51.5074, -0.1278]}
+                  zoom={14}
+                  height={400}
+                />
+                <LeafletMapWithPin
+                  title="Map with Pin"
+                  description="Map with a marker pin"
+                  center={[51.5074, -0.1278]}
+                  zoom={14}
+                  marker={{
+                    lat: 51.5074,
+                    lng: -0.1278,
+                    label: "London",
+                    popup: "London, UK - Capital city",
+                  }}
+                  height={400}
+                />
+              </GridLayout>
+            </div>
+
+            {/* Grayscale & Custom Pins */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Styled Maps</h3>
+              <GridLayout cols={2} gap="lg">
+                <LeafletMapGrayscale
+                  title="Grayscale Map"
+                  description="Minimalist grayscale styling"
+                  center={[51.5074, -0.1278]}
+                  zoom={13}
+                  markers={[
+                    {
+                      lat: 51.5074,
+                      lng: -0.1278,
+                      label: "London",
+                      popup: "London Office",
+                    },
+                    {
+                      lat: 51.5155,
+                      lng: -0.0922,
+                      label: "Shoreditch",
+                      popup: "Shoreditch Office",
+                    },
+                  ]}
+                  height={400}
+                />
+                <LeafletMapCustomPin
+                  title="Custom Pin Map"
+                  description="Map with custom colored pins"
+                  center={[51.5074, -0.1278]}
+                  zoom={13}
+                  markers={[
+                    {
+                      lat: 51.5074,
+                      lng: -0.1278,
+                      label: "HQ",
+                      color: "#00a859",
+                      popup: "Headquarters - London",
+                    },
+                    {
+                      lat: 51.5155,
+                      lng: -0.0922,
+                      label: "B",
+                      color: "#007fff",
+                      popup: "Branch Office - Shoreditch",
+                    },
+                    {
+                      lat: 51.5200,
+                      lng: -0.1000,
+                      label: "W",
+                      color: "#8a2be2",
+                      popup: "Warehouse - West End",
+                    },
+                  ]}
+                  height={400}
+                />
+              </GridLayout>
+            </div>
+
+            {/* Custom Popover & City Switching */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Advanced Features</h3>
+              <GridLayout cols={2} gap="lg">
+                <LeafletMapCustomPopover
+                  title="Custom Popover Map"
+                  description="Map with styled custom popovers"
+                  center={[51.5074, -0.1278]}
+                  zoom={13}
+                  markers={[
+                    {
+                      lat: 51.5074,
+                      lng: -0.1278,
+                      label: "London Office",
+                      value: "£2.5M Revenue",
+                      popup: `
+                        <div style="padding: 12px;">
+                          <h3 style="margin: 0 0 8px 0; font-weight: 600; font-size: 18px;">London Office</h3>
+                          <p style="margin: 4px 0; color: #666;">Revenue: £2.5M</p>
+                          <p style="margin: 4px 0; color: #666;">Employees: 150</p>
+                          <p style="margin: 4px 0; color: #666;">Status: Active</p>
+                        </div>
+                      `,
+                    },
+                    {
+                      lat: 51.5155,
+                      lng: -0.0922,
+                      label: "Shoreditch Branch",
+                      value: "£1.2M Revenue",
+                      popup: `
+                        <div style="padding: 12px;">
+                          <h3 style="margin: 0 0 8px 0; font-weight: 600; font-size: 18px;">Shoreditch Branch</h3>
+                          <p style="margin: 4px 0; color: #666;">Revenue: £1.2M</p>
+                          <p style="margin: 4px 0; color: #666;">Employees: 75</p>
+                          <p style="margin: 4px 0; color: #666;">Status: Active</p>
+                        </div>
+                      `,
+                    },
+                  ]}
+                  height={400}
+                />
+                <LeafletMapChangeCity
+                  title="City Switching Map"
+                  description="Switch between different cities"
+                  cities={[
+                    { name: "London", lat: 51.5074, lng: -0.1278, zoom: 14 },
+                    { name: "Birmingham", lat: 52.4862, lng: -1.8904, zoom: 13 },
+                    { name: "Leeds", lat: 53.8008, lng: -1.5491, zoom: 13 },
+                    { name: "Manchester", lat: 53.4808, lng: -2.2426, zoom: 13 },
+                  ]}
+                  defaultCity="London"
+                  markers={[
+                    {
+                      lat: 51.5074,
+                      lng: -0.1278,
+                      label: "London Office",
+                      popup: "Main Office - London",
+                    },
+                  ]}
+                  height={400}
+                />
+              </GridLayout>
+            </div>
+
+            {/* Bubbles Map */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Bubble Maps</h3>
+              <GridLayout cols={1} gap="lg">
+                <LeafletMapBubbles
+                  title="Sales by Location (Bubbles)"
+                  description="Bubble size represents sales value"
+                  center={[51.5, -0.1]}
+                  zoom={10}
+                  markers={[
+                    {
+                      lat: 51.5074,
+                      lng: -0.1278,
+                      label: "London",
+                      value: 2500000,
+                      color: "#00a859",
+                      popup: "London: £2.5M",
+                    },
+                    {
+                      lat: 52.4862,
+                      lng: -1.8904,
+                      label: "Birmingham",
+                      value: 1200000,
+                      color: "#007fff",
+                      popup: "Birmingham: £1.2M",
+                    },
+                    {
+                      lat: 53.8008,
+                      lng: -1.5491,
+                      label: "Leeds",
+                      value: 800000,
+                      color: "#8a2be2",
+                      popup: "Leeds: £800K",
+                    },
+                    {
+                      lat: 53.4808,
+                      lng: -2.2426,
+                      label: "Manchester",
+                      value: 1500000,
+                      color: "#f59e0b",
+                      popup: "Manchester: £1.5M",
+                    },
+                    {
+                      lat: 54.9783,
+                      lng: -1.6178,
+                      label: "Newcastle",
+                      value: 600000,
+                      color: "#ef4444",
+                      popup: "Newcastle: £600K",
+                    },
+                  ]}
+                  height={500}
+                  minBubbleSize={15}
+                  maxBubbleSize={60}
+                />
+              </GridLayout>
+            </div>
+          </div>
         </Section>
 
         {/* ========================================
