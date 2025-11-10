@@ -83,19 +83,19 @@ export function ForecastLine({
   const chartConfig = {
     historical: {
       label: "Actual",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
     forecast: {
       label: forecastLabel,
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
     upper: {
       label: "Upper Bound",
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
     lower: {
       label: "Lower Bound",
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
   } satisfies ChartConfig;
 

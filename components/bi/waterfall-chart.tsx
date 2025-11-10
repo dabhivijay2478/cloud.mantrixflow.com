@@ -68,9 +68,9 @@ export function WaterfallChart({
   description,
   showGrid = true,
   showLegend = false,
-  positiveColor = "hsl(var(--chart-2))",
-  negativeColor = "hsl(var(--chart-4))",
-  totalColor = "hsl(var(--chart-1))",
+  positiveColor = "var(--chart-2)",
+  negativeColor = "var(--chart-4)",
+  totalColor = "var(--chart-1)",
   className,
 }: WaterfallChartProps) {
   // Process data to calculate cumulative values for waterfall effect

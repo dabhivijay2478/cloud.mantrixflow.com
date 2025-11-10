@@ -71,7 +71,7 @@ export function ScatterChart({
   description,
   showGrid = true,
   showLegend = false,
-  color = "hsl(var(--chart-1))",
+  color = "var(--chart-1)",
   pointSize = 8,
   className,
 }: ScatterChartProps) {
