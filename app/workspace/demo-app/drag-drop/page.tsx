@@ -25,7 +25,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Resizable } from "react-resizable";
+import { ResizableBox } from "react-resizable";
 import {
   BarChart,
   LineChart,
@@ -287,7 +287,7 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
   };
 
   return (
-    <Resizable
+    <ResizableBox
       width={item.width}
       height={item.height}
       onResize={(e, data) => {
@@ -306,22 +306,15 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
       }}
       minConstraints={[200, 150]}
       maxConstraints={[800, 600]}
-      handle={
-        <div
-          className="react-resizable-handle react-resizable-handle-se group/resize"
-          onMouseDown={(e) => {
-            // Stop drag and drop from interfering, but allow resize
-            e.stopPropagation();
-          }}
-          title="Drag to resize"
-        />
-      }
+      resizeHandles={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
+      className="group"
+      style={{ position: 'relative' }}
     >
       <div
         ref={setNodeRef}
         style={style}
         className={cn(
-          "relative group bg-card border rounded-lg shadow-sm w-full h-full",
+          "relative bg-card border rounded-lg shadow-sm w-full h-full",
           isDragging && "z-50 opacity-50"
         )}
       >
@@ -329,9 +322,8 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing bg-background/90 backdrop-blur-sm rounded p-1.5 border shadow-sm hover:bg-background transition-colors touch-none"
+          className="absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing bg-background/90 backdrop-blur-sm rounded p-1.5 border shadow-sm hover:bg-background transition-colors"
           onMouseDown={(e) => {
-            // Prevent resize handle from interfering
             e.stopPropagation();
           }}
         >
@@ -360,7 +352,7 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
           {renderComponent()}
         </div>
       </div>
-    </Resizable>
+    </ResizableBox>
   );
 }
 
@@ -593,7 +585,7 @@ export default function DragDropDemoPage() {
                 items={items.map((item) => item.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
+                <div className="flex flex-wrap gap-4 p-4" style={{ alignItems: 'flex-start' }}>
                   {items.map((item) => (
                     <DraggableItem
                       key={item.id}

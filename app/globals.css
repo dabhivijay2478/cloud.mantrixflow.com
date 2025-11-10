@@ -188,43 +188,124 @@ body {
 @import "leaflet/dist/leaflet.css";
 
 /* React Resizable Styles */
-.react-resizable {
+.react-resizable,
+.react-resizable-box {
   position: relative;
   display: inline-block;
 }
 
 .react-resizable-handle {
   position: absolute;
-  width: 20px;
-  height: 20px;
-  background-repeat: no-repeat;
-  background-origin: content-box;
-  box-sizing: border-box;
-  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTAgNmw2LTZNLTYgMGw2IDYiLz48L2c+PC9zdmc+');
-  background-position: bottom right;
-  padding: 0 3px 3px 0;
-  background-size: 20px 20px;
-  cursor: se-resize;
   z-index: 30 !important;
   user-select: none;
   touch-action: none;
   pointer-events: auto !important;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
 }
 
+.react-resizable-box.group:hover .react-resizable-handle,
+.react-resizable-box:hover .react-resizable-handle,
+.react-resizable.group:hover .react-resizable-handle,
+.react-resizable:hover .react-resizable-handle {
+  opacity: 1;
+}
+
+/* North (top) */
+.react-resizable-handle-n {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: n-resize;
+}
+
+/* South (bottom) */
+.react-resizable-handle-s {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: s-resize;
+}
+
+/* East (right) */
+.react-resizable-handle-e {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  cursor: e-resize;
+}
+
+/* West (left) */
+.react-resizable-handle-w {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  cursor: w-resize;
+}
+
+/* Northeast (top-right) */
+.react-resizable-handle-ne {
+  top: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: ne-resize;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTAgMGw2IDZNLTEgNWw2LTYiLz48L2c+PC9zdmc+');
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: 12px 12px;
+}
+
+/* Northwest (top-left) */
+.react-resizable-handle-nw {
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nw-resize;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTYgMGwtNiA2TTAgNWwtNi02Ii8+PC9nPjwvc3ZnPg==');
+  background-repeat: no-repeat;
+  background-position: top left;
+  background-size: 12px 12px;
+}
+
+/* Southeast (bottom-right) */
 .react-resizable-handle-se {
   bottom: 0;
   right: 0;
+  width: 16px;
+  height: 16px;
   cursor: se-resize;
-  width: 20px !important;
-  height: 20px !important;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTAgNmw2LTZNLTYgMGw2IDYiLz48L2c+PC9zdmc+');
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  background-size: 12px 12px;
+}
+
+/* Southwest (bottom-left) */
+.react-resizable-handle-sw {
+  bottom: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  cursor: sw-resize;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTYgNmwtNi02TTAgMWwtNiA2Ii8+PC9nPjwvc3ZnPg==');
+  background-repeat: no-repeat;
+  background-position: bottom left;
+  background-size: 12px 12px;
 }
 
 .react-resizable-handle:hover {
-  background-color: rgba(0, 0, 0, 0.15);
-  border-radius: 4px;
-  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiMwMDAiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTAgNmw2LTZNLTYgMGw2IDYiLz48L2c+PC9zdmc+');
+  background-color: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 2px;
 }
 
 .react-resizable-handle:active {
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.7);
 }
