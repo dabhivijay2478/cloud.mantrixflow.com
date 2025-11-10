@@ -2,13 +2,19 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
   RadarChart as RechartsRadarChart,
   Radar,
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  ResponsiveContainer,
-  Legend,
 } from "recharts";
 
 /**
@@ -49,12 +55,11 @@ export interface RadarChartProps {
 }
 
 const CHART_COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7c7c",
-  "#a78bfa",
-  "#fb923c",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
 ];
 
 export function RadarChart({
@@ -66,6 +71,17 @@ export function RadarChart({
   showLegend = true,
   className,
 }: RadarChartProps) {
+  const chartConfig = valueKeys.reduce(
+    (config, key, index) => {
+      config[key] = {
+        label: key,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+      };
+      return config;
+    },
+    {} as ChartConfig,
+  );
+
   return (
     <Card className={className}>
       {(title || description) && (
@@ -77,24 +93,25 @@ export function RadarChart({
         </CardHeader>
       )}
       <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
-          <RechartsRadarChart data={data}>
+        <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
+          <RechartsRadarChart accessibilityLayer data={data}>
             <PolarGrid />
             <PolarAngleAxis dataKey={categoryKey} />
             <PolarRadiusAxis />
-            {valueKeys.map((key, index) => (
+            <ChartTooltip content={<ChartTooltipContent />} />
+            {valueKeys.map((key) => (
               <Radar
                 key={key}
                 name={key}
                 dataKey={key}
-                stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                fill={CHART_COLORS[index % CHART_COLORS.length]}
+                stroke={`var(--color-${key})`}
+                fill={`var(--color-${key})`}
                 fillOpacity={0.3}
               />
             ))}
-            {showLegend && <Legend />}
+            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
           </RechartsRadarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

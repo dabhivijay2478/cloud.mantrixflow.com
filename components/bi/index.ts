@@ -26,12 +26,42 @@ export type { PieChartProps } from "./pie-chart";
 export { DonutChart } from "./donut-chart";
 export type { DonutChartProps } from "./donut-chart";
 
+export { StackedBarChart } from "./stacked-bar-chart";
+export type { StackedBarChartProps } from "./stacked-bar-chart";
+
+export { StackedColumnChart } from "./stacked-column-chart";
+export type { StackedColumnChartProps } from "./stacked-column-chart";
+
+export { ClusteredBarChart } from "./clustered-bar-chart";
+export type { ClusteredBarChartProps } from "./clustered-bar-chart";
+
+export { ClusteredColumnChart } from "./clustered-column-chart";
+export type { ClusteredColumnChartProps } from "./clustered-column-chart";
+
+export { StackedAreaChart } from "./stacked-area-chart";
+export type { StackedAreaChartProps } from "./stacked-area-chart";
+
+export { LineStackedColumnChart } from "./line-stacked-column-chart";
+export type { LineStackedColumnChartProps } from "./line-stacked-column-chart";
+
+export { RibbonChart } from "./ribbon-chart";
+export type { RibbonChartProps } from "./ribbon-chart";
+
+export { WaterfallChart } from "./waterfall-chart";
+export type { WaterfallChartProps, WaterfallDataPoint } from "./waterfall-chart";
+
+export { ScatterChart } from "./scatter-chart";
+export type { ScatterChartProps } from "./scatter-chart";
+
 // ============================================================================
 // Core BI Components - Metrics
 // ============================================================================
 
 export { KPICard } from "./kpi-card";
 export type { KPICardProps } from "./kpi-card";
+
+export { MultiRowCard } from "./multi-row-card";
+export type { MultiRowCardProps, CardRow } from "./multi-row-card";
 
 export { Sparkline } from "./sparkline";
 export type { SparklineProps, SparklineType } from "./sparkline";
@@ -79,6 +109,9 @@ export type { MultiSelectProps, SelectOption } from "./multi-select";
 export { SearchInput } from "./search-input";
 export type { SearchInputProps } from "./search-input";
 
+export { Slicer } from "./slicer";
+export type { SlicerProps, SlicerOption, SlicerType } from "./slicer";
+
 // Re-export Shadcn form components for filters
 export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 export { Switch } from "@/components/ui/switch";
@@ -114,6 +147,15 @@ export type { GaugeProps, GaugeThreshold } from "./gauge";
 
 export { BulletChart } from "./bullet-chart";
 export type { BulletChartProps, BulletZone } from "./bullet-chart";
+
+export { Map } from "./map";
+export type { MapProps, MapMarker } from "./map";
+
+export { FilledMap } from "./filled-map";
+export type { FilledMapProps, MapRegion } from "./filled-map";
+
+export { Matrix } from "./matrix";
+export type { MatrixProps } from "./matrix";
 
 // ============================================================================
 // Text & Insight Components
@@ -162,6 +204,12 @@ export type { FeedbackThumbsProps, FeedbackThumbsSize, FeedbackValue } from "./f
 
 export { EditPrompt } from "./edit-prompt";
 export type { EditPromptProps, EditPromptVariant, EditPromptSize } from "./edit-prompt";
+
+export { QA } from "./qa";
+export type { QAProps, QAAnswer } from "./qa";
+
+export { PaginatedReport } from "./paginated-report";
+export type { PaginatedReportProps, ReportColumn } from "./paginated-report";
 
 // ============================================================================
 // Example & Demo Components

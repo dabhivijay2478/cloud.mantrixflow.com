@@ -11,6 +11,8 @@ import {
   AreaChart,
   BarChart,
   BulletChart,
+  ClusteredBarChart,
+  ClusteredColumnChart,
   createSortableHeader,
   // Data Display
   DataTable,
@@ -22,6 +24,7 @@ import {
   EmbedCode,
   ExportPDF,
   FeedbackThumbs,
+  FilledMap,
   // Advanced Analytics
   ForecastLine,
   FunnelChart,
@@ -36,18 +39,30 @@ import {
   KPICard,
   // Charts
   LineChart,
+  LineStackedColumnChart,
+  Map,
+  Matrix,
   MetricCard,
+  MultiRowCard,
   MultiSelect,
+  PaginatedReport,
   PieChart,
   ProgressBar,
   // AI Components
   PromptInput,
+  QA,
   RadarChart,
   RegenerateButton,
+  RibbonChart,
+  ScatterChart,
   SearchInput,
   Section,
   ShareButton,
+  Slicer,
   Sparkline,
+  StackedAreaChart,
+  StackedBarChart,
+  StackedColumnChart,
   StatChange,
   Tabs,
   TabsContent,
@@ -55,6 +70,7 @@ import {
   TabsTrigger,
   TreeMap,
   TrendLabel,
+  WaterfallChart,
 } from "@/components/bi";
 
 /**
@@ -73,7 +89,7 @@ export default function DemoPage() {
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-4xl font-bold mb-2">InsightFlow BI Components</h1>
           <p className="text-muted-foreground text-lg">
-            Complete component library showcase - 37+ production-ready
+            Complete component library showcase - 50+ production-ready
             components
           </p>
         </div>
@@ -137,6 +153,104 @@ export default function DemoPage() {
         </Section>
 
         {/* ========================================
+            1B. STACKED & CLUSTERED CHARTS
+        ======================================== */}
+        <Section
+          title="📊 Stacked & Clustered Charts"
+          description="Advanced bar and column chart variations"
+        >
+          <Tabs defaultValue="stacked" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="stacked">Stacked</TabsTrigger>
+              <TabsTrigger value="clustered">Clustered</TabsTrigger>
+              <TabsTrigger value="combo">Combo</TabsTrigger>
+              <TabsTrigger value="other">Other</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="stacked" className="space-y-4">
+              <GridLayout cols={2} gap="lg">
+                <StackedBarChart
+                  data={sampleStackedData}
+                  xKey="quarter"
+                  yKeys={["productA", "productB", "productC"]}
+                  title="Stacked Bar Chart"
+                  description="Horizontal stacked comparison"
+                />
+                <StackedColumnChart
+                  data={sampleStackedData}
+                  xKey="quarter"
+                  yKeys={["productA", "productB", "productC"]}
+                  title="Stacked Column Chart"
+                  description="Vertical stacked comparison"
+                />
+                <StackedAreaChart
+                  data={sampleTimeSeriesData}
+                  xKey="month"
+                  yKeys={["revenue", "profit", "expenses"]}
+                  title="Stacked Area Chart"
+                  description="Cumulative stacked trends"
+                />
+              </GridLayout>
+            </TabsContent>
+
+            <TabsContent value="clustered" className="space-y-4">
+              <GridLayout cols={2} gap="lg">
+                <ClusteredBarChart
+                  data={sampleStackedData}
+                  xKey="quarter"
+                  yKeys={["productA", "productB"]}
+                  title="Clustered Bar Chart"
+                  description="Horizontal side-by-side comparison"
+                />
+                <ClusteredColumnChart
+                  data={sampleStackedData}
+                  xKey="quarter"
+                  yKeys={["productA", "productB", "productC"]}
+                  title="Clustered Column Chart"
+                  description="Vertical side-by-side comparison"
+                />
+              </GridLayout>
+            </TabsContent>
+
+            <TabsContent value="combo" className="space-y-4">
+              <LineStackedColumnChart
+                data={sampleComboData}
+                xKey="month"
+                columnKeys={["sales", "profit"]}
+                lineKeys={["target"]}
+                title="Line and Stacked Column Chart"
+                description="Dual-axis combination chart"
+              />
+            </TabsContent>
+
+            <TabsContent value="other" className="space-y-4">
+              <GridLayout cols={2} gap="lg">
+                <RibbonChart
+                  data={sampleRibbonData}
+                  xKey="month"
+                  yKeys={["productA", "productB", "productC"]}
+                  title="Ribbon Chart"
+                  description="Normalized stacked area (stream chart)"
+                />
+                <WaterfallChart
+                  data={sampleWaterfallData}
+                  title="Waterfall Chart"
+                  description="Cumulative effect visualization"
+                />
+                <ScatterChart
+                  data={sampleScatterData}
+                  xKey="x"
+                  yKey="y"
+                  nameKey="name"
+                  title="Scatter Chart"
+                  description="Relationship between two variables"
+                />
+              </GridLayout>
+            </TabsContent>
+          </Tabs>
+        </Section>
+
+        {/* ========================================
             2. METRICS & KPIs
         ======================================== */}
         <Section
@@ -175,6 +289,32 @@ export default function DemoPage() {
               description="Last 30 days"
             />
           </GridLayout>
+
+          <div className="mt-8">
+            <MultiRowCard
+              title="Sales Summary"
+              rows={[
+                {
+                  label: "Total Revenue",
+                  value: "$45,231",
+                  change: 12.5,
+                  changeLabel: "vs last month",
+                },
+                {
+                  label: "Orders",
+                  value: "1,234",
+                  change: -5.2,
+                  changeLabel: "vs last month",
+                },
+                {
+                  label: "Average Order",
+                  value: "$36.70",
+                  change: 8.1,
+                  changeLabel: "vs last month",
+                },
+              ]}
+            />
+          </div>
 
           <div className="mt-8">
             <GridLayout cols={3} gap="md">
@@ -342,6 +482,41 @@ export default function DemoPage() {
         </Section>
 
         {/* ========================================
+            4B. MATRIX & PAGINATED REPORT
+        ======================================== */}
+        <Section
+          title="📊 Matrix & Reports"
+          description="Heatmap tables and paginated reports"
+        >
+          <GridLayout cols={2} gap="lg">
+            <Matrix
+              data={sampleMatrixData}
+              rowKeys={["Q1", "Q2", "Q3", "Q4"]}
+              columnKeys={["Product A", "Product B", "Product C"]}
+              title="Quarterly Performance Matrix"
+              description="Sales by product and quarter"
+              showValues={true}
+            />
+            <PaginatedReport
+              data={sampleTableData}
+              columns={[
+                { key: "email", label: "Email" },
+                {
+                  key: "amount",
+                  label: "Amount",
+                  render: (value) => `$${value}`,
+                  align: "right",
+                },
+                { key: "status", label: "Status" },
+              ]}
+              title="Paginated Report"
+              description="Large dataset with pagination"
+              pageSize={5}
+            />
+          </GridLayout>
+        </Section>
+
+        {/* ========================================
             5. INSIGHTS & TEXT
         ======================================== */}
         <Section
@@ -446,6 +621,42 @@ export default function DemoPage() {
               <DateRangePicker placeholder="Pick a date range" />
             </div>
           </GridLayout>
+
+          <div className="mt-8">
+            <GridLayout cols={3} gap="lg">
+              <Slicer
+                title="Region Filter"
+                type="checkbox"
+                options={[
+                  { value: "north", label: "North", count: 1250 },
+                  { value: "south", label: "South", count: 980 },
+                  { value: "east", label: "East", count: 1450 },
+                  { value: "west", label: "West", count: 1100 },
+                ]}
+                onChange={(values) => console.log("Selected:", values)}
+              />
+              <Slicer
+                title="Product Type"
+                type="dropdown"
+                options={[
+                  { value: "electronics", label: "Electronics", count: 500 },
+                  { value: "clothing", label: "Clothing", count: 300 },
+                  { value: "food", label: "Food", count: 200 },
+                ]}
+                onChange={(values) => console.log("Selected:", values)}
+              />
+              <Slicer
+                title="Status"
+                type="button"
+                options={[
+                  { value: "active", label: "Active", count: 1200 },
+                  { value: "inactive", label: "Inactive", count: 300 },
+                  { value: "pending", label: "Pending", count: 150 },
+                ]}
+                onChange={(values) => console.log("Selected:", values)}
+              />
+            </GridLayout>
+          </div>
         </Section>
 
         {/* ========================================
@@ -483,6 +694,21 @@ export default function DemoPage() {
                 onFeedback={(feedback) => console.log("Feedback:", feedback)}
               />
             </div>
+
+            <QA
+              title="Ask Questions About Your Data"
+              description="Get instant answers using natural language"
+              placeholder="What was the revenue last month?"
+              onQuery={(query) => console.log("Query:", query)}
+              loading={false}
+              history={[
+                {
+                  question: "What was the total revenue in Q1?",
+                  answer: "The total revenue in Q1 was $45,231, representing a 12.5% increase from the previous quarter.",
+                  timestamp: new Date(),
+                },
+              ]}
+            />
           </GridLayout>
         </Section>
 
@@ -530,7 +756,41 @@ export default function DemoPage() {
         </Section>
 
         {/* ========================================
-            9. LAYOUT COMPONENTS
+            9. MAPS & GEOGRAPHIC
+        ======================================== */}
+        <Section
+          title="🗺️ Maps & Geographic"
+          description="Geographic data visualization"
+        >
+          <GridLayout cols={2} gap="lg">
+            <Map
+              title="Sales by Location"
+              description="Store locations with sales data"
+              markers={[
+                { lat: 40.7128, lng: -74.0060, label: "New York", value: 1000 },
+                { lat: 34.0522, lng: -118.2437, label: "Los Angeles", value: 800 },
+                { lat: 41.8781, lng: -87.6298, label: "Chicago", value: 600 },
+                { lat: 29.7604, lng: -95.3698, label: "Houston", value: 500 },
+              ]}
+              height={400}
+            />
+            <FilledMap
+              title="Regional Sales Distribution"
+              description="Sales by region (choropleth map)"
+              regions={[
+                { id: "US", name: "United States", value: 1000 },
+                { id: "CA", name: "Canada", value: 800 },
+                { id: "MX", name: "Mexico", value: 600 },
+                { id: "BR", name: "Brazil", value: 500 },
+                { id: "UK", name: "United Kingdom", value: 700 },
+              ]}
+              height={400}
+            />
+          </GridLayout>
+        </Section>
+
+        {/* ========================================
+            10. LAYOUT COMPONENTS
         ======================================== */}
         <Section
           title="📐 Layout Components"
@@ -589,15 +849,15 @@ export default function DemoPage() {
         <div className="py-12 text-center border-t">
           <h2 className="text-2xl font-bold mb-2">🎉 All Components Loaded!</h2>
           <p className="text-muted-foreground">
-            37+ production-ready BI components • Full TypeScript • Dark Mode •
+            50+ production-ready BI components • Full TypeScript • Dark Mode •
             Responsive
           </p>
           <div className="mt-4 flex gap-3 justify-center">
             <div className="text-sm">
-              <span className="font-semibold">Total Components:</span> 37+
+              <span className="font-semibold">Total Components:</span> 50+
             </div>
             <div className="text-sm">
-              <span className="font-semibold">Lines of Code:</span> ~5,000+
+              <span className="font-semibold">Lines of Code:</span> ~8,000+
             </div>
             <div className="text-sm">
               <span className="font-semibold">TypeScript:</span> 100%
@@ -769,4 +1029,57 @@ const frameworkOptions = [
   { value: "angular", label: "Angular" },
   { value: "svelte", label: "Svelte" },
   { value: "next", label: "Next.js" },
+];
+
+// Additional sample data for new components
+const sampleStackedData = [
+  { quarter: "Q1", productA: 4000, productB: 2400, productC: 2000 },
+  { quarter: "Q2", productA: 3000, productB: 1398, productC: 1500 },
+  { quarter: "Q3", productA: 2000, productB: 9800, productC: 1800 },
+  { quarter: "Q4", productA: 2780, productB: 3908, productC: 2200 },
+];
+
+const sampleComboData = [
+  { month: "Jan", sales: 4000, profit: 2400, target: 5000 },
+  { month: "Feb", sales: 3000, profit: 1398, target: 4500 },
+  { month: "Mar", sales: 2000, profit: 9800, target: 4000 },
+  { month: "Apr", sales: 2780, profit: 3908, target: 4800 },
+  { month: "May", sales: 1890, profit: 4800, target: 4200 },
+  { month: "Jun", sales: 2390, profit: 3800, target: 4600 },
+];
+
+const sampleRibbonData = [
+  { month: "Jan", productA: 0.4, productB: 0.3, productC: 0.3 },
+  { month: "Feb", productA: 0.5, productB: 0.2, productC: 0.3 },
+  { month: "Mar", productA: 0.45, productB: 0.25, productC: 0.3 },
+  { month: "Apr", productA: 0.5, productB: 0.3, productC: 0.2 },
+  { month: "May", productA: 0.4, productB: 0.35, productC: 0.25 },
+  { month: "Jun", productA: 0.45, productB: 0.3, productC: 0.25 },
+];
+
+const sampleWaterfallData = [
+  { name: "Start", value: 1000, type: "start" },
+  { name: "Revenue", value: 500, type: "positive" },
+  { name: "Costs", value: -200, type: "negative" },
+  { name: "Marketing", value: -150, type: "negative" },
+  { name: "Other Income", value: 100, type: "positive" },
+  { name: "End", value: 1250, type: "total" },
+];
+
+const sampleScatterData = [
+  { x: 100, y: 200, name: "Point A" },
+  { x: 120, y: 100, name: "Point B" },
+  { x: 170, y: 300, name: "Point C" },
+  { x: 140, y: 250, name: "Point D" },
+  { x: 150, y: 180, name: "Point E" },
+  { x: 110, y: 220, name: "Point F" },
+  { x: 130, y: 190, name: "Point G" },
+  { x: 160, y: 280, name: "Point H" },
+];
+
+const sampleMatrixData = [
+  { row: "Q1", "Product A": 100, "Product B": 200, "Product C": 150 },
+  { row: "Q2", "Product A": 120, "Product B": 180, "Product C": 160 },
+  { row: "Q3", "Product A": 140, "Product B": 220, "Product C": 170 },
+  { row: "Q4", "Product A": 160, "Product B": 200, "Product C": 190 },
 ];

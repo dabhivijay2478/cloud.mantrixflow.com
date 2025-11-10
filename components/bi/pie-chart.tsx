@@ -2,12 +2,17 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
 
 /**
@@ -51,14 +56,11 @@ export interface PieChartProps {
 }
 
 const DEFAULT_COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7c7c",
-  "#a78bfa",
-  "#fb923c",
-  "#4ade80",
-  "#f472b6",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
 ];
 
 export function PieChart({
@@ -72,6 +74,18 @@ export function PieChart({
   colors = DEFAULT_COLORS,
   className,
 }: PieChartProps) {
+  const chartConfig = data.reduce(
+    (config, entry, index) => {
+      const name = entry[nameKey] as string;
+      config[name] = {
+        label: name,
+        color: colors[index % colors.length],
+      };
+      return config;
+    },
+    {} as ChartConfig,
+  );
+
   return (
     <Card className={className}>
       {(title || description) && (
@@ -83,7 +97,7 @@ export function PieChart({
         </CardHeader>
       )}
       <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
+        <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
           <RechartsPieChart>
             <Pie
               data={data}
@@ -94,22 +108,23 @@ export function PieChart({
               innerRadius={innerRadius}
               outerRadius={120}
               paddingAngle={2}
-              label
             >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-              ))}
+              {data.map((entry, index) => {
+                const name = entry[nameKey] as string;
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={`var(--color-${name})`}
+                  />
+                );
+              })}
             </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
-              }}
-            />
-            {showLegend && <Legend />}
+            <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} />} />
+            {showLegend && (
+              <ChartLegend content={<ChartLegendContent nameKey={nameKey} />} />
+            )}
           </RechartsPieChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

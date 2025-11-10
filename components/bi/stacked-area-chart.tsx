@@ -18,43 +18,40 @@ import {
 } from "recharts";
 
 /**
- * AreaChart
- * @description Cumulative trends visualization component for displaying data over time with filled areas.
- * Perfect for showing volume, accumulated values, and trend patterns.
- * @param {AreaChartProps} props - Component properties
+ * StackedAreaChart
+ * @description Stacked area chart for displaying cumulative trends with multiple series.
+ * @param {StackedAreaChartProps} props - Component properties
  * @param {Array<Record<string, any>>} props.data - Array of data points
  * @param {string} props.xKey - Key for X-axis data
- * @param {string[]} props.yKeys - Array of keys for Y-axis data (supports multiple areas)
+ * @param {string[]} props.yKeys - Array of keys for Y-axis data (stacked areas)
  * @param {string} [props.title] - Chart title
  * @param {string} [props.description] - Chart description
- * @param {boolean} [props.stacked] - Enable stacked areas (default: false)
  * @param {boolean} [props.showGrid] - Show/hide grid lines (default: true)
  * @param {boolean} [props.showLegend] - Show/hide legend (default: true)
+ * @param {string[]} [props.colors] - Custom color palette
  * @param {string} [props.className] - Additional CSS classes
- * @returns {JSX.Element} AreaChart component
+ * @returns {JSX.Element} StackedAreaChart component
  * @example
- * <AreaChart
+ * <StackedAreaChart
  *   data={[
- *     { month: "Jan", users: 4000, sessions: 2400 },
- *     { month: "Feb", users: 3000, sessions: 1398 },
- *     { month: "Mar", users: 2000, sessions: 9800 }
+ *     { month: "Jan", productA: 4000, productB: 2400, productC: 2000 },
+ *     { month: "Feb", productA: 3000, productB: 1398, productC: 1500 }
  *   ]}
  *   xKey="month"
- *   yKeys={["users", "sessions"]}
- *   title="User Engagement"
- *   stacked={true}
+ *   yKeys={["productA", "productB", "productC"]}
+ *   title="Cumulative Sales by Product"
  * />
  */
 
-export interface AreaChartProps {
+export interface StackedAreaChartProps {
   data: Array<Record<string, any>>;
   xKey: string;
   yKeys: string[];
   title?: string;
   description?: string;
-  stacked?: boolean;
   showGrid?: boolean;
   showLegend?: boolean;
+  colors?: string[];
   className?: string;
 }
 
@@ -66,22 +63,22 @@ const CHART_COLORS = [
   "hsl(var(--chart-5))",
 ];
 
-export function AreaChart({
+export function StackedAreaChart({
   data,
   xKey,
   yKeys,
   title,
   description,
-  stacked = false,
   showGrid = true,
   showLegend = true,
+  colors = CHART_COLORS,
   className,
-}: AreaChartProps) {
+}: StackedAreaChartProps) {
   const chartConfig = yKeys.reduce(
     (config, key, index) => {
       config[key] = {
         label: key,
-        color: CHART_COLORS[index % CHART_COLORS.length],
+        color: colors[index % colors.length],
       };
       return config;
     },
@@ -120,7 +117,7 @@ export function AreaChart({
                 key={key}
                 type="monotone"
                 dataKey={key}
-                stackId={stacked ? "stack" : undefined}
+                stackId="stack"
                 stroke={`var(--color-${key})`}
                 fill={`var(--color-${key})`}
                 fillOpacity={0.6}
@@ -132,3 +129,4 @@ export function AreaChart({
     </Card>
   );
 }
+

@@ -10,7 +10,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
-  LineChart as RechartsLineChart,
+  ComposedChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -18,47 +19,49 @@ import {
 } from "recharts";
 
 /**
- * LineChart
- * @description Time series visualization component for displaying trends over time.
- * Supports multiple lines, trendlines, and responsive layouts.
- * @param {LineChartProps} props - Component properties
+ * LineStackedColumnChart
+ * @description Combination chart with stacked columns and line series for dual-axis visualization.
+ * @param {LineStackedColumnChartProps} props - Component properties
  * @param {Array<Record<string, any>>} props.data - Array of data points
  * @param {string} props.xKey - Key for X-axis data
- * @param {string[]} props.yKeys - Array of keys for Y-axis data (supports multiple lines)
+ * @param {string[]} props.columnKeys - Array of keys for stacked column data
+ * @param {string[]} props.lineKeys - Array of keys for line series data
  * @param {string} [props.title] - Chart title
  * @param {string} [props.description] - Chart description
- * @param {string} [props.color] - Primary line color (hex or CSS color)
  * @param {boolean} [props.showGrid] - Show/hide grid lines (default: true)
  * @param {boolean} [props.showLegend] - Show/hide legend (default: true)
+ * @param {string[]} [props.columnColors] - Custom color palette for columns
+ * @param {string[]} [props.lineColors] - Custom color palette for lines
  * @param {string} [props.className] - Additional CSS classes
- * @returns {JSX.Element} LineChart component
+ * @returns {JSX.Element} LineStackedColumnChart component
  * @example
- * <LineChart
+ * <LineStackedColumnChart
  *   data={[
- *     { month: "Jan", revenue: 4000, profit: 2400 },
- *     { month: "Feb", revenue: 3000, profit: 1398 },
- *     { month: "Mar", revenue: 2000, profit: 9800 }
+ *     { month: "Jan", sales: 4000, profit: 2400, target: 5000 },
+ *     { month: "Feb", sales: 3000, profit: 1398, target: 4500 }
  *   ]}
  *   xKey="month"
- *   yKeys={["revenue", "profit"]}
- *   title="Revenue & Profit Trends"
- *   color="#8884d8"
+ *   columnKeys={["sales", "profit"]}
+ *   lineKeys={["target"]}
+ *   title="Sales vs Target"
  * />
  */
 
-export interface LineChartProps {
+export interface LineStackedColumnChartProps {
   data: Array<Record<string, any>>;
   xKey: string;
-  yKeys: string[];
+  columnKeys: string[];
+  lineKeys: string[];
   title?: string;
   description?: string;
-  color?: string;
   showGrid?: boolean;
   showLegend?: boolean;
+  columnColors?: string[];
+  lineColors?: string[];
   className?: string;
 }
 
-const CHART_COLORS = [
+const DEFAULT_COLUMN_COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
   "hsl(var(--chart-3))",
@@ -66,22 +69,42 @@ const CHART_COLORS = [
   "hsl(var(--chart-5))",
 ];
 
-export function LineChart({
+const DEFAULT_LINE_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+];
+
+export function LineStackedColumnChart({
   data,
   xKey,
-  yKeys,
+  columnKeys,
+  lineKeys,
   title,
   description,
-  color,
   showGrid = true,
   showLegend = true,
+  columnColors = DEFAULT_COLUMN_COLORS,
+  lineColors = DEFAULT_LINE_COLORS,
   className,
-}: LineChartProps) {
-  const chartConfig = yKeys.reduce(
-    (config, key, index) => {
-      config[key] = {
-        label: key,
-        color: index === 0 && color ? color : CHART_COLORS[index % CHART_COLORS.length],
+}: LineStackedColumnChartProps) {
+  const chartConfig = [
+    ...columnKeys.map((key, index) => ({
+      key,
+      label: key,
+      color: columnColors[index % columnColors.length],
+    })),
+    ...lineKeys.map((key, index) => ({
+      key,
+      label: key,
+      color: lineColors[index % lineColors.length],
+    })),
+  ].reduce(
+    (config, item) => {
+      config[item.key] = {
+        label: item.label,
+        color: item.color,
       };
       return config;
     },
@@ -100,7 +123,7 @@ export function LineChart({
       )}
       <CardContent>
         <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
-          <RechartsLineChart
+          <ComposedChart
             accessibilityLayer
             data={data}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -112,12 +135,29 @@ export function LineChart({
               tickMargin={10}
               axisLine={false}
             />
-            <YAxis tickLine={false} axisLine={false} />
+            <YAxis yAxisId="left" tickLine={false} axisLine={false} />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              tickLine={false}
+              axisLine={false}
+            />
             <ChartTooltip content={<ChartTooltipContent />} />
             {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-            {yKeys.map((key) => (
+            {columnKeys.map((key) => (
+              <Bar
+                key={key}
+                yAxisId="left"
+                dataKey={key}
+                fill={`var(--color-${key})`}
+                stackId="stack"
+                radius={[4, 4, 0, 0]}
+              />
+            ))}
+            {lineKeys.map((key) => (
               <Line
                 key={key}
+                yAxisId="right"
                 type="monotone"
                 dataKey={key}
                 stroke={`var(--color-${key})`}
@@ -126,7 +166,7 @@ export function LineChart({
                 activeDot={{ r: 6 }}
               />
             ))}
-          </RechartsLineChart>
+          </ComposedChart>
         </ChartContainer>
       </CardContent>
     </Card>

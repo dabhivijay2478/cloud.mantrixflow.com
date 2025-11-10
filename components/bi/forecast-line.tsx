@@ -2,15 +2,21 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
   LineChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
   ReferenceLine,
+  Area,
 } from "recharts";
 
 /**
@@ -74,6 +80,25 @@ export function ForecastLine({
     ...forecastData.map((d) => ({ ...d, type: "forecast" })),
   ];
 
+  const chartConfig = {
+    historical: {
+      label: "Actual",
+      color: "hsl(var(--chart-1))",
+    },
+    forecast: {
+      label: forecastLabel,
+      color: "hsl(var(--chart-2))",
+    },
+    upper: {
+      label: "Upper Bound",
+      color: "hsl(var(--chart-2))",
+    },
+    lower: {
+      label: "Lower Bound",
+      color: "hsl(var(--chart-2))",
+    },
+  } satisfies ChartConfig;
+
   return (
     <Card className={className}>
       {(title || description) && (
@@ -85,54 +110,43 @@ export function ForecastLine({
         </CardHeader>
       )}
       <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
+        <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
           <LineChart
+            accessibilityLayer
             data={combinedData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
               dataKey={xKey}
-              stroke="#888888"
-              fontSize={12}
               tickLine={false}
+              tickMargin={10}
               axisLine={false}
             />
-            <YAxis
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
-              }}
-            />
-            <Legend />
+            <YAxis tickLine={false} axisLine={false} />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartLegend content={<ChartLegendContent />} />
             <ReferenceLine
               x={historicalData[historicalData.length - 1]?.[xKey]}
-              stroke="#666"
+              stroke="hsl(var(--muted-foreground))"
               strokeDasharray="3 3"
             />
             <Line
               type="monotone"
               dataKey={yKey}
-              stroke="#8884d8"
+              stroke={`var(--color-historical)`}
               strokeWidth={2}
               dot={{ r: 4 }}
-              name="Actual"
+              name="historical"
             />
             <Line
               type="monotone"
               dataKey={yKey}
-              stroke="#82ca9d"
+              stroke={`var(--color-forecast)`}
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={{ r: 4 }}
-              name={forecastLabel}
+              name="forecast"
               data={forecastData}
             />
             {showConfidenceInterval && (
@@ -140,27 +154,27 @@ export function ForecastLine({
                 <Line
                   type="monotone"
                   dataKey="upper"
-                  stroke="#82ca9d"
+                  stroke={`var(--color-upper)`}
                   strokeWidth={1}
                   strokeDasharray="2 2"
                   dot={false}
-                  name="Upper Bound"
+                  name="upper"
                   data={forecastData}
                 />
                 <Line
                   type="monotone"
                   dataKey="lower"
-                  stroke="#82ca9d"
+                  stroke={`var(--color-lower)`}
                   strokeWidth={1}
                   strokeDasharray="2 2"
                   dot={false}
-                  name="Lower Bound"
+                  name="lower"
                   data={forecastData}
                 />
               </>
             )}
           </LineChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

@@ -10,51 +10,48 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
-  AreaChart as RechartsAreaChart,
-  Area,
+  BarChart as RechartsBarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
 } from "recharts";
 
 /**
- * AreaChart
- * @description Cumulative trends visualization component for displaying data over time with filled areas.
- * Perfect for showing volume, accumulated values, and trend patterns.
- * @param {AreaChartProps} props - Component properties
+ * StackedColumnChart
+ * @description Vertical stacked column chart for comparing multiple categories with stacked segments.
+ * @param {StackedColumnChartProps} props - Component properties
  * @param {Array<Record<string, any>>} props.data - Array of data points
- * @param {string} props.xKey - Key for X-axis data
- * @param {string[]} props.yKeys - Array of keys for Y-axis data (supports multiple areas)
+ * @param {string} props.xKey - Key for X-axis data (category)
+ * @param {string[]} props.yKeys - Array of keys for Y-axis data (stacked segments)
  * @param {string} [props.title] - Chart title
  * @param {string} [props.description] - Chart description
- * @param {boolean} [props.stacked] - Enable stacked areas (default: false)
  * @param {boolean} [props.showGrid] - Show/hide grid lines (default: true)
  * @param {boolean} [props.showLegend] - Show/hide legend (default: true)
+ * @param {string[]} [props.colors] - Custom color palette
  * @param {string} [props.className] - Additional CSS classes
- * @returns {JSX.Element} AreaChart component
+ * @returns {JSX.Element} StackedColumnChart component
  * @example
- * <AreaChart
+ * <StackedColumnChart
  *   data={[
- *     { month: "Jan", users: 4000, sessions: 2400 },
- *     { month: "Feb", users: 3000, sessions: 1398 },
- *     { month: "Mar", users: 2000, sessions: 9800 }
+ *     { month: "Jan", productA: 4000, productB: 2400, productC: 2000 },
+ *     { month: "Feb", productA: 3000, productB: 1398, productC: 1500 }
  *   ]}
  *   xKey="month"
- *   yKeys={["users", "sessions"]}
- *   title="User Engagement"
- *   stacked={true}
+ *   yKeys={["productA", "productB", "productC"]}
+ *   title="Monthly Sales by Product"
  * />
  */
 
-export interface AreaChartProps {
+export interface StackedColumnChartProps {
   data: Array<Record<string, any>>;
   xKey: string;
   yKeys: string[];
   title?: string;
   description?: string;
-  stacked?: boolean;
   showGrid?: boolean;
   showLegend?: boolean;
+  colors?: string[];
   className?: string;
 }
 
@@ -66,22 +63,22 @@ const CHART_COLORS = [
   "hsl(var(--chart-5))",
 ];
 
-export function AreaChart({
+export function StackedColumnChart({
   data,
   xKey,
   yKeys,
   title,
   description,
-  stacked = false,
   showGrid = true,
   showLegend = true,
+  colors = CHART_COLORS,
   className,
-}: AreaChartProps) {
+}: StackedColumnChartProps) {
   const chartConfig = yKeys.reduce(
     (config, key, index) => {
       config[key] = {
         label: key,
-        color: CHART_COLORS[index % CHART_COLORS.length],
+        color: colors[index % colors.length],
       };
       return config;
     },
@@ -100,7 +97,7 @@ export function AreaChart({
       )}
       <CardContent>
         <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
-          <RechartsAreaChart
+          <RechartsBarChart
             accessibilityLayer
             data={data}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -116,19 +113,18 @@ export function AreaChart({
             <ChartTooltip content={<ChartTooltipContent />} />
             {showLegend && <ChartLegend content={<ChartLegendContent />} />}
             {yKeys.map((key) => (
-              <Area
+              <Bar
                 key={key}
-                type="monotone"
                 dataKey={key}
-                stackId={stacked ? "stack" : undefined}
-                stroke={`var(--color-${key})`}
                 fill={`var(--color-${key})`}
-                fillOpacity={0.6}
+                stackId="stack"
+                radius={[4, 4, 0, 0]}
               />
             ))}
-          </RechartsAreaChart>
+          </RechartsBarChart>
         </ChartContainer>
       </CardContent>
     </Card>
   );
 }
+

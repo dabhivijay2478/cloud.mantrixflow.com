@@ -2,14 +2,19 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
   BarChart as RechartsBarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
 
 /**
@@ -56,12 +61,11 @@ export interface BarChartProps {
 }
 
 const CHART_COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7c7c",
-  "#a78bfa",
-  "#fb923c",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
 ];
 
 export function BarChart({
@@ -76,6 +80,17 @@ export function BarChart({
   showLegend = true,
   className,
 }: BarChartProps) {
+  const chartConfig = yKeys.reduce(
+    (config, key, index) => {
+      config[key] = {
+        label: key,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+      };
+      return config;
+    },
+    {} as ChartConfig,
+  );
+
   return (
     <Card className={className}>
       {(title || description) && (
@@ -87,54 +102,48 @@ export function BarChart({
         </CardHeader>
       )}
       <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
+        <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
           <RechartsBarChart
+            accessibilityLayer
             data={data}
             layout={horizontal ? "vertical" : "horizontal"}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
-            {showGrid && <CartesianGrid strokeDasharray="3 3" />}
+            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
             {horizontal ? (
               <>
-                <XAxis type="number" stroke="#888888" fontSize={12} />
+                <XAxis type="number" tickLine={false} axisLine={false} />
                 <YAxis
                   type="category"
                   dataKey={xKey}
-                  stroke="#888888"
-                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
                 />
               </>
             ) : (
               <>
                 <XAxis
                   dataKey={xKey}
-                  stroke="#888888"
-                  fontSize={12}
                   tickLine={false}
+                  tickMargin={10}
                   axisLine={false}
                 />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
               </>
             )}
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
-              }}
-            />
-            {showLegend && <Legend />}
-            {yKeys.map((key, index) => (
+            <ChartTooltip content={<ChartTooltipContent />} />
+            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+            {yKeys.map((key) => (
               <Bar
                 key={key}
                 dataKey={key}
-                fill={CHART_COLORS[index % CHART_COLORS.length]}
+                fill={`var(--color-${key})`}
                 stackId={stacked ? "stack" : undefined}
                 radius={[4, 4, 0, 0]}
               />
             ))}
           </RechartsBarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

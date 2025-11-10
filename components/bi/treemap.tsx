@@ -2,8 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  ChartContainer,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
   Treemap as RechartsTreemap,
-  ResponsiveContainer,
 } from "recharts";
 
 /**
@@ -44,14 +47,11 @@ export interface TreeMapProps {
 }
 
 const DEFAULT_COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7c7c",
-  "#a78bfa",
-  "#fb923c",
-  "#4ade80",
-  "#f472b6",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
 ];
 
 // Custom content for treemap cells
@@ -103,6 +103,13 @@ export function TreeMap({
   colors = DEFAULT_COLORS,
   className,
 }: TreeMapProps) {
+  const chartConfig = {
+    size: {
+      label: "Size",
+      color: colors[0],
+    },
+  } satisfies ChartConfig;
+
   return (
     <Card className={className}>
       {(title || description) && (
@@ -114,16 +121,17 @@ export function TreeMap({
         </CardHeader>
       )}
       <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
+        <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
           <RechartsTreemap
+            accessibilityLayer
             data={data}
             dataKey="size"
             aspectRatio={4 / 3}
             stroke="#fff"
-            fill="#8884d8"
+            fill={colors[0]}
             content={<CustomContent colors={colors} />}
           />
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
