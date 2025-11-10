@@ -186,3 +186,45 @@ body {
 
 /* Leaflet CSS - imported via component, but ensure styles are available */
 @import "leaflet/dist/leaflet.css";
+
+/* React Resizable Styles */
+.react-resizable {
+  position: relative;
+  display: inline-block;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTAgNmw2LTZNLTYgMGw2IDYiLz48L2c+PC9zdmc+');
+  background-position: bottom right;
+  padding: 0 3px 3px 0;
+  background-size: 20px 20px;
+  cursor: se-resize;
+  z-index: 30 !important;
+  user-select: none;
+  touch-action: none;
+  pointer-events: auto !important;
+}
+
+.react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.react-resizable-handle:hover {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiMwMDAiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTAgNmw2LTZNLTYgMGw2IDYiLz48L2c+PC9zdmc+');
+}
+
+.react-resizable-handle:active {
+  background-color: rgba(0, 0, 0, 0.25);
+}
