@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useAuthStore } from "@/lib/stores/auth-store";
@@ -18,10 +18,14 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading } = useAuthStore();
-  const { onboarding, sidebarOpen, setSidebarOpen, componentsPanelOpen, agentPanelOpen } = useWorkspaceStore();
+  const { onboarding, sidebarOpen, setSidebarOpen, componentsPanelOpen, agentPanelOpen, setComponentsPanelOpen, setAgentPanelOpen } = useWorkspaceStore();
   const componentsPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const agentPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+
+  // Check if we're on a view-only page (dashboard view)
+  const isViewMode = pathname?.includes("/view");
 
   // Only resize when collapsing (to preserve user's manual resizing)
   useEffect(() => {
@@ -59,6 +63,16 @@ export default function WorkspaceLayout({
     return null;
   }
 
+  // View mode: No sidebar, no topbar, no panels - just content for iframe embedding
+  if (isViewMode) {
+    return (
+      <div className="h-screen w-full overflow-auto">
+        {children}
+      </div>
+    );
+  }
+
+  // Edit mode: Full workspace layout with sidebar, topbar, and panels
   return (
     <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <div className="flex h-screen w-full">

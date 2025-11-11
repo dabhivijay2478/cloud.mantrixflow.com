@@ -44,7 +44,7 @@ export default function DashboardViewPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
+    <div className="h-full bg-background p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold mb-2">{dashboard.name}</h1>
