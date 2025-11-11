@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
 import { ComponentsPanel } from "@/components/workspace/components-panel";
 import { AgentPanel } from "@/components/workspace/agent-panel";
+import * as ResizablePrimitive from "react-resizable-panels";
 
 export default function WorkspaceLayout({
   children,
@@ -17,7 +19,22 @@ export default function WorkspaceLayout({
 }>) {
   const router = useRouter();
   const { user, loading } = useAuthStore();
-  const { onboarding, sidebarOpen, setSidebarOpen } = useWorkspaceStore();
+  const { onboarding, sidebarOpen, setSidebarOpen, componentsPanelOpen, agentPanelOpen } = useWorkspaceStore();
+  const componentsPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+  const agentPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+
+  // Only resize when collapsing (to preserve user's manual resizing)
+  useEffect(() => {
+    if (!componentsPanelOpen && componentsPanelRef.current) {
+      componentsPanelRef.current.resize(3);
+    }
+  }, [componentsPanelOpen]);
+
+  useEffect(() => {
+    if (!agentPanelOpen && agentPanelRef.current) {
+      agentPanelRef.current.resize(3);
+    }
+  }, [agentPanelOpen]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -48,13 +65,49 @@ export default function WorkspaceLayout({
         <WorkspaceSidebar />
         <SidebarInset className="flex flex-col flex-1">
           <WorkspaceTopbar />
-          <div className="flex flex-1 overflow-hidden">
-            <ComponentsPanel />
-            <main className="flex-1 overflow-auto p-6">
-              {children}
-            </main>
-            <AgentPanel />
-          </div>
+          <ResizablePanelGroup direction="horizontal" className="flex-1">
+            <ResizablePanel 
+              ref={componentsPanelRef}
+              id="components-panel"
+              defaultSize={componentsPanelOpen ? 18 : 3} 
+              minSize={3} 
+              maxSize={componentsPanelOpen ? 40 : 3}
+              collapsible={true}
+              collapsedSize={3}
+              key={`components-${componentsPanelOpen}`}
+            >
+              <ComponentsPanel />
+            </ResizablePanel>
+            <ResizableHandle 
+              withHandle={componentsPanelOpen}
+              className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen ? 'pointer-events-none opacity-0' : ''}`}
+            />
+            <ResizablePanel 
+              id="main-panel"
+              defaultSize={componentsPanelOpen && agentPanelOpen ? 64 : componentsPanelOpen ? 79 : agentPanelOpen ? 79 : 94}
+              minSize={40}
+            >
+              <main className="h-full overflow-auto p-6">
+                {children}
+              </main>
+            </ResizablePanel>
+            <ResizableHandle 
+              withHandle={agentPanelOpen}
+              className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!agentPanelOpen ? 'pointer-events-none opacity-0' : ''}`}
+            />
+            <ResizablePanel 
+              ref={agentPanelRef}
+              id="agent-panel"
+              defaultSize={agentPanelOpen ? 18 : 3} 
+              minSize={3} 
+              maxSize={agentPanelOpen ? 40 : 3}
+              collapsible={true}
+              collapsedSize={3}
+              key={`agent-${agentPanelOpen}`}
+            >
+              <AgentPanel />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </SidebarInset>
       </div>
     </SidebarProvider>

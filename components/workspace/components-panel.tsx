@@ -141,30 +141,43 @@ export function ComponentsPanel() {
 
   if (!componentsPanelOpen) {
     return (
-      <div className="w-12 border-r bg-muted/30 flex flex-col items-center py-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 mb-2 rounded-md bg-accent"
-                onClick={() => setComponentsPanelOpen(true)}
-              >
-                <BarChart3 className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Components</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div 
+        className="h-full w-full border-r bg-muted/30 flex flex-col items-center relative cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={() => setComponentsPanelOpen(true)}
+      >
+        <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
+        <div className="flex flex-col items-center justify-center flex-1 w-full py-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="h-8 w-8 mb-4 rounded-md flex items-center justify-center">
+                  <BarChart3 className="h-4 w-4" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Click to expand Components</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div className="flex-1 flex items-center justify-center">
+            <span 
+              className="text-xs text-muted-foreground select-none"
+              style={{ 
+                writingMode: 'vertical-rl',
+                transform: 'rotate(180deg)',
+                textOrientation: 'mixed'
+              }}
+            >
+              Components
+            </span>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-64 border-r bg-muted/30 flex flex-col">
+    <div className="h-full w-full border-r bg-muted/30 flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="font-semibold text-sm">Components</h2>
         <Button

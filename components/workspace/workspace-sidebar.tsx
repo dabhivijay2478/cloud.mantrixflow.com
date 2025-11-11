@@ -5,7 +5,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
@@ -22,9 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { useAuthStore } from "@/lib/stores/auth-store";
 import {
   LayoutDashboard,
   Database,
@@ -37,24 +34,17 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function WorkspaceSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { currentOrganization, organizations, dashboards, dataSources, setCurrentOrganization } = useWorkspaceStore();
-  const { user, signOut } = useAuthStore();
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/auth/login");
-  };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-2">
         <div className="flex items-center gap-2 px-2">
-          <Logo className="h-6 w-6 flex-shrink-0" />
+          <Logo className="h-6 w-6 shrink-0" />
           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">MantrixFlow</span>
         </div>
         {currentOrganization && (
@@ -178,57 +168,6 @@ export function WorkspaceSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-2">
-        <div className="group-data-[collapsible=icon]:hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
-                  <AvatarFallback>
-                    {user?.email?.charAt(0).toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {user?.user_metadata?.full_name || user?.email}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <div className="group-data-[collapsible=icon]:block hidden">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-full"
-                  onClick={handleSignOut}
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} />
-                    <AvatarFallback>
-                      {user?.email?.charAt(0).toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>{user?.user_metadata?.full_name || user?.email}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

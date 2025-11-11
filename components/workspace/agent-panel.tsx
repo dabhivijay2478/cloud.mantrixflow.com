@@ -61,30 +61,43 @@ export function AgentPanel() {
 
   if (!agentPanelOpen) {
     return (
-      <div className="w-12 border-l bg-muted/30 flex flex-col items-center py-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 mb-2 rounded-md bg-accent"
-                onClick={() => setAgentPanelOpen(true)}
-              >
-                <Sparkles className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p>AI Agent</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div 
+        className="h-full w-full border-l bg-muted/30 flex flex-col items-center relative cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={() => setAgentPanelOpen(true)}
+      >
+        <div className="absolute right-0 top-0 bottom-0 w-px bg-border" />
+        <div className="flex flex-col items-center justify-center flex-1 w-full py-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="h-8 w-8 mb-4 rounded-md flex items-center justify-center">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>Click to expand AI Agent</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <div className="flex-1 flex items-center justify-center">
+            <span 
+              className="text-xs text-muted-foreground select-none"
+              style={{ 
+                writingMode: 'vertical-rl',
+                transform: 'rotate(180deg)',
+                textOrientation: 'mixed'
+              }}
+            >
+              Agent
+            </span>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-80 border-l bg-muted/30 flex flex-col">
+    <div className="h-full w-full border-l bg-muted/30 flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4" />
