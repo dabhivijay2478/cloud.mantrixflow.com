@@ -7,6 +7,7 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { PromptInput } from "@/components/bi/prompt-input";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function AgentPanel() {
   const { agentPanelOpen, setAgentPanelOpen, currentDashboard, addComponentToDashboard } = useWorkspaceStore();
@@ -60,14 +61,25 @@ export function AgentPanel() {
 
   if (!agentPanelOpen) {
     return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-10 rounded-l-lg rounded-r-none"
-        onClick={() => setAgentPanelOpen(true)}
-      >
-        <Sparkles className="h-4 w-4" />
-      </Button>
+      <div className="w-12 border-l bg-muted/30 flex flex-col items-center py-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 mb-2 rounded-md bg-accent"
+                onClick={() => setAgentPanelOpen(true)}
+              >
+                <Sparkles className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>AI Agent</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     );
   }
 

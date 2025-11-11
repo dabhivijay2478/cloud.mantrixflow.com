@@ -141,14 +141,25 @@ export function ComponentsPanel() {
 
   if (!componentsPanelOpen) {
     return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-10 rounded-r-lg rounded-l-none"
-        onClick={() => setComponentsPanelOpen(true)}
-      >
-        <BarChart3 className="h-4 w-4" />
-      </Button>
+      <div className="w-12 border-r bg-muted/30 flex flex-col items-center py-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 mb-2 rounded-md bg-accent"
+                onClick={() => setComponentsPanelOpen(true)}
+              >
+                <BarChart3 className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Components</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     );
   }
 
@@ -177,7 +188,7 @@ export function ComponentsPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-5 w-5 hover:bg-accent p-3"
+                        className="h-10 w-10 hover:bg-accent"
                         draggable
                         onDragStart={(e) => {
                           e.dataTransfer.setData("component-type", component.id);
