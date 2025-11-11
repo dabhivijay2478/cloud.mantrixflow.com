@@ -177,8 +177,8 @@ export function ComponentsPanel() {
   }
 
   return (
-    <div className="h-full w-full border-r bg-muted/30 flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
+    <div className="h-full w-full border-r bg-muted/30 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b shrink-0">
         <h2 className="font-semibold text-sm">Components</h2>
         <Button
           variant="ghost"
@@ -189,7 +189,7 @@ export function ComponentsPanel() {
           <X className="h-5 w-5" />
         </Button>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-4">
           <TooltipProvider delayDuration={200}>
             <div className="grid grid-cols-4 gap-2">
