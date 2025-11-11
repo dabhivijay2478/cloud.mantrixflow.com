@@ -11,7 +11,7 @@ export interface Organization {
 export interface DataSource {
   id: string
   name: string
-  type: 'postgres' | 'mysql' | 'mongodb' | 'bigquery' | 'snowflake' | 'redshift' | 'excel' | 'csv' | 'google-sheets' | 'api'
+  type: 'postgres' | 'mysql' | 'mongodb' | 'bigquery' | 'snowflake' | 'redshift' | 'excel' | 'csv' | 'google-sheets' | 'api' | 'azure-blob-storage' | 'customer-io' | 'milvus' | 'pinecone' | 's3' | 'databricks' | 'mssql' | 's3-datalake' | 'snowflake-cortex' | 'clickhouse' | 'hubspot' | 'pgvector' | 'salesforce' | 'weaviate'
   status: 'connected' | 'disconnected' | 'error'
   connectedAt?: string
   tables?: string[]
@@ -23,6 +23,7 @@ export interface Dashboard {
   name: string
   description?: string
   organizationId: string
+  dataSourceId?: string
   createdAt: string
   updatedAt: string
   components: DashboardComponent[]
