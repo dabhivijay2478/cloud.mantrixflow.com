@@ -40,7 +40,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Mail, UserPlus, MoreVertical, Shield, User, Crown, Settings, Trash2, Edit, Check } from "lucide-react";
+import { Plus, Mail, UserPlus, MoreVertical, Shield, User, Crown, Settings, Trash2, Edit, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +94,11 @@ export default function TeamPage() {
   const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("member");
   const [loading, setLoading] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editRole, setEditRole] = useState<TeamMemberRole>("member");
 
   // Mock team members - in a real app, this would come from the store/API
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
@@ -193,6 +198,43 @@ export default function TeamPage() {
     }
   };
 
+  const handleEditClick = (member: TeamMember) => {
+    setEditingMember(member);
+    setEditName(member.name);
+    setEditEmail(member.email);
+    setEditRole(member.role);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingMember) return;
+
+    if (!editName.trim() || !editEmail.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setTeamMembers(
+      teamMembers.map((member) =>
+        member.id === editingMember.id
+          ? {
+              ...member,
+              name: editName,
+              email: editEmail,
+              role: editRole,
+            }
+          : member
+      )
+    );
+
+    toast.success("Team member updated successfully");
+    setEditDialogOpen(false);
+    setEditingMember(null);
+    setEditName("");
+    setEditEmail("");
+    setEditRole("member");
+  };
+
   const getRoleBadge = (role: TeamMemberRole) => {
     const config = roleConfig[role];
     const Icon = config.icon;
@@ -241,65 +283,105 @@ export default function TeamPage() {
         </div>
         <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <UserPlus className="mr-2 h-4 w-4" />
               Invite Member
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Send an invitation to add a new team member to your organization
-              </DialogDescription>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle>Invite Team Member</DialogTitle>
+                  <DialogDescription className="mt-1">
+                    Send an invitation to add a new team member to your organization
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="invite-email" className="text-sm font-medium">
+                  Email Address <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  id="email"
+                  id="invite-email"
                   type="email"
                   placeholder="colleague@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
                       handleInvite();
                     }
                   }}
+                  className="h-10"
                 />
+                <p className="text-xs text-muted-foreground">
+                  An invitation email will be sent to this address
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="invite-role" className="text-sm font-medium">
+                  Role <span className="text-destructive">*</span>
+                </Label>
                 <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as TeamMemberRole)}>
-                  <SelectTrigger id="role">
+                  <SelectTrigger id="invite-role" className="h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(roleConfig).map(([key, config]) => {
-                      const Icon = config.icon;
-                      return (
-                        <SelectItem key={key} value={key}>
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4" />
-                            <div className="flex flex-col">
-                              <span>{config.label}</span>
-                              <span className="text-xs text-muted-foreground">{config.description}</span>
+                    <ScrollArea className="h-[300px]">
+                      {Object.entries(roleConfig).map(([key, config]) => {
+                        const Icon = config.icon;
+                        return (
+                          <SelectItem key={key} value={key} className="py-2">
+                            <div className="flex items-start gap-3 w-full">
+                              <div className={cn("h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0", config.color, "text-white")}>
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className="font-medium">{config.label}</span>
+                                <span className="text-xs text-muted-foreground mt-0.5">
+                                  {config.description}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
+                          </SelectItem>
+                        );
+                      })}
+                    </ScrollArea>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setInviteDialogOpen(false);
+                  setEmail("");
+                  setSelectedRole("member");
+                }}
+                className="w-full sm:w-auto"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleInvite} disabled={loading}>
-                {loading ? "Sending..." : "Send Invitation"}
+              <Button onClick={handleInvite} disabled={loading || !email.trim()} className="w-full sm:w-auto">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Invitation
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -436,10 +518,7 @@ export default function TeamPage() {
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={() => {
-                                    // Handle edit
-                                    toast.info("Edit functionality coming soon");
-                                  }}
+                                  onClick={() => handleEditClick(member)}
                                 >
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Member
@@ -464,6 +543,143 @@ export default function TeamPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) {
+          setEditingMember(null);
+          setEditName("");
+          setEditEmail("");
+          setEditRole("member");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Edit className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle>Edit Team Member</DialogTitle>
+                <DialogDescription className="mt-1">
+                  Update team member information and role
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          {editingMember && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4 pb-4 border-b">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={editingMember.avatar || undefined} />
+                  <AvatarFallback className="text-lg">
+                    {editingMember.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-semibold text-lg">{editingMember.name}</div>
+                  <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {editingMember.email}
+                  </div>
+                  <div className="mt-2">
+                    {getStatusBadge(editingMember.status)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-name" className="text-sm font-medium">
+                  Full Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="edit-name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="h-10"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-email" className="text-sm font-medium">
+                  Email Address <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="h-10"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-role-select" className="text-sm font-medium">
+                  Role <span className="text-destructive">*</span>
+                </Label>
+                <Select value={editRole} onValueChange={(value) => setEditRole(value as TeamMemberRole)}>
+                  <SelectTrigger id="edit-role-select" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-[300px]">
+                      {Object.entries(roleConfig).map(([key, config]) => {
+                        const Icon = config.icon;
+                        return (
+                          <SelectItem key={key} value={key} className="py-2">
+                            <div className="flex items-start gap-3 w-full">
+                              <div className={cn("h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0", config.color, "text-white")}>
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className="font-medium">{config.label}</span>
+                                <span className="text-xs text-muted-foreground mt-0.5">
+                                  {config.description}
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false);
+                setEditingMember(null);
+                setEditName("");
+                setEditEmail("");
+                setEditRole("member");
+              }}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={!editName.trim() || !editEmail.trim()}
+              className="w-full sm:w-auto"
+            >
+              <Check className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
