@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -43,14 +43,9 @@ function LoginFormContent({
     const confirmEmail = searchParams.get("confirmEmail");
 
     if (confirmed === "true") {
-      toast.success("Email confirmed!", {
-        description: "Your email has been confirmed. You can now sign in.",
-      });
+      toast.success("Email confirmed!", "Your email has been confirmed. You can now sign in.");
     } else if (confirmEmail === "true") {
-      toast.info("Check your email", {
-        description:
-          "Please check your email to confirm your account before signing in.",
-      });
+      toast.info("Check your email", "Please check your email to confirm your account before signing in.");
     }
   }, [searchParams]);
 
@@ -70,13 +65,12 @@ function LoginFormContent({
 
     if (error) {
       setIsSubmitting(false);
+      toast.error("Login failed", error.message || "Invalid email or password. Please try again.");
       return;
     }
 
     // Show success toast
-    toast.success("Login successful!", {
-      description: "Welcome back! You've been successfully logged in.",
-    });
+    toast.success("Login successful!", "Welcome back! You've been successfully logged in.");
 
     // Redirect on success
     router.push("/");
@@ -85,12 +79,18 @@ function LoginFormContent({
 
   const handleGitHubLogin = async () => {
     setError(null);
-    await signInWithGitHub();
+    const { error } = await signInWithGitHub();
+    if (error) {
+      toast.error("GitHub login failed", error.message || "Failed to sign in with GitHub. Please try again.");
+    }
   };
 
   const handleGoogleLogin = async () => {
     setError(null);
-    await signInWithGoogle();
+    const { error } = await signInWithGoogle();
+    if (error) {
+      toast.error("Google login failed", error.message || "Failed to sign in with Google. Please try again.");
+    }
   };
 
   return (

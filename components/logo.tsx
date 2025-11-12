@@ -31,7 +31,7 @@ export function Logo({
   return (
     <div className={`relative ${className}`}>
       <Image
-        src="/next.svg"
+        src="/m.png"
         alt="MantrixFlow Logo"
         width={size}
         height={size}
