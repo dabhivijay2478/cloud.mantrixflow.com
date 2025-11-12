@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,24 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Mail, UserPlus, MoreVertical, Shield, User, Crown, Settings, Trash2, Edit, Check, Loader2 } from "lucide-react";
+import { MoreVertical, Shield, User, Crown, Trash2, Edit, Bot, X, UserPlus, Check, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +36,8 @@ interface TeamMember {
   avatar: string | null;
   status: "active" | "pending" | "inactive";
   joinedAt?: string;
+  agentPanelAccess?: boolean;
+  allowedModels?: string[];
 }
 
 const roleConfig: Record<TeamMemberRole, { label: string; icon: typeof Shield; color: string; description: string }> = {
@@ -90,15 +74,7 @@ const roleConfig: Record<TeamMemberRole, { label: string; icon: typeof Shield; c
 };
 
 export default function TeamPage() {
-  const [email, setEmail] = useState("");
-  const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("member");
-  const [loading, setLoading] = useState(false);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState<TeamMemberRole>("member");
+  const router = useRouter();
 
   // Mock team members - in a real app, this would come from the store/API
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
@@ -110,6 +86,8 @@ export default function TeamPage() {
       avatar: null,
       status: "active",
       joinedAt: "2024-01-15",
+      agentPanelAccess: true,
+      allowedModels: ["gpt-4o", "claude-opus-4-20250514", "gemini-2.0-flash-exp"],
     },
     {
       id: "2",
@@ -119,6 +97,8 @@ export default function TeamPage() {
       avatar: null,
       status: "active",
       joinedAt: "2024-02-20",
+      agentPanelAccess: true,
+      allowedModels: ["gpt-4o", "gpt-4o-mini"],
     },
     {
       id: "3",
@@ -128,6 +108,8 @@ export default function TeamPage() {
       avatar: null,
       status: "active",
       joinedAt: "2024-03-10",
+      agentPanelAccess: true,
+      allowedModels: ["gpt-4o-mini"],
     },
     {
       id: "4",
@@ -137,6 +119,8 @@ export default function TeamPage() {
       avatar: null,
       status: "pending",
       joinedAt: "2024-04-05",
+      agentPanelAccess: false,
+      allowedModels: [],
     },
     {
       id: "5",
@@ -146,41 +130,11 @@ export default function TeamPage() {
       avatar: null,
       status: "active",
       joinedAt: "2024-04-12",
+      agentPanelAccess: false,
+      allowedModels: [],
     },
   ]);
 
-  const handleInvite = async () => {
-    if (!email.trim()) {
-      toast.error("Please enter an email address");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // In a real app, this would call an API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      const newMember: TeamMember = {
-        id: `member_${Date.now()}`,
-        name: email.split("@")[0],
-        email: email,
-        role: selectedRole,
-        avatar: null,
-        status: "pending",
-        joinedAt: new Date().toISOString(),
-      };
-
-      setTeamMembers([...teamMembers, newMember]);
-      toast.success(`Invitation sent to ${email}`);
-      setEmail("");
-      setSelectedRole("member");
-      setInviteDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to send invitation");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleRoleChange = (memberId: string, newRole: TeamMemberRole) => {
     setTeamMembers(
@@ -199,40 +153,7 @@ export default function TeamPage() {
   };
 
   const handleEditClick = (member: TeamMember) => {
-    setEditingMember(member);
-    setEditName(member.name);
-    setEditEmail(member.email);
-    setEditRole(member.role);
-    setEditDialogOpen(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingMember) return;
-
-    if (!editName.trim() || !editEmail.trim()) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    setTeamMembers(
-      teamMembers.map((member) =>
-        member.id === editingMember.id
-          ? {
-              ...member,
-              name: editName,
-              email: editEmail,
-              role: editRole,
-            }
-          : member
-      )
-    );
-
-    toast.success("Team member updated successfully");
-    setEditDialogOpen(false);
-    setEditingMember(null);
-    setEditName("");
-    setEditEmail("");
-    setEditRole("member");
+    router.push(`/workspace/team/${member.id}/edit`);
   };
 
   const getRoleBadge = (role: TeamMemberRole) => {
@@ -281,118 +202,20 @@ export default function TeamPage() {
           <h1 className="text-3xl font-bold">Team</h1>
           <p className="text-muted-foreground">Manage your team members and permissions</p>
         </div>
-        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <UserPlus className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <DialogTitle>Invite Team Member</DialogTitle>
-                  <DialogDescription className="mt-1">
-                    Send an invitation to add a new team member to your organization
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="invite-email" className="text-sm font-medium">
-                  Email Address <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="invite-email"
-                  type="email"
-                  placeholder="colleague@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleInvite();
-                    }
-                  }}
-                  className="h-10"
-                />
-                <p className="text-xs text-muted-foreground">
-                  An invitation email will be sent to this address
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="invite-role" className="text-sm font-medium">
-                  Role <span className="text-destructive">*</span>
-                </Label>
-                <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as TeamMemberRole)}>
-                  <SelectTrigger id="invite-role" className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="h-[300px]">
-                      {Object.entries(roleConfig).map(([key, config]) => {
-                        const Icon = config.icon;
-                        return (
-                          <SelectItem key={key} value={key} className="py-2">
-                            <div className="flex items-start gap-3 w-full">
-                              <div className={cn("h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0", config.color, "text-white")}>
-                                <Icon className="h-4 w-4" />
-                              </div>
-                              <div className="flex flex-col flex-1 min-w-0">
-                                <span className="font-medium">{config.label}</span>
-                                <span className="text-xs text-muted-foreground mt-0.5">
-                                  {config.description}
-                                </span>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setInviteDialogOpen(false);
-                  setEmail("");
-                  setSelectedRole("member");
-                }}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleInvite} disabled={loading || !email.trim()} className="w-full sm:w-auto">
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Send Invitation
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button
+          onClick={() => router.push("/workspace/team/invite")}
+          className="w-full sm:w-auto"
+        >
+          <UserPlus className="mr-2 h-4 w-4" />
+          Invite Member
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Team Members</CardTitle>
+          <CardTitle>Team Members</CardTitle>
               <CardDescription>
                 {teamMembers.length} {teamMembers.length === 1 ? "member" : "members"} in your organization
               </CardDescription>
@@ -407,6 +230,7 @@ export default function TeamPage() {
                   <TableHead className="w-[300px]">Member</TableHead>
                   <TableHead className="hidden md:table-cell">Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Role</TableHead>
+                  <TableHead className="hidden lg:table-cell">Agent Panel</TableHead>
                   <TableHead className="hidden lg:table-cell">Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -414,7 +238,7 @@ export default function TeamPage() {
               <TableBody>
                 {teamMembers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <User className="h-12 w-12 text-muted-foreground" />
                         <p className="text-muted-foreground">No team members yet</p>
@@ -433,23 +257,23 @@ export default function TeamPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
-                              <AvatarImage src={member.avatar || undefined} />
-                              <AvatarFallback>
-                                {member.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                    <AvatarImage src={member.avatar || undefined} />
+                    <AvatarFallback>
+                      {member.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                             <div className="flex flex-col min-w-0">
                               <div className="font-medium truncate">{member.name}</div>
                               <div className="text-sm text-muted-foreground flex items-center gap-1 truncate">
                                 <Mail className="h-3 w-3 flex-shrink-0" />
                                 <span className="truncate">{member.email}</span>
-                              </div>
-                            </div>
-                          </div>
+                    </div>
+                  </div>
+                </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {getStatusBadge(member.status)}
@@ -490,6 +314,26 @@ export default function TeamPage() {
                               })}
                             </DropdownMenuContent>
                           </DropdownMenu>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="flex items-center gap-2">
+                            {member.agentPanelAccess ? (
+                              <Badge variant="outline" className="border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950">
+                                <Bot className="h-3 w-3 mr-1" />
+                                Enabled
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950">
+                                <X className="h-3 w-3 mr-1" />
+                                Disabled
+                              </Badge>
+                            )}
+                            {member.agentPanelAccess && member.allowedModels && member.allowedModels.length > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                ({member.allowedModels.length} model{member.allowedModels.length !== 1 ? "s" : ""})
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-muted-foreground">
                           {member.joinedAt
@@ -532,7 +376,7 @@ export default function TeamPage() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </div>
+              </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -544,142 +388,6 @@ export default function TeamPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Member Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={(open) => {
-        setEditDialogOpen(open);
-        if (!open) {
-          setEditingMember(null);
-          setEditName("");
-          setEditEmail("");
-          setEditRole("member");
-        }
-      }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Edit className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <DialogTitle>Edit Team Member</DialogTitle>
-                <DialogDescription className="mt-1">
-                  Update team member information and role
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-          {editingMember && (
-            <div className="space-y-4 py-4">
-              <div className="flex items-center gap-4 pb-4 border-b">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={editingMember.avatar || undefined} />
-                  <AvatarFallback className="text-lg">
-                    {editingMember.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-semibold text-lg">{editingMember.name}</div>
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    {editingMember.email}
-                  </div>
-                  <div className="mt-2">
-                    {getStatusBadge(editingMember.status)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-name" className="text-sm font-medium">
-                  Full Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="edit-name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="h-10"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-email" className="text-sm font-medium">
-                  Email Address <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  placeholder="john@example.com"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className="h-10"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-role-select" className="text-sm font-medium">
-                  Role <span className="text-destructive">*</span>
-                </Label>
-                <Select value={editRole} onValueChange={(value) => setEditRole(value as TeamMemberRole)}>
-                  <SelectTrigger id="edit-role-select" className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <ScrollArea className="h-[300px]">
-                      {Object.entries(roleConfig).map(([key, config]) => {
-                        const Icon = config.icon;
-                        return (
-                          <SelectItem key={key} value={key} className="py-2">
-                            <div className="flex items-start gap-3 w-full">
-                              <div className={cn("h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0", config.color, "text-white")}>
-                                <Icon className="h-4 w-4" />
-                              </div>
-                              <div className="flex flex-col flex-1 min-w-0">
-                                <span className="font-medium">{config.label}</span>
-                                <span className="text-xs text-muted-foreground mt-0.5">
-                                  {config.description}
-                                </span>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </ScrollArea>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setEditDialogOpen(false);
-                setEditingMember(null);
-                setEditName("");
-                setEditEmail("");
-                setEditRole("member");
-              }}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveEdit}
-              disabled={!editName.trim() || !editEmail.trim()}
-              className="w-full sm:w-auto"
-            >
-              <Check className="mr-2 h-4 w-4" />
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
