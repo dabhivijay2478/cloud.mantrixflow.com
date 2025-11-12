@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useAuthStore } from "@/lib/stores/auth-store";
-import { Search, ExternalLink, Settings, LogOut, User } from "lucide-react";
+import { Search, Settings, LogOut, User } from "lucide-react";
 
 export function WorkspaceTopbar() {
   const router = useRouter();
@@ -45,15 +45,6 @@ export function WorkspaceTopbar() {
     };
   }, []);
 
-  const handleOpenInNewTab = () => {
-    if (currentDashboard) {
-      const url = `/workspace/dashboards/${currentDashboard.id}/view`;
-      window.open(url, "_blank");
-    } else {
-      // If no dashboard is selected, open the main workspace
-      window.open("/workspace", "_blank");
-    }
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -80,16 +71,6 @@ export function WorkspaceTopbar() {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {currentDashboard && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleOpenInNewTab}
-            title="Open in new tab"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
