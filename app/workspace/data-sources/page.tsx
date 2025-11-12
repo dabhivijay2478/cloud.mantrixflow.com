@@ -572,7 +572,7 @@ export default function DataSourcesPage() {
     : null;
 
   return (
-    <div className="space-y-6 h-full">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Data Sources</h1>
@@ -582,7 +582,7 @@ export default function DataSourcesPage() {
           <Button variant="outline" onClick={() => setSelectedDataSource(null)}>
             <X className="mr-2 h-4 w-4" />
             Back to List
-          </Button>
+        </Button>
         )}
       </div>
 
@@ -633,8 +633,8 @@ export default function DataSourcesPage() {
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+          </CardContent>
+        </Card>
             );
           })}
         </div>
@@ -726,7 +726,7 @@ export default function DataSourcesPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
+                </div>
 
           <div className="lg:col-span-2">
             {connectedDataSource ? (
@@ -734,7 +734,7 @@ export default function DataSourcesPage() {
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-lg mb-4">Select Sheet/Table</h3>
                   <ScrollArea className="h-[400px]">
-                    <div className="space-y-2">
+                <div className="space-y-2">
                       {connectedDataSource.tables && connectedDataSource.tables.length > 0 ? (
                         connectedDataSource.tables.map((table) => (
                           <Card
@@ -760,8 +760,8 @@ export default function DataSourcesPage() {
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
                           <p>No tables/sheets available</p>
-                        </div>
-                      )}
+                    </div>
+                  )}
                     </div>
                   </ScrollArea>
                 </CardContent>
@@ -936,8 +936,8 @@ export default function DataSourcesPage() {
                                   </p>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                    </div>
+                  )}
                         </>
                       );
                     })()}
@@ -961,7 +961,7 @@ export default function DataSourcesPage() {
                     Cancel
                   </Button>
                   {getCurrentSchema()?.testConnection && (
-                    <Button
+                  <Button
                       type="button"
                       variant="secondary"
                       onClick={handleTestConnection}
@@ -979,7 +979,7 @@ export default function DataSourcesPage() {
                           Test Connection
                         </>
                       )}
-                    </Button>
+                  </Button>
                   )}
                 </div>
                 <Button

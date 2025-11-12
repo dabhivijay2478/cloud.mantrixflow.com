@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,7 +17,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Edit, Mail, Loader2, Bot, Sparkles, AlertCircle, Check, Shield, User, Crown } from "lucide-react";
+import { Edit, Mail, Loader2, Bot, Sparkles, AlertCircle, Check, Shield, User, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -227,73 +226,38 @@ export default function EditTeamMemberPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        {/* Header */}
-        <div className="mb-8 sm:mb-12">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/workspace/team")}
-            className="mb-4 sm:mb-6 -ml-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Team
-          </Button>
-          <div className="flex items-start gap-4">
-            <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Edit className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Edit Team Member</h1>
+          <p className="text-muted-foreground">Update team member information, role, and permissions</p>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* Member Preview */}
+        <div className="flex items-center gap-4 pb-4 border-b">
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={member.avatar || undefined} />
+            <AvatarFallback className="text-lg">
+              {member.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="font-semibold text-lg">{member.name}</div>
+            <div className="text-sm text-muted-foreground flex items-center gap-1">
+              <Mail className="h-3 w-3" />
+              {member.email}
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Edit Team Member</h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Update team member information, role, and permissions
-              </p>
+            <div className="mt-2">
+              {getStatusBadge(member.status)}
             </div>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Main Form */}
-          <div className="lg:col-span-2">
-            <Card className="border-2 shadow-lg">
-              <CardHeader className="pb-4 border-b bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Edit className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Member Details</CardTitle>
-                    <CardDescription className="mt-1">
-                      Update team member information and permissions
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                {/* Member Preview */}
-                <div className="flex items-center gap-4 pb-4 border-b">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={member.avatar || undefined} />
-                    <AvatarFallback className="text-lg">
-                      {member.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-semibold text-lg">{member.name}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {member.email}
-                    </div>
-                    <div className="mt-2">
-                      {getStatusBadge(member.status)}
-                    </div>
-                  </div>
-                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="edit-name" className="text-base font-semibold">
@@ -436,73 +400,31 @@ export default function EditTeamMemberPage() {
                   )}
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push("/workspace/team")}
-                    disabled={loading}
-                    className="w-full sm:w-auto"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSave}
-                    disabled={loading || !editName.trim() || !editEmail.trim() || (editAgentPanelAccess && editAllowedModels.length === 0)}
-                    className="w-full sm:w-auto min-w-[140px]"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar Info */}
-          <div className="lg:col-span-1">
-            <div className="space-y-6 sticky top-6">
-              <Card className="border-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    Member Info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
-                    {getStatusBadge(member.status)}
-                  </div>
-                  {member.joinedAt && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Joined</p>
-                      <p className="text-sm">
-                        {new Date(member.joinedAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Member ID</p>
-                    <p className="text-sm font-mono text-xs">{member.id}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/workspace/team")}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={loading || !editName.trim() || !editEmail.trim() || (editAgentPanelAccess && editAllowedModels.length === 0)}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>
