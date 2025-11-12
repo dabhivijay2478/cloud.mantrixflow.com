@@ -22,7 +22,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Plus, Database, Check, X, Loader2 } from "lucide-react";
+import { Plus, Database, Check, X, Loader2, Table2 } from "lucide-react";
 import { toast } from "@/lib/utils/toast";
 import { cn } from "@/lib/utils";
 
@@ -660,6 +660,20 @@ export default function DataSourcesPage() {
                       </div>
                     )}
                   </div>
+                  {connected && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/workspace/data-sources/${dataSource.id}/query`);
+                      }}
+                      title="View Tables & Query"
+                    >
+                      <Table2 className="h-4 w-4" />
+                    </Button>
+                  )}
           </CardContent>
         </Card>
             );
@@ -691,14 +705,25 @@ export default function DataSourcesPage() {
                     <div className="text-sm text-muted-foreground">
                       Connected on {new Date(connectedDataSource.connectedAt || "").toLocaleDateString()}
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDisconnect(selectedDataSource)}
-                      className="w-full"
-                    >
-                      Disconnect
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => router.push(`/workspace/data-sources/${selectedDataSource}/query`)}
+                        className="w-full"
+                      >
+                        <Table2 className="mr-2 h-4 w-4" />
+                        View Tables & Query
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDisconnect(selectedDataSource)}
+                        className="w-full"
+                      >
+                        Disconnect
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -762,6 +787,14 @@ export default function DataSourcesPage() {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-lg">Select Sheet/Table</h3>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/workspace/data-sources/${selectedDataSource}/query`)}
+                      >
+                        <Table2 className="mr-2 h-4 w-4" />
+                        Query Editor
+                      </Button>
                       {(() => {
                         const selectedTables = connectedDataSource.selectedTables || (connectedDataSource.selectedTable ? [connectedDataSource.selectedTable] : []);
                         const allTables = connectedDataSource.tables || [];
