@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sheet,
   SheetContent,
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Plus, Database, Check, X, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { cn } from "@/lib/utils";
 
 // Connection schema configuration for each data source type
@@ -413,7 +414,7 @@ export default function DataSourcesPage() {
     const isValid = await form.trigger();
 
     if (!isValid) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all required fields", "All required connection fields must be filled before testing.");
       return;
     }
 
@@ -432,20 +433,20 @@ export default function DataSourcesPage() {
           success: true,
           message: "Connection successful! You can now save this connection.",
         });
-        toast.success("Connection test successful!");
+        toast.success("Connection test successful!", "The connection to your data source was successful.");
       } else {
         setConnectionTestResult({
           success: false,
           message: "Connection failed. Please check your credentials and try again.",
         });
-        toast.error("Connection test failed");
+        toast.error("Connection test failed", "Unable to connect to the data source. Please check your credentials and try again.");
       }
     } catch (error) {
       setConnectionTestResult({
         success: false,
         message: "An error occurred while testing the connection.",
       });
-      toast.error("Connection test failed");
+      toast.error("Connection test failed", "An error occurred while testing the connection. Please try again.");
     } finally {
       setTestingConnection(false);
     }
@@ -472,7 +473,7 @@ export default function DataSourcesPage() {
       };
 
       addDataSource(newDataSource);
-      toast.success(`${dataSource.name} connected successfully`);
+      toast.success(`${dataSource.name} connected successfully`, "Your data source has been connected and is ready to use.");
       setShowConnectionSheet(false);
       setConnectingDataSourceId(null);
       setSelectedDataSource(connectingDataSourceId);
@@ -480,7 +481,7 @@ export default function DataSourcesPage() {
       setConnectionTestResult(null);
       form.reset();
     } catch (error) {
-      toast.error("Failed to connect data source");
+      toast.error("Failed to connect data source", "Unable to connect the data source. Please try again.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -494,7 +495,7 @@ export default function DataSourcesPage() {
     setLoading(true);
     try {
       // Simulate OAuth flow
-      toast.info("Redirecting to OAuth...");
+      toast.info("Redirecting to OAuth...", "You will be redirected to complete the OAuth authentication.");
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const newDataSource = {
@@ -551,8 +552,29 @@ export default function DataSourcesPage() {
   };
 
   const handleSelectTable = (dataSourceId: string, table: string) => {
-    updateDataSource(dataSourceId, { selectedTable: table });
-    toast.success(`Selected ${table}`);
+    const dataSource = getConnectedDataSource(dataSourceId);
+    if (!dataSource) return;
+
+    // Get current selected tables (support both old selectedTable and new selectedTables)
+    const currentSelected = dataSource.selectedTables || (dataSource.selectedTable ? [dataSource.selectedTable] : []);
+    
+    // Toggle table selection
+    const isSelected = currentSelected.includes(table);
+    const newSelectedTables = isSelected
+      ? currentSelected.filter((t) => t !== table)
+      : [...currentSelected, table];
+
+    updateDataSource(dataSourceId, { 
+      selectedTables: newSelectedTables,
+      // Keep selectedTable for backward compatibility (use first selected)
+      selectedTable: newSelectedTables.length > 0 ? newSelectedTables[0] : undefined
+    });
+
+    if (isSelected) {
+      toast.success(`Deselected ${table}`, `${newSelectedTables.length} table(s) selected`);
+    } else {
+      toast.success(`Selected ${table}`, `${newSelectedTables.length} table(s) selected`);
+    }
   };
 
   const handleDisconnect = (dataSourceId: string) => {
@@ -627,9 +649,14 @@ export default function DataSourcesPage() {
                     <div className="text-sm font-medium text-foreground truncate">
                       {dataSource.name}
                     </div>
-                    {connected && connectedData?.selectedTable && (
+                    {connected && connectedData && (
                       <div className="text-xs text-muted-foreground truncate mt-0.5">
-                        {connectedData.selectedTable}
+                        {(() => {
+                          const selectedTables = connectedData.selectedTables || (connectedData.selectedTable ? [connectedData.selectedTable] : []);
+                          if (selectedTables.length === 0) return null;
+                          if (selectedTables.length === 1) return selectedTables[0];
+                          return `${selectedTables.length} tables selected`;
+                        })()}
                       </div>
                     )}
                   </div>
@@ -732,31 +759,83 @@ export default function DataSourcesPage() {
             {connectedDataSource ? (
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-4">Select Sheet/Table</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-lg">Select Sheet/Table</h3>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const selectedTables = connectedDataSource.selectedTables || (connectedDataSource.selectedTable ? [connectedDataSource.selectedTable] : []);
+                        const allTables = connectedDataSource.tables || [];
+                        const allSelected = allTables.length > 0 && selectedTables.length === allTables.length;
+                        
+                        return (
+                          <>
+                            {selectedTables.length > 0 && (
+                              <Badge variant="secondary" className="text-sm">
+                                {selectedTables.length} {selectedTables.length === 1 ? 'table' : 'tables'} selected
+                              </Badge>
+                            )}
+                            {allTables.length > 0 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (allSelected) {
+                                    // Deselect all
+                                    updateDataSource(selectedDataSource, {
+                                      selectedTables: [],
+                                      selectedTable: undefined
+                                    });
+                                    toast.info("All tables deselected");
+                                  } else {
+                                    // Select all
+                                    updateDataSource(selectedDataSource, {
+                                      selectedTables: allTables,
+                                      selectedTable: allTables[0]
+                                    });
+                                    toast.success(`All ${allTables.length} tables selected`);
+                                  }
+                                }}
+                              >
+                                {allSelected ? "Deselect All" : "Select All"}
+                              </Button>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
                   <ScrollArea className="h-[400px]">
                 <div className="space-y-2">
                       {connectedDataSource.tables && connectedDataSource.tables.length > 0 ? (
-                        connectedDataSource.tables.map((table) => (
-                          <Card
-                            key={table}
-                            className={cn(
-                              "cursor-pointer transition-all hover:shadow-md",
-                              connectedDataSource.selectedTable === table &&
-                              "ring-2 ring-primary"
-                            )}
-                            onClick={() => handleSelectTable(selectedDataSource, table)}
-                          >
-                            <CardContent className="p-4 flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Database className="h-5 w-5 text-muted-foreground" />
-                                <span className="font-medium">{table}</span>
-                              </div>
-                              {connectedDataSource.selectedTable === table && (
-                                <Check className="h-5 w-5 text-primary" />
+                        connectedDataSource.tables.map((table) => {
+                          const selectedTables = connectedDataSource.selectedTables || (connectedDataSource.selectedTable ? [connectedDataSource.selectedTable] : []);
+                          const isSelected = selectedTables.includes(table);
+                          return (
+                            <Card
+                              key={table}
+                              className={cn(
+                                "cursor-pointer transition-all hover:shadow-md",
+                                isSelected && "ring-2 ring-primary bg-primary/5"
                               )}
-                            </CardContent>
-                          </Card>
-                        ))
+                              onClick={() => handleSelectTable(selectedDataSource, table)}
+                            >
+                              <CardContent className="p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => handleSelectTable(selectedDataSource, table)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <Database className="h-5 w-5 text-muted-foreground" />
+                                  <span className="font-medium">{table}</span>
+                                </div>
+                                {isSelected && (
+                                  <Check className="h-5 w-5 text-primary" />
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
                           <p>No tables/sheets available</p>

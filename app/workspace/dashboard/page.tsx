@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -21,13 +21,11 @@ export default function DashboardPage() {
     const { error } = await signOut();
     
     if (error) {
-      toast.error("Sign out failed", {
-        description: error.message,
-      });
+      toast.error("Sign out failed", error.message || "Failed to sign out. Please try again.");
       return;
     }
 
-    toast.success("Signed out successfully");
+    toast.success("Signed out successfully", "You have been successfully logged out.");
     router.push("/auth/login");
   };
 

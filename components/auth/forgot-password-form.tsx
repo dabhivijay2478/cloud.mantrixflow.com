@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -42,13 +42,12 @@ export function ForgotPasswordForm({
 
     if (error) {
       setIsSubmitting(false);
+      toast.error("Failed to send reset email", error.message || "Unable to send password reset email. Please try again.");
       return;
     }
 
     // Show success toast
-    toast.success("Reset email sent!", {
-      description: "Please check your email for password reset instructions.",
-    });
+    toast.success("Reset email sent!", "Please check your email for password reset instructions.");
 
     setIsSubmitting(false);
     

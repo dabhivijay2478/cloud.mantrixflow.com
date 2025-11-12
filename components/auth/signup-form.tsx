@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -55,6 +55,7 @@ export function SignupForm({
 
     if (error) {
       setIsSubmitting(false);
+      toast.error("Signup failed", error.message || "Failed to create account. Please try again.");
       return;
     }
 
@@ -65,10 +66,7 @@ export function SignupForm({
 
     if (!sessionData.session) {
       // Email confirmation required - don't try to create user in DB yet
-      toast.success("Account created!", {
-        description:
-          "Please check your email to confirm your account. The confirmation link will create your account.",
-      });
+      toast.success("Account created!", "Please check your email to confirm your account. The confirmation link will create your account.");
       setIsSubmitting(false);
       // Redirect to login with message
       router.push("/auth/login?confirmEmail=true");
@@ -77,10 +75,7 @@ export function SignupForm({
 
     // Session exists (email confirmation not required or already confirmed)
     // Show success toast
-    toast.success("Account created successfully!", {
-      description:
-        "Welcome! Your account has been created. You can now start using the app.",
-    });
+    toast.success("Account created successfully!", "Welcome! Your account has been created. You can now start using the app.");
 
     // Redirect on success
     router.push("/");
@@ -89,12 +84,18 @@ export function SignupForm({
 
   const handleGitHubLogin = async () => {
     setError(null);
-    await signInWithGitHub();
+    const { error } = await signInWithGitHub();
+    if (error) {
+      toast.error("GitHub signup failed", error.message || "Failed to sign up with GitHub. Please try again.");
+    }
   };
 
   const handleGoogleLogin = async () => {
     setError(null);
-    await signInWithGoogle();
+    const { error } = await signInWithGoogle();
+    if (error) {
+      toast.error("Google signup failed", error.message || "Failed to sign up with Google. Please try again.");
+    }
   };
 
   return (

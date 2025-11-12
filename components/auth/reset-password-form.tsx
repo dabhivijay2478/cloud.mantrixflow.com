@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -42,9 +42,7 @@ function ResetPasswordFormContent({
         refresh_token: refreshToken,
       });
     } else {
-      toast.error("Invalid reset link", {
-        description: "This password reset link is invalid or has expired.",
-      });
+      toast.error("Invalid reset link", "This password reset link is invalid or has expired.");
       setTimeout(() => {
         router.push("/auth/forgot-password");
       }, 3000);
@@ -61,9 +59,7 @@ function ResetPasswordFormContent({
 
   const onSubmit = async (data: ResetPasswordInput) => {
     if (!isValidToken) {
-      toast.error("Invalid session", {
-        description: "Please request a new password reset link.",
-      });
+      toast.error("Invalid session", "Please request a new password reset link.");
       return;
     }
 
@@ -74,13 +70,12 @@ function ResetPasswordFormContent({
 
     if (error) {
       setIsSubmitting(false);
+      toast.error("Password update failed", error.message || "Failed to update password. Please try again.");
       return;
     }
 
     // Show success toast
-    toast.success("Password updated!", {
-      description: "Your password has been successfully updated. You can now login with your new password.",
-    });
+    toast.success("Password updated!", "Your password has been successfully updated. You can now login with your new password.");
 
     // Redirect to login
     setTimeout(() => {

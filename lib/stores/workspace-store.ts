@@ -15,7 +15,8 @@ export interface DataSource {
   status: 'connected' | 'disconnected' | 'error'
   connectedAt?: string
   tables?: string[]
-  selectedTable?: string
+  selectedTable?: string // Keep for backward compatibility
+  selectedTables?: string[] // New field for multiple selection
 }
 
 export interface Dashboard {

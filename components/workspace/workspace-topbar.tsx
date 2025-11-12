@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { toast } from "@/lib/utils/toast";
 import { Search, Settings, LogOut, User } from "lucide-react";
 
 export function WorkspaceTopbar() {
@@ -47,7 +48,14 @@ export function WorkspaceTopbar() {
 
 
   const handleSignOut = async () => {
-    await signOut();
+    const { error } = await signOut();
+    
+    if (error) {
+      toast.error("Sign out failed", error.message || "Failed to sign out. Please try again.");
+      return;
+    }
+
+    toast.success("Signed out successfully", "You have been successfully logged out.");
     router.push("/auth/login");
   };
 

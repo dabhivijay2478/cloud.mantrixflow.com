@@ -30,7 +30,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -78,9 +78,9 @@ export default function SettingsPage() {
         name: orgName,
         slug: orgSlug,
       });
-      toast.success("Organization settings saved successfully");
+      toast.success("Organization settings saved successfully", "Your organization settings have been updated.");
     } catch (error) {
-      toast.error("Failed to save settings");
+      toast.error("Failed to save settings", "Unable to save organization settings. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -90,9 +90,9 @@ export default function SettingsPage() {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      toast.success("Preferences saved successfully");
+      toast.success("Preferences saved successfully", "Your notification preferences have been updated.");
     } catch (error) {
-      toast.error("Failed to save preferences");
+      toast.error("Failed to save preferences", "Unable to save preferences. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -102,9 +102,9 @@ export default function SettingsPage() {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      toast.success("Appearance settings saved successfully");
+      toast.success("Appearance settings saved successfully", "Your appearance settings have been updated.");
     } catch (error) {
-      toast.error("Failed to save appearance settings");
+      toast.error("Failed to save appearance settings", "Unable to save appearance settings. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -112,13 +112,13 @@ export default function SettingsPage() {
 
   const handleCopyApiKey = (key: string) => {
     navigator.clipboard.writeText(key);
-    toast.success("API key copied to clipboard");
+    toast.success("API key copied to clipboard", "The API key has been copied to your clipboard.");
   };
 
   const handleDeleteApiKey = (id: string) => {
     if (confirm("Are you sure you want to delete this API key? This action cannot be undone.")) {
       setApiKeys(apiKeys.filter((k) => k.id !== id));
-      toast.success("API key deleted");
+      toast.success("API key deleted", "The API key has been successfully deleted.");
     }
   };
 
