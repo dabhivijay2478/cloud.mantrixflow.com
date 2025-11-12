@@ -27,8 +27,13 @@ export default function ConnectPage() {
   const router = useRouter();
   const params = useParams();
   const connector = params.connector as string;
-  const { updateOnboarding, setOnboardingStep, addDataSource } = useWorkspaceStore();
+  const { updateOnboarding, setOnboardingStep, addDataSource, completeOnboarding, currentOrganization } = useWorkspaceStore();
   const [loading, setLoading] = useState(false);
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
+  };
 
   const form = useForm<ConnectionFormValues>({
     resolver: zodResolver(connectionSchema),
@@ -50,6 +55,7 @@ export default function ConnectPage() {
         name: `${connector} Connection`,
         type: connector as any,
         status: "connected" as const,
+        organizationId: currentOrganization?.id,
         connectedAt: new Date().toISOString(),
       };
 
@@ -75,6 +81,7 @@ export default function ConnectPage() {
         name: `${connector} Connection`,
         type: connector as any,
         status: "connected" as const,
+        organizationId: currentOrganization?.id,
         connectedAt: new Date().toISOString(),
       };
       addDataSource(dataSource);
@@ -116,10 +123,19 @@ export default function ConnectPage() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
-                <Button onClick={handleOAuth} disabled={loading}>
-                  Connect with Google
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={handleSkip}
+                    disabled={loading}
+                  >
+                    Skip for now
+                  </Button>
+                  <Button onClick={handleOAuth} disabled={loading}>
+                    Connect with Google
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -177,6 +193,12 @@ export default function ConnectPage() {
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleSkip}
+                >
+                  Skip for now
                 </Button>
               </div>
             </CardContent>
@@ -278,10 +300,20 @@ export default function ConnectPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
-                  <Button type="submit" disabled={loading}>
-                    {loading ? "Connecting..." : "Connect"}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleSkip}
+                      disabled={loading}
+                    >
+                      Skip for now
+                    </Button>
+                    <Button type="submit" disabled={loading}>
+                      {loading ? "Connecting..." : "Connect"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </form>
             </Form>

@@ -69,8 +69,13 @@ const dataSourceTypes = [
 
 export default function DataSourcePage() {
   const router = useRouter();
-  const { setOnboardingStep, updateOnboarding } = useWorkspaceStore();
+  const { setOnboardingStep, updateOnboarding, completeOnboarding } = useWorkspaceStore();
   const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
+  };
 
   const handleContinue = () => {
     if (!selectedType) {
@@ -133,10 +138,18 @@ export default function DataSourcePage() {
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
-              <Button onClick={handleContinue} disabled={!selectedType}>
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={handleSkip}
+                >
+                  Skip for now
+                </Button>
+                <Button onClick={handleContinue} disabled={!selectedType}>
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

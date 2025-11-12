@@ -320,7 +320,13 @@ const mockTables: Record<string, string[]> = {
 
 export default function DataSourcesPage() {
   const router = useRouter();
-  const { dataSources, addDataSource, updateDataSource, removeDataSource } = useWorkspaceStore();
+  const { dataSources, addDataSource, updateDataSource, removeDataSource, currentOrganization } = useWorkspaceStore();
+  
+  // Filter data sources by current organization
+  const filteredDataSources = currentOrganization
+    ? dataSources.filter((ds) => !ds.organizationId || ds.organizationId === currentOrganization.id)
+    : dataSources.filter((ds) => !ds.organizationId);
+  
   const [selectedDataSource, setSelectedDataSource] = useState<string | null>(null);
   const [showAddMode, setShowAddMode] = useState(false);
   const [showConnectionSheet, setShowConnectionSheet] = useState(false);
@@ -378,11 +384,11 @@ export default function DataSourcesPage() {
   }, [connectingDataSourceId]);
 
   const isConnected = (dataSourceId: string) => {
-    return dataSources.some((ds) => ds.id === dataSourceId && ds.status === "connected");
+    return filteredDataSources.some((ds) => ds.id === dataSourceId && ds.status === "connected");
   };
 
   const getConnectedDataSource = (dataSourceId: string) => {
-    return dataSources.find((ds) => ds.id === dataSourceId);
+    return filteredDataSources.find((ds) => ds.id === dataSourceId);
   };
 
   const handleDataSourceClick = (dataSourceId: string) => {
@@ -468,6 +474,7 @@ export default function DataSourcesPage() {
         name: dataSource.name,
         type: dataSource.type,
         status: "connected" as const,
+        organizationId: currentOrganization?.id,
         connectedAt: new Date().toISOString(),
         tables: mockTables[dataSource.type] || [],
       };
@@ -503,6 +510,7 @@ export default function DataSourcesPage() {
         name: dataSource.name,
         type: dataSource.type,
         status: "connected" as const,
+        organizationId: currentOrganization?.id,
         connectedAt: new Date().toISOString(),
         tables: mockTables[dataSource.type] || [],
       };
@@ -528,6 +536,7 @@ export default function DataSourcesPage() {
       name: file.name,
       type: dataSource.type,
       status: "connected" as const,
+      organizationId: currentOrganization?.id,
       connectedAt: new Date().toISOString(),
       tables: mockTables[dataSource.type] || [],
     };

@@ -13,6 +13,7 @@ export interface DataSource {
   name: string
   type: 'postgres' | 'mysql' | 'mongodb' | 'bigquery' | 'snowflake' | 'redshift' | 'excel' | 'csv' | 'google-sheets' | 'api' | 'azure-blob-storage' | 'customer-io' | 'milvus' | 'pinecone' | 's3' | 'databricks' | 'mssql' | 's3-datalake' | 'snowflake-cortex' | 'clickhouse' | 'hubspot' | 'pgvector' | 'salesforce' | 'weaviate'
   status: 'connected' | 'disconnected' | 'error'
+  organizationId?: string
   connectedAt?: string
   tables?: string[]
   selectedTable?: string // Keep for backward compatibility

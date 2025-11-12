@@ -11,7 +11,7 @@ import { Sparkles, ArrowRight } from "lucide-react";
 export default function WelcomePage() {
   const router = useRouter();
   const { user, loading } = useAuthStore();
-  const { onboarding, setOnboardingStep } = useWorkspaceStore();
+  const { onboarding, setOnboardingStep, completeOnboarding } = useWorkspaceStore();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -25,6 +25,11 @@ export default function WelcomePage() {
   const handleGetStarted = () => {
     setOnboardingStep("organization");
     router.push("/onboarding/organization");
+  };
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
   };
 
   if (loading) {
@@ -91,10 +96,15 @@ export default function WelcomePage() {
                 </div>
               </div>
             </div>
-            <Button onClick={handleGetStarted} className="w-full" size="lg">
-              Get Started
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="space-y-2">
+              <Button onClick={handleGetStarted} className="w-full" size="lg">
+                Get Started
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button onClick={handleSkip} variant="ghost" className="w-full">
+                Skip for now
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

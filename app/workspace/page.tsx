@@ -11,19 +11,24 @@ export default function WorkspacePage() {
   const router = useRouter();
   const { dashboards, dataSources, currentOrganization, setCurrentDashboard } = useWorkspaceStore();
 
+  // Filter dashboards by current organization
+  const filteredDashboards = currentOrganization
+    ? dashboards.filter((dashboard) => dashboard.organizationId === currentOrganization.id)
+    : [];
+
   const handleCreateDashboard = () => {
     router.push("/workspace/dashboards");
   };
 
   const handleOpenDashboard = (dashboardId: string) => {
-    const dashboard = dashboards.find((d) => d.id === dashboardId);
+    const dashboard = filteredDashboards.find((d) => d.id === dashboardId);
     if (dashboard) {
       setCurrentDashboard(dashboard);
       router.push(`/workspace/dashboards/${dashboardId}`);
     }
   };
 
-  if (dashboards.length === 0) {
+  if (filteredDashboards.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-2xl">
@@ -46,7 +51,7 @@ export default function WorkspacePage() {
                   <CardTitle className="text-lg">Dashboards</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{dashboards.length}</div>
+                  <div className="text-3xl font-bold">{filteredDashboards.length}</div>
                   <p className="text-sm text-muted-foreground">Total dashboards</p>
                 </CardContent>
               </Card>
@@ -84,7 +89,7 @@ export default function WorkspacePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {dashboards.map((dashboard) => (
+        {filteredDashboards.map((dashboard) => (
           <Card
             key={dashboard.id}
             className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden group relative"

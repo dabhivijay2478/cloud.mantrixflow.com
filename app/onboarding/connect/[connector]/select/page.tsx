@@ -12,10 +12,15 @@ export default function SelectTablePage() {
   const router = useRouter();
   const params = useParams();
   const connector = params.connector as string;
-  const { currentDataSource, updateDataSource, setOnboardingStep } = useWorkspaceStore();
+  const { currentDataSource, updateDataSource, setOnboardingStep, completeOnboarding } = useWorkspaceStore();
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
+  };
 
   useEffect(() => {
     // Simulate fetching tables
@@ -97,10 +102,18 @@ export default function SelectTablePage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
-                  <Button onClick={handleContinue} disabled={!selectedTable}>
-                    Continue
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={handleSkip}
+                    >
+                      Skip for now
+                    </Button>
+                    <Button onClick={handleContinue} disabled={!selectedTable}>
+                      Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </>
             )}

@@ -35,6 +35,7 @@ import {
   FileText,
   Building2,
   ChevronsUpDown,
+  GitBranch,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 
@@ -115,6 +116,16 @@ export function WorkspaceSidebar() {
   const pathname = usePathname();
   const { currentOrganization, organizations, dashboards, dataSources, setCurrentOrganization } = useWorkspaceStore();
 
+  // Filter dashboards by current organization
+  const filteredDashboards = currentOrganization
+    ? dashboards.filter((dashboard) => dashboard.organizationId === currentOrganization.id)
+    : [];
+  
+  // Filter data sources by current organization
+  const filteredDataSources = currentOrganization
+    ? dataSources.filter((ds) => !ds.organizationId || ds.organizationId === currentOrganization.id)
+    : dataSources.filter((ds) => !ds.organizationId);
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-2">
@@ -149,9 +160,9 @@ export function WorkspaceSidebar() {
                   <a href="/workspace/dashboards">
                     <FileText className="h-4 w-4" />
                     <span>Dashboards</span>
-                    {dashboards.length > 0 && (
+                    {filteredDashboards.length > 0 && (
                       <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                        {dashboards.length}
+                        {filteredDashboards.length}
                       </span>
                     )}
                   </a>
@@ -166,11 +177,23 @@ export function WorkspaceSidebar() {
                   <a href="/workspace/data-sources">
                     <Database className="h-4 w-4" />
                     <span>Data Sources</span>
-                    {dataSources.length > 0 && (
+                    {filteredDataSources.length > 0 && (
                       <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                        {dataSources.length}
+                        {filteredDataSources.length}
                       </span>
                     )}
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname?.startsWith("/workspace/data-pipelines")}
+                  tooltip="Data Pipelines"
+                >
+                  <a href="/workspace/data-pipelines">
+                    <GitBranch className="h-4 w-4" />
+                    <span>Data Pipelines</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

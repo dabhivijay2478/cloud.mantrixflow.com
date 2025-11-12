@@ -23,8 +23,13 @@ type OrganizationFormValues = z.infer<typeof organizationSchema>;
 
 export default function OrganizationPage() {
   const router = useRouter();
-  const { addOrganization, setOnboardingStep, updateOnboarding } = useWorkspaceStore();
+  const { addOrganization, setOnboardingStep, updateOnboarding, completeOnboarding } = useWorkspaceStore();
   const [loading, setLoading] = useState(false);
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
+  };
 
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationSchema),
@@ -141,10 +146,20 @@ export default function OrganizationPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
-                  <Button type="submit" disabled={loading}>
-                    Continue
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleSkip}
+                      disabled={loading}
+                    >
+                      Skip for now
+                    </Button>
+                    <Button type="submit" disabled={loading}>
+                      Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </form>
             </Form>

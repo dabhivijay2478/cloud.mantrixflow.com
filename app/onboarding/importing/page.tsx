@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -9,7 +10,12 @@ import { Database, CheckCircle2 } from "lucide-react";
 
 export default function ImportingPage() {
   const router = useRouter();
-  const { setOnboardingStep } = useWorkspaceStore();
+  const { setOnboardingStep, completeOnboarding } = useWorkspaceStore();
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
+  };
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Connecting to data source...");
 
@@ -69,6 +75,15 @@ export default function ImportingPage() {
                 <span className="text-sm font-medium">Data imported successfully!</span>
               </div>
             )}
+            <div className="pt-4">
+              <Button
+                variant="ghost"
+                onClick={handleSkip}
+                className="w-full"
+              >
+                Skip for now
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
