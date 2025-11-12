@@ -84,6 +84,26 @@ const executeQuery = async (
   };
 };
 
+// Check if data source type supports SQL queries
+const supportsSQLQueries = (type: string): boolean => {
+  const sqlTypes = [
+    "postgres",
+    "mysql",
+    "mssql",
+    "redshift",
+    "clickhouse",
+    "pgvector",
+    "bigquery",
+    "snowflake",
+    "snowflake-cortex",
+    "databricks",
+    "google-sheets",
+    "excel",
+    "csv",
+  ];
+  return sqlTypes.includes(type);
+};
+
 // Get language for Monaco editor based on data source type
 const getLanguageForDataSource = (type: string): string => {
   const languageMap: Record<string, string> = {
@@ -148,16 +168,21 @@ export default function DataSourceQueryPage() {
   
   const editorRef = useRef<any>(null);
   const language = dataSource ? getLanguageForDataSource(dataSource.type) : "sql";
+  
+  // Check if SQL editor should be shown
+  const shouldShowSQLEditor = dataSource && 
+    dataSource.status === "connected" && 
+    supportsSQLQueries(dataSource.type);
 
   useEffect(() => {
-    if (dataSource && !query) {
+    if (dataSource && !query && shouldShowSQLEditor) {
       const defaultQuery = getDefaultQuery(
         dataSource.type,
         dataSource.selectedTable || dataSource.tables?.[0]
       );
       setQuery(defaultQuery);
     }
-  }, [dataSource, query]);
+  }, [dataSource, query, shouldShowSQLEditor]);
 
   if (!dataSource) {
     return (
@@ -173,6 +198,32 @@ export default function DataSourceQueryPage() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Data Sources
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Check if data source is connected
+  if (dataSource.status !== "connected") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Data source is not connected</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Please connect the data source first to view tables and run queries.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/workspace/data-sources")}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Data Sources
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -202,11 +253,30 @@ export default function DataSourceQueryPage() {
     }
   };
 
-  const handleTableClick = (tableName: string) => {
-    const newQuery = getDefaultQuery(dataSource.type, tableName);
-    setQuery(newQuery);
-    if (editorRef.current) {
-      editorRef.current.setValue(newQuery);
+  const handleTableClick = async (tableName: string) => {
+    if (shouldShowSQLEditor) {
+      const newQuery = getDefaultQuery(dataSource.type, tableName);
+      setQuery(newQuery);
+      if (editorRef.current) {
+        editorRef.current.setValue(newQuery);
+      }
+    } else {
+      // For non-SQL data sources, directly load table data
+      setLoading(true);
+      setError(null);
+      setResults(null);
+      
+      try {
+        const query = getDefaultQuery(dataSource.type, tableName);
+        const result = await executeQuery(dataSourceId, dataSource.type, query);
+        setResults(result);
+        toast.success("Table loaded successfully", `Loaded ${result.rows.length} rows`);
+      } catch (err: any) {
+        setError(err.message || "Failed to load table data");
+        toast.error("Failed to load table", err.message || "An error occurred while loading the table.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -255,23 +325,25 @@ export default function DataSourceQueryPage() {
             <Badge variant={dataSource.status === "connected" ? "default" : "secondary"}>
               {dataSource.status}
             </Badge>
-            <Button
-              onClick={handleExecuteQuery}
-              disabled={loading || !query.trim()}
-              size="sm"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Executing...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Run Query
-                </>
-              )}
-            </Button>
+            {shouldShowSQLEditor && (
+              <Button
+                onClick={handleExecuteQuery}
+                disabled={loading || !query.trim()}
+                size="sm"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Executing...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Run Query
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -327,135 +399,187 @@ export default function DataSourceQueryPage() {
 
           {/* Query Editor and Results */}
           <ResizablePanel defaultSize={80} minSize={50}>
-            <ResizablePanelGroup direction="vertical" className="h-full">
-              {/* Query Editor */}
-              <ResizablePanel
-                defaultSize={editorExpanded ? 100 : 50}
-                minSize={20}
-                maxSize={resultsExpanded ? 20 : 100}
-                collapsible
-              >
-                <Card className="h-full flex flex-col border-0 rounded-none">
-                  <CardHeader className="flex-shrink-0 border-b px-4 py-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium">Query Editor</CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditorExpanded(!editorExpanded);
-                          setResultsExpanded(false);
-                        }}
-                      >
-                        {editorExpanded ? (
-                          <Minimize2 className="h-4 w-4" />
-                        ) : (
-                          <Maximize2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 min-h-0 p-0">
-                    <Editor
-                      height="100%"
-                      language={language}
-                      value={query}
-                      onChange={(value) => setQuery(value || "")}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        wordWrap: "on",
-                        automaticLayout: true,
-                        scrollBeyondLastLine: false,
-                        tabSize: 2,
-                        insertSpaces: true,
-                        formatOnPaste: true,
-                        formatOnType: true,
-                      }}
-                      onMount={(editor) => {
-                        editorRef.current = editor;
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              </ResizablePanel>
-
-              <ResizableHandle withHandle />
-
-              {/* Results */}
-              <ResizablePanel
-                defaultSize={resultsExpanded ? 100 : 50}
-                minSize={20}
-                maxSize={editorExpanded ? 20 : 100}
-                collapsible
-              >
-                <Card className="h-full flex flex-col border-0 rounded-none">
-                  <CardHeader className="flex-shrink-0 border-b px-4 py-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium">
-                        Results
-                        {results && (
-                          <Badge variant="secondary" className="ml-2">
-                            {results.rows.length} rows
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setResultsExpanded(!resultsExpanded);
-                          setEditorExpanded(false);
-                        }}
-                      >
-                        {resultsExpanded ? (
-                          <Minimize2 className="h-4 w-4" />
-                        ) : (
-                          <Maximize2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 min-h-0 overflow-auto p-4">
-                    {loading ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                          <p className="text-muted-foreground">Executing query...</p>
-                        </div>
+            {shouldShowSQLEditor ? (
+              <ResizablePanelGroup direction="vertical" className="h-full">
+                {/* Query Editor */}
+                <ResizablePanel
+                  defaultSize={editorExpanded ? 100 : 50}
+                  minSize={20}
+                  maxSize={resultsExpanded ? 20 : 100}
+                  collapsible
+                >
+                  <Card className="h-full flex flex-col border-0 rounded-none">
+                    <CardHeader className="flex-shrink-0 border-b px-4 py-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium">Query Editor</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditorExpanded(!editorExpanded);
+                            setResultsExpanded(false);
+                          }}
+                        >
+                          {editorExpanded ? (
+                            <Minimize2 className="h-4 w-4" />
+                          ) : (
+                            <Maximize2 className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                    ) : error ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <p className="text-destructive font-medium mb-2">Error</p>
-                          <p className="text-sm text-muted-foreground">{error}</p>
-                        </div>
-                      </div>
-                    ) : results ? (
-                      <DataTable
-                        columns={columns}
-                        data={results.rows}
-                        pagination={true}
-                        pageSize={20}
-                        filterable={true}
-                        filterColumn={results.columns[0]}
-                        filterPlaceholder="Filter results..."
+                    </CardHeader>
+                    <CardContent className="flex-1 min-h-0 p-0">
+                      <Editor
+                        height="100%"
+                        language={language}
+                        value={query}
+                        onChange={(value) => setQuery(value || "")}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          wordWrap: "on",
+                          automaticLayout: true,
+                          scrollBeyondLastLine: false,
+                          tabSize: 2,
+                          insertSpaces: true,
+                          formatOnPaste: true,
+                          formatOnType: true,
+                        }}
+                        onMount={(editor) => {
+                          editorRef.current = editor;
+                        }}
                       />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                          <p className="text-muted-foreground">
-                            Click "Run Query" to execute your query
-                          </p>
-                        </div>
+                    </CardContent>
+                  </Card>
+                </ResizablePanel>
+
+                <ResizableHandle withHandle />
+
+                {/* Results */}
+                <ResizablePanel
+                  defaultSize={resultsExpanded ? 100 : 50}
+                  minSize={20}
+                  maxSize={editorExpanded ? 20 : 100}
+                  collapsible
+                >
+                  <Card className="h-full flex flex-col border-0 rounded-none">
+                    <CardHeader className="flex-shrink-0 border-b px-4 py-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium">
+                          Results
+                          {results && (
+                            <Badge variant="secondary" className="ml-2">
+                              {results.rows.length} rows
+                            </Badge>
+                          )}
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setResultsExpanded(!resultsExpanded);
+                            setEditorExpanded(false);
+                          }}
+                        >
+                          {resultsExpanded ? (
+                            <Minimize2 className="h-4 w-4" />
+                          ) : (
+                            <Maximize2 className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
+                    </CardHeader>
+                    <CardContent className="flex-1 min-h-0 overflow-auto p-4">
+                      {loading ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                            <p className="text-muted-foreground">Executing query...</p>
+                          </div>
+                        </div>
+                      ) : error ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <p className="text-destructive font-medium mb-2">Error</p>
+                            <p className="text-sm text-muted-foreground">{error}</p>
+                          </div>
+                        </div>
+                      ) : results ? (
+                        <DataTable
+                          columns={columns}
+                          data={results.rows}
+                          pagination={true}
+                          pageSize={20}
+                          filterable={true}
+                          filterColumn={results.columns[0]}
+                          filterPlaceholder="Filter results..."
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">
+                              Click "Run Query" to execute your query
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            ) : (
+              // View for non-SQL data sources or when SQL editor shouldn't be shown
+              <Card className="h-full flex flex-col border-0 rounded-none">
+                <CardHeader className="flex-shrink-0 border-b px-4 py-2">
+                  <CardTitle className="text-sm font-medium">
+                    Tables & Data
+                    {results && (
+                      <Badge variant="secondary" className="ml-2">
+                        {results.rows.length} rows
+                      </Badge>
                     )}
-                  </CardContent>
-                </Card>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 min-h-0 overflow-auto p-4">
+                  {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                        <p className="text-muted-foreground">Loading data...</p>
+                      </div>
+                    </div>
+                  ) : error ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-destructive font-medium mb-2">Error</p>
+                        <p className="text-sm text-muted-foreground">{error}</p>
+                      </div>
+                    </div>
+                  ) : results ? (
+                    <DataTable
+                      columns={columns}
+                      data={results.rows}
+                      pagination={true}
+                      pageSize={20}
+                      filterable={true}
+                      filterColumn={results.columns[0]}
+                      filterPlaceholder="Filter results..."
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                          Select a table from the sidebar to view data
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
