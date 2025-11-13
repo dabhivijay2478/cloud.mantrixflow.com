@@ -22,9 +22,49 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Plus, Database, Check, X, Loader2, Table2 } from "lucide-react";
+import { SQLResultViewer } from "@/components/bi/sql-result-viewer";
+import { Plus, Database, Check, X, Loader2, Table2, Globe, Server, Cloud, Search, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "@/lib/utils/toast";
 import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+// Using simple-icons through react-icons/si (Si prefix icons)
+import { 
+  SiPostgresql, 
+  SiMysql, 
+  SiMongodb, 
+  SiGooglecloud, 
+  SiSnowflake, 
+  SiAmazon, 
+  SiDatabricks,
+  SiClickhouse,
+  SiHubspot,
+  SiSalesforce,
+  SiGooglesheets
+} from "react-icons/si";
+// Using react-icons for additional icons
+import { 
+  FaFileExcel, 
+  FaVectorSquare,
+  FaDatabase,
+  FaCloud as FaCloudIcon
+} from "react-icons/fa";
+import { 
+  BiNetworkChart
+} from "react-icons/bi";
 
 // Connection schema configuration for each data source type
 const connectionSchemas: Record<string, {
@@ -264,32 +304,63 @@ const buildConnectionSchema = (dataSourceType: string) => {
 
 type ConnectionFormValues = Record<string, string>;
 
+// Icon component helper
+const getIconComponent = (iconType: string, size: number = 24) => {
+  const iconMap: Record<string, React.ReactNode> = {
+    "azure-blob-storage": <Cloud size={size} className="text-blue-500" />,
+    "customer-io": <BiNetworkChart size={size} className="text-purple-500" />,
+    "milvus": <FaVectorSquare size={size} className="text-green-500" />,
+    "pinecone": <FaCloudIcon size={size} className="text-blue-400" />,
+    "s3": <SiAmazon size={size} className="text-orange-500" />,
+    "snowflake": <SiSnowflake size={size} className="text-blue-400" />,
+    "bigquery": <SiGooglecloud size={size} className="text-blue-500" />,
+    "databricks": <SiDatabricks size={size} className="text-orange-500" />,
+    "mssql": <Server size={size} className="text-red-500" />,
+    "postgres": <SiPostgresql size={size} className="text-blue-600" />,
+    "s3-datalake": <SiAmazon size={size} className="text-orange-500" />,
+    "snowflake-cortex": <SiSnowflake size={size} className="text-blue-400" />,
+    "clickhouse": <SiClickhouse size={size} className="text-yellow-500" />,
+    "hubspot": <SiHubspot size={size} className="text-orange-500" />,
+    "pgvector": <SiPostgresql size={size} className="text-blue-600" />,
+    "redshift": <SiAmazon size={size} className="text-orange-500" />,
+    "salesforce": <SiSalesforce size={size} className="text-blue-500" />,
+    "weaviate": <FaVectorSquare size={size} className="text-blue-400" />,
+    "mysql": <SiMysql size={size} className="text-blue-500" />,
+    "mongodb": <SiMongodb size={size} className="text-green-500" />,
+    "google-sheets": <SiGooglesheets size={size} className="text-green-500" />,
+    "excel": <FaFileExcel size={size} className="text-green-600" />,
+    "api": <Globe size={size} className="text-blue-500" />,
+  };
+  
+  return iconMap[iconType] || <Database size={size} className="text-muted-foreground" />;
+};
+
 // All available data sources based on the image
 const allDataSources = [
-  { id: "azure-blob-storage", name: "Azure Blob Storage", type: "azure-blob-storage" as const, icon: "📦" },
-  { id: "customer-io", name: "Customer IO", type: "customer-io" as const, icon: "➡️" },
-  { id: "milvus", name: "Milvus", type: "milvus" as const, icon: "👁️" },
-  { id: "pinecone", name: "Pinecone", type: "pinecone" as const, icon: "❄️" },
-  { id: "s3", name: "S3", type: "s3" as const, icon: "🪣" },
-  { id: "snowflake", name: "Snowflake", type: "snowflake" as const, icon: "❄️" },
-  { id: "bigquery", name: "BigQuery", type: "bigquery" as const, icon: "🔍" },
-  { id: "databricks-lakehouse", name: "Databricks Lakehouse", type: "databricks" as const, icon: "📊" },
-  { id: "ms-sql-server", name: "MS SQL Server", type: "mssql" as const, icon: "🔴" },
-  { id: "postgres", name: "Postgres", type: "postgres" as const, icon: "🐘" },
-  { id: "s3-data-lake", name: "S3 Data Lake", type: "s3-datalake" as const, icon: "📥" },
-  { id: "snowflake-cortex", name: "Snowflake Cortex", type: "snowflake-cortex" as const, icon: "❄️" },
-  { id: "clickhouse", name: "Clickhouse", type: "clickhouse" as const, icon: "📊" },
-  { id: "hubspot", name: "HubSpot", type: "hubspot" as const, icon: "⭐" },
-  { id: "pgvector", name: "PGVector", type: "pgvector" as const, icon: "🐘" },
-  { id: "redshift", name: "Redshift", type: "redshift" as const, icon: "📦" },
-  { id: "salesforce", name: "Salesforce", type: "salesforce" as const, icon: "💼", enterprise: true },
-  { id: "weaviate", name: "Weaviate", type: "weaviate" as const, icon: "🌊" },
+  { id: "azure-blob-storage", name: "Azure Blob Storage", type: "azure-blob-storage" as const, iconType: "azure-blob-storage" },
+  { id: "customer-io", name: "Customer IO", type: "customer-io" as const, iconType: "customer-io" },
+  { id: "milvus", name: "Milvus", type: "milvus" as const, iconType: "milvus" },
+  { id: "pinecone", name: "Pinecone", type: "pinecone" as const, iconType: "pinecone" },
+  { id: "s3", name: "S3", type: "s3" as const, iconType: "s3" },
+  { id: "snowflake", name: "Snowflake", type: "snowflake" as const, iconType: "snowflake" },
+  { id: "bigquery", name: "BigQuery", type: "bigquery" as const, iconType: "bigquery" },
+  { id: "databricks-lakehouse", name: "Databricks Lakehouse", type: "databricks" as const, iconType: "databricks" },
+  { id: "ms-sql-server", name: "MS SQL Server", type: "mssql" as const, iconType: "mssql" },
+  { id: "postgres", name: "Postgres", type: "postgres" as const, iconType: "postgres" },
+  { id: "s3-data-lake", name: "S3 Data Lake", type: "s3-datalake" as const, iconType: "s3-datalake" },
+  { id: "snowflake-cortex", name: "Snowflake Cortex", type: "snowflake-cortex" as const, iconType: "snowflake-cortex" },
+  { id: "clickhouse", name: "Clickhouse", type: "clickhouse" as const, iconType: "clickhouse" },
+  { id: "hubspot", name: "HubSpot", type: "hubspot" as const, iconType: "hubspot" },
+  { id: "pgvector", name: "PGVector", type: "pgvector" as const, iconType: "pgvector" },
+  { id: "redshift", name: "Redshift", type: "redshift" as const, iconType: "redshift" },
+  { id: "salesforce", name: "Salesforce", type: "salesforce" as const, iconType: "salesforce", enterprise: true },
+  { id: "weaviate", name: "Weaviate", type: "weaviate" as const, iconType: "weaviate" },
   // Additional common data sources
-  { id: "mysql", name: "MySQL", type: "mysql" as const, icon: "🗄️" },
-  { id: "mongodb", name: "MongoDB", type: "mongodb" as const, icon: "🍃" },
-  { id: "google-sheets", name: "Google Sheets", type: "google-sheets" as const, icon: "📊" },
-  { id: "excel", name: "Excel / CSV", type: "excel" as const, icon: "📄" },
-  { id: "api", name: "REST API", type: "api" as const, icon: "🌐" },
+  { id: "mysql", name: "MySQL", type: "mysql" as const, iconType: "mysql" },
+  { id: "mongodb", name: "MongoDB", type: "mongodb" as const, iconType: "mongodb" },
+  { id: "google-sheets", name: "Google Sheets", type: "google-sheets" as const, iconType: "google-sheets" },
+  { id: "excel", name: "Excel / CSV", type: "excel" as const, iconType: "excel" },
+  { id: "api", name: "REST API", type: "api" as const, iconType: "api" },
 ];
 
 // Mock tables/sheets for demonstration
@@ -334,6 +405,13 @@ export default function DataSourcesPage() {
   const [loading, setLoading] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [selectedTableForView, setSelectedTableForView] = useState<string | null>(null);
+  const [tableData, setTableData] = useState<{ columns: string[]; rows: any[] } | null>(null);
+  const [loadingTableData, setLoadingTableData] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortColumn, setSortColumn] = useState<string>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const getCurrentSchema = () => {
     if (!connectingDataSourceId) return null;
@@ -355,23 +433,28 @@ export default function DataSourcesPage() {
   };
 
   const form = useForm<ConnectionFormValues>({
-    resolver: (data) => {
-      if (!connectingDataSourceId) return { values: data, errors: {} };
-      const dataSource = allDataSources.find((ds) => ds.id === connectingDataSourceId);
-      if (!dataSource) return { values: data, errors: {} };
-      const schema = buildConnectionSchema(dataSource.type);
-      const result = schema.safeParse(data);
-      if (result.success) {
-        return { values: result.data, errors: {} };
-      } else {
-        const errors: Record<string, { message: string }> = {};
-        result.error.errors.forEach((err) => {
-          if (err.path[0]) {
-            errors[err.path[0] as string] = { message: err.message };
-          }
-        });
-        return { values: data, errors };
+    // @ts-expect-error - Custom resolver with dynamic schema
+    resolver: (values, context, options) => {
+      if (!connectingDataSourceId) {
+        return { values: values as ConnectionFormValues, errors: {} };
       }
+      const dataSource = allDataSources.find((ds) => ds.id === connectingDataSourceId);
+      if (!dataSource) {
+        return { values: values as ConnectionFormValues, errors: {} };
+      }
+      const schema = buildConnectionSchema(dataSource.type);
+      const result = schema.safeParse(values);
+      if (result.success) {
+        return { values: result.data as ConnectionFormValues, errors: {} };
+      }
+      const errors: Record<string, { message: string }> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path[0];
+        if (path && typeof path === "string") {
+          errors[path] = { message: issue.message };
+        }
+      });
+      return { values: {} as ConnectionFormValues, errors };
     },
     defaultValues: getDefaultValues(),
   });
@@ -560,6 +643,37 @@ export default function DataSourcesPage() {
     return "form";
   };
 
+  // Mock function to load table data
+  const loadTableData = async (dataSourceId: string, tableName: string) => {
+    setLoadingTableData(true);
+    setTableData(null);
+    
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Mock data based on table name
+      const mockData = {
+        columns: ["id", "name", "email", "created_at", "status"],
+        rows: Array.from({ length: 50 }, (_, i) => ({
+          id: i + 1,
+          name: `${tableName} Row ${i + 1}`,
+          email: `row${i + 1}@example.com`,
+          created_at: new Date(Date.now() - Math.random() * 10000000000).toISOString().split("T")[0],
+          status: i % 3 === 0 ? "active" : i % 3 === 1 ? "inactive" : "pending",
+        })),
+      };
+      
+      setTableData(mockData);
+      setSelectedTableForView(tableName);
+      toast.success("Table data loaded", `Loaded ${mockData.rows.length} rows from ${tableName}`);
+    } catch (error: any) {
+      toast.error("Failed to load table data", error.message || "An error occurred");
+    } finally {
+      setLoadingTableData(false);
+    }
+  };
+
   const handleSelectTable = (dataSourceId: string, table: string) => {
     const dataSource = getConnectedDataSource(dataSourceId);
     if (!dataSource) return;
@@ -586,6 +700,10 @@ export default function DataSourcesPage() {
     }
   };
 
+  const handleViewTableData = (dataSourceId: string, table: string) => {
+    loadTableData(dataSourceId, table);
+  };
+
   const handleDisconnect = (dataSourceId: string) => {
     if (confirm("Are you sure you want to disconnect this data source?")) {
       removeDataSource(dataSourceId);
@@ -602,22 +720,266 @@ export default function DataSourcesPage() {
     ? getConnectedDataSource(selectedDataSource)
     : null;
 
+  // Get all connected data sources
+  const connectedDataSources = filteredDataSources.filter((ds) => ds.status === "connected");
+  const hasOnlyOneConnected = connectedDataSources.length === 1;
+  const singleConnectedDataSource = hasOnlyOneConnected ? connectedDataSources[0] : null;
+
+  // Filter and sort data sources for table view
+  const getFilteredAndSortedDataSources = () => {
+    let filtered = [...allDataSources];
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter((ds) =>
+        ds.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((ds) => {
+        const connected = isConnected(ds.id);
+        if (statusFilter === "connected") return connected;
+        if (statusFilter === "not-connected") return !connected;
+        return true;
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: string | number = "";
+      let bValue: string | number = "";
+
+      switch (sortColumn) {
+        case "name":
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case "connector":
+          aValue = a.type.toLowerCase();
+          bValue = b.type.toLowerCase();
+          break;
+        case "connections":
+          const aConnected = isConnected(a.id);
+          const bConnected = isConnected(b.id);
+          aValue = aConnected ? 1 : 0;
+          bValue = bConnected ? 1 : 0;
+          break;
+        case "last-sync":
+          const aData = getConnectedDataSource(a.id);
+          const bData = getConnectedDataSource(b.id);
+          aValue = aData?.connectedAt ? new Date(aData.connectedAt).getTime() : 0;
+          bValue = bData?.connectedAt ? new Date(bData.connectedAt).getTime() : 0;
+          break;
+        case "status":
+          aValue = isConnected(a.id) ? "connected" : "not-connected";
+          bValue = isConnected(b.id) ? "connected" : "not-connected";
+          break;
+      }
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortDirection === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      } else {
+        return sortDirection === "asc" ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue);
+      }
+    });
+
+    return filtered;
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-4 w-4 ml-1" />
+    ) : (
+      <ArrowDown className="h-4 w-4 ml-1" />
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Data Sources</h1>
+          <h1 className="text-3xl font-bold">Sources</h1>
           <p className="text-muted-foreground">Connect and manage your data sources</p>
         </div>
-        {selectedDataSource && (
-          <Button variant="outline" onClick={() => setSelectedDataSource(null)}>
-            <X className="mr-2 h-4 w-4" />
-            Back to List
-        </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedDataSource && (
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSelectedDataSource(null);
+                setSelectedTableForView(null);
+                setTableData(null);
+              }}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Back to List
+            </Button>
+          )}
+          {!selectedDataSource && (
+            <Button onClick={() => setShowAddMode(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New source
+            </Button>
+          )}
+        </div>
       </div>
 
       {!selectedDataSource ? (
+        hasOnlyOneConnected && singleConnectedDataSource ? (
+          // Table view when only one data source is connected
+          <div className="space-y-4">
+            {/* Search and Filter */}
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="connected">Connected</SelectItem>
+                  <SelectItem value="not-connected">Not Connected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Table */}
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 font-semibold text-primary"
+                          onClick={() => handleSort("name")}
+                        >
+                          NAME
+                          {getSortIcon("name")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 font-semibold"
+                          onClick={() => handleSort("connector")}
+                        >
+                          CONNECTOR
+                          {getSortIcon("connector")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 font-semibold"
+                          onClick={() => handleSort("connections")}
+                        >
+                          CONNECTIONS
+                          {getSortIcon("connections")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 font-semibold"
+                          onClick={() => handleSort("last-sync")}
+                        >
+                          LAST SYNC
+                          {getSortIcon("last-sync")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 font-semibold"
+                          onClick={() => handleSort("status")}
+                        >
+                          STATUS
+                          {getSortIcon("status")}
+                        </Button>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredAndSortedDataSources().map((dataSource) => {
+                      const connected = isConnected(dataSource.id);
+                      const connectedData = getConnectedDataSource(dataSource.id);
+                      const selectedTables = connectedData?.selectedTables || (connectedData?.selectedTable ? [connectedData.selectedTable] : []);
+
+                      return (
+                        <TableRow
+                          key={dataSource.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleDataSourceClick(dataSource.id)}
+                        >
+                          <TableCell className="font-medium">{dataSource.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="shrink-0 w-5 h-5 flex items-center justify-center">
+                                {getIconComponent(dataSource.iconType, 20)}
+                              </div>
+                              <span className="capitalize">{dataSource.type}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {connected && selectedTables.length > 0
+                              ? `${selectedTables.length} ${selectedTables.length === 1 ? "connection" : "connections"}`
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {connectedData?.connectedAt
+                              ? new Date(connectedData.connectedAt).toLocaleDateString()
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {connected ? (
+                              <Badge className="bg-green-500 text-white border-0">
+                                <Check className="h-3 w-3 mr-1" />
+                                Connected
+                              </Badge>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
         // Grid view of all data sources
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {allDataSources.map((dataSource) => {
@@ -651,8 +1013,8 @@ export default function DataSourcesPage() {
                   </Badge>
                 )}
                 <CardContent className="p-1 flex items-center gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 bg-background border rounded-md flex items-center justify-center text-xl">
-                    {dataSource.icon}
+                  <div className="shrink-0 w-10 h-10 bg-background border rounded-md flex items-center justify-center">
+                    {getIconComponent(dataSource.iconType, 20)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-foreground truncate">
@@ -683,11 +1045,12 @@ export default function DataSourcesPage() {
                       <Table2 className="h-4 w-4" />
                     </Button>
                   )}
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
+        )
       ) : (
         // Sheet/Table selection view
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -695,7 +1058,7 @@ export default function DataSourcesPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="text-3xl">{selectedDataSourceData?.icon}</div>
+                  <div className="flex items-center justify-center">{getIconComponent(selectedDataSourceData?.iconType || "", 32)}</div>
                   <div>
                     <h3 className="font-semibold text-lg">{selectedDataSourceData?.name}</h3>
                     {selectedDataSourceData?.enterprise && (
@@ -791,11 +1154,25 @@ export default function DataSourcesPage() {
 
           <div className="lg:col-span-2">
             {connectedDataSource ? (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-lg">Select Sheet/Table</h3>
-                    <div className="flex items-center gap-2">
+              selectedTableForView && tableData ? (
+                // Table data view
+                <Card className="h-full flex flex-col">
+                  <CardContent className="p-6 flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTableForView(null);
+                            setTableData(null);
+                          }}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Back to Tables
+                        </Button>
+                        <h3 className="font-semibold text-lg">Table: {selectedTableForView}</h3>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -804,89 +1181,133 @@ export default function DataSourcesPage() {
                         <Table2 className="mr-2 h-4 w-4" />
                         Query Editor
                       </Button>
-                      {(() => {
-                        const selectedTables = connectedDataSource.selectedTables || (connectedDataSource.selectedTable ? [connectedDataSource.selectedTable] : []);
-                        const allTables = connectedDataSource.tables || [];
-                        const allSelected = allTables.length > 0 && selectedTables.length === allTables.length;
-                        
-                        return (
-                          <>
-                            {selectedTables.length > 0 && (
-                              <Badge variant="secondary" className="text-sm">
-                                {selectedTables.length} {selectedTables.length === 1 ? 'table' : 'tables'} selected
-                              </Badge>
-                            )}
-                            {allTables.length > 0 && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (allSelected) {
-                                    // Deselect all
-                                    updateDataSource(selectedDataSource, {
-                                      selectedTables: [],
-                                      selectedTable: undefined
-                                    });
-                                    toast.info("All tables deselected");
-                                  } else {
-                                    // Select all
-                                    updateDataSource(selectedDataSource, {
-                                      selectedTables: allTables,
-                                      selectedTable: allTables[0]
-                                    });
-                                    toast.success(`All ${allTables.length} tables selected`);
-                                  }
-                                }}
-                              >
-                                {allSelected ? "Deselect All" : "Select All"}
-                              </Button>
-                            )}
-                          </>
-                        );
-                      })()}
                     </div>
-                  </div>
-                  <ScrollArea className="h-[400px]">
-                <div className="space-y-2">
-                      {connectedDataSource.tables && connectedDataSource.tables.length > 0 ? (
-                        connectedDataSource.tables.map((table) => {
+                    <div className="flex-1 min-h-0">
+                      <SQLResultViewer
+                        columns={tableData.columns}
+                        rows={tableData.rows}
+                        loading={loadingTableData}
+                        error={null}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                // Table list view
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-lg">Select Sheet/Table</h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/workspace/data-sources/${selectedDataSource}/query`)}
+                        >
+                          <Table2 className="mr-2 h-4 w-4" />
+                          Query Editor
+                        </Button>
+                        {(() => {
                           const selectedTables = connectedDataSource.selectedTables || (connectedDataSource.selectedTable ? [connectedDataSource.selectedTable] : []);
-                          const isSelected = selectedTables.includes(table);
+                          const allTables = connectedDataSource.tables || [];
+                          const allSelected = allTables.length > 0 && selectedTables.length === allTables.length;
+                          
                           return (
-                            <Card
-                              key={table}
-                              className={cn(
-                                "cursor-pointer transition-all hover:shadow-md",
-                                isSelected && "ring-2 ring-primary bg-primary/5"
+                            <>
+                              {selectedTables.length > 0 && (
+                                <Badge variant="secondary" className="text-sm">
+                                  {selectedTables.length} {selectedTables.length === 1 ? 'table' : 'tables'} selected
+                                </Badge>
                               )}
-                              onClick={() => handleSelectTable(selectedDataSource, table)}
-                            >
-                              <CardContent className="p-4 flex items-center justify-between">
-                                <div className="flex items-center gap-3 flex-1">
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onCheckedChange={() => handleSelectTable(selectedDataSource, table)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                  <Database className="h-5 w-5 text-muted-foreground" />
-                                  <span className="font-medium">{table}</span>
-                                </div>
-                                {isSelected && (
-                                  <Check className="h-5 w-5 text-primary" />
-                                )}
-                              </CardContent>
-                            </Card>
+                              {allTables.length > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (allSelected) {
+                                      // Deselect all
+                                      updateDataSource(selectedDataSource, {
+                                        selectedTables: [],
+                                        selectedTable: undefined
+                                      });
+                                      toast.info("All tables deselected");
+                                    } else {
+                                      // Select all
+                                      updateDataSource(selectedDataSource, {
+                                        selectedTables: allTables,
+                                        selectedTable: allTables[0]
+                                      });
+                                      toast.success(`All ${allTables.length} tables selected`);
+                                    }
+                                  }}
+                                >
+                                  {allSelected ? "Deselect All" : "Select All"}
+                                </Button>
+                              )}
+                            </>
                           );
-                        })
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <p>No tables/sheets available</p>
+                        })()}
+                      </div>
                     </div>
-                  )}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-2">
+                        {connectedDataSource.tables && connectedDataSource.tables.length > 0 ? (
+                          connectedDataSource.tables.map((table) => {
+                            const selectedTables = connectedDataSource.selectedTables || (connectedDataSource.selectedTable ? [connectedDataSource.selectedTable] : []);
+                            const isSelected = selectedTables.includes(table);
+                            return (
+                              <Card
+                                key={table}
+                                className={cn(
+                                  "cursor-pointer transition-all hover:shadow-md",
+                                  isSelected && "ring-2 ring-primary bg-primary/5"
+                                )}
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-center justify-between">
+                                    <div 
+                                      className="flex items-center gap-3 flex-1 cursor-pointer"
+                                      onClick={() => handleSelectTable(selectedDataSource, table)}
+                                    >
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() => handleSelectTable(selectedDataSource, table)}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                      <Database className="h-5 w-5 text-muted-foreground" />
+                                      <span className="font-medium">{table}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {isSelected && (
+                                        <Check className="h-5 w-5 text-primary" />
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleViewTableData(selectedDataSource, table);
+                                        }}
+                                        className="h-8"
+                                      >
+                                        <Table2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <p>No tables/sheets available</p>
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )
             ) : (
               <Card>
                 <CardContent className="p-6">
@@ -917,8 +1338,8 @@ export default function DataSourcesPage() {
             <>
               <SheetHeader className="px-6 pt-6 pb-4 border-b bg-muted/30 shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="text-3xl bg-background p-2 rounded-lg border">
-                    {allDataSources.find((ds) => ds.id === connectingDataSourceId)?.icon}
+                  <div className="bg-background p-2 rounded-lg border flex items-center justify-center">
+                    {getIconComponent(allDataSources.find((ds) => ds.id === connectingDataSourceId)?.iconType || "", 32)}
                   </div>
                   <div className="flex-1">
                     <SheetTitle className="text-xl font-semibold">

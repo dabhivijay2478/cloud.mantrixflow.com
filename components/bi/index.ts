@@ -79,6 +79,15 @@ export type { ProgressBarProps } from "./progress-bar";
 export { DataTable, createSortableHeader } from "./data-table";
 export type { DataTableProps } from "./data-table";
 
+export { SQLEditor } from "./sql-editor";
+export type { SQLEditorProps } from "./sql-editor";
+
+export { SQLResultViewer } from "./sql-result-viewer";
+export type { SQLResultViewerProps } from "./sql-result-viewer";
+
+export { TableNavigation } from "./table-navigation";
+export type { TableNavigationProps } from "./table-navigation";
+
 // ============================================================================
 // Layout & Container Components
 // ============================================================================

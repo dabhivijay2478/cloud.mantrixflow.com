@@ -2,26 +2,34 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Editor from "@monaco-editor/react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { DataTable } from "@/components/bi/data-table";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SQLEditor } from "@/components/bi/sql-editor";
+import { SQLResultViewer } from "@/components/bi/sql-result-viewer";
+import { TableNavigation } from "@/components/bi/table-navigation";
 import {
   ArrowLeft,
   Play,
   Database,
   Loader2,
-  Table as TableIcon,
+  Link2,
+  Download,
+  ChevronDown,
+  Save,
   Maximize2,
   Minimize2,
 } from "lucide-react";
 import { toast } from "@/lib/utils/toast";
 import { cn } from "@/lib/utils";
-import type { ColumnDef } from "@tanstack/react-table";
 
 // Mock query execution - replace with actual API call
 const executeQuery = async (
@@ -45,30 +53,6 @@ const executeQuery = async (
         email: `user${i + 1}@example.com`,
         created_at: new Date(Date.now() - Math.random() * 10000000000).toISOString().split("T")[0],
         status: i % 3 === 0 ? "active" : i % 3 === 1 ? "inactive" : "pending",
-      })),
-    };
-  } else if (lowerQuery.includes("find") || lowerQuery.includes("db.")) {
-    // MongoDB-like query
-    return {
-      columns: ["_id", "name", "email", "age", "city"],
-      rows: Array.from({ length: 30 }, (_, i) => ({
-        _id: `507f1f77bcf86cd79943901${i}`,
-        name: `Document ${i + 1}`,
-        email: `doc${i + 1}@example.com`,
-        age: 20 + (i % 40),
-        city: ["New York", "London", "Tokyo", "Paris"][i % 4],
-      })),
-    };
-  } else if (lowerQuery.includes("get") || lowerQuery.includes("api")) {
-    // API-like query
-    return {
-      columns: ["id", "title", "description", "status", "updated_at"],
-      rows: Array.from({ length: 25 }, (_, i) => ({
-        id: `api-${i + 1}`,
-        title: `API Resource ${i + 1}`,
-        description: `Description for resource ${i + 1}`,
-        status: i % 2 === 0 ? "success" : "error",
-        updated_at: new Date().toISOString(),
       })),
     };
   }
@@ -140,8 +124,6 @@ const getDefaultQuery = (type: string, tableName?: string): string => {
     snowflake: `SELECT * FROM ${table} LIMIT 100;`,
     "snowflake-cortex": `SELECT * FROM ${table} LIMIT 100;`,
     databricks: `SELECT * FROM ${table} LIMIT 100;`,
-    mongodb: `db.${table}.find({}).limit(100)`,
-    api: `GET /api/v1/${table}`,
     "google-sheets": `SELECT * FROM "${table}" LIMIT 100`,
     excel: `SELECT * FROM [${table}] LIMIT 100`,
     csv: `SELECT * FROM ${table} LIMIT 100`,
@@ -159,12 +141,13 @@ export default function DataSourceQueryPage() {
   const dataSource = dataSources.find((ds) => ds.id === dataSourceId);
   
   const [query, setQuery] = useState("");
-  const [queryHistory, setQueryHistory] = useState<string[]>([]);
   const [results, setResults] = useState<{ columns: string[]; rows: any[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editorExpanded, setEditorExpanded] = useState(false);
-  const [resultsExpanded, setResultsExpanded] = useState(false);
+  const [queryTitle, setQueryTitle] = useState("Untitled SQL query");
+  const [selectedTable, setSelectedTable] = useState<string | undefined>();
+  const [resultsFullScreen, setResultsFullScreen] = useState(false);
+  const [editorSize, setEditorSize] = useState(60);
   
   const editorRef = useRef<any>(null);
   const language = dataSource ? getLanguageForDataSource(dataSource.type) : "sql";
@@ -243,7 +226,6 @@ export default function DataSourceQueryPage() {
     try {
       const result = await executeQuery(dataSourceId, dataSource.type, query);
       setResults(result);
-      setQueryHistory((prev) => [query, ...prev.slice(0, 9)]);
       toast.success("Query executed successfully", `Returned ${result.rows.length} rows`);
     } catch (err: any) {
       setError(err.message || "Failed to execute query");
@@ -253,96 +235,129 @@ export default function DataSourceQueryPage() {
     }
   };
 
-  const handleTableClick = async (tableName: string) => {
-    if (shouldShowSQLEditor) {
-      const newQuery = getDefaultQuery(dataSource.type, tableName);
-      setQuery(newQuery);
-      if (editorRef.current) {
-        editorRef.current.setValue(newQuery);
-      }
-    } else {
-      // For non-SQL data sources, directly load table data
-      setLoading(true);
-      setError(null);
-      setResults(null);
-      
-      try {
-        const query = getDefaultQuery(dataSource.type, tableName);
-        const result = await executeQuery(dataSourceId, dataSource.type, query);
-        setResults(result);
-        toast.success("Table loaded successfully", `Loaded ${result.rows.length} rows`);
-      } catch (err: any) {
-        setError(err.message || "Failed to load table data");
-        toast.error("Failed to load table", err.message || "An error occurred while loading the table.");
-      } finally {
-        setLoading(false);
-      }
+  const handleTableSelect = (tableName: string) => {
+    setSelectedTable(tableName);
+    const newQuery = getDefaultQuery(dataSource.type, tableName);
+    setQuery(newQuery);
+    if (editorRef.current) {
+      editorRef.current.setValue(newQuery);
     }
   };
 
-  // Create columns for data table
-  const columns: ColumnDef<any>[] =
-    results?.columns.map((col) => ({
-      accessorKey: col,
-      header: col,
-      cell: ({ getValue }) => {
-        const value = getValue();
-        if (value === null || value === undefined) {
-          return <span className="text-muted-foreground">NULL</span>;
-        }
-        if (typeof value === "object") {
-          return <span className="text-muted-foreground">{JSON.stringify(value)}</span>;
-        }
-        return <span>{String(value)}</span>;
-      },
-    })) || [];
+  const handleDownload = (format: "csv" | "json" | "excel") => {
+    if (!results) return;
+    
+    if (format === "csv") {
+      const headers = results.columns.join(",");
+      const csvRows = results.rows.map((row) =>
+        results.columns.map((col) => {
+          const val = row[col];
+          if (val === null || val === undefined) return "";
+          if (typeof val === "object") return JSON.stringify(val);
+          return String(val).replace(/"/g, '""');
+        }).join(",")
+      );
+      const csv = [headers, ...csvRows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "query-results.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === "json") {
+      const json = JSON.stringify(results.rows, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "query-results.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    toast.success("Download started", `Downloading results as ${format.toUpperCase()}`);
+  };
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
-        <div className="flex items-center justify-between px-6 py-4">
+    <div className="h-screen flex flex-col bg-background">
+      {/* Top Header Bar */}
+      <div className="border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between px-6 py-1">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push("/workspace/data-sources")}
+              className="h-8"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Database className="h-6 w-6" />
-                {dataSource.name}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Query Editor - {dataSource.type.toUpperCase()}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold">{queryTitle}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={dataSource.status === "connected" ? "default" : "secondary"}>
-              {dataSource.status}
-            </Badge>
             {shouldShowSQLEditor && (
-              <Button
-                onClick={handleExecuteQuery}
-                disabled={loading || !query.trim()}
-                size="sm"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Executing...
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    Run Query
-                  </>
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8">
+                      <Save className="h-4 w-4 mr-1" />
+                      Save
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save query
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save as new query
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Copy link">
+                  <Link2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={handleExecuteQuery}
+                  disabled={loading || !query.trim()}
+                  size="sm"
+                  className="h-8"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Executing...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Run query
+                    </>
+                  )}
+                </Button>
+                {results && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDownload("csv")}>
+                        Download as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload("json")}>
+                        Download as JSON
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                        Download as Excel
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
-              </Button>
+              </>
             )}
           </div>
         </div>
@@ -350,240 +365,138 @@ export default function DataSourceQueryPage() {
 
       {/* Main Content */}
       <div className="flex-1 min-h-0">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Tables Sidebar */}
-          <ResizablePanel
-            defaultSize={20}
-            minSize={15}
-            maxSize={30}
-            collapsible
-            className="border-r bg-muted/30"
-          >
-            <div className="h-full flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b">
-                <div className="flex items-center gap-2">
-                  <Database className="h-4 w-4" />
-                  <span className="font-semibold">Tables</span>
-                  {dataSource.tables && (
-                    <Badge variant="secondary" className="ml-2">
-                      {dataSource.tables.length}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {dataSource.tables && dataSource.tables.length > 0 ? (
-                    dataSource.tables.map((table) => (
-                      <Button
-                        key={table}
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => handleTableClick(table)}
-                      >
-                        <TableIcon className="mr-2 h-4 w-4" />
-                        {table}
-                      </Button>
-                    ))
-                  ) : (
-                    <div className="p-4 text-sm text-muted-foreground text-center">
-                      No tables available
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          </ResizablePanel>
+        {shouldShowSQLEditor ? (
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* Tables Sidebar */}
+            <ResizablePanel
+              defaultSize={20}
+              minSize={15}
+              maxSize={30}
+              collapsible
+            >
+              <TableNavigation
+                tables={dataSource.tables || []}
+                onTableSelect={handleTableSelect}
+                selectedTable={selectedTable}
+              />
+            </ResizablePanel>
 
-          <ResizableHandle withHandle />
+            <ResizableHandle withHandle />
 
-          {/* Query Editor and Results */}
-          <ResizablePanel defaultSize={80} minSize={50}>
-            {shouldShowSQLEditor ? (
-              <ResizablePanelGroup direction="vertical" className="h-full">
-                {/* Query Editor */}
-                <ResizablePanel
-                  defaultSize={editorExpanded ? 100 : 50}
-                  minSize={20}
-                  maxSize={resultsExpanded ? 20 : 100}
-                  collapsible
+            {/* Editor and Results */}
+            <ResizablePanel defaultSize={80} minSize={50}>
+              {resultsFullScreen && results ? (
+                // Full-screen results view
+                <div className="h-full flex flex-col bg-background">
+                  <div className="flex items-center justify-between p-4 border-b shrink-0">
+                    <h2 className="text-sm font-medium">Query Results</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setResultsFullScreen(false)}
+                      className="h-8"
+                    >
+                      <Minimize2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <SQLResultViewer
+                      columns={results.columns}
+                      rows={results.rows}
+                      loading={loading}
+                      error={error}
+                      fullScreen={resultsFullScreen}
+                      onFullScreen={setResultsFullScreen}
+                      onDownload={handleDownload}
+                    />
+                  </div>
+                </div>
+              ) : (
+                // Normal split view
+                <ResizablePanelGroup 
+                  direction="vertical" 
+                  className="h-full"
+                  key={results ? "with-results" : "no-results"}
                 >
-                  <Card className="h-full flex flex-col border-0 rounded-none">
-                    <CardHeader className="flex-shrink-0 border-b px-4 py-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium">Query Editor</CardTitle>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditorExpanded(!editorExpanded);
-                            setResultsExpanded(false);
-                          }}
-                        >
-                          {editorExpanded ? (
-                            <Minimize2 className="h-4 w-4" />
-                          ) : (
-                            <Maximize2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-1 min-h-0 p-0">
-                      <Editor
-                        height="100%"
-                        language={language}
+                  {/* Query Editor */}
+                  <ResizablePanel
+                    id="editor-panel"
+                    defaultSize={results ? editorSize : 100}
+                    minSize={20}
+                    maxSize={results ? 80 : 100}
+                    collapsible={!!results}
+                    onResize={(size) => {
+                      if (results) {
+                        setEditorSize(size);
+                      }
+                    }}
+                  >
+                    <div className="h-full flex flex-col border-b">
+                      <SQLEditor
                         value={query}
-                        onChange={(value) => setQuery(value || "")}
-                        theme="vs-dark"
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          wordWrap: "on",
-                          automaticLayout: true,
-                          scrollBeyondLastLine: false,
-                          tabSize: 2,
-                          insertSpaces: true,
-                          formatOnPaste: true,
-                          formatOnType: true,
-                        }}
+                        onChange={setQuery}
+                        language={language}
                         onMount={(editor) => {
                           editorRef.current = editor;
                         }}
+                        className="h-full"
                       />
-                    </CardContent>
-                  </Card>
-                </ResizablePanel>
+                    </div>
+                  </ResizablePanel>
 
-                <ResizableHandle withHandle />
-
-                {/* Results */}
-                <ResizablePanel
-                  defaultSize={resultsExpanded ? 100 : 50}
-                  minSize={20}
-                  maxSize={editorExpanded ? 20 : 100}
-                  collapsible
-                >
-                  <Card className="h-full flex flex-col border-0 rounded-none">
-                    <CardHeader className="flex-shrink-0 border-b px-4 py-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium">
-                          Results
-                          {results && (
-                            <Badge variant="secondary" className="ml-2">
-                              {results.rows.length} rows
-                            </Badge>
-                          )}
-                        </CardTitle>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setResultsExpanded(!resultsExpanded);
-                            setEditorExpanded(false);
-                          }}
-                        >
-                          {resultsExpanded ? (
-                            <Minimize2 className="h-4 w-4" />
-                          ) : (
-                            <Maximize2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-1 min-h-0 overflow-auto p-4">
-                      {loading ? (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                            <p className="text-muted-foreground">Executing query...</p>
-                          </div>
-                        </div>
-                      ) : error ? (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <p className="text-destructive font-medium mb-2">Error</p>
-                            <p className="text-sm text-muted-foreground">{error}</p>
-                          </div>
-                        </div>
-                      ) : results ? (
-                        <DataTable
-                          columns={columns}
-                          data={results.rows}
-                          pagination={true}
-                          pageSize={20}
-                          filterable={true}
-                          filterColumn={results.columns[0]}
-                          filterPlaceholder="Filter results..."
+                  {results && (
+                    <>
+                      <ResizableHandle withHandle className="bg-border" />
+                      {/* Results */}
+                      <ResizablePanel
+                        id="results-panel"
+                        defaultSize={Math.max(20, Math.min(80, 100 - editorSize))}
+                        minSize={20}
+                        maxSize={80}
+                        collapsible
+                      >
+                        <SQLResultViewer
+                          columns={results.columns}
+                          rows={results.rows}
+                          loading={loading}
+                          error={error}
+                          fullScreen={resultsFullScreen}
+                          onFullScreen={setResultsFullScreen}
+                          onDownload={handleDownload}
                         />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                            <p className="text-muted-foreground">
-                              Click "Run Query" to execute your query
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            ) : (
-              // View for non-SQL data sources or when SQL editor shouldn't be shown
-              <Card className="h-full flex flex-col border-0 rounded-none">
-                <CardHeader className="flex-shrink-0 border-b px-4 py-2">
-                  <CardTitle className="text-sm font-medium">
-                    Tables & Data
-                    {results && (
-                      <Badge variant="secondary" className="ml-2">
-                        {results.rows.length} rows
-                      </Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 min-h-0 overflow-auto p-4">
-                  {loading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                        <p className="text-muted-foreground">Loading data...</p>
-                      </div>
-                    </div>
-                  ) : error ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <p className="text-destructive font-medium mb-2">Error</p>
-                        <p className="text-sm text-muted-foreground">{error}</p>
-                      </div>
-                    </div>
-                  ) : results ? (
-                    <DataTable
-                      columns={columns}
-                      data={results.rows}
-                      pagination={true}
-                      pageSize={20}
-                      filterable={true}
-                      filterColumn={results.columns[0]}
-                      filterPlaceholder="Filter results..."
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                          Select a table from the sidebar to view data
-                        </p>
-                      </div>
-                    </div>
+                      </ResizablePanel>
+                    </>
                   )}
-                </CardContent>
-              </Card>
-            )}
-          </ResizablePanel>
-        </ResizablePanelGroup>
+                </ResizablePanelGroup>
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          // View for non-SQL data sources
+          <div className="flex-1 min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={30} collapsible>
+                <TableNavigation
+                  tables={dataSource.tables || []}
+                  onTableSelect={handleTableSelect}
+                  selectedTable={selectedTable}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={80} minSize={50}>
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      Select a table from the sidebar to view data
+                    </p>
+                  </div>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
