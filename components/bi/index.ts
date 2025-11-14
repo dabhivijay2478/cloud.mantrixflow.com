@@ -95,8 +95,9 @@ export type { TableNavigationProps } from "./table-navigation";
 export { GridLayout, GridItem } from "./grid-layout";
 export type { GridLayoutProps, GridItemProps } from "./grid-layout";
 
-export { Section } from "./section";
-export type { SectionProps } from "./section";
+// Re-export Section from shared components (moved for better organization)
+export { Section } from "@/components/shared/layout/section";
+export type { SectionProps } from "@/components/shared/layout/section";
 
 // Re-export commonly used Shadcn components for BI layouts
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";

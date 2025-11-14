@@ -3,22 +3,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GitBranch, ArrowRightLeft, Database, Sparkles } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { PageHeader } from "@/components/shared";
 
 export default function DataPipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Data Pipelines</h1>
-          <p className="text-muted-foreground">
-            {currentOrganization
-              ? `Manage data transfers from source to destination for ${currentOrganization.name}`
-              : "Manage data transfers from source to destination"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Data Pipelines"
+        description={
+          currentOrganization
+            ? `Manage data transfers from source to destination for ${currentOrganization.name}`
+            : "Manage data transfers from source to destination"
+        }
+      />
 
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-2xl">

@@ -1,14 +1,11 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
 import {
   LineChart as RechartsLineChart,
@@ -17,6 +14,8 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
+import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
+import { createChartConfig } from "@/components/features/bi/charts/chart-config";
 
 /**
  * LineChart
@@ -59,14 +58,6 @@ export interface LineChartProps {
   className?: string;
 }
 
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
-
 export function LineChart({
   data,
   xKey,
@@ -78,59 +69,40 @@ export function LineChart({
   showLegend = true,
   className,
 }: LineChartProps) {
-  const chartConfig = yKeys.reduce(
-    (config, key, index) => {
-      config[key] = {
-        label: key,
-        color: index === 0 && color ? color : CHART_COLORS[index % CHART_COLORS.length],
-      };
-      return config;
-    },
-    {} as ChartConfig,
-  );
+  const chartConfig = createChartConfig(yKeys, color);
 
   return (
-    <Card className={cn("h-full flex flex-col", className)}>
-      {(title || description) && (
-        <CardHeader className="flex-shrink-0">
-          {title && <CardTitle>{title}</CardTitle>}
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-        </CardHeader>
-      )}
-      <CardContent className="flex-1 min-h-0">
-        <ChartContainer config={chartConfig} className="h-full w-full">
-          <RechartsLineChart
-            accessibilityLayer
-            data={data}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
-            <XAxis
-              dataKey={xKey}
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
+    <ChartWrapper title={title} description={description} className={className}>
+      <ChartContainer config={chartConfig} className="h-full w-full">
+        <RechartsLineChart
+          accessibilityLayer
+          data={data}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+          <XAxis
+            dataKey={xKey}
+            tickLine={false}
+            tickMargin={10}
+            axisLine={false}
+          />
+          <YAxis tickLine={false} axisLine={false} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+          {yKeys.map((key) => (
+            <Line
+              key={key}
+              type="monotone"
+              dataKey={key}
+              stroke={`var(--color-${key})`}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 6 }}
             />
-            <YAxis tickLine={false} axisLine={false} />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-            {yKeys.map((key) => (
-              <Line
-                key={key}
-                type="monotone"
-                dataKey={key}
-                stroke={`var(--color-${key})`}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 6 }}
-              />
-            ))}
-          </RechartsLineChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+          ))}
+        </RechartsLineChart>
+      </ChartContainer>
+    </ChartWrapper>
   );
 }
 

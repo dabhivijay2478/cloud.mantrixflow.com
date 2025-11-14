@@ -10,6 +10,7 @@ import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
 import { ComponentsPanel } from "@/components/workspace/components-panel";
 import { AgentPanel } from "@/components/workspace/agent-panel";
+import { LoadingState } from "@/components/shared";
 import * as ResizablePrimitive from "react-resizable-panels";
 
 export default function WorkspaceLayout({
@@ -64,14 +65,7 @@ export default function WorkspaceLayout({
   }, [user, loading, onboarding.completed, router]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState fullScreen message="Loading..." />;
   }
 
   if (!user) {
