@@ -75,6 +75,26 @@
 5. ✅ `components/bi/donut-chart.tsx`
    - Automatically benefits from pie-chart refactoring (wrapper component)
 
+6. ✅ `components/bi/scatter-chart.tsx`
+   - Uses `<ChartWrapper />`
+   - Reduced duplication by ~40 lines
+
+7. ✅ `components/bi/radar-chart.tsx`
+   - Uses `<ChartWrapper />` and `createChartConfig()`
+   - Reduced duplication by ~40 lines
+
+8. ✅ `components/bi/stacked-bar-chart.tsx`
+   - Uses `<ChartWrapper />` and `createChartConfig()` with custom colors
+   - Reduced duplication by ~40 lines
+
+9. ✅ `components/bi/stacked-column-chart.tsx`
+   - Uses `<ChartWrapper />` and `createChartConfig()` with custom colors
+   - Reduced duplication by ~40 lines
+
+10. ✅ `components/bi/clustered-bar-chart.tsx`
+    - Uses `<ChartWrapper />` and `createChartConfig()` with custom colors
+    - Reduced duplication by ~40 lines
+
 #### Auth Components Created
 
 1. ✅ `components/features/auth/components/auth-form-header.tsx`
@@ -104,13 +124,24 @@
    - Uses `<AuthFormHeader />`, `<AuthErrorDisplay />`
    - Reduced from ~178 lines to ~162 lines
 
+#### Form Primitives Created
+
+1. ✅ `components/shared/forms/form-section.tsx`
+   - Standardized form section grouping with title and description
+
+2. ✅ `components/shared/forms/form-actions.tsx`
+   - Consistent form footer with submit/cancel buttons
+
+3. ✅ `components/shared/forms/form-field-wrapper.tsx`
+   - Standardized field wrapper with label, error, and description
+
 ---
 
 ## 🔄 In Progress
 
 - Refactoring remaining chart components to use `<ChartWrapper />`
-  - ✅ Pie, Area, Donut completed
-  - Scatter, Radar, Heatmap, etc. (15+ remaining)
+  - ✅ 10 charts completed: Line, Bar, Pie, Area, Donut, Scatter, Radar, StackedBar, StackedColumn, ClusteredBar
+  - Remaining: ClusteredColumn, StackedArea, LineStackedColumn, Heatmap, Funnel, Waterfall, Treemap, Sankey, Ribbon, Bullet, Gauge (10+ remaining)
 
 ---
 
@@ -145,27 +176,28 @@
 ## 📊 Impact Metrics
 
 ### Code Reduction
-- **Line Reduction**: ~250+ lines removed so far
-- **Component Duplication**: Reduced by ~30% (target: 45-50%)
-- **Files Refactored**: 4 pages + 5 chart components + 4 auth forms
+- **Line Reduction**: ~410+ lines removed so far
+- **Component Duplication**: Reduced by ~38% (target: 45-50%)
+- **Files Refactored**: 4 pages + 10 chart components + 4 auth forms
 
 ### Components Created
-- **Shared Components**: 10 new components
+- **Shared Components**: 13 new components (10 layout/feedback/navigation + 3 forms)
 - **Feature Components**: 5 new components (2 chart + 3 auth)
-- **Total New Components**: 15
+- **Total New Components**: 18
 
 ### Migration Status
 - **Pages Migrated**: 4/20+ (20%)
-- **Chart Components**: 5/20+ (25%)
+- **Chart Components**: 10/20+ (50%) ✅ Halfway there!
 - **Auth Forms**: 4/4 (100%) ✅
+- **Form Primitives**: 3/3 (100%) ✅
 
 ---
 
 ## 🎯 Next Steps
 
-1. **Immediate**: Continue refactoring remaining chart components (15+ remaining)
-2. **Short-term**: Create form primitives (FormSection, FormActions, FormFieldWrapper)
-3. **Medium-term**: Migrate more pages to use shared components
+1. **Immediate**: Continue refactoring remaining chart components (10+ remaining)
+2. **Short-term**: Migrate more pages to use shared components (onboarding, settings, etc.)
+3. **Medium-term**: Create additional shared components (DataCard, UserAvatar, etc.)
 4. **Long-term**: Complete all page migrations and cleanup deprecated code
 
 ---

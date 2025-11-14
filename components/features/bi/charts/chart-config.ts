@@ -20,12 +20,15 @@ export const CHART_COLORS = [
  * Creates a ChartConfig object from an array of data keys
  * @param yKeys - Array of data keys to create config for
  * @param customColor - Optional custom color for the first key
+ * @param customColors - Optional custom color array (overrides default palette)
  * @returns ChartConfig object
  */
 export function createChartConfig(
   yKeys: string[],
-  customColor?: string
+  customColor?: string,
+  customColors?: string[]
 ): ChartConfig {
+  const colors = customColors || CHART_COLORS;
   return yKeys.reduce(
     (config, key, index) => {
       config[key] = {
@@ -33,7 +36,7 @@ export function createChartConfig(
         color:
           index === 0 && customColor
             ? customColor
-            : CHART_COLORS[index % CHART_COLORS.length],
+            : colors[index % colors.length],
       };
       return config;
     },
