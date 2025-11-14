@@ -32,6 +32,7 @@ interface DataSourceTableProps {
   isConnected: (id: string) => boolean;
   getConnectedDataSource: (id: string) => any;
   onDataSourceClick: (id: string) => void;
+  showOnlyConnected?: boolean;
 }
 
 export function DataSourceTable({
@@ -45,6 +46,7 @@ export function DataSourceTable({
   isConnected,
   getConnectedDataSource,
   onDataSourceClick,
+  showOnlyConnected = false,
 }: DataSourceTableProps) {
   const getSortIcon = (column: string) => {
     if (sortColumn !== column) {
@@ -59,6 +61,11 @@ export function DataSourceTable({
 
   const getFilteredAndSortedDataSources = () => {
     let filtered = [...allDataSources];
+
+    // If showOnlyConnected is true, only show connected data sources
+    if (showOnlyConnected) {
+      filtered = filtered.filter((ds) => isConnected(ds.id));
+    }
 
     // Apply search filter
     if (searchQuery) {
@@ -134,16 +141,18 @@ export function DataSourceTable({
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="connected">Connected</SelectItem>
-            <SelectItem value="not-connected">Not Connected</SelectItem>
-          </SelectContent>
-        </Select>
+        {!showOnlyConnected && (
+          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="connected">Connected</SelectItem>
+              <SelectItem value="not-connected">Not Connected</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Table */}
