@@ -1,7 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
   ChartContainer,
   ChartTooltip,
@@ -15,6 +13,8 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
+import { CHART_COLORS } from "@/components/features/bi/charts/chart-config";
 
 /**
  * PieChart
@@ -56,14 +56,6 @@ export interface PieChartProps {
   className?: string;
 }
 
-const DEFAULT_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
-
 export function PieChart({
   data,
   nameKey,
@@ -72,7 +64,7 @@ export function PieChart({
   description,
   innerRadius = 0,
   showLegend = true,
-  colors = DEFAULT_COLORS,
+  colors = CHART_COLORS,
   className,
 }: PieChartProps) {
   const chartConfig = data.reduce(
@@ -88,17 +80,8 @@ export function PieChart({
   );
 
   return (
-    <Card className={cn("h-full flex flex-col", className)}>
-      {(title || description) && (
-        <CardHeader className="flex-shrink-0">
-          {title && <CardTitle>{title}</CardTitle>}
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-        </CardHeader>
-      )}
-      <CardContent className="flex-1 min-h-0">
-        <ChartContainer config={chartConfig} className="h-full w-full">
+    <ChartWrapper title={title} description={description} className={className}>
+      <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsPieChart>
             <Pie
               data={data}
@@ -126,7 +109,6 @@ export function PieChart({
             )}
           </RechartsPieChart>
         </ChartContainer>
-      </CardContent>
-    </Card>
+    </ChartWrapper>
   );
 }

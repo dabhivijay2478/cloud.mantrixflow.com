@@ -17,6 +17,10 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { type ForgotPasswordInput, forgotPasswordSchema } from "@/lib/validations/auth";
+import {
+  AuthFormHeader,
+  AuthErrorDisplay,
+} from "@/components/features/auth/components";
 
 export function ForgotPasswordForm({
   className,
@@ -64,18 +68,12 @@ export function ForgotPasswordForm({
       {...props}
     >
       <FieldGroup>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Forgot your password?</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Enter your email address and we'll send you a link to reset your password
-          </p>
-        </div>
+        <AuthFormHeader
+          title="Forgot your password?"
+          description="Enter your email address and we'll send you a link to reset your password"
+        />
 
-        {authError && (
-          <FieldError className="bg-destructive/10 border-destructive/20 border rounded-md p-3 text-center">
-            {authError}
-          </FieldError>
-        )}
+        <AuthErrorDisplay error={authError} />
 
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>

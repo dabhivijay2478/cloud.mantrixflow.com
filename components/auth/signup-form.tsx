@@ -4,8 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import { toast } from "@/lib/utils/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +19,11 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { type SignupInput, signupSchema } from "@/lib/validations/auth";
+import {
+  AuthFormHeader,
+  AuthErrorDisplay,
+  OAuthButtons,
+} from "@/components/features/auth/components";
 
 export function SignupForm({
   className,
@@ -105,18 +108,12 @@ export function SignupForm({
       {...props}
     >
       <FieldGroup className="gap-3">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-xl font-bold">Create your account</h1>
-          <p className="text-muted-foreground text-xs text-balance">
-            Fill in the form below to create your account
-          </p>
-        </div>
+        <AuthFormHeader
+          title="Create your account"
+          description="Fill in the form below to create your account"
+        />
 
-        {authError && (
-          <FieldError className="bg-destructive/10 border-destructive/20 border rounded-md p-3 text-center">
-            {authError}
-          </FieldError>
-        )}
+        <AuthErrorDisplay error={authError} />
 
         {/* Two column grid for name fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -215,28 +212,12 @@ export function SignupForm({
         <FieldSeparator className="text-xs">Or continue with</FieldSeparator>
 
         <Field>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              className="h-8 text-xs"
-              onClick={handleGitHubLogin}
-              disabled={isSubmitting}
-            >
-              <FaGithub className="size-3" />
-              GitHub
-            </Button>
-            <Button
-              variant="outline"
-              type="button"
-              className="h-8 text-xs"
-              onClick={handleGoogleLogin}
-              disabled={isSubmitting}
-            >
-              <FcGoogle className="size-3" />
-              Google
-            </Button>
-          </div>
+          <OAuthButtons
+            onGitHubClick={handleGitHubLogin}
+            onGoogleClick={handleGoogleLogin}
+            disabled={isSubmitting}
+            variant="compact"
+          />
 
           <FieldDescription className="text-center text-xs">
             Already have an account?{" "}

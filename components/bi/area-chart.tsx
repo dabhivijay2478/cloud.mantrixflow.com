@@ -1,14 +1,11 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
 import {
   AreaChart as RechartsAreaChart,
@@ -17,6 +14,8 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
+import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
+import { createChartConfig } from "@/components/features/bi/charts/chart-config";
 
 /**
  * AreaChart
@@ -59,14 +58,6 @@ export interface AreaChartProps {
   className?: string;
 }
 
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
-
 export function AreaChart({
   data,
   xKey,
@@ -78,29 +69,11 @@ export function AreaChart({
   showLegend = true,
   className,
 }: AreaChartProps) {
-  const chartConfig = yKeys.reduce(
-    (config, key, index) => {
-      config[key] = {
-        label: key,
-        color: CHART_COLORS[index % CHART_COLORS.length],
-      };
-      return config;
-    },
-    {} as ChartConfig,
-  );
+  const chartConfig = createChartConfig(yKeys);
 
   return (
-    <Card className={cn("h-full flex flex-col", className)}>
-      {(title || description) && (
-        <CardHeader className="flex-shrink-0">
-          {title && <CardTitle>{title}</CardTitle>}
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-        </CardHeader>
-      )}
-      <CardContent className="flex-1 min-h-0">
-        <ChartContainer config={chartConfig} className="h-full w-full">
+    <ChartWrapper title={title} description={description} className={className}>
+      <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsAreaChart
             accessibilityLayer
             data={data}
@@ -129,7 +102,6 @@ export function AreaChart({
             ))}
           </RechartsAreaChart>
         </ChartContainer>
-      </CardContent>
-    </Card>
+    </ChartWrapper>
   );
 }

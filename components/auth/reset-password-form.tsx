@@ -17,6 +17,10 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { type ResetPasswordInput, resetPasswordSchema } from "@/lib/validations/auth";
+import {
+  AuthFormHeader,
+  AuthErrorDisplay,
+} from "@/components/features/auth/components";
 
 function ResetPasswordFormContent({
   className,
@@ -106,18 +110,12 @@ function ResetPasswordFormContent({
       {...props}
     >
       <FieldGroup>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Reset your password</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Enter your new password below
-          </p>
-        </div>
+        <AuthFormHeader
+          title="Reset your password"
+          description="Enter your new password below"
+        />
 
-        {authError && (
-          <FieldError className="bg-destructive/10 border-destructive/20 border rounded-md p-3 text-center">
-            {authError}
-          </FieldError>
-        )}
+        <AuthErrorDisplay error={authError} />
 
         <Field>
           <FieldLabel htmlFor="password">New Password</FieldLabel>
