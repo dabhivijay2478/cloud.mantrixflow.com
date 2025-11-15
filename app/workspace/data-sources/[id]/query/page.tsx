@@ -1,9 +1,19 @@
 "use client";
 
-import { ArrowLeft, Loader2, Play, Save } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Database,
+  Download,
+  Link2,
+  Loader2,
+  Minimize2,
+  Play,
+  Save,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { SQLEditor } from "@/components/bi/sql-editor";
+import { SQLEditor, SQLResultViewer, TableNavigation } from "@/components/bi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -143,7 +153,7 @@ export default function DataSourceQueryPage() {
   const [resultsFullScreen, setResultsFullScreen] = useState(false);
   const [editorSize, setEditorSize] = useState(60);
 
-  const editorRef = useRef<unknown>(null);
+  const editorRef = useRef<{ setValue: (value: string) => void } | null>(null);
   const language = dataSource
     ? getLanguageForDataSource(dataSource.type)
     : "sql";
@@ -302,7 +312,7 @@ export default function DataSourceQueryPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-lg font-semibold">{queryTitle}</h1>
+            <h1 className="text-lg font-semibold">{_queryTitle}</h1>
           </div>
           <div className="flex items-center gap-2">
             {shouldShowSQLEditor && (
@@ -419,7 +429,7 @@ export default function DataSourceQueryPage() {
                       columns={results.columns}
                       rows={results.rows}
                       loading={loading}
-                      error={error}
+                      error={_error}
                       fullScreen={resultsFullScreen}
                       onFullScreen={setResultsFullScreen}
                       onDownload={handleDownload}
@@ -452,7 +462,9 @@ export default function DataSourceQueryPage() {
                         onChange={setQuery}
                         language={language}
                         onMount={(editor) => {
-                          editorRef.current = editor;
+                          editorRef.current = editor as {
+                            setValue: (value: string) => void;
+                          };
                         }}
                         className="h-full"
                       />
@@ -477,7 +489,7 @@ export default function DataSourceQueryPage() {
                           columns={results.columns}
                           rows={results.rows}
                           loading={loading}
-                          error={error}
+                          error={_error}
                           fullScreen={resultsFullScreen}
                           onFullScreen={setResultsFullScreen}
                           onDownload={handleDownload}

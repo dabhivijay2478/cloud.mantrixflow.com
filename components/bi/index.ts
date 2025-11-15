@@ -141,7 +141,10 @@ export { Slicer } from "./filters/slicer";
 // Advanced Analytics Components
 // ============================================================================
 
-export type { AnomalyBadgeProps, AnomalySeverity } from "./advanced/anomaly-badge";
+export type {
+  AnomalyBadgeProps,
+  AnomalySeverity,
+} from "./advanced/anomaly-badge";
 export { AnomalyBadge } from "./advanced/anomaly-badge";
 export type { BulletChartProps, BulletZone } from "./advanced/bullet-chart";
 export { BulletChart } from "./advanced/bullet-chart";

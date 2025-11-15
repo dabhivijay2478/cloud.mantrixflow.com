@@ -1,6 +1,6 @@
 import { Table2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { SQLResultViewer } from "@/components/bi/sql-result-viewer";
+import { SQLResultViewer } from "@/components/bi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 

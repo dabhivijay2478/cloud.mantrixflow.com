@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { PromptInput } from "@/components/bi/prompt-input";
+import { PromptInput } from "@/components/bi";
 import { Button } from "@/components/ui/button";
 import {
   Card,
