@@ -9,11 +9,9 @@ import type { DashboardComponent } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import {
   canPlaceComponent,
-  checkCollisionWithComponents,
   componentToRect,
   findBestPosition,
   getBoundingBox,
-  getNearestValidPosition,
 } from "@/lib/utils/dashboard-layout";
 import { ComponentRenderer } from "./component-renderer";
 import { DashboardItem } from "./dashboard-item";
@@ -38,7 +36,7 @@ export function DashboardCanvas({
   className,
 }: DashboardCanvasProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [draggedComponentType, setDraggedComponentType] = useState<
+  const [_draggedComponentType, setDraggedComponentType] = useState<
     string | null
   >(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -48,8 +46,8 @@ export function DashboardCanvas({
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
     null,
   );
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const { active, over, delta } = useDndContext();
+  const canvasRef = useRef<HTMLElement>(null);
+  const { active, delta } = useDndContext();
   const prevActiveRef = React.useRef(active);
   const dragStartPositionRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -123,7 +121,7 @@ export function DashboardCanvas({
     window.addEventListener("resize", updateCanvasSize);
 
     // Listen for panel resize events (from ResizablePanelGroup)
-    const handlePanelResize = () => {
+    const _handlePanelResize = () => {
       requestAnimationFrame(updateCanvasSize);
     };
 
@@ -349,8 +347,11 @@ export function DashboardCanvas({
 
     prevActiveRef.current = active;
 
+    // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
     if (justEnded && (window as any).__lastDragData) {
+      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
       const lastActiveData = (window as any).__lastDragData;
+      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag over
       const lastOver = (window as any).__lastOver;
 
       if (lastOver?.id === "canvas-drop-zone") {
@@ -367,7 +368,9 @@ export function DashboardCanvas({
           }
 
           const canvasRect = canvasElement.getBoundingClientRect();
+          // biome-ignore lint/suspicious/noExplicitAny: Window extension for drop coordinates
           const dropX = (window as any).__lastDropX || canvasRect.width / 2;
+          // biome-ignore lint/suspicious/noExplicitAny: Window extension for drop coordinates
           const dropY = (window as any).__lastDropY || canvasRect.height / 2;
 
           // Default component size
@@ -448,26 +451,24 @@ export function DashboardCanvas({
 
         setActiveId(null);
         setDraggedComponentType(null);
+        // biome-ignore lint/suspicious/noExplicitAny: Window extension cleanup
         delete (window as any).__lastDragData;
+        // biome-ignore lint/suspicious/noExplicitAny: Window extension cleanup
         delete (window as any).__lastOver;
+        // biome-ignore lint/suspicious/noExplicitAny: Window extension cleanup
         delete (window as any).__lastDelta;
+        // biome-ignore lint/suspicious/noExplicitAny: Window extension cleanup
         delete (window as any).__lastDropX;
+        // biome-ignore lint/suspicious/noExplicitAny: Window extension cleanup
         delete (window as any).__lastDropY;
       }
     }
-  }, [
-    active,
-    activeId,
-    components,
-    onComponentsChange,
-    snapToGrid,
-    pixelToGrid,
-    canvasSize,
-  ]);
+  }, [active, components, onComponentsChange, canvasSize]);
 
   // Store drag data before it's cleared
   useEffect(() => {
     if (active) {
+      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
       (window as any).__lastDragData = active.data.current;
     }
   }, [active]);
@@ -512,7 +513,7 @@ export function DashboardCanvas({
       const component = components.find((c) => c.id === id);
       if (!component) return;
 
-      const currentZIndex = component.zIndex || 0;
+      const _currentZIndex = component.zIndex || 0;
       let newZIndex: number;
 
       if (direction === "front") {
@@ -556,7 +557,7 @@ export function DashboardCanvas({
     <>
       <CanvasDropZone>
         <ScrollArea className="w-full h-full">
-          <div
+          <section
             ref={canvasRef}
             className={cn(
               "relative bg-background",
@@ -584,6 +585,21 @@ export function DashboardCanvas({
                 setSelectedComponentId(null);
               }
             }}
+            onKeyDown={(e) => {
+              // Deselect when pressing Enter or Space on blank canvas area
+              if (e.key === "Enter" || e.key === " ") {
+                if (
+                  e.target === e.currentTarget ||
+                  (e.target as HTMLElement).id === "canvas-drop-zone"
+                ) {
+                  e.preventDefault();
+                  setSelectedComponentId(null);
+                }
+              }
+            }}
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: Canvas area needs keyboard interaction for accessibility
+            tabIndex={0}
+            aria-label="Dashboard canvas"
           >
             {/* Grid overlay - visible when dragging */}
             {isDragging && (
@@ -648,7 +664,7 @@ export function DashboardCanvas({
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </ScrollArea>
       </CanvasDropZone>
 

@@ -8,7 +8,6 @@ import {
   ArrowRight,
   BarChart2,
   BarChart3,
-  BookOpen,
   Calendar,
   ChevronsDown,
   Circle,
@@ -25,17 +24,15 @@ import {
   Gauge,
   GitBranch,
   Globe,
-  Grid,
   Grid3x3,
   HelpCircle,
   Layers,
   LayoutGrid,
   LineChart,
   LineChart as LineChartIcon,
-  Map,
+  Map as MapIcon,
   MapPin,
   MessageSquare,
-  MoreHorizontal,
   PieChart,
   QrCode,
   Radio,
@@ -49,9 +46,7 @@ import {
   Target,
   ThumbsUp,
   TrendingUp,
-  Trophy,
   X,
-  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -256,7 +251,7 @@ const allComponents = [
   {
     id: "map",
     name: "Map",
-    icon: Map,
+    icon: MapIcon,
     description: "Geographic visualization",
   },
   {
@@ -492,7 +487,8 @@ export function ComponentsPanel() {
 
   if (!componentsPanelOpen) {
     return (
-      <div
+      <button
+        type="button"
         className="h-full w-full border-r bg-muted/30 flex flex-col items-center relative cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={() => setComponentsPanelOpen(true)}
       >
@@ -523,7 +519,7 @@ export function ComponentsPanel() {
             </span>
           </div>
         </div>
-      </div>
+      </button>
     );
   }
 
@@ -545,7 +541,6 @@ export function ComponentsPanel() {
           <TooltipProvider delayDuration={200}>
             <div className="grid grid-cols-4 gap-2">
               {allComponents.map((component) => {
-                const Icon = component.icon;
                 return (
                   <Tooltip key={component.id}>
                     <TooltipTrigger asChild>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -60,12 +61,13 @@ export function QRCode({
             "flex items-center justify-center",
           )}
         >
-          <img
+          <Image
             src={qrCodeUrl}
             alt="QR Code"
             width={size}
             height={size}
             className="max-w-full h-auto"
+            unoptimized
           />
         </div>
         <p className="text-xs text-muted-foreground mt-4 text-center max-w-xs">

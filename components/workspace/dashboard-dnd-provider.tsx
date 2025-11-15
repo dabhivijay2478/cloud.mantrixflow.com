@@ -30,15 +30,18 @@ export function DashboardDndProvider({ children }: DashboardDndProviderProps) {
 
     // Store drag data and drop position for canvas to use
     if (active.data.current) {
+      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
       (window as any).__lastDragData = active.data.current;
     }
 
     // Store delta for position calculation
     if (delta) {
+      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag delta
       (window as any).__lastDelta = delta;
     }
 
     // Store over target
+    // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag over
     (window as any).__lastOver = over;
 
     if (over?.id === "canvas-drop-zone") {
@@ -48,7 +51,9 @@ export function DashboardDndProvider({ children }: DashboardDndProviderProps) {
         const mouseEvent = event.activatorEvent as MouseEvent | undefined;
 
         if (mouseEvent) {
+          // biome-ignore lint/suspicious/noExplicitAny: Window extension for drop coordinates
           (window as any).__lastDropX = mouseEvent.clientX - canvasRect.left;
+          // biome-ignore lint/suspicious/noExplicitAny: Window extension for drop coordinates
           (window as any).__lastDropY = mouseEvent.clientY - canvasRect.top;
         }
       }

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import * as BIComponents from "@/components/bi";
 import type { DashboardComponent } from "@/lib/stores/workspace-store";
 
@@ -605,7 +604,7 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
   }
 }
 
-function getDefaultConfig(type: string): Record<string, unknown> {
+function getDefaultConfig(_type: string): Record<string, unknown> {
   // Return default configurations for each component type
   return {};
 }

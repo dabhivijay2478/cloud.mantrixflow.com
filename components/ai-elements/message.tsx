@@ -346,6 +346,7 @@ export function MessageAttachment({
     >
       {isImage ? (
         <>
+          {/* biome-ignore lint/performance/noImgElement: Blob URLs require native img element */}
           <img
             alt={filename || "attachment"}
             className="size-full object-cover"

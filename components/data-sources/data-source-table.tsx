@@ -1,4 +1,3 @@
-import type { DataSource } from "@/lib/stores/workspace-store";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { DataSource } from "@/lib/stores/workspace-store";
 import { allDataSources } from "./constants";
 import { getIconComponent } from "./utils";
 

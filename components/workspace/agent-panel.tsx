@@ -164,7 +164,7 @@ export function AgentPanel() {
     "submitted" | "streaming" | "ready" | "error"
   >("ready");
   const [messages, setMessages] = useState<MessageType[]>([]);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+  const [_streamingMessageId, setStreamingMessageId] = useState<string | null>(
     null,
   );
 
@@ -329,7 +329,8 @@ export function AgentPanel() {
 
   if (!agentPanelOpen) {
     return (
-      <div
+      <button
+        type="button"
         className="h-full w-full border-l bg-muted/30 flex flex-col items-center relative cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={() => setAgentPanelOpen(true)}
       >
@@ -360,7 +361,7 @@ export function AgentPanel() {
             </span>
           </div>
         </div>
-      </div>
+      </button>
     );
   }
 

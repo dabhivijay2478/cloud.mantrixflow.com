@@ -12,6 +12,7 @@ export const Image = ({
   mediaType,
   ...props
 }: ImageProps) => (
+  // biome-ignore lint/performance/noImgElement: Data URLs require native img element
   <img
     {...props}
     alt={props.alt}

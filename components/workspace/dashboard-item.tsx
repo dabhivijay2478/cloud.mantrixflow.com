@@ -119,8 +119,8 @@ export function DashboardItem({
 
       let newWidth = resizeStart.width;
       let newHeight = resizeStart.height;
-      let newX = component.position.x;
-      let newY = component.position.y;
+      let _newX = component.position.x;
+      let _newY = component.position.y;
       let newXPixels = component.position.x * gridSize;
       let newYPixels = component.position.y * gridSize;
 
@@ -148,7 +148,7 @@ export function DashboardItem({
         const deltaW = resizeStart.width - newW; // Positive when shrinking, negative when growing
         const currentXPixels = component.position.x * gridSize;
         newXPixels = currentXPixels + deltaW; // Move left when shrinking, right when growing
-        newX = Math.max(0, newXPixels) / gridSize;
+        _newX = Math.max(0, newXPixels) / gridSize;
         newWidth = newW;
       }
       if (resizeHandle.includes("n")) {
@@ -159,7 +159,7 @@ export function DashboardItem({
         const deltaH = resizeStart.height - newH; // Positive when shrinking, negative when growing
         const currentYPixels = component.position.y * gridSize;
         newYPixels = currentYPixels + deltaH; // Move up when shrinking, down when growing
-        newY = Math.max(0, newYPixels) / gridSize;
+        _newY = Math.max(0, newYPixels) / gridSize;
         newHeight = newH;
       }
 
@@ -242,10 +242,9 @@ export function DashboardItem({
     };
 
     return (
-      <div
+      <button
         key={handle}
-        role="button"
-        tabIndex={0}
+        type="button"
         className={cn(
           "absolute z-[100] pointer-events-auto touch-none select-none",
           "bg-primary/30 border border-primary/60 rounded-sm",
@@ -285,13 +284,12 @@ export function DashboardItem({
         overflow: "visible",
       }}
     >
-      <div
+      <button
+        type="button"
         ref={(node) => {
           setNodeRef(node);
-          itemRef.current = node as HTMLDivElement;
+          itemRef.current = node as HTMLButtonElement;
         }}
-        role="button"
-        tabIndex={0}
         className={cn(
           "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm transition-all",
           isSelected
@@ -314,17 +312,11 @@ export function DashboardItem({
             onSelect(component.id);
           }
         }}
-        onKeyDown={(e) => {
-          if ((e.key === "Enter" || e.key === " ") && !isResizing && onSelect) {
-            e.preventDefault();
-            e.stopPropagation();
-            onSelect(component.id);
-          }
-        }}
       >
         {/* Drag Handle - Only visible when not resizing */}
         {!isResizing && (
-          <div
+          <button
+            type="button"
             {...attributes}
             {...listeners}
             className={cn(
@@ -344,7 +336,7 @@ export function DashboardItem({
                 isDragging ? "text-blue-600" : "text-muted-foreground",
               )}
             />
-          </div>
+          </button>
         )}
 
         {/* Toolbar - Only visible on hover/select, positioned outside content */}
@@ -442,7 +434,7 @@ export function DashboardItem({
             {renderResizeHandle("sw")}
           </>
         )}
-      </div>
+      </button>
     </div>
   );
 }

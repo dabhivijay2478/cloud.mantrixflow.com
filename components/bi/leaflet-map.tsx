@@ -787,7 +787,7 @@ export function LeafletMapChangeCity({
         markersRef.current = [];
       }
     };
-  }, []);
+  }, [cities, markers, selectedCity]);
 
   useEffect(() => {
     if (!mapRef.current) return;

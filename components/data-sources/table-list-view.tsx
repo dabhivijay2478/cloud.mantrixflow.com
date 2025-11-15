@@ -94,10 +94,9 @@ export function TableListView({
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          className="flex items-center gap-3 flex-1 cursor-pointer"
+                        <button
+                          type="button"
+                          className="flex items-center gap-3 flex-1 cursor-pointer bg-transparent border-none p-0 text-left"
                           onClick={() => onSelectTable(table)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
@@ -113,7 +112,7 @@ export function TableListView({
                           />
                           <Database className="h-5 w-5 text-muted-foreground" />
                           <span className="font-medium">{table}</span>
-                        </div>
+                        </button>
                         <div className="flex items-center gap-2">
                           {isSelected && (
                             <Check className="h-5 w-5 text-primary" />
