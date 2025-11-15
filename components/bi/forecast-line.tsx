@@ -75,10 +75,14 @@ export function ForecastLine({
   showConfidenceInterval = false,
   className,
 }: ForecastLineProps) {
+  // Safety checks for undefined data
+  const safeHistoricalData = historicalData || [];
+  const safeForecastData = forecastData || [];
+
   // Combine data for display
   const combinedData = [
-    ...historicalData.map((d) => ({ ...d, type: "historical" })),
-    ...forecastData.map((d) => ({ ...d, type: "forecast" })),
+    ...safeHistoricalData.map((d) => ({ ...d, type: "historical" })),
+    ...safeForecastData.map((d) => ({ ...d, type: "forecast" })),
   ];
 
   const chartConfig = {
@@ -127,11 +131,13 @@ export function ForecastLine({
             <YAxis tickLine={false} axisLine={false} />
             <ChartTooltip content={<ChartTooltipContent />} />
             <ChartLegend content={<ChartLegendContent />} />
-            <ReferenceLine
-              x={historicalData[historicalData.length - 1]?.[xKey]}
-              stroke="hsl(var(--muted-foreground))"
-              strokeDasharray="3 3"
-            />
+            {safeHistoricalData.length > 0 && (
+              <ReferenceLine
+                x={safeHistoricalData[safeHistoricalData.length - 1]?.[xKey]}
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="3 3"
+              />
+            )}
             <Line
               type="monotone"
               dataKey={yKey}
@@ -140,17 +146,19 @@ export function ForecastLine({
               dot={{ r: 4 }}
               name="historical"
             />
-            <Line
-              type="monotone"
-              dataKey={yKey}
-              stroke={`var(--color-forecast)`}
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={{ r: 4 }}
-              name="forecast"
-              data={forecastData}
-            />
-            {showConfidenceInterval && (
+            {safeForecastData.length > 0 && (
+              <Line
+                type="monotone"
+                dataKey={yKey}
+                stroke={`var(--color-forecast)`}
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={{ r: 4 }}
+                name="forecast"
+                data={safeForecastData}
+              />
+            )}
+            {showConfidenceInterval && safeForecastData.length > 0 && (
               <>
                 <Line
                   type="monotone"
@@ -160,7 +168,7 @@ export function ForecastLine({
                   strokeDasharray="2 2"
                   dot={false}
                   name="upper"
-                  data={forecastData}
+                  data={safeForecastData}
                 />
                 <Line
                   type="monotone"
@@ -170,7 +178,7 @@ export function ForecastLine({
                   strokeDasharray="2 2"
                   dot={false}
                   name="lower"
-                  data={forecastData}
+                  data={safeForecastData}
                 />
               </>
             )}

@@ -36,6 +36,7 @@ export interface DashboardComponent {
   type: string
   position: { x: number; y: number; w: number; h: number }
   config: Record<string, unknown>
+  zIndex?: number
 }
 
 export interface OnboardingState {

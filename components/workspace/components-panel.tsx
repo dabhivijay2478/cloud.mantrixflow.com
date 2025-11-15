@@ -55,6 +55,8 @@ import {
   ChevronsDown,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 // All @bi components with their icons and descriptions
 const allComponents = [
@@ -136,6 +138,41 @@ const allComponents = [
   { id: "qa", name: "Q&A", icon: HelpCircle, description: "Question and answer" },
 ];
 
+interface DraggableComponentButtonProps {
+  component: (typeof allComponents)[number];
+}
+
+function DraggableComponentButton({ component }: DraggableComponentButtonProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `palette-${component.id}`,
+    data: {
+      type: "palette",
+      componentType: component.id,
+    },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const Icon = component.icon;
+
+  return (
+    <Button
+      ref={setNodeRef}
+      variant="ghost"
+      size="icon"
+      className="h-10 w-10 hover:bg-accent cursor-grab active:cursor-grabbing touch-none"
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
+      <Icon className="h-5 w-5" />
+    </Button>
+  );
+}
+
 export function ComponentsPanel() {
   const { componentsPanelOpen, setComponentsPanelOpen } = useWorkspaceStore();
 
@@ -198,17 +235,7 @@ export function ComponentsPanel() {
                 return (
                   <Tooltip key={component.id}>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 hover:bg-accent"
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData("component-type", component.id);
-                        }}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </Button>
+                      <DraggableComponentButton component={component} />
                     </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-[200px]">
                       <div>

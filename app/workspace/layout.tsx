@@ -11,6 +11,7 @@ import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
 import { ComponentsPanel } from "@/components/workspace/components-panel";
 import { AgentPanel } from "@/components/workspace/agent-panel";
 import { LoadingState } from "@/components/shared";
+import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
 import * as ResizablePrimitive from "react-resizable-panels";
 
 export default function WorkspaceLayout({
@@ -89,50 +90,52 @@ export default function WorkspaceLayout({
         <SidebarInset className="flex flex-col flex-1">
           <WorkspaceTopbar />
           {isDashboardEditMode ? (
-            // Dashboard edit mode: Show panels
-            <ResizablePanelGroup direction="horizontal" className="flex-1">
-              <ResizablePanel 
-                ref={componentsPanelRef}
-                id="components-panel"
-                defaultSize={componentsPanelOpen ? 18 : 3} 
-                minSize={3} 
-                maxSize={componentsPanelOpen ? 40 : 3}
-                collapsible={true}
-                collapsedSize={3}
-                key={`components-${componentsPanelOpen}`}
-              >
-                <ComponentsPanel />
-              </ResizablePanel>
-              <ResizableHandle 
-                withHandle={componentsPanelOpen}
-                className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen ? 'pointer-events-none opacity-0' : ''}`}
-              />
-              <ResizablePanel 
-                id="main-panel"
-                defaultSize={componentsPanelOpen && agentPanelOpen ? 64 : componentsPanelOpen ? 79 : agentPanelOpen ? 79 : 94}
-                minSize={40}
-              >
-                <main className="h-full overflow-auto p-6">
-                  {children}
-                </main>
-              </ResizablePanel>
-              <ResizableHandle 
-                withHandle={agentPanelOpen}
-                className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!agentPanelOpen ? 'pointer-events-none opacity-0' : ''}`}
-              />
-              <ResizablePanel 
-                ref={agentPanelRef}
-                id="agent-panel"
-                defaultSize={agentPanelOpen ? 18 : 3} 
-                minSize={3} 
-                maxSize={agentPanelOpen ? 40 : 3}
-                collapsible={true}
-                collapsedSize={3}
-                key={`agent-${agentPanelOpen}`}
-              >
-                <AgentPanel />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+            // Dashboard edit mode: Show panels with shared DndContext
+            <DashboardDndProvider>
+              <ResizablePanelGroup direction="horizontal" className="flex-1">
+                <ResizablePanel 
+                  ref={componentsPanelRef}
+                  id="components-panel"
+                  defaultSize={componentsPanelOpen ? 18 : 3} 
+                  minSize={3} 
+                  maxSize={componentsPanelOpen ? 40 : 3}
+                  collapsible={true}
+                  collapsedSize={3}
+                  key={`components-${componentsPanelOpen}`}
+                >
+                  <ComponentsPanel />
+                </ResizablePanel>
+                <ResizableHandle 
+                  withHandle={componentsPanelOpen}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen ? 'pointer-events-none opacity-0' : ''}`}
+                />
+                <ResizablePanel 
+                  id="main-panel"
+                  defaultSize={componentsPanelOpen && agentPanelOpen ? 64 : componentsPanelOpen ? 79 : agentPanelOpen ? 79 : 94}
+                  minSize={40}
+                >
+                  <main className="h-full overflow-auto p-6">
+                    {children}
+                  </main>
+                </ResizablePanel>
+                <ResizableHandle 
+                  withHandle={agentPanelOpen}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!agentPanelOpen ? 'pointer-events-none opacity-0' : ''}`}
+                />
+                <ResizablePanel 
+                  ref={agentPanelRef}
+                  id="agent-panel"
+                  defaultSize={agentPanelOpen ? 18 : 3} 
+                  minSize={3} 
+                  maxSize={agentPanelOpen ? 40 : 3}
+                  collapsible={true}
+                  collapsedSize={3}
+                  key={`agent-${agentPanelOpen}`}
+                >
+                  <AgentPanel />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </DashboardDndProvider>
           ) : (
             // Other pages: No panels, just main content
             <main className="h-full overflow-auto p-6">
