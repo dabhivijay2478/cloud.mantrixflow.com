@@ -16,8 +16,13 @@ import { toast } from "@/lib/utils/toast";
 type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
-  const { dataSources, addDataSource, currentOrganization } =
-    useWorkspaceStore();
+  const {
+    dataSources,
+    addDataSource,
+    removeDataSource,
+    updateDataSource,
+    currentOrganization,
+  } = useWorkspaceStore();
 
   // Filter data sources by current organization
   const filteredDataSources = currentOrganization
@@ -177,6 +182,38 @@ export default function DataSourcesPage() {
     }
   };
 
+  const handleDisconnect = (dataSourceId: string) => {
+    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
+    if (!dataSource) return;
+
+    updateDataSource(dataSourceId, {
+      ...dataSource,
+      status: "disconnected",
+    });
+
+    toast.success(
+      "Data source disconnected",
+      `${dataSource.name} has been disconnected successfully.`,
+    );
+  };
+
+  const handleDelete = (dataSourceId: string) => {
+    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
+    if (!dataSource) return;
+
+    if (
+      confirm(
+        `Are you sure you want to delete "${dataSource.name}"? This action cannot be undone.`,
+      )
+    ) {
+      removeDataSource(dataSourceId);
+      toast.success(
+        "Data source deleted",
+        `${dataSource.name} has been deleted successfully.`,
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -223,6 +260,8 @@ export default function DataSourcesPage() {
           getConnectedDataSource={getConnectedDataSource}
           onDataSourceClick={handleDataSourceClick}
           showOnlyConnected={true}
+          onDisconnect={handleDisconnect}
+          onDelete={handleDelete}
         />
       )}
 

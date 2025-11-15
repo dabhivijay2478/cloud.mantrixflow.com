@@ -28,6 +28,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 
 // Mock query execution - replace with actual API call
@@ -152,6 +153,7 @@ export default function DataSourceQueryPage() {
   const [selectedTable, setSelectedTable] = useState<string | undefined>();
   const [resultsFullScreen, setResultsFullScreen] = useState(false);
   const [editorSize, setEditorSize] = useState(60);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const editorRef = useRef<{ setValue: (value: string) => void } | null>(null);
   const language = dataSource
@@ -391,25 +393,25 @@ export default function DataSourceQueryPage() {
       {/* Main Content */}
       <div className="flex-1 min-h-0">
         {shouldShowSQLEditor ? (
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            {/* Tables Sidebar */}
-            <ResizablePanel
-              defaultSize={20}
-              minSize={15}
-              maxSize={30}
-              collapsible
+          <div className="flex h-full">
+            {/* Tables Sidebar - Fixed width based on collapsed state */}
+            <div
+              className={cn(
+                "shrink-0 transition-all duration-200 border-r",
+                sidebarCollapsed ? "w-16" : "w-64",
+              )}
             >
               <TableNavigation
                 tables={dataSource.tables || []}
                 onTableSelect={handleTableSelect}
                 selectedTable={selectedTable}
+                defaultCollapsed={sidebarCollapsed}
+                onCollapsedChange={setSidebarCollapsed}
               />
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
+            </div>
 
             {/* Editor and Results */}
-            <ResizablePanel defaultSize={80} minSize={50}>
+            <div className="flex-1 min-w-0">
               {resultsFullScreen && results ? (
                 // Full-screen results view
                 <div className="h-full flex flex-col bg-background">
@@ -499,36 +501,34 @@ export default function DataSourceQueryPage() {
                   )}
                 </ResizablePanelGroup>
               )}
-            </ResizablePanel>
-          </ResizablePanelGroup>
+            </div>
+          </div>
         ) : (
           // View for non-SQL data sources
-          <div className="flex-1 min-h-0">
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel
-                defaultSize={20}
-                minSize={15}
-                maxSize={30}
-                collapsible
-              >
-                <TableNavigation
-                  tables={dataSource.tables || []}
-                  onTableSelect={handleTableSelect}
-                  selectedTable={selectedTable}
-                />
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={80} minSize={50}>
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      Select a table from the sidebar to view data
-                    </p>
-                  </div>
-                </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+          <div className="flex-1 min-h-0 flex">
+            {/* Tables Sidebar - Fixed width based on collapsed state */}
+            <div
+              className={cn(
+                "shrink-0 transition-all duration-200 border-r",
+                sidebarCollapsed ? "w-16" : "w-64",
+              )}
+            >
+              <TableNavigation
+                tables={dataSource.tables || []}
+                onTableSelect={handleTableSelect}
+                selectedTable={selectedTable}
+                defaultCollapsed={sidebarCollapsed}
+                onCollapsedChange={setSidebarCollapsed}
+              />
+            </div>
+            <div className="flex-1 min-w-0 flex items-center justify-center">
+              <div className="text-center">
+                <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Select a table from the sidebar to view data
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
