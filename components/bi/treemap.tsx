@@ -60,6 +60,9 @@ const CustomContent = (props: any) => {
   
   if (width < 40 || height < 40) return null;
 
+  // Ensure size is a valid number
+  const displaySize = typeof size === 'number' && !isNaN(size) ? size : 0;
+
   return (
     <g>
       <rect
@@ -83,15 +86,17 @@ const CustomContent = (props: any) => {
       >
         {name}
       </text>
-      <text
-        x={x + width / 2}
-        y={y + height / 2 + 20}
-        textAnchor="middle"
-        fill="#fff"
-        fontSize={12}
-      >
-        {size.toLocaleString()}
-      </text>
+      {displaySize > 0 && (
+        <text
+          x={x + width / 2}
+          y={y + height / 2 + 20}
+          textAnchor="middle"
+          fill="#fff"
+          fontSize={12}
+        >
+          {displaySize.toLocaleString()}
+        </text>
+      )}
     </g>
   );
 };

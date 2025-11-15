@@ -3,7 +3,6 @@
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { DashboardCanvasWithHandlers } from "@/components/workspace/dashboard-canvas";
 import { ArrowLeft, Save, ExternalLink } from "lucide-react";
@@ -100,16 +99,16 @@ export default function DashboardEditorPage() {
   }
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-2 h-full flex flex-col">
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.push("/workspace")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{dashboard.name}</h1>
+            <h1 className="text-xl font-bold">{dashboard.name}</h1>
             {dashboard.description && (
-              <p className="text-muted-foreground">{dashboard.description}</p>
+              <p className="text-muted-foreground text-sm">{dashboard.description}</p>
             )}
           </div>
         </div>
@@ -128,8 +127,7 @@ export default function DashboardEditorPage() {
         </div>
       </div>
 
-      <Card className="flex-1 min-h-0 flex flex-col">
-        <CardContent className="p-6 flex-1 min-h-0">
+      <div className="border min-h-screen overflow-visible" style={{ overflow: 'visible' }}>
           <DashboardCanvasWithHandlers
             components={dashboard.components}
             onComponentsChange={handleComponentsChange}
@@ -137,8 +135,7 @@ export default function DashboardEditorPage() {
             onComponentDelete={handleComponentDelete}
             className="h-full"
           />
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

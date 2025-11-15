@@ -114,7 +114,7 @@ export default function WorkspaceLayout({
                   defaultSize={componentsPanelOpen && agentPanelOpen ? 64 : componentsPanelOpen ? 79 : agentPanelOpen ? 79 : 94}
                   minSize={40}
                 >
-                  <main className="h-full overflow-auto p-6">
+                  <main className="h-full overflow-visible p-6" style={{ overflow: 'visible' }}>
                     {children}
                   </main>
                 </ResizablePanel>

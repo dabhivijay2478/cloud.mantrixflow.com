@@ -57,6 +57,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/lib/utils";
 
 // All @bi components with their icons and descriptions
 const allComponents = [
@@ -153,7 +154,7 @@ function DraggableComponentButton({ component }: DraggableComponentButtonProps) 
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   const Icon = component.icon;
@@ -163,12 +164,20 @@ function DraggableComponentButton({ component }: DraggableComponentButtonProps) 
       ref={setNodeRef}
       variant="ghost"
       size="icon"
-      className="h-10 w-10 hover:bg-accent cursor-grab active:cursor-grabbing touch-none"
+      className={cn(
+        "h-10 w-10 cursor-grab active:cursor-grabbing touch-none transition-all",
+        "hover:bg-blue-500/20 hover:border-blue-500 hover:border",
+        "active:bg-blue-500/30 active:border-blue-600",
+        isDragging && "bg-blue-500/30 border-blue-600 border-2"
+      )}
       style={style}
       {...attributes}
       {...listeners}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className={cn(
+        "h-5 w-5 transition-colors",
+        isDragging && "text-blue-600"
+      )} />
     </Button>
   );
 }

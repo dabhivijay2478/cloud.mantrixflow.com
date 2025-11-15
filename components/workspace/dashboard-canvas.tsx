@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback, useMemo, useEffect } from "react";
-import "react-resizable/css/styles.css";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   DragOverlay,
   useDroppable,
@@ -13,9 +12,16 @@ import { cn } from "@/lib/utils";
 import type { DashboardComponent } from "@/lib/stores/workspace-store";
 import { DashboardItem } from "./dashboard-item";
 import { ComponentRenderer } from "./component-renderer";
+import {
+  findBestPosition,
+  canPlaceComponent,
+  getNearestValidPosition,
+  checkCollisionWithComponents,
+  componentToRect,
+} from "@/lib/utils/dashboard-layout";
 
 const GRID_SIZE = 20; // Grid cell size in pixels
-const GRID_COLS = 24; // Number of grid columns
+const GRID_COLS = 12; // Number of grid columns
 const GRID_ROWS = 40; // Number of grid rows
 
 interface DashboardCanvasProps {
@@ -36,8 +42,27 @@ export function DashboardCanvas({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedComponentType, setDraggedComponentType] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
+  const [showOccupiedAreas, setShowOccupiedAreas] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const { active, over, delta } = useDndContext();
   const prevActiveRef = React.useRef(active);
+  const dragStartPositionRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Update canvas size on mount and resize
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        setCanvasSize({ width: rect.width, height: rect.height });
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  }, []);
 
   // Snap position to grid
   const snapToGrid = useCallback((x: number, y: number) => {
@@ -51,6 +76,91 @@ export function DashboardCanvas({
   const pixelToGrid = useCallback((pixels: number) => {
     return Math.round(pixels / GRID_SIZE);
   }, []);
+
+  // Handle real-time drag updates with collision detection
+  useEffect(() => {
+    if (!active || !delta) return;
+
+    const activeData = active.data.current;
+    if (activeData?.type === "dashboard-item" && activeData?.component) {
+      const component = activeData.component as DashboardComponent;
+      
+      // Store start position on drag start
+      if (!dragStartPositionRef.current) {
+        dragStartPositionRef.current = {
+          x: component.position.x * GRID_SIZE,
+          y: component.position.y * GRID_SIZE,
+        };
+      }
+
+      // Calculate new position
+      if (dragStartPositionRef.current) {
+        const newX = dragStartPositionRef.current.x + delta.x;
+        const newY = dragStartPositionRef.current.y + delta.y;
+        
+        const snapped = snapToGrid(newX, newY);
+        let gridX = pixelToGrid(snapped.x);
+        let gridY = pixelToGrid(snapped.y);
+
+        // Calculate canvas bounds in grid units
+        const maxGridX = Math.floor(canvasSize.width / GRID_SIZE);
+        const maxGridY = Math.floor(canvasSize.height / GRID_SIZE);
+
+        // Clamp to canvas bounds
+        gridX = Math.max(0, Math.min(gridX, maxGridX - component.position.w));
+        gridY = Math.max(0, Math.min(gridY, maxGridY - component.position.h));
+
+        // Check for collisions
+        const wouldCollide = !canPlaceComponent(
+          gridX,
+          gridY,
+          component.position.w,
+          component.position.h,
+          components,
+          component.id,
+          GRID_SIZE
+        );
+
+        if (wouldCollide) {
+          // Try to find nearest valid position
+          const validPos = getNearestValidPosition(
+            gridX,
+            gridY,
+            component.position.w,
+            component.position.h,
+            components,
+            component.id,
+            GRID_SIZE
+          );
+          gridX = validPos.x;
+          gridY = validPos.y;
+          setCollisionWarning(component.id);
+        } else {
+          setCollisionWarning(null);
+        }
+
+        // Update position in real-time
+        onComponentUpdate(component.id, {
+          position: {
+            ...component.position,
+            x: gridX,
+            y: gridY,
+          },
+        });
+      }
+    }
+  }, [active, delta, canvasSize, snapToGrid, pixelToGrid, onComponentUpdate, components]);
+
+  // Reset drag start position and clear active state when drag ends
+  useEffect(() => {
+    if (!active) {
+      dragStartPositionRef.current = null;
+      setActiveId(null);
+      setDraggedComponentType(null);
+      setIsDragging(false);
+      setCollisionWarning(null);
+    }
+  }, [active]);
 
   // Listen to drag events from the parent DndContext
   useEffect(() => {
@@ -71,7 +181,7 @@ export function DashboardCanvas({
     }
   }, [active]);
 
-  // Handle drag end when dropped on canvas
+  // Handle drag end when dropped on canvas (for new components from palette)
   useEffect(() => {
     // Detect when drag ends (active goes from non-null to null)
     const wasDragging = prevActiveRef.current !== null;
@@ -97,70 +207,51 @@ export function DashboardCanvas({
           const dropX = (window as any).__lastDropX || canvasRect.width / 2;
           const dropY = (window as any).__lastDropY || canvasRect.height / 2;
 
-          const snapped = snapToGrid(dropX, dropY);
-          const gridX = pixelToGrid(snapped.x);
-          const gridY = pixelToGrid(snapped.y);
+          // Default component size
+          const defaultWidth = 6;
+          const defaultHeight = 4;
 
-          const clampedX = Math.max(0, Math.min(gridX, GRID_COLS - 6));
-          const clampedY = Math.max(0, Math.min(gridY, GRID_ROWS - 4));
+          // Get canvas dimensions (ensure we have valid size)
+          const effectiveCanvasWidth = canvasSize.width > 0 
+            ? canvasSize.width 
+            : (canvasElement?.offsetWidth || GRID_COLS * GRID_SIZE);
+          const effectiveCanvasHeight = canvasSize.height > 0 
+            ? canvasSize.height 
+            : (canvasElement?.offsetHeight || GRID_ROWS * GRID_SIZE);
+
+          // ALWAYS use intelligent auto-placement to find empty space
+          // This ensures components never overlap (like Power BI/Tableau)
+          const bestPosition = findBestPosition(
+            defaultWidth,
+            defaultHeight,
+            components,
+            effectiveCanvasWidth,
+            effectiveCanvasHeight,
+            GRID_SIZE
+          );
+
+          // Use auto-placement position (ensures no overlap)
+          const finalX = bestPosition.x;
+          const finalY = bestPosition.y;
 
           const newComponent: DashboardComponent = {
             id: nanoid(),
             type: lastActiveData.componentType,
             position: {
-              x: clampedX,
-              y: clampedY,
-              w: 6,
-              h: 4,
+              x: finalX,
+              y: finalY,
+              w: defaultWidth,
+              h: defaultHeight,
             },
             config: {},
             zIndex: components.length > 0 ? Math.max(...components.map((c) => c.zIndex || 0)) + 1 : 1,
           };
 
           onComponentsChange([...components, newComponent]);
-        } else if (lastActiveData?.type === "dashboard-item" && lastActiveData?.component) {
-          // Moving existing component
-          const component = lastActiveData.component as DashboardComponent;
-          const componentId = component.id;
-
-          // Get the stored delta or calculate from drop position
-          const storedDelta = (window as any).__lastDelta;
-          const dropX = (window as any).__lastDropX;
-          const dropY = (window as any).__lastDropY;
-
-          if (component) {
-            let newX: number;
-            let newY: number;
-
-            if (dropX !== undefined && dropY !== undefined) {
-              // Use drop position
-              newX = dropX;
-              newY = dropY;
-            } else if (storedDelta) {
-              // Use delta
-              newX = component.position.x * GRID_SIZE + storedDelta.x;
-              newY = component.position.y * GRID_SIZE + storedDelta.y;
-            } else {
-              // Fallback to current position
-              newX = component.position.x * GRID_SIZE;
-              newY = component.position.y * GRID_SIZE;
-            }
-
-            const snapped = snapToGrid(newX, newY);
-            const gridX = pixelToGrid(snapped.x);
-            const gridY = pixelToGrid(snapped.y);
-
-            const clampedX = Math.max(0, Math.min(gridX, GRID_COLS - component.position.w));
-            const clampedY = Math.max(0, Math.min(gridY, GRID_ROWS - component.position.h));
-
-            onComponentUpdate(componentId, {
-              position: {
-                ...component.position,
-                x: clampedX,
-                y: clampedY,
-              },
-            });
-          }
+          
+          // Show occupied areas briefly after adding component
+          setShowOccupiedAreas(true);
+          setTimeout(() => setShowOccupiedAreas(false), 1000);
         }
 
         setActiveId(null);
@@ -172,7 +263,7 @@ export function DashboardCanvas({
         delete (window as any).__lastDropY;
       }
     }
-  }, [active, activeId, delta, components, onComponentsChange, onComponentUpdate, snapToGrid, pixelToGrid]);
+  }, [active, activeId, components, onComponentsChange, snapToGrid, pixelToGrid, canvasSize]);
 
   // Store drag data before it's cleared
   useEffect(() => {
@@ -183,9 +274,31 @@ export function DashboardCanvas({
 
   const handleResize = useCallback(
     (id: string, newSize: { w: number; h: number }) => {
+      const component = components.find((c) => c.id === id);
+      if (!component) return;
+
+      // Check if resize would cause collision
+      const wouldCollide = !canPlaceComponent(
+        component.position.x,
+        component.position.y,
+        newSize.w,
+        newSize.h,
+        components,
+        id,
+        GRID_SIZE
+      );
+
+      if (wouldCollide) {
+        setCollisionWarning(id);
+        // Still allow resize but show warning
+        // In production, you might want to prevent resize or auto-adjust
+      } else {
+        setCollisionWarning(null);
+      }
+
       onComponentUpdate(id, {
         position: {
-          ...components.find((c) => c.id === id)?.position!,
+          ...component.position,
           w: newSize.w,
           h: newSize.h,
         },
@@ -243,8 +356,9 @@ export function DashboardCanvas({
     <>
       <CanvasDropZone>
         <div
+          ref={canvasRef}
           className={cn(
-            "relative w-full h-full min-h-[600px] bg-background",
+            "relative w-full h-full min-h-[600px] bg-background overflow-visible",
             isDragging && "bg-muted/50",
             className
           )}
@@ -254,6 +368,7 @@ export function DashboardCanvas({
               linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px)
             `,
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+            overflow: 'visible',
           }}
         >
           {/* Grid overlay - visible when dragging */}
@@ -263,16 +378,40 @@ export function DashboardCanvas({
             </div>
           )}
 
+          {/* Occupied areas overlay (visual feedback) */}
+          {showOccupiedAreas && (
+            <div className="absolute inset-0 pointer-events-none">
+              {components.map((component) => {
+                const rect = componentToRect(component, GRID_SIZE);
+                return (
+                  <div
+                    key={`occupied-${component.id}`}
+                    className="absolute border-2 border-dashed border-muted-foreground/20 bg-muted/5"
+                    style={{
+                      left: `${rect.x}px`,
+                      top: `${rect.y}px`,
+                      width: `${rect.width}px`,
+                      height: `${rect.height}px`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
           {/* Components */}
           {components.map((component) => (
             <DashboardItem
               key={component.id}
               component={component}
               gridSize={GRID_SIZE}
+              canvasWidth={canvasSize.width || GRID_COLS * GRID_SIZE}
+              canvasHeight={canvasSize.height || GRID_ROWS * GRID_SIZE}
               onResize={handleResize}
               onDelete={onComponentDelete}
               onLayerChange={handleLayerChange}
               onUpdate={onComponentUpdate}
+              hasCollision={collisionWarning === component.id}
             >
               <ComponentRenderer component={component} />
             </DashboardItem>
@@ -294,6 +433,59 @@ export function DashboardCanvas({
           )}
         </div>
       </CanvasDropZone>
+
+      {/* Drag Overlay - Blue preview when dragging */}
+      {isDragging && active && (
+        <DragOverlay dropAnimation={null}>
+          {(() => {
+            const activeData = active.data.current;
+            if (activeData?.type === "dashboard-item" && activeData?.component) {
+              const component = activeData.component as DashboardComponent;
+              const width = component.position.w * GRID_SIZE;
+              const height = component.position.h * GRID_SIZE;
+              
+              return (
+                <div
+                  className="bg-blue-500/90 border-2 border-blue-600 rounded-lg shadow-2xl rotate-2"
+                  style={{
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    opacity: 0.95,
+                    cursor: 'grabbing',
+                  }}
+                >
+                  <div className="w-full h-full flex items-center justify-center p-2">
+                    <div className="text-white text-xs font-medium text-center">
+                      {component.type.replace(/-/g, ' ')}
+                    </div>
+                  </div>
+                </div>
+              );
+            } else if (activeData?.type === "palette" && activeData?.componentType) {
+              // Preview for new component from palette
+              const defaultWidth = 6 * GRID_SIZE;
+              const defaultHeight = 4 * GRID_SIZE;
+              
+              return (
+                <div
+                  className="bg-blue-500/90 border-2 border-blue-600 rounded-lg shadow-2xl flex items-center justify-center rotate-2"
+                  style={{
+                    width: `${defaultWidth}px`,
+                    height: `${defaultHeight}px`,
+                    opacity: 0.95,
+                    cursor: 'grabbing',
+                  }}
+                >
+                  <div className="text-white text-xs font-medium text-center px-2">
+                    {activeData.componentType.replace(/-/g, ' ')}
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </DragOverlay>
+      )}
     </>
   );
 }
