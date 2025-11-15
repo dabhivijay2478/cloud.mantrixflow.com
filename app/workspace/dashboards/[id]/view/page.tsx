@@ -35,14 +35,15 @@ export default function DashboardViewPage() {
     const updateCanvasSize = () => {
       if (containerRef.current && canvasRef.current && dashboard) {
         const containerRect = containerRef.current.getBoundingClientRect();
-        const containerWidth = Math.max(containerRect.width, 320); // Minimum 320px for mobile
+        const containerWidth = Math.max(containerRect.width, 280); // Minimum 280px for very small mobile devices
         const containerHeight = containerRect.height;
 
         // Calculate scale factor based on container width vs base width
         // This ensures the dashboard scales proportionally in iframes
-        // Clamp scale between 0.3 (for very small screens) and 1.5 (for large screens)
+        // Clamp scale between 0.25 (for very small screens) and 1.5 (for large screens)
+        // Use a more aggressive scaling for mobile devices
         const calculatedScale = Math.max(
-          0.3,
+          0.25, // Allow smaller scale for very small screens
           Math.min(
             containerWidth / BASE_CANVAS_WIDTH,
             1.5, // Max scale to prevent components from becoming too large
@@ -108,12 +109,12 @@ export default function DashboardViewPage() {
   return (
     <div className="h-screen w-full flex flex-col bg-background">
       {/* Header */}
-      <div className="shrink-0 p-4 md:p-6 border-b">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">
+      <div className="shrink-0 p-3 sm:p-4 md:p-6 border-b">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2 break-words">
           {dashboard.name}
         </h1>
         {dashboard.description && (
-          <p className="text-muted-foreground text-sm md:text-base">
+          <p className="text-muted-foreground text-xs sm:text-sm md:text-base break-words">
             {dashboard.description}
           </p>
         )}
@@ -123,12 +124,11 @@ export default function DashboardViewPage() {
       <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden w-full">
         <ScrollArea className="w-full h-full">
           <div
-            className="relative bg-background mx-auto"
+            className="relative bg-background mx-auto p-2.5 sm:p-5"
             style={{
               width: `${canvasSize.width || BASE_CANVAS_WIDTH}px`,
               height: `${canvasSize.height || "100%"}px`,
               minHeight: "100%",
-              padding: "20px",
               transform: `scale(${scale})`,
               transformOrigin: "top center",
               // Adjust margin to account for scaled content height
@@ -146,12 +146,12 @@ export default function DashboardViewPage() {
             <div ref={canvasRef} className="relative w-full h-full">
               {dashboard.components.length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center space-y-4 p-8">
-                    <div className="text-4xl mb-4">📊</div>
-                    <h3 className="text-lg font-semibold text-foreground">
+                  <div className="text-center space-y-4 p-4 sm:p-8">
+                    <div className="text-3xl sm:text-4xl mb-2 sm:mb-4">📊</div>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground">
                       Your dashboard is empty
                     </h3>
-                    <p className="text-sm text-muted-foreground max-w-md">
+                    <p className="text-xs sm:text-sm text-muted-foreground max-w-md px-4">
                       Add components to start visualizing your data
                     </p>
                   </div>

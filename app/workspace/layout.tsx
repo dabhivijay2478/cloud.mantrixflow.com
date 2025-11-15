@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   SidebarProvider,
@@ -24,6 +24,7 @@ import { ComponentsPanel } from "@/components/workspace/components-panel";
 import { AgentPanel } from "@/components/workspace/agent-panel";
 import { LoadingState } from "@/components/shared";
 import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
+import { useIsMobile } from "@/hooks/use-mobile";
 import * as ResizablePrimitive from "react-resizable-panels";
 
 export default function WorkspaceLayout({
@@ -34,6 +35,7 @@ export default function WorkspaceLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading } = useAuthStore();
+  const isMobile = useIsMobile();
   const {
     onboarding,
     sidebarOpen,
@@ -46,6 +48,7 @@ export default function WorkspaceLayout({
   const componentsPanelRef =
     useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const agentPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+  const [mainPanelSize, setMainPanelSize] = useState(64);
 
   // Check if we're on a view-only page (dashboard view)
   const isViewMode = pathname?.includes("/view");
@@ -73,18 +76,51 @@ export default function WorkspaceLayout({
     setAgentPanelOpen,
   ]);
 
-  // Only resize when collapsing (to preserve user's manual resizing)
+  // Calculate responsive panel sizes based on screen size and panel states
   useEffect(() => {
-    if (!componentsPanelOpen && componentsPanelRef.current) {
-      componentsPanelRef.current.resize(3);
+    if (isMobile) {
+      // On mobile, panels should be smaller or hidden
+      if (!componentsPanelOpen && componentsPanelRef.current) {
+        componentsPanelRef.current.resize(0);
+      }
+      if (!agentPanelOpen && agentPanelRef.current) {
+        agentPanelRef.current.resize(0);
+      }
+    } else {
+      // On desktop, use normal sizes
+      if (!componentsPanelOpen && componentsPanelRef.current) {
+        componentsPanelRef.current.resize(3);
+      }
+      if (!agentPanelOpen && agentPanelRef.current) {
+        agentPanelRef.current.resize(3);
+      }
     }
-  }, [componentsPanelOpen]);
+  }, [componentsPanelOpen, agentPanelOpen, isMobile]);
 
+  // Calculate main panel size based on open panels
   useEffect(() => {
-    if (!agentPanelOpen && agentPanelRef.current) {
-      agentPanelRef.current.resize(3);
+    if (isMobile) {
+      // On mobile, main panel takes full width when panels are closed
+      if (componentsPanelOpen && agentPanelOpen) {
+        setMainPanelSize(50);
+      } else if (componentsPanelOpen || agentPanelOpen) {
+        setMainPanelSize(70);
+      } else {
+        setMainPanelSize(100);
+      }
+    } else {
+      // On desktop, calculate based on open panels
+      if (componentsPanelOpen && agentPanelOpen) {
+        setMainPanelSize(64);
+      } else if (componentsPanelOpen) {
+        setMainPanelSize(79);
+      } else if (agentPanelOpen) {
+        setMainPanelSize(79);
+      } else {
+        setMainPanelSize(94);
+      }
     }
-  }, [agentPanelOpen]);
+  }, [componentsPanelOpen, agentPanelOpen, isMobile]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -104,7 +140,9 @@ export default function WorkspaceLayout({
 
   // View mode: No sidebar, no topbar, no panels - just content for iframe embedding
   if (isViewMode) {
-    return <div className="h-screen w-full overflow-auto">{children}</div>;
+    return (
+      <div className="h-screen w-full overflow-auto bg-background">{children}</div>
+    );
   }
 
   // Edit mode: Full workspace layout with sidebar, topbar, and panels (only in dashboard edit mode)
@@ -117,64 +155,66 @@ export default function WorkspaceLayout({
           {isDashboardEditMode ? (
             // Dashboard edit mode: Show panels with shared DndContext
             <DashboardDndProvider>
-              <ResizablePanelGroup direction="horizontal" className="flex-1">
+              <ResizablePanelGroup 
+                direction="horizontal" 
+                className="flex-1"
+                onLayout={(sizes) => {
+                  // Update main panel size when layout changes
+                  if (sizes.length >= 3) {
+                    setMainPanelSize(sizes[1] || 64);
+                  }
+                }}
+              >
                 <ResizablePanel
                   ref={componentsPanelRef}
                   id="components-panel"
-                  defaultSize={componentsPanelOpen ? 18 : 3}
-                  minSize={3}
-                  maxSize={componentsPanelOpen ? 40 : 3}
+                  defaultSize={isMobile ? (componentsPanelOpen ? 50 : 0) : (componentsPanelOpen ? 18 : 3)}
+                  minSize={isMobile ? 0 : 3}
+                  maxSize={isMobile ? (componentsPanelOpen ? 80 : 0) : (componentsPanelOpen ? 40 : 3)}
                   collapsible={true}
-                  collapsedSize={3}
-                  key={`components-${componentsPanelOpen}`}
+                  collapsedSize={isMobile ? 0 : 3}
+                  key={`components-${componentsPanelOpen}-${isMobile}`}
                 >
-                  <ComponentsPanel />
+                  {(!isMobile || componentsPanelOpen) && <ComponentsPanel />}
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={componentsPanelOpen}
-                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen ? "pointer-events-none opacity-0" : ""}`}
+                  withHandle={componentsPanelOpen && !isMobile}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel
                   id="main-panel"
-                  defaultSize={
-                    componentsPanelOpen && agentPanelOpen
-                      ? 64
-                      : componentsPanelOpen
-                        ? 79
-                        : agentPanelOpen
-                          ? 79
-                          : 94
-                  }
-                  minSize={40}
+                  defaultSize={mainPanelSize}
+                  minSize={isMobile ? 20 : 40}
+                  key={`main-${componentsPanelOpen}-${agentPanelOpen}-${isMobile}`}
                 >
                   <main
-                    className="h-full overflow-visible p-6"
+                    className="h-full overflow-visible p-3 md:p-6"
                     style={{ overflow: "visible" }}
                   >
                     {children}
                   </main>
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={agentPanelOpen}
-                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!agentPanelOpen ? "pointer-events-none opacity-0" : ""}`}
+                  withHandle={agentPanelOpen && !isMobile}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!agentPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel
                   ref={agentPanelRef}
                   id="agent-panel"
-                  defaultSize={agentPanelOpen ? 18 : 3}
-                  minSize={3}
-                  maxSize={agentPanelOpen ? 40 : 3}
+                  defaultSize={isMobile ? (agentPanelOpen ? 50 : 0) : (agentPanelOpen ? 18 : 3)}
+                  minSize={isMobile ? 0 : 3}
+                  maxSize={isMobile ? (agentPanelOpen ? 80 : 0) : (agentPanelOpen ? 40 : 3)}
                   collapsible={true}
-                  collapsedSize={3}
-                  key={`agent-${agentPanelOpen}`}
+                  collapsedSize={isMobile ? 0 : 3}
+                  key={`agent-${agentPanelOpen}-${isMobile}`}
                 >
-                  <AgentPanel />
+                  {(!isMobile || agentPanelOpen) && <AgentPanel />}
                 </ResizablePanel>
               </ResizablePanelGroup>
             </DashboardDndProvider>
           ) : (
             // Other pages: No panels, just main content
-            <main className="h-full overflow-auto p-6">{children}</main>
+            <main className="h-full overflow-auto p-3 md:p-6">{children}</main>
           )}
         </SidebarInset>
       </div>

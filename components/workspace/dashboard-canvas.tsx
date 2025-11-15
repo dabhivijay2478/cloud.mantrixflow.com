@@ -57,10 +57,17 @@ export function DashboardCanvas({
   useEffect(() => {
     const updateCanvasSize = () => {
       // Get viewport from parent container, not canvas itself
-      const scrollContainer = canvasRef.current?.parentElement?.parentElement;
+      // Try multiple parent levels to find the actual scroll container
+      let scrollContainer = canvasRef.current?.parentElement?.parentElement;
+      
+      // If not found, try going up more levels (for responsive layout changes)
+      if (!scrollContainer || scrollContainer.clientWidth === 0) {
+        scrollContainer = canvasRef.current?.parentElement?.parentElement?.parentElement;
+      }
+      
       if (scrollContainer) {
-        const viewportWidth = scrollContainer.clientWidth;
-        const viewportHeight = scrollContainer.clientHeight;
+        const viewportWidth = Math.max(scrollContainer.clientWidth || 0, 320); // Minimum 320px for mobile
+        const viewportHeight = Math.max(scrollContainer.clientHeight || 0, 400); // Minimum height
 
         // Calculate content size based on component positions
         const boundingBox = getBoundingBox(components, GRID_SIZE);
@@ -92,21 +99,52 @@ export function DashboardCanvas({
     // Update immediately and after a short delay to ensure DOM is ready
     updateCanvasSize();
     const timeoutId = setTimeout(updateCanvasSize, 100);
+    const timeoutId2 = setTimeout(updateCanvasSize, 500); // Additional delay for panel animations
 
-    // Use ResizeObserver for better performance
+    // Use ResizeObserver for better performance - observe multiple containers
     const resizeObserver = new ResizeObserver(() => {
-      updateCanvasSize();
+      // Use requestAnimationFrame to batch updates
+      requestAnimationFrame(updateCanvasSize);
     });
 
+    // Observe the canvas container and its parents
     const scrollContainer = canvasRef.current?.parentElement?.parentElement;
     if (scrollContainer) {
       resizeObserver.observe(scrollContainer);
     }
+    
+    // Also observe the main panel container if available
+    const mainPanel = document.getElementById("main-panel");
+    if (mainPanel) {
+      resizeObserver.observe(mainPanel);
+    }
 
     window.addEventListener("resize", updateCanvasSize);
+    
+    // Listen for panel resize events (from ResizablePanelGroup)
+    const handlePanelResize = () => {
+      requestAnimationFrame(updateCanvasSize);
+    };
+    
+    // Use a MutationObserver to detect when panels expand/collapse
+    const mutationObserver = new MutationObserver(() => {
+      requestAnimationFrame(updateCanvasSize);
+    });
+    
+    if (mainPanel) {
+      mutationObserver.observe(mainPanel, {
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+        childList: false,
+        subtree: false,
+      });
+    }
+    
     return () => {
       clearTimeout(timeoutId);
+      clearTimeout(timeoutId2);
       resizeObserver.disconnect();
+      mutationObserver.disconnect();
       window.removeEventListener("resize", updateCanvasSize);
     };
   }, [components]);
