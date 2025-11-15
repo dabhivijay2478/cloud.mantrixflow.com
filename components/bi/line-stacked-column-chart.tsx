@@ -1,23 +1,23 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
-  ComposedChart,
   Bar,
+  CartesianGrid,
+  ComposedChart,
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { cn } from "@/lib/utils";
 
 /**
  * LineStackedColumnChart
@@ -49,7 +49,7 @@ import {
  */
 
 export interface LineStackedColumnChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   xKey: string;
   columnKeys: string[];
   lineKeys: string[];

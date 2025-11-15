@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
  */
 
 export interface MatrixProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   rowKeys: string[];
   columnKeys: string[];
   title?: string;
@@ -69,7 +69,7 @@ export function Matrix({
   data.forEach((row) => {
     columnKeys.forEach((colKey) => {
       const value = Number(row[colKey]);
-      if (!isNaN(value)) {
+      if (!Number.isNaN(value)) {
         allValues.push(value);
       }
     });
@@ -80,7 +80,7 @@ export function Matrix({
   const valueRange = calculatedMax - calculatedMin || 1;
 
   const getColorForValue = (value: number): string => {
-    if (isNaN(value)) return "#e5e7eb";
+    if (Number.isNaN(value)) return "#e5e7eb";
     const normalized = (value - calculatedMin) / valueRange;
     const index = Math.floor(normalized * (colorScale.length - 1));
     return colorScale[Math.min(index, colorScale.length - 1)];
@@ -158,9 +158,9 @@ export function Matrix({
         <div className="mt-4 flex items-center gap-4">
           <span className="text-xs text-muted-foreground">Scale:</span>
           <div className="flex-1 h-3 rounded-full overflow-hidden flex">
-            {colorScale.map((color, index) => (
+            {colorScale.map((color) => (
               <div
-                key={index}
+                key={`color-${color}`}
                 className="flex-1"
                 style={{ backgroundColor: color }}
               />

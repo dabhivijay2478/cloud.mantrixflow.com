@@ -20,7 +20,7 @@ export interface GridPosition {
   rows: number;
 }
 
-const GRID_COLS = 12; // 12-column grid system
+const _GRID_COLS = 12; // 12-column grid system
 const GRID_SIZE = 20; // Grid cell size in pixels
 
 /**
@@ -304,7 +304,7 @@ export function getNearestValidPosition(
 
   // Try nearby positions (spiral search)
   const maxAttempts = 50;
-  const step = 1; // grid units
+  const _step = 1; // grid units
 
   for (let radius = 1; radius < maxAttempts; radius++) {
     // Try positions in a spiral pattern

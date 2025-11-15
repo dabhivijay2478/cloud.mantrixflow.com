@@ -91,6 +91,8 @@ export function Gauge({
             className="w-full h-full"
             viewBox="0 0 200 100"
             xmlns="http://www.w3.org/2000/svg"
+            role="img"
+            aria-label="Gauge chart"
           >
             <path
               d="M 20 90 A 80 80 0 0 1 180 90"

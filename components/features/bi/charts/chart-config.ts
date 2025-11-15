@@ -45,7 +45,7 @@ export function createChartConfig(
  * Base chart props shared by all chart components
  */
 export interface BaseChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   title?: string;
   description?: string;
   className?: string;

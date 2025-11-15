@@ -1,7 +1,8 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 /**
  * Slicer
@@ -69,8 +69,7 @@ export function Slicer({
   onChange,
   className,
 }: SlicerProps) {
-  const isMultiSelectDefault =
-    multiSelect ?? (type === "checkbox" ? true : false);
+  const isMultiSelectDefault = multiSelect ?? type === "checkbox";
   const [selectedValues, setSelectedValues] = useState<string[]>(defaultValues);
 
   const handleToggle = (value: string) => {

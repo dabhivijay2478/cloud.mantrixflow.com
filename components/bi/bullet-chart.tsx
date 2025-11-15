@@ -105,7 +105,7 @@ export function BulletChart({
               const width = ((zone.max - prevMax) / maxValue) * 100;
               return (
                 <div
-                  key={index}
+                  key={`zone-${zone.max}-${index}`}
                   className="h-full"
                   style={{
                     width: `${width}%`,

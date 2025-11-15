@@ -1,7 +1,7 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * Map
@@ -43,7 +43,7 @@ export interface MapProps {
   className?: string;
 }
 
-export function Map({
+export function MapComponent({
   markers,
   title,
   description,
@@ -87,7 +87,7 @@ export function Map({
           <div className="absolute inset-0 pointer-events-none">
             {markers.map((marker, index) => (
               <div
-                key={index}
+                key={`marker-${marker.lat}-${marker.lng}-${index}`}
                 className="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
                 style={{
                   left: `${((marker.lng + 180) / 360) * 100}%`,

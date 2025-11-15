@@ -1,13 +1,13 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { DashboardCanvasWithHandlers } from "@/components/workspace/dashboard-canvas";
-import { ArrowLeft, Save, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Save } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { DashboardCanvasWithHandlers } from "@/components/workspace/dashboard-canvas";
 import type { DashboardComponent } from "@/lib/stores/workspace-store";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function DashboardEditorPage() {
   const router = useRouter();
@@ -111,7 +111,9 @@ export default function DashboardEditorPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg sm:text-xl font-bold truncate">{dashboard.name}</h1>
+            <h1 className="text-lg sm:text-xl font-bold truncate">
+              {dashboard.name}
+            </h1>
             {dashboard.description && (
               <p className="text-muted-foreground text-xs sm:text-sm truncate">
                 {dashboard.description}
@@ -135,7 +137,11 @@ export default function DashboardEditorPage() {
             <span className="hidden sm:inline">View</span>
             <span className="sm:hidden">View</span>
           </Button>
-          <Button onClick={handleSave} size="sm" className="flex-1 sm:flex-initial">
+          <Button
+            onClick={handleSave}
+            size="sm"
+            className="flex-1 sm:flex-initial"
+          >
             <Save className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Save</span>
             <span className="sm:hidden">Save</span>

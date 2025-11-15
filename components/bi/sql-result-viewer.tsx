@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
 import {
-  ColumnDef,
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -12,15 +11,31 @@ import {
 } from "@tanstack/react-table";
 import {
   ArrowUpDown,
-  Download,
-  Maximize2,
-  Minimize2,
-  Loader2,
   ChevronLeft,
   ChevronRight,
+  Download,
+  Loader2,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
+import * as React from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -29,26 +44,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 export interface SQLResultViewerProps {
   columns: string[];
-  rows: any[];
+  rows: Record<string, unknown>[];
   loading?: boolean;
   error?: string | null;
   className?: string;
@@ -74,7 +74,7 @@ export function SQLResultViewer({
   const [globalFilter, setGlobalFilter] = React.useState("");
 
   // Create column definitions from column names
-  const tableColumns: ColumnDef<any>[] = React.useMemo(
+  const tableColumns: ColumnDef<Record<string, unknown>>[] = React.useMemo(
     () =>
       columns.map((col) => ({
         accessorKey: col,

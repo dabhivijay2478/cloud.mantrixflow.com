@@ -1,7 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import {
+  Bot,
+  Check,
+  Crown,
+  Edit,
+  Mail,
+  MoreVertical,
+  Shield,
+  Trash2,
+  User,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,16 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,19 +35,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  MoreVertical,
-  Shield,
-  User,
-  Crown,
-  Trash2,
-  Edit,
-  Bot,
-  X,
-  UserPlus,
-  Check,
-  Mail,
-} from "lucide-react";
-import { toast } from "sonner";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
@@ -290,8 +290,6 @@ export default function TeamPage() {
                   </TableRow>
                 ) : (
                   teamMembers.map((member) => {
-                    const roleInfo = roleConfig[member.role];
-                    const RoleIcon = roleInfo.icon;
                     return (
                       <TableRow key={member.id} className="hover:bg-muted/50">
                         <TableCell>

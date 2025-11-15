@@ -1,8 +1,7 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * FilledMap
@@ -66,17 +65,11 @@ export function FilledMap({
   className,
 }: FilledMapProps) {
   // Calculate value range for color mapping
-  const values = regions.map((r) => Number(r.value)).filter((v) => !isNaN(v));
+  const values = regions
+    .map((r) => Number(r.value))
+    .filter((v) => !Number.isNaN(v));
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
-  const valueRange = maxValue - minValue || 1;
-
-  const getColorForValue = (value: number): string => {
-    if (isNaN(value)) return "#e5e7eb";
-    const normalized = (value - minValue) / valueRange;
-    const index = Math.floor(normalized * (colorScale.length - 1));
-    return colorScale[Math.min(index, colorScale.length - 1)];
-  };
 
   return (
     <Card className={className}>
@@ -115,9 +108,9 @@ export function FilledMap({
               <p className="text-xs font-medium mb-2">Value Scale</p>
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-2 rounded-full overflow-hidden flex">
-                  {colorScale.map((color, index) => (
+                  {colorScale.map((color) => (
                     <div
-                      key={index}
+                      key={`color-${color}`}
                       className="flex-1"
                       style={{ backgroundColor: color }}
                     />

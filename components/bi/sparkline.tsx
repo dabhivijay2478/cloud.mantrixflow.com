@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  LineChart,
-  Line,
-  AreaChart,
   Area,
+  AreaChart,
+  Line,
+  LineChart,
   ResponsiveContainer,
 } from "recharts";
 
@@ -39,7 +39,7 @@ import {
 export type SparklineType = "line" | "area";
 
 export interface SparklineProps {
-  data: Array<number | Record<string, any>>;
+  data: Array<number | Record<string, unknown>>;
   dataKey?: string;
   type?: SparklineType;
   color?: string;

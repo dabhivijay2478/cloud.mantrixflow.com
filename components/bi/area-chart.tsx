@@ -1,21 +1,21 @@
 "use client";
 
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import {
-  AreaChart as RechartsAreaChart,
   Area,
+  CartesianGrid,
+  AreaChart as RechartsAreaChart,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from "recharts";
-import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
 import { createChartConfig } from "@/components/features/bi/charts/chart-config";
+import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 /**
  * AreaChart
@@ -47,7 +47,7 @@ import { createChartConfig } from "@/components/features/bi/charts/chart-config"
  */
 
 export interface AreaChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   xKey: string;
   yKeys: string[];
   title?: string;

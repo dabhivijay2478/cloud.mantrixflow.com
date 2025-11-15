@@ -1,9 +1,10 @@
+import type { DataSource } from "@/lib/stores/workspace-store";
 import { allDataSources } from "./constants";
 import { DataSourceCard } from "./data-source-card";
 
 interface DataSourceGridProps {
   isConnected: (id: string) => boolean;
-  getConnectedDataSource: (id: string) => any;
+  getConnectedDataSource: (id: string) => DataSource | undefined;
   onDataSourceClick: (id: string) => void;
 }
 

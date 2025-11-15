@@ -18,11 +18,8 @@ export default function SelectTablePage() {
   const router = useRouter();
   const params = useParams();
   const connector = params.connector as string;
-  const {
-    currentDataSource,
-    updateDataSource,
-    completeOnboarding,
-  } = useWorkspaceStore();
+  const { currentDataSource, updateDataSource, completeOnboarding } =
+    useWorkspaceStore();
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

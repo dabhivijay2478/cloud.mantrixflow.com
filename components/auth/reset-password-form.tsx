@@ -4,7 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "@/lib/utils/toast";
+import {
+  AuthErrorDisplay,
+  AuthFormHeader,
+} from "@/components/features/auth/components";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -16,14 +19,11 @@ import {
 import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/utils/toast";
 import {
   type ResetPasswordInput,
   resetPasswordSchema,
 } from "@/lib/validations/auth";
-import {
-  AuthFormHeader,
-  AuthErrorDisplay,
-} from "@/components/features/auth/components";
 
 function ResetPasswordFormContent({
   className,

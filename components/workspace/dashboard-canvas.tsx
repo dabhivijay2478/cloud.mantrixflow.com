@@ -1,22 +1,22 @@
 "use client";
 
-import * as React from "react";
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { DragOverlay, useDroppable, useDndContext } from "@dnd-kit/core";
+import { DragOverlay, useDndContext, useDroppable } from "@dnd-kit/core";
 import { nanoid } from "nanoid";
-import { cn } from "@/lib/utils";
-import type { DashboardComponent } from "@/lib/stores/workspace-store";
-import { DashboardItem } from "./dashboard-item";
-import { ComponentRenderer } from "./component-renderer";
+import * as React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { DashboardComponent } from "@/lib/stores/workspace-store";
+import { cn } from "@/lib/utils";
 import {
-  findBestPosition,
   canPlaceComponent,
-  getNearestValidPosition,
   checkCollisionWithComponents,
   componentToRect,
+  findBestPosition,
   getBoundingBox,
+  getNearestValidPosition,
 } from "@/lib/utils/dashboard-layout";
+import { ComponentRenderer } from "./component-renderer";
+import { DashboardItem } from "./dashboard-item";
 
 const GRID_SIZE = 20; // Grid cell size in pixels
 const GRID_COLS = 12; // Number of grid columns
@@ -59,12 +59,13 @@ export function DashboardCanvas({
       // Get viewport from parent container, not canvas itself
       // Try multiple parent levels to find the actual scroll container
       let scrollContainer = canvasRef.current?.parentElement?.parentElement;
-      
+
       // If not found, try going up more levels (for responsive layout changes)
       if (!scrollContainer || scrollContainer.clientWidth === 0) {
-        scrollContainer = canvasRef.current?.parentElement?.parentElement?.parentElement;
+        scrollContainer =
+          canvasRef.current?.parentElement?.parentElement?.parentElement;
       }
-      
+
       if (scrollContainer) {
         const viewportWidth = Math.max(scrollContainer.clientWidth || 0, 320); // Minimum 320px for mobile
         const viewportHeight = Math.max(scrollContainer.clientHeight || 0, 400); // Minimum height
@@ -112,7 +113,7 @@ export function DashboardCanvas({
     if (scrollContainer) {
       resizeObserver.observe(scrollContainer);
     }
-    
+
     // Also observe the main panel container if available
     const mainPanel = document.getElementById("main-panel");
     if (mainPanel) {
@@ -120,26 +121,26 @@ export function DashboardCanvas({
     }
 
     window.addEventListener("resize", updateCanvasSize);
-    
+
     // Listen for panel resize events (from ResizablePanelGroup)
     const handlePanelResize = () => {
       requestAnimationFrame(updateCanvasSize);
     };
-    
+
     // Use a MutationObserver to detect when panels expand/collapse
     const mutationObserver = new MutationObserver(() => {
       requestAnimationFrame(updateCanvasSize);
     });
-    
+
     if (mainPanel) {
       mutationObserver.observe(mainPanel, {
         attributes: true,
-        attributeFilter: ['style', 'class'],
+        attributeFilter: ["style", "class"],
         childList: false,
         subtree: false,
       });
     }
-    
+
     return () => {
       clearTimeout(timeoutId);
       clearTimeout(timeoutId2);

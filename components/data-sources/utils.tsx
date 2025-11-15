@@ -1,24 +1,24 @@
-import React from "react";
-import { Database, Cloud, Server, Globe } from "lucide-react";
+import { Cloud, Database, Globe, Server } from "lucide-react";
+import type React from "react";
+import { BiNetworkChart } from "react-icons/bi";
 import {
-  SiPostgresql,
-  SiMysql,
-  SiMongodb,
-  SiGooglecloud,
-  SiSnowflake,
-  SiAmazon,
-  SiDatabricks,
-  SiClickhouse,
-  SiHubspot,
-  SiSalesforce,
-  SiGooglesheets,
-} from "react-icons/si";
-import {
+  FaCloud as FaCloudIcon,
   FaFileExcel,
   FaVectorSquare,
-  FaCloud as FaCloudIcon,
 } from "react-icons/fa";
-import { BiNetworkChart } from "react-icons/bi";
+import {
+  SiAmazon,
+  SiClickhouse,
+  SiDatabricks,
+  SiGooglecloud,
+  SiGooglesheets,
+  SiHubspot,
+  SiMongodb,
+  SiMysql,
+  SiPostgresql,
+  SiSalesforce,
+  SiSnowflake,
+} from "react-icons/si";
 
 // Icon component helper
 export const getIconComponent = (iconType: string, size: number = 24) => {

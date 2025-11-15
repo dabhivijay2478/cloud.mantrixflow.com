@@ -1,31 +1,23 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import type * as ResizablePrimitive from "react-resizable-panels";
+import { LoadingState } from "@/components/shared";
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
   ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { useAuthStore } from "@/lib/stores/auth-store";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AgentPanel } from "@/components/workspace/agent-panel";
+import { ComponentsPanel } from "@/components/workspace/components-panel";
+import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
-import { ComponentsPanel } from "@/components/workspace/components-panel";
-import { AgentPanel } from "@/components/workspace/agent-panel";
-import { LoadingState } from "@/components/shared";
-import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
-import * as ResizablePrimitive from "react-resizable-panels";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function WorkspaceLayout({
   children,
@@ -141,7 +133,9 @@ export default function WorkspaceLayout({
   // View mode: No sidebar, no topbar, no panels - just content for iframe embedding
   if (isViewMode) {
     return (
-      <div className="h-screen w-full overflow-auto bg-background">{children}</div>
+      <div className="h-screen w-full overflow-auto bg-background">
+        {children}
+      </div>
     );
   }
 
@@ -155,8 +149,8 @@ export default function WorkspaceLayout({
           {isDashboardEditMode ? (
             // Dashboard edit mode: Show panels with shared DndContext
             <DashboardDndProvider>
-              <ResizablePanelGroup 
-                direction="horizontal" 
+              <ResizablePanelGroup
+                direction="horizontal"
                 className="flex-1"
                 onLayout={(sizes) => {
                   // Update main panel size when layout changes
@@ -168,9 +162,25 @@ export default function WorkspaceLayout({
                 <ResizablePanel
                   ref={componentsPanelRef}
                   id="components-panel"
-                  defaultSize={isMobile ? (componentsPanelOpen ? 50 : 0) : (componentsPanelOpen ? 18 : 3)}
+                  defaultSize={
+                    isMobile
+                      ? componentsPanelOpen
+                        ? 50
+                        : 0
+                      : componentsPanelOpen
+                        ? 18
+                        : 3
+                  }
                   minSize={isMobile ? 0 : 3}
-                  maxSize={isMobile ? (componentsPanelOpen ? 80 : 0) : (componentsPanelOpen ? 40 : 3)}
+                  maxSize={
+                    isMobile
+                      ? componentsPanelOpen
+                        ? 80
+                        : 0
+                      : componentsPanelOpen
+                        ? 40
+                        : 3
+                  }
                   collapsible={true}
                   collapsedSize={isMobile ? 0 : 3}
                   key={`components-${componentsPanelOpen}-${isMobile}`}
@@ -201,9 +211,25 @@ export default function WorkspaceLayout({
                 <ResizablePanel
                   ref={agentPanelRef}
                   id="agent-panel"
-                  defaultSize={isMobile ? (agentPanelOpen ? 50 : 0) : (agentPanelOpen ? 18 : 3)}
+                  defaultSize={
+                    isMobile
+                      ? agentPanelOpen
+                        ? 50
+                        : 0
+                      : agentPanelOpen
+                        ? 18
+                        : 3
+                  }
                   minSize={isMobile ? 0 : 3}
-                  maxSize={isMobile ? (agentPanelOpen ? 80 : 0) : (agentPanelOpen ? 40 : 3)}
+                  maxSize={
+                    isMobile
+                      ? agentPanelOpen
+                        ? 80
+                        : 0
+                      : agentPanelOpen
+                        ? 40
+                        : 3
+                  }
                   collapsible={true}
                   collapsedSize={isMobile ? 0 : 3}
                   key={`agent-${agentPanelOpen}-${isMobile}`}

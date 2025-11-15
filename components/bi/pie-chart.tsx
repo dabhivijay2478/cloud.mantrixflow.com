@@ -1,16 +1,16 @@
 "use client";
 
+import { Cell, Pie, PieChart as RechartsPieChart } from "recharts";
+import { CHART_COLORS } from "@/components/features/bi/charts/chart-config";
+import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
 import {
+  type ChartConfig,
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
-  type ChartConfig,
+  ChartTooltip,
+  ChartTooltipContent,
 } from "@/components/ui/chart";
-import { PieChart as RechartsPieChart, Pie, Cell } from "recharts";
-import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
-import { CHART_COLORS } from "@/components/features/bi/charts/chart-config";
 
 /**
  * PieChart
@@ -41,7 +41,7 @@ import { CHART_COLORS } from "@/components/features/bi/charts/chart-config";
  */
 
 export interface PieChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   nameKey: string;
   valueKey: string;
   title?: string;
@@ -86,10 +86,10 @@ export function PieChart({
             outerRadius={120}
             paddingAngle={2}
           >
-            {data.map((entry, index) => {
+            {data.map((entry) => {
               const name = entry[nameKey] as string;
               return (
-                <Cell key={`cell-${index}`} fill={`var(--color-${name})`} />
+                <Cell key={`cell-${name}`} fill={`var(--color-${name})`} />
               );
             })}
           </Pie>

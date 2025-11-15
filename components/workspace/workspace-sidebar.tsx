@@ -1,21 +1,18 @@
 "use client";
 
-import * as React from "react";
-import { useRouter, usePathname } from "next/navigation";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarSeparator,
-  useSidebar,
-} from "@/components/ui/sidebar";
+  Building2,
+  ChevronsUpDown,
+  Database,
+  FileText,
+  GitBranch,
+  LayoutDashboard,
+  Plus,
+  Settings,
+  Users,
+} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Logo } from "@/components/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,19 +22,21 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import {
-  LayoutDashboard,
-  Database,
-  Settings,
-  Users,
-  Plus,
-  FileText,
-  Building2,
-  ChevronsUpDown,
-  GitBranch,
-} from "lucide-react";
-import { Logo } from "@/components/logo";
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 function OrganizationSwitcher({
   organizations,

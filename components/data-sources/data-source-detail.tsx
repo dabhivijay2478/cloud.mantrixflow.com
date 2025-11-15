@@ -1,10 +1,10 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Check, Loader2, Plus, Table2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Table2, Database, Plus, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { getIconComponent, getConnectionFields } from "./utils";
+import { Card, CardContent } from "@/components/ui/card";
 import { allDataSources } from "./constants";
+import { getConnectionFields, getIconComponent } from "./utils";
 
 interface DataSourceDetailProps {
   dataSourceId: string;

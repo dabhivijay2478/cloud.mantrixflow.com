@@ -1,46 +1,31 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Loader2, Play, Save } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useEffect, useRef, useState } from "react";
+import { SQLEditor } from "@/components/bi/sql-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SQLEditor } from "@/components/bi/sql-editor";
-import { SQLResultViewer } from "@/components/bi/sql-result-viewer";
-import { TableNavigation } from "@/components/bi/table-navigation";
 import {
-  ArrowLeft,
-  Play,
-  Database,
-  Loader2,
-  Link2,
-  Download,
-  ChevronDown,
-  Save,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
-import { cn } from "@/lib/utils";
 
 // Mock query execution - replace with actual API call
 const executeQuery = async (
-  dataSourceId: string,
-  dataSourceType: string,
+  _dataSourceId: string,
+  _dataSourceType: string,
   query: string,
-): Promise<{ columns: string[]; rows: any[] }> => {
+): Promise<{ columns: string[]; rows: Record<string, unknown>[] }> => {
   // Simulate API call
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -149,16 +134,16 @@ export default function DataSourceQueryPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{
     columns: string[];
-    rows: any[];
+    rows: Record<string, unknown>[];
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [queryTitle, setQueryTitle] = useState("Untitled SQL query");
+  const [_error, setError] = useState<string | null>(null);
+  const [_queryTitle, _setQueryTitle] = useState("Untitled SQL query");
   const [selectedTable, setSelectedTable] = useState<string | undefined>();
   const [resultsFullScreen, setResultsFullScreen] = useState(false);
   const [editorSize, setEditorSize] = useState(60);
 
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<unknown>(null);
   const language = dataSource
     ? getLanguageForDataSource(dataSource.type)
     : "sql";
@@ -245,12 +230,11 @@ export default function DataSourceQueryPage() {
         "Query executed successfully",
         `Returned ${result.rows.length} rows`,
       );
-    } catch (err: any) {
-      setError(err.message || "Failed to execute query");
-      toast.error(
-        "Query execution failed",
-        err.message || "An error occurred while executing the query.",
-      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to execute query";
+      setError(errorMessage);
+      toast.error("Query execution failed", errorMessage);
     } finally {
       setLoading(false);
     }

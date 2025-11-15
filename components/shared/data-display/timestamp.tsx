@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +63,7 @@ export function Timestamp({
       ? new Date(date)
       : date;
 
-  if (!dateObj || isNaN(dateObj.getTime())) {
+  if (!dateObj || Number.isNaN(dateObj.getTime())) {
     return <span className={cn("text-muted-foreground", className)}>-</span>;
   }
 

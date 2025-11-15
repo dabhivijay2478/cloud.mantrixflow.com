@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { AlertCircle, Loader2, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -12,19 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import {
-  UserPlus,
-  Mail,
-  Loader2,
-  Bot,
-  Sparkles,
-  AlertCircle,
-  Check,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
@@ -116,7 +107,7 @@ export default function InviteTeamMemberPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success(`Invitation sent to ${email}`);
       router.push("/workspace/team");
-    } catch (error) {
+    } catch {
       toast.error("Failed to send invitation");
     } finally {
       setLoading(false);
@@ -240,11 +231,12 @@ export default function InviteTeamMemberPage() {
                 {availableModels.map((model) => {
                   const isSelected = allowedModels.includes(model.id);
                   return (
-                    <div
+                    <button
                       key={model.id}
+                      type="button"
                       onClick={() => toggleModelPermission(model.id)}
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all w-full text-left",
                         isSelected
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50",
@@ -270,7 +262,7 @@ export default function InviteTeamMemberPage() {
                           </p>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

@@ -161,13 +161,13 @@ export function Heatmap({
                 </div>
 
                 {/* Cells */}
-                {yLabels.map((_, yIndex) => (
-                  <div key={yIndex} className="flex gap-1 mb-1">
-                    {xLabels.map((_, xIndex) => {
+                {yLabels.map((label, yIndex) => (
+                  <div key={`row-${label}`} className="flex gap-1 mb-1">
+                    {xLabels.map((xLabel, xIndex) => {
                       const value = getCellValue(xIndex, yIndex);
                       return (
                         <div
-                          key={`${xIndex}-${yIndex}`}
+                          key={`cell-${xLabel}-${label}`}
                           className={cn(
                             "flex-1 h-12 rounded flex items-center justify-center text-sm font-medium transition-colors",
                             value > maxValue * 0.6 && "text-white",
@@ -190,9 +190,9 @@ export function Heatmap({
         <div className="mt-4 flex items-center justify-center gap-2">
           <span className="text-xs text-muted-foreground">Low</span>
           <div className="flex gap-1">
-            {colorScales[colorScale].map((color, index) => (
+            {colorScales[colorScale].map((color) => (
               <div
-                key={index}
+                key={`color-${color}`}
                 className="w-6 h-4 rounded"
                 style={{ backgroundColor: color }}
               />

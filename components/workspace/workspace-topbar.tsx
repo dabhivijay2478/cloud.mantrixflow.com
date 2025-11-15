@@ -1,12 +1,10 @@
 "use client";
 
+import { LogOut, Search, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Kbd } from "@/components/ui/kbd";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,14 +13,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { toast } from "@/lib/utils/toast";
-import { Search, Settings, LogOut, User } from "lucide-react";
 
 export function WorkspaceTopbar() {
   const router = useRouter();
-  const { currentDashboard } = useWorkspaceStore();
   const { user, signOut } = useAuthStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMac, setIsMac] = useState(false);

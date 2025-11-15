@@ -1,64 +1,61 @@
 "use client";
 
-import * as React from "react";
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import "react-resizable/css/styles.css";
 import {
-  DndContext,
-  DragOverlay,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
+  useDraggable,
+  useDroppable,
   useSensor,
   useSensors,
-  DragStartEvent,
-  DragEndEvent,
-  DragOverEvent,
-  useDroppable,
-  useDraggable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
+  rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  rectSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import {
+  GripVertical,
+  Maximize2,
+  Minimize2,
+  Plus,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { ResizableBox } from "react-resizable";
 import {
-  BarChart,
-  LineChart,
+  AnomalyBadge,
   AreaChart,
-  PieChart,
-  KPICard,
-  MetricCard,
-  Gauge,
-  DonutChart,
-  RadarChart,
-  Heatmap,
-  FunnelChart,
+  BarChart,
   BulletChart,
+  DataTable,
+  DonutChart,
+  FunnelChart,
+  Gauge,
+  Heatmap,
+  KPICard,
+  LineChart,
+  MetricCard,
+  PieChart,
+  ProgressBar,
+  RadarChart,
   Sparkline,
   StatChange,
   TrendLabel,
-  AnomalyBadge,
-  ProgressBar,
-  DataTable,
 } from "@/components/bi";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  GripVertical,
-  X,
-  Plus,
-  Save,
-  Download,
-  Upload,
-  Trash2,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 // Sample data for charts
@@ -125,7 +122,7 @@ interface DashboardItem {
   y: number;
   width: number;
   height: number;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 interface DraggableItemProps {
@@ -311,16 +308,17 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
         )}
       >
         {/* Drag Handle - Always visible and functional */}
-        <div
+        <button
           {...attributes}
           {...listeners}
+          type="button"
           className="absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing bg-background/90 backdrop-blur-sm rounded p-1.5 border shadow-sm hover:bg-background transition-colors"
           onMouseDown={(e) => {
             e.stopPropagation();
           }}
         >
           <GripVertical className="w-4 h-4 text-muted-foreground" />
-        </div>
+        </button>
 
         {/* Delete Button */}
         <Button

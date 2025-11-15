@@ -1,7 +1,10 @@
 "use client";
 
+import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
+import { PromptInput } from "@/components/bi/prompt-input";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,19 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PromptInput } from "@/components/bi/prompt-input";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 export default function FirstDashboardPage() {
   const router = useRouter();
-  const {
-    addDashboard,
-    setOnboardingStep,
-    currentOrganization,
-    currentDataSource,
-  } = useWorkspaceStore();
+  const { addDashboard, setOnboardingStep, currentOrganization } =
+    useWorkspaceStore();
   const [loading, setLoading] = useState(false);
   const [prompt, setPrompt] = useState("");
 

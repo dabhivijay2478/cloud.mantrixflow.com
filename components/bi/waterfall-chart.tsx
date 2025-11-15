@@ -1,23 +1,23 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
-  BarChart as RechartsBarChart,
   Bar,
-  XAxis,
-  YAxis,
   CartesianGrid,
   Cell,
+  BarChart as RechartsBarChart,
+  XAxis,
+  YAxis,
 } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { cn } from "@/lib/utils";
 
 /**
  * WaterfallChart
@@ -179,7 +179,11 @@ export function WaterfallChart({
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  formatter={(value: number, name: string, props: any) => {
+                  formatter={(
+                    value: number,
+                    _name: string,
+                    props: Record<string, unknown>,
+                  ) => {
                     if (
                       props.payload?.type === "start" ||
                       props.payload?.type === "total"
@@ -193,9 +197,16 @@ export function WaterfallChart({
             />
             {showLegend && <ChartLegend content={<ChartLegendContent />} />}
             <Bar dataKey="end" radius={[4, 4, 0, 0]}>
-              {processedData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getBarColor(entry.type)} />
-              ))}
+              {processedData.map((entry) => {
+                const entryKey =
+                  entry.name || `${entry.start}-${entry.end}-${entry.type}`;
+                return (
+                  <Cell
+                    key={`cell-${entryKey}`}
+                    fill={getBarColor(entry.type)}
+                  />
+                );
+              })}
             </Bar>
           </RechartsBarChart>
         </ChartContainer>

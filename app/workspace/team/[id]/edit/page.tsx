@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import {
+  AlertCircle,
+  Bot,
+  Check,
+  Crown,
+  Loader2,
+  Mail,
+  Shield,
+  Sparkles,
+  User,
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -14,22 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import {
-  Edit,
-  Mail,
-  Loader2,
-  Bot,
-  Sparkles,
-  AlertCircle,
-  Check,
-  Shield,
-  User,
-  Crown,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
@@ -234,7 +233,7 @@ export default function EditTeamMemberPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success("Team member updated successfully");
       router.push("/workspace/team");
-    } catch (error) {
+    } catch {
       toast.error("Failed to update team member");
     } finally {
       setLoading(false);
@@ -401,11 +400,12 @@ export default function EditTeamMemberPage() {
                 {availableModels.map((model) => {
                   const isSelected = editAllowedModels.includes(model.id);
                   return (
-                    <div
+                    <button
                       key={model.id}
+                      type="button"
                       onClick={() => toggleModelPermission(model.id)}
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all w-full text-left",
                         isSelected
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50",
@@ -431,7 +431,7 @@ export default function EditTeamMemberPage() {
                           </p>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

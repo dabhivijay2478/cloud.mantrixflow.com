@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-
 /**
  * AuthFormHeader
  * @description Standardized header for auth forms with title and description.

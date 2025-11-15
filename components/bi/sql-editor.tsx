@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useEffect } from "react";
 import Editor from "@monaco-editor/react";
+import { useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export interface SQLEditorProps {
@@ -13,7 +13,7 @@ export interface SQLEditorProps {
   className?: string;
   placeholder?: string;
   readOnly?: boolean;
-  onMount?: (editor: any) => void;
+  onMount?: (editor: unknown) => void;
 }
 
 /**
@@ -31,9 +31,9 @@ export function SQLEditor({
   readOnly = false,
   onMount,
 }: SQLEditorProps) {
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<unknown>(null);
 
-  const handleEditorDidMount = (editor: any) => {
+  const handleEditorDidMount = (editor: unknown) => {
     editorRef.current = editor;
     if (onMount) {
       onMount(editor);

@@ -1,12 +1,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { ComponentRenderer } from "@/components/workspace/component-renderer";
+import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ComponentRenderer } from "@/components/workspace/component-renderer";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { getBoundingBox } from "@/lib/utils/dashboard-layout";
-import { cn } from "@/lib/utils";
 
 const GRID_SIZE = 20; // Grid cell size in pixels
 const BASE_CANVAS_WIDTH = 1920; // Base/reference width for responsive scaling

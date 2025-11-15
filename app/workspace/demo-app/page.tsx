@@ -10,6 +10,8 @@ import {
   AnomalyBadge,
   AreaChart,
   BarChart,
+  // Leaflet Maps
+  BasicLeafletMap,
   BulletChart,
   ClusteredBarChart,
   ClusteredColumnChart,
@@ -25,14 +27,6 @@ import {
   ExportPDF,
   FeedbackThumbs,
   FilledMap,
-  // Leaflet Maps
-  BasicLeafletMap,
-  LeafletMapWithPin,
-  LeafletMapGrayscale,
-  LeafletMapCustomPin,
-  LeafletMapCustomPopover,
-  LeafletMapChangeCity,
-  LeafletMapBubbles,
   // Advanced Analytics
   ForecastLine,
   FunnelChart,
@@ -45,10 +39,15 @@ import {
   InsightText,
   // Metrics
   KPICard,
+  LeafletMapBubbles,
+  LeafletMapChangeCity,
+  LeafletMapCustomPin,
+  LeafletMapCustomPopover,
+  LeafletMapGrayscale,
+  LeafletMapWithPin,
   // Charts
   LineChart,
   LineStackedColumnChart,
-  Map,
   Matrix,
   MetricCard,
   MultiRowCard,

@@ -1,10 +1,10 @@
 "use client";
 
-import * as React from "react";
-import { useState, useRef, useEffect, useCallback } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X, MoveUp, MoveDown, MoreVertical } from "lucide-react";
+import { GripVertical, MoreVertical, MoveDown, MoveUp, X } from "lucide-react";
+import type * as React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,8 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import type { DashboardComponent } from "@/lib/stores/workspace-store";
+import { cn } from "@/lib/utils";
 
 interface DashboardItemProps {
   component: DashboardComponent;
@@ -244,6 +244,8 @@ export function DashboardItem({
     return (
       <div
         key={handle}
+        role="button"
+        tabIndex={0}
         className={cn(
           "absolute z-[100] pointer-events-auto touch-none select-none",
           "bg-primary/30 border border-primary/60 rounded-sm",
@@ -252,6 +254,12 @@ export function DashboardItem({
           handleClasses[handle],
         )}
         onMouseDown={(e) => handleResizeStart(e, handle)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleResizeStart(e as unknown as React.MouseEvent, handle);
+          }
+        }}
         style={{
           userSelect: "none",
           WebkitUserSelect: "none",
@@ -282,6 +290,8 @@ export function DashboardItem({
           setNodeRef(node);
           itemRef.current = node as HTMLDivElement;
         }}
+        role="button"
+        tabIndex={0}
         className={cn(
           "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm transition-all",
           isSelected
@@ -300,6 +310,13 @@ export function DashboardItem({
         onMouseLeave={() => setIsHovered(false)}
         onClick={(e) => {
           if (!isResizing && onSelect) {
+            e.stopPropagation();
+            onSelect(component.id);
+          }
+        }}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !isResizing && onSelect) {
+            e.preventDefault();
             e.stopPropagation();
             onSelect(component.id);
           }

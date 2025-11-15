@@ -61,7 +61,7 @@ export function MultiRowCard({
       <CardContent className="p-0">
         {rows.map((row, index) => (
           <div
-            key={index}
+            key={`row-${index}-${JSON.stringify(row).slice(0, 50)}`}
             className={cn(
               "p-4",
               showDividers &&

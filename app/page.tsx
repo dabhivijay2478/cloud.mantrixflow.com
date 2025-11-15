@@ -1,10 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
-import { useAuthStore } from "@/lib/stores/auth-store";
 
 export default function Home() {
   // const router = useRouter();

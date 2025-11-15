@@ -1,9 +1,11 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, ArrowRight, Database } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,19 +15,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { ArrowRight, ArrowLeft, Database } from "lucide-react";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import {
+  type DataSource,
+  useWorkspaceStore,
+} from "@/lib/stores/workspace-store";
 
 const connectionSchema = z.object({
   host: z.string().min(1, "Host is required"),
@@ -43,7 +45,6 @@ export default function ConnectPage() {
   const connector = params.connector as string;
   const {
     updateOnboarding,
-    setOnboardingStep,
     addDataSource,
     completeOnboarding,
     currentOrganization,
@@ -66,14 +67,14 @@ export default function ConnectPage() {
     },
   });
 
-  const onSubmit = async (data: ConnectionFormValues) => {
+  const onSubmit = async (_data: ConnectionFormValues) => {
     setLoading(true);
     try {
       // In a real app, this would call an API to test the connection
-      const dataSource = {
+      const dataSource: DataSource = {
         id: `ds_${Date.now()}`,
         name: `${connector} Connection`,
-        type: connector as any,
+        type: connector as DataSource["type"],
         status: "connected" as const,
         organizationId: currentOrganization?.id,
         connectedAt: new Date().toISOString(),
@@ -96,10 +97,10 @@ export default function ConnectPage() {
     toast.info("Redirecting to OAuth...");
     // In a real app, this would redirect to OAuth flow
     setTimeout(() => {
-      const dataSource = {
+      const dataSource: DataSource = {
         id: `ds_${Date.now()}`,
         name: `${connector} Connection`,
-        type: connector as any,
+        type: connector as DataSource["type"],
         status: "connected" as const,
         organizationId: currentOrganization?.id,
         connectedAt: new Date().toISOString(),
@@ -204,10 +205,10 @@ export default function ConnectPage() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const dataSource = {
+                      const dataSource: DataSource = {
                         id: `ds_${Date.now()}`,
                         name: file.name,
-                        type: connector as any,
+                        type: connector as DataSource["type"],
                         status: "connected" as const,
                         connectedAt: new Date().toISOString(),
                       };

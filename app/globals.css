@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -194,9 +195,6 @@ body {
   }
 }
 
-/* Leaflet CSS - imported via component, but ensure styles are available */
-@import "leaflet/dist/leaflet.css";
-
 /* React Resizable Styles */
 .react-resizable,
 .react-resizable-box {
@@ -206,10 +204,10 @@ body {
 
 .react-resizable-handle {
   position: absolute;
-  z-index: 100 !important;
+  z-index: 100;
   user-select: none;
   touch-action: none;
-  pointer-events: auto !important;
+  pointer-events: auto;
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
 }
@@ -231,8 +229,8 @@ body {
   right: 0;
   height: 8px;
   cursor: n-resize;
-  z-index: 100 !important;
-  pointer-events: auto !important;
+  z-index: 100;
+  pointer-events: auto;
   touch-action: none;
 }
 
@@ -243,8 +241,8 @@ body {
   right: 0;
   height: 8px;
   cursor: s-resize;
-  z-index: 100 !important;
-  pointer-events: auto !important;
+  z-index: 100;
+  pointer-events: auto;
   touch-action: none;
 }
 
@@ -255,8 +253,8 @@ body {
   right: 0;
   width: 8px;
   cursor: e-resize;
-  z-index: 100 !important;
-  pointer-events: auto !important;
+  z-index: 100;
+  pointer-events: auto;
   touch-action: none;
 }
 
@@ -267,8 +265,8 @@ body {
   left: 0;
   width: 8px;
   cursor: w-resize;
-  z-index: 100 !important;
-  pointer-events: auto !important;
+  z-index: 100;
+  pointer-events: auto;
   touch-action: none;
 }
 
@@ -292,8 +290,8 @@ body {
   width: 16px;
   height: 16px;
   cursor: nw-resize;
-  z-index: 100 !important;
-  pointer-events: auto !important;
+  z-index: 100;
+  pointer-events: auto;
   touch-action: none;
   background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTYgMGwtNiA2TTAgNWwtNi02Ii8+PC9nPjwvc3ZnPg==");
   background-repeat: no-repeat;
@@ -308,8 +306,8 @@ body {
   width: 16px;
   height: 16px;
   cursor: se-resize;
-  z-index: 100 !important;
-  pointer-events: auto !important;
+  z-index: 100;
+  pointer-events: auto;
   touch-action: none;
   background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTAgNmw2LTZNLTYgMGw2IDYiLz48L2c+PC9zdmc+");
   background-repeat: no-repeat;
@@ -324,8 +322,8 @@ body {
   width: 16px;
   height: 16px;
   cursor: sw-resize;
-  z-index: 100 !important;
-  pointer-events: auto !important;
+  z-index: 100;
+  pointer-events: auto;
   touch-action: none;
   background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9IiM5OTkiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZD0ibTYgNmwtNi02TTAgMWwtNiA2Ii8+PC9nPjwvc3ZnPg==");
   background-repeat: no-repeat;

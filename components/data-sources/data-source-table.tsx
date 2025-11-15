@@ -1,7 +1,16 @@
-import { Card, CardContent } from "@/components/ui/card";
+import type { DataSource } from "@/lib/stores/workspace-store";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -10,14 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, Check, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { allDataSources } from "./constants";
 import { getIconComponent } from "./utils";
 
@@ -30,7 +31,7 @@ interface DataSourceTableProps {
   sortDirection: "asc" | "desc";
   onSort: (column: string) => void;
   isConnected: (id: string) => boolean;
-  getConnectedDataSource: (id: string) => any;
+  getConnectedDataSource: (id: string) => DataSource | undefined;
   onDataSourceClick: (id: string) => void;
   showOnlyConnected?: boolean;
 }
@@ -98,13 +99,14 @@ export function DataSourceTable({
           aValue = a.type.toLowerCase();
           bValue = b.type.toLowerCase();
           break;
-        case "connections":
+        case "connections": {
           const aConnected = isConnected(a.id);
           const bConnected = isConnected(b.id);
           aValue = aConnected ? 1 : 0;
           bValue = bConnected ? 1 : 0;
           break;
-        case "last-sync":
+        }
+        case "last-sync": {
           const aData = getConnectedDataSource(a.id);
           const bData = getConnectedDataSource(b.id);
           aValue = aData?.connectedAt
@@ -114,6 +116,7 @@ export function DataSourceTable({
             ? new Date(bData.connectedAt).getTime()
             : 0;
           break;
+        }
         case "status":
           aValue = isConnected(a.id) ? "connected" : "not-connected";
           bValue = isConnected(b.id) ? "connected" : "not-connected";

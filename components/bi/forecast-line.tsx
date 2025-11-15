@@ -1,24 +1,23 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  ReferenceLine,
   XAxis,
   YAxis,
-  CartesianGrid,
-  ReferenceLine,
-  Area,
 } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { cn } from "@/lib/utils";
 
 /**
  * ForecastLine
@@ -53,8 +52,8 @@ import {
  */
 
 export interface ForecastLineProps {
-  historicalData: Array<Record<string, any>>;
-  forecastData: Array<Record<string, any>>;
+  historicalData: Array<Record<string, unknown>>;
+  forecastData: Array<Record<string, unknown>>;
   xKey: string;
   yKey: string;
   title?: string;

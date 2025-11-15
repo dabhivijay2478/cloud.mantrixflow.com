@@ -176,7 +176,10 @@ export function SankeyDiagram({
                 const widthPercent = (link.value / maxValue) * 100;
 
                 return (
-                  <div key={index} className="flex items-center gap-2 text-sm">
+                  <div
+                    key={`link-${link.source}-${link.target}-${index}`}
+                    className="flex items-center gap-2 text-sm"
+                  >
                     <span className="text-muted-foreground min-w-[100px]">
                       {sourceNode?.name}
                     </span>

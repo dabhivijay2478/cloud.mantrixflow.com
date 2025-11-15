@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowRightLeft, Database, GitBranch, Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/shared";
 import {
   Card,
   CardContent,
@@ -7,9 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { GitBranch, ArrowRightLeft, Database, Sparkles } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { PageHeader } from "@/components/shared";
 
 export default function DataPipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();

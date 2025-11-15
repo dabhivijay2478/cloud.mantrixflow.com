@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
-import { toast } from "@/lib/utils/toast";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useState } from "react";
 import {
+  allDataSources,
+  ConnectionSheet,
   DataSourceGrid,
   DataSourceTable,
-  ConnectionSheet,
-  allDataSources,
   mockTables,
 } from "@/components/data-sources";
+import { Button } from "@/components/ui/button";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { toast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
@@ -27,14 +27,14 @@ export default function DataSourcesPage() {
       )
     : dataSources.filter((ds) => !ds.organizationId);
 
-  const [selectedDataSource, setSelectedDataSource] = useState<string | null>(
+  const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
     null,
   );
   const [showConnectionSheet, setShowConnectionSheet] = useState(false);
   const [connectingDataSourceId, setConnectingDataSourceId] = useState<
     string | null
   >(null);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortColumn, setSortColumn] = useState<string>("name");
@@ -72,7 +72,7 @@ export default function DataSourcesPage() {
     setShowConnectionSheet(true);
   };
 
-  const handleConnect = async (data: ConnectionFormValues) => {
+  const handleConnect = async (_data: ConnectionFormValues) => {
     if (!connectingDataSourceId) return;
 
     const dataSource = allDataSources.find(
@@ -113,7 +113,7 @@ export default function DataSourcesPage() {
     }
   };
 
-  const handleOAuthConnect = async (dataSourceId: string) => {
+  const _handleOAuthConnect = async (dataSourceId: string) => {
     const dataSource = allDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 
@@ -148,7 +148,7 @@ export default function DataSourcesPage() {
     }
   };
 
-  const handleFileUpload = (dataSourceId: string, file: File) => {
+  const _handleFileUpload = (dataSourceId: string, file: File) => {
     const dataSource = allDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 

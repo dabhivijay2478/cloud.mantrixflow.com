@@ -1,7 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,8 +8,10 @@ import {
   Download,
   Printer,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 /**
  * PaginatedReport
@@ -44,12 +44,12 @@ import { useState } from "react";
 export interface ReportColumn {
   key: string;
   label: string;
-  render?: (value: any, row: Record<string, any>) => React.ReactNode;
+  render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
   align?: "left" | "center" | "right";
 }
 
 export interface PaginatedReportProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   columns: ReportColumn[];
   title?: string;
   description?: string;
@@ -184,27 +184,34 @@ export function PaginatedReport({
                     </td>
                   </tr>
                 ) : (
-                  currentData.map((row, rowIndex) => (
-                    <tr
-                      key={rowIndex}
-                      className="border-t hover:bg-muted/50 transition-colors"
-                    >
-                      {columns.map((column) => (
-                        <td
-                          key={column.key}
-                          className={cn(
-                            "px-4 py-3 text-sm",
-                            column.align === "center" && "text-center",
-                            column.align === "right" && "text-right",
-                          )}
-                        >
-                          {column.render
-                            ? column.render(row[column.key], row)
-                            : String(row[column.key] ?? "")}
-                        </td>
-                      ))}
-                    </tr>
-                  ))
+                  currentData.map((row, rowIndex) => {
+                    // Create a unique key from row data
+                    const rowKey =
+                      columns
+                        .map((col) => String(row[col.key] ?? ""))
+                        .join("-") || `row-${rowIndex}`;
+                    return (
+                      <tr
+                        key={rowKey}
+                        className="border-t hover:bg-muted/50 transition-colors"
+                      >
+                        {columns.map((column) => (
+                          <td
+                            key={column.key}
+                            className={cn(
+                              "px-4 py-3 text-sm",
+                              column.align === "center" && "text-center",
+                              column.align === "right" && "text-right",
+                            )}
+                          >
+                            {column.render
+                              ? column.render(row[column.key], row)
+                              : String(row[column.key] ?? "")}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

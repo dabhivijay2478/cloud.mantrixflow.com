@@ -1,47 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Bell,
+  Building2,
+  Copy,
+  Key,
+  Loader2,
+  Mail,
+  Palette,
+  Plus,
+  Save,
+  Shield,
+  Trash2,
+  User,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/lib/stores/auth-store";
-import {
-  Save,
-  Settings,
-  Building2,
-  User,
-  Bell,
-  Palette,
-  Shield,
-  Key,
-  Mail,
-  Globe,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Copy,
-  Trash2,
-  Plus,
-} from "lucide-react";
-import { toast } from "@/lib/utils/toast";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/utils/toast";
 
 export default function SettingsPage() {
-  const { currentOrganization, updateOrganization, organizations } =
-    useWorkspaceStore();
+  const { currentOrganization, updateOrganization } = useWorkspaceStore();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("organization");
@@ -101,7 +89,7 @@ export default function SettingsPage() {
         "Organization settings saved successfully",
         "Your organization settings have been updated.",
       );
-    } catch (error) {
+    } catch {
       toast.error(
         "Failed to save settings",
         "Unable to save organization settings. Please try again.",
@@ -119,7 +107,7 @@ export default function SettingsPage() {
         "Preferences saved successfully",
         "Your notification preferences have been updated.",
       );
-    } catch (error) {
+    } catch {
       toast.error(
         "Failed to save preferences",
         "Unable to save preferences. Please try again.",
@@ -137,7 +125,7 @@ export default function SettingsPage() {
         "Appearance settings saved successfully",
         "Your appearance settings have been updated.",
       );
-    } catch (error) {
+    } catch {
       toast.error(
         "Failed to save appearance settings",
         "Unable to save appearance settings. Please try again.",

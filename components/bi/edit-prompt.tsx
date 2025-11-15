@@ -1,5 +1,6 @@
 "use client";
 
+import { Edit } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit } from "lucide-react";
 
 /**
  * EditPrompt

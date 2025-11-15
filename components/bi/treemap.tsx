@@ -1,8 +1,8 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { Treemap as RechartsTreemap } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 /**
  * TreeMap
@@ -50,13 +50,25 @@ const DEFAULT_COLORS = [
 ];
 
 // Custom content for treemap cells
-const CustomContent = (props: any) => {
+interface CustomContentProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  name?: string;
+  size?: number;
+  depth?: number;
+  colors?: string[];
+}
+
+const CustomContent = (props: CustomContentProps) => {
   const { x, y, width, height, name, size, depth, colors } = props;
 
-  if (width < 40 || height < 40) return null;
+  if (!width || !height || width < 40 || height < 40) return null;
 
   // Ensure size is a valid number
-  const displaySize = typeof size === "number" && !isNaN(size) ? size : 0;
+  const displaySize =
+    typeof size === "number" && !Number.isNaN(size) ? size : 0;
 
   return (
     <g>

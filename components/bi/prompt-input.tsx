@@ -1,11 +1,10 @@
 "use client";
 
+import { Loader2, Sparkles } from "lucide-react";
 import * as React from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 /**
  * PromptInput
@@ -119,9 +118,9 @@ export function PromptInput({
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">Try these examples:</p>
             <div className="flex flex-wrap gap-2">
-              {suggestions.map((suggestion, index) => (
+              {suggestions.map((suggestion) => (
                 <Button
-                  key={index}
+                  key={suggestion}
                   variant="outline"
                   size="sm"
                   onClick={() => handleSuggestionClick(suggestion)}

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export interface Organization {
   id: string;
@@ -145,7 +145,7 @@ interface WorkspaceActions {
 
 export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Initial state
       currentOrganization: null,
       organizations: [],

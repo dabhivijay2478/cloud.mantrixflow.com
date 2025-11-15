@@ -1,15 +1,15 @@
 "use client";
 
-import * as React from "react";
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from "@dnd-kit/core";
+import type * as React from "react";
 
 interface DashboardDndProviderProps {
   children: React.ReactNode;

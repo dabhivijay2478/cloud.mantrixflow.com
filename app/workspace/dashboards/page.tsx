@@ -1,13 +1,14 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle, Database, Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -17,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -24,10 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Plus, Database, Loader2, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const dashboardSchema = z.object({
@@ -44,7 +44,6 @@ type DashboardFormValues = z.infer<typeof dashboardSchema>;
 export default function DashboardsPage() {
   const router = useRouter();
   const {
-    dashboards,
     addDashboard,
     setCurrentDashboard,
     currentOrganization,

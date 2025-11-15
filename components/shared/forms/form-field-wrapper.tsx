@@ -1,11 +1,11 @@
 "use client";
 
-import * as React from "react";
+import type * as React from "react";
 import {
   Field,
-  FieldLabel,
-  FieldError,
   FieldDescription,
+  FieldError,
+  FieldLabel,
 } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 

@@ -1,10 +1,10 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Check, Table2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Table2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { getIconComponent } from "./utils";
-import { useRouter } from "next/navigation";
 
 interface DataSourceCardProps {
   dataSource: {

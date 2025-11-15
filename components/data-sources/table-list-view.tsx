@@ -1,10 +1,10 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Check, Database, Table2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Database, Table2, Check } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 
@@ -95,8 +95,16 @@ export function TableListView({
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div
+                          role="button"
+                          tabIndex={0}
                           className="flex items-center gap-3 flex-1 cursor-pointer"
                           onClick={() => onSelectTable(table)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              onSelectTable(table);
+                            }
+                          }}
                         >
                           <Checkbox
                             checked={isSelected}

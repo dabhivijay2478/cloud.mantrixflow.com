@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Check, Loader2, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
 } from "@/components/ui/sheet";
-import { Loader2, Check, X } from "lucide-react";
-import { toast } from "@/lib/utils/toast";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { connectionSchemas, allDataSources } from "./constants";
+import { toast } from "@/lib/utils/toast";
+import { allDataSources, connectionSchemas } from "./constants";
 import { getIconComponent } from "./utils";
 
 type ConnectionFormValues = Record<string, string>;
@@ -98,7 +98,7 @@ export function ConnectionSheet({
     : null;
   const schema = dataSource ? connectionSchemas[dataSource.type] : null;
 
-  const getDefaultValues = () => {
+  const getDefaultValues = useCallback(() => {
     if (!schema) return {};
     const defaults: Record<string, string> = {};
     if (schema.connectionString) {
@@ -108,11 +108,11 @@ export function ConnectionSheet({
       defaults[field.name] = "";
     });
     return defaults;
-  };
+  }, [schema]);
 
   const form = useForm<ConnectionFormValues>({
     // @ts-expect-error - Custom resolver with dynamic schema
-    resolver: (values, context, options) => {
+    resolver: (values, _context, _options) => {
       if (!dataSourceId || !dataSource) {
         return { values: values as ConnectionFormValues, errors: {} };
       }
@@ -139,7 +139,7 @@ export function ConnectionSheet({
       form.reset(getDefaultValues());
       setConnectionTestResult(null);
     }
-  }, [dataSourceId, open]);
+  }, [dataSourceId, open, form, getDefaultValues]);
 
   const handleTestConnection = async () => {
     if (!dataSourceId || !dataSource) return;
@@ -197,7 +197,7 @@ export function ConnectionSheet({
           );
         }
       }
-    } catch (error) {
+    } catch {
       setConnectionTestResult({
         success: false,
         message: "An error occurred while testing the connection.",

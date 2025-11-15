@@ -1,11 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare, Send } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * QA
@@ -105,7 +104,10 @@ export function QA({
             <h4 className="text-sm font-medium">Recent Questions</h4>
             <div className="space-y-3">
               {history.map((item, index) => (
-                <div key={index} className="space-y-2">
+                <div
+                  key={`qa-${item.question.slice(0, 30)}-${index}`}
+                  className="space-y-2"
+                >
                   <p className="text-sm font-medium text-foreground">
                     Q: {item.question}
                   </p>

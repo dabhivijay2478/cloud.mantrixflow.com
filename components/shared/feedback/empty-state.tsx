@@ -1,6 +1,8 @@
 "use client";
 
-import * as React from "react";
+import type { LucideIcon } from "lucide-react";
+import type * as React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,8 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**

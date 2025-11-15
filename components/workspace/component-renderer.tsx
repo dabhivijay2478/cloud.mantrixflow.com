@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import type { DashboardComponent } from "@/lib/stores/workspace-store";
 import * as BIComponents from "@/components/bi";
+import type { DashboardComponent } from "@/lib/stores/workspace-store";
 
 // Sample data for components
 const sampleBarData = [

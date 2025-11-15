@@ -79,7 +79,7 @@ export function AICommentary({
             <ul className="space-y-1.5">
               {highlights.map((highlight, index) => (
                 <li
-                  key={index}
+                  key={`highlight-${highlight.slice(0, 20)}-${index}`}
                   className="text-sm text-muted-foreground flex items-start gap-2"
                 >
                   <span className="text-blue-500 mt-1">•</span>

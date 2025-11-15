@@ -1,21 +1,21 @@
 "use client";
 
 import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart as RechartsRadarChart,
+} from "recharts";
+import { createChartConfig } from "@/components/features/bi/charts/chart-config";
+import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
+import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-  RadarChart as RechartsRadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-} from "recharts";
-import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
-import { createChartConfig } from "@/components/features/bi/charts/chart-config";
 
 /**
  * RadarChart
@@ -45,7 +45,7 @@ import { createChartConfig } from "@/components/features/bi/charts/chart-config"
  */
 
 export interface RadarChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   categoryKey: string;
   valueKeys: string[];
   title?: string;

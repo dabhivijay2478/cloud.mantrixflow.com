@@ -1,21 +1,20 @@
 "use client";
 
-import * as React from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Activity, DollarSign, TrendingUp, Users } from "lucide-react";
 import {
-  LineChart,
   BarChart,
-  KPICard,
-  MetricCard,
   DataTable,
-  GridLayout,
   GridItem,
+  GridLayout,
+  KPICard,
+  LineChart,
+  MetricCard,
   Section,
+  Sparkline,
   StatChange,
   TrendLabel,
-  Sparkline,
 } from "./index";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DollarSign, Users, TrendingUp, Activity } from "lucide-react";
 
 /**
  * ExampleDashboard

@@ -1,9 +1,8 @@
 "use client";
 
-import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { Button } from "@/components/ui/button";
 
 /**
  * OAuthButtons

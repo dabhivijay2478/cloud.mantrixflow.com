@@ -1,6 +1,8 @@
 "use client";
 
+import { ExternalLink, FileText, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EmptyState, PageHeader, Timestamp } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,9 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Plus, FileText, ExternalLink } from "lucide-react";
-import { GridLayout, GridItem } from "@/components/bi/grid-layout";
-import { PageHeader, EmptyState, Timestamp } from "@/components/shared";
 
 export default function WorkspacePage() {
   const router = useRouter();

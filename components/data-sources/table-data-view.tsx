@@ -1,15 +1,15 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { X, Table2 } from "lucide-react";
+import { Table2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SQLResultViewer } from "@/components/bi/sql-result-viewer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface TableDataViewProps {
   dataSourceId: string;
   tableName: string;
   tableData: {
     columns: string[];
-    rows: any[];
+    rows: Record<string, unknown>[];
   };
   loading: boolean;
   onBack: () => void;

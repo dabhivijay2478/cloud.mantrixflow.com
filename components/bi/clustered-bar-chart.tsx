@@ -1,24 +1,24 @@
 "use client";
 
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import {
-  BarChart as RechartsBarChart,
   Bar,
+  CartesianGrid,
+  BarChart as RechartsBarChart,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from "recharts";
+import {
+  CHART_COLORS,
+  createChartConfig,
+} from "@/components/features/bi/charts/chart-config";
 import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
 import {
-  createChartConfig,
-  CHART_COLORS,
-} from "@/components/features/bi/charts/chart-config";
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 /**
  * ClusteredBarChart
@@ -47,7 +47,7 @@ import {
  */
 
 export interface ClusteredBarChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   xKey: string;
   yKeys: string[];
   title?: string;

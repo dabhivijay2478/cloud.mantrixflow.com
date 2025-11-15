@@ -1,22 +1,22 @@
 "use client";
 
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
+  CartesianGrid,
+  Cell,
   ScatterChart as RechartsScatterChart,
   Scatter,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Cell,
 } from "recharts";
 import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 /**
  * ScatterChart
@@ -49,7 +49,7 @@ import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
  */
 
 export interface ScatterChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   xKey: string;
   yKey: string;
   nameKey?: string;
@@ -72,7 +72,7 @@ export function ScatterChart({
   showGrid = true,
   showLegend = false,
   color = "var(--chart-1)",
-  pointSize = 8,
+  pointSize: _pointSize = 8,
   className,
 }: ScatterChartProps) {
   const chartConfig = {
@@ -106,7 +106,11 @@ export function ScatterChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                formatter={(value: number, name: string, props: any) => {
+                formatter={(
+                  value: number,
+                  name: string,
+                  props: Record<string, unknown>,
+                ) => {
                   if (nameKey && props.payload?.[nameKey]) {
                     return [
                       `${props.payload[nameKey]}: (${props.payload[xKey]}, ${props.payload[yKey]})`,
@@ -121,9 +125,15 @@ export function ScatterChart({
           />
           {showLegend && <ChartLegend content={<ChartLegendContent />} />}
           <Scatter name="data" data={data} fill={`var(--color-data)`}>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={`var(--color-data)`} />
-            ))}
+            {data.map((entry) => {
+              const entryKey =
+                nameKey && entry[nameKey]
+                  ? String(entry[nameKey])
+                  : `${entry[xKey]}-${entry[yKey]}`;
+              return (
+                <Cell key={`cell-${entryKey}`} fill={`var(--color-data)`} />
+              );
+            })}
           </Scatter>
         </RechartsScatterChart>
       </ChartContainer>

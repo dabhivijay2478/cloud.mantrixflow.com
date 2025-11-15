@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Dynamic import for Leaflet to avoid SSR issues
+// biome-ignore lint/suspicious/noExplicitAny: Leaflet library is dynamically imported
 let L: any = null;
 let leafletLoaded = false;
 
@@ -19,7 +19,8 @@ const loadLeaflet = async () => {
     L = leafletModule.default || leafletModule;
 
     // Fix for default marker icons in Next.js
-    if (L.Icon && L.Icon.Default) {
+    if (L?.Icon?.Default) {
+      // biome-ignore lint/suspicious/noExplicitAny: Leaflet internal API
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl:
@@ -45,6 +46,7 @@ export interface LeafletMarker {
   value?: number | string;
   popup?: string | React.ReactNode;
   color?: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet icon type
   icon?: any;
 }
 
@@ -80,6 +82,7 @@ export function BasicLeafletMap({
   maxBounds,
   maxBoundsViscosity = 1.0,
 }: BasicLeafletMapProps) {
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,7 +97,8 @@ export function BasicLeafletMap({
         return;
       }
 
-      const map = Leaflet.map(mapContainerRef.current!, {
+      if (!mapContainerRef.current) return;
+      const map = Leaflet.map(mapContainerRef.current, {
         center,
         zoom,
         maxBounds,
@@ -177,7 +181,9 @@ export function LeafletMapWithPin({
   height = 400,
   className,
 }: LeafletMapWithPinProps) {
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
   const mapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet marker instance
   const markerRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -192,7 +198,8 @@ export function LeafletMapWithPin({
         return;
       }
 
-      const map = Leaflet.map(mapContainerRef.current!, {
+      if (!mapContainerRef.current) return;
+      const map = Leaflet.map(mapContainerRef.current, {
         center: marker ? [marker.lat, marker.lng] : center,
         zoom,
         maxBounds: [
@@ -295,7 +302,9 @@ export function LeafletMapGrayscale({
   height = 400,
   className,
 }: LeafletMapGrayscaleProps) {
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
   const mapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet marker instances array
   const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -310,7 +319,8 @@ export function LeafletMapGrayscale({
         return;
       }
 
-      const map = Leaflet.map(mapContainerRef.current!, {
+      if (!mapContainerRef.current) return;
+      const map = Leaflet.map(mapContainerRef.current, {
         center,
         zoom,
       });
@@ -413,7 +423,9 @@ export function LeafletMapCustomPin({
   height = 400,
   className,
 }: LeafletMapCustomPinProps) {
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
   const mapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet marker instances array
   const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -428,7 +440,8 @@ export function LeafletMapCustomPin({
         return;
       }
 
-      const map = Leaflet.map(mapContainerRef.current!, {
+      if (!mapContainerRef.current) return;
+      const map = Leaflet.map(mapContainerRef.current, {
         center,
         zoom,
       });
@@ -445,6 +458,7 @@ export function LeafletMapCustomPin({
 
       // Add markers with custom icons
       markers.forEach((marker) => {
+        // biome-ignore lint/suspicious/noExplicitAny: Leaflet icon type
         let icon: any;
 
         if (marker.icon) {
@@ -566,7 +580,9 @@ export function LeafletMapCustomPopover({
   height = 400,
   className,
 }: LeafletMapCustomPopoverProps) {
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
   const mapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet marker instances array
   const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -581,7 +597,8 @@ export function LeafletMapCustomPopover({
         return;
       }
 
-      const map = Leaflet.map(mapContainerRef.current!, {
+      if (!mapContainerRef.current) return;
+      const map = Leaflet.map(mapContainerRef.current, {
         center,
         zoom,
       });
@@ -595,12 +612,6 @@ export function LeafletMapCustomPopover({
             '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
         },
       ).addTo(map);
-
-      // Custom popup class
-      const CustomPopup = Leaflet.popup({
-        className: "custom-popup",
-        maxWidth: 300,
-      });
 
       // Add markers with custom popups
       markers.forEach((marker) => {
@@ -703,7 +714,9 @@ export function LeafletMapChangeCity({
   height = 400,
   className,
 }: LeafletMapChangeCityProps) {
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
   const mapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet marker instances array
   const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [selectedCity, setSelectedCity] = useState(
@@ -728,7 +741,8 @@ export function LeafletMapChangeCity({
         return;
       }
 
-      const map = Leaflet.map(mapContainerRef.current!, {
+      if (!mapContainerRef.current) return;
+      const map = Leaflet.map(mapContainerRef.current, {
         center: [currentCity.lat, currentCity.lng],
         zoom: currentCity.zoom || 14,
       });
@@ -858,7 +872,9 @@ export function LeafletMapBubbles({
   minBubbleSize = 10,
   maxBubbleSize = 50,
 }: LeafletMapBubblesProps) {
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet map instance
   const mapRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: Leaflet marker instances array
   const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -873,7 +889,8 @@ export function LeafletMapBubbles({
         return;
       }
 
-      const map = Leaflet.map(mapContainerRef.current!, {
+      if (!mapContainerRef.current) return;
+      const map = Leaflet.map(mapContainerRef.current, {
         center,
         zoom,
       });

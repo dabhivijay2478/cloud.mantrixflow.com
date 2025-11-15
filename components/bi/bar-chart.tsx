@@ -1,21 +1,21 @@
 "use client";
 
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import {
-  BarChart as RechartsBarChart,
   Bar,
+  CartesianGrid,
+  BarChart as RechartsBarChart,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from "recharts";
-import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
 import { createChartConfig } from "@/components/features/bi/charts/chart-config";
+import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 /**
  * BarChart
@@ -48,7 +48,7 @@ import { createChartConfig } from "@/components/features/bi/charts/chart-config"
  */
 
 export interface BarChartProps {
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
   xKey: string;
   yKeys: string[];
   title?: string;
