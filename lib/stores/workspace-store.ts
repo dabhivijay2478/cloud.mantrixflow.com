@@ -125,6 +125,8 @@ interface WorkspaceState {
   componentsPanelOpen: boolean;
   agentPanelOpen: boolean;
   propertiesPanelOpen: boolean;
+  selectedComponentId: string | null;
+  selectedDatasetId: string | null;
 }
 
 interface WorkspaceActions {
@@ -171,6 +173,8 @@ interface WorkspaceActions {
   setComponentsPanelOpen: (open: boolean) => void;
   setAgentPanelOpen: (open: boolean) => void;
   setPropertiesPanelOpen: (open: boolean) => void;
+  setSelectedComponentId: (id: string | null) => void;
+  setSelectedDatasetId: (id: string | null) => void;
   toggleSidebar: () => void;
   toggleComponentsPanel: () => void;
   toggleAgentPanel: () => void;
@@ -196,6 +200,8 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       componentsPanelOpen: true,
       agentPanelOpen: true,
       propertiesPanelOpen: true,
+      selectedComponentId: null,
+      selectedDatasetId: null,
 
       // Organization actions
       setCurrentOrganization: (org) => set({ currentOrganization: org }),
@@ -369,6 +375,8 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       setComponentsPanelOpen: (open) => set({ componentsPanelOpen: open }),
       setAgentPanelOpen: (open) => set({ agentPanelOpen: open }),
       setPropertiesPanelOpen: (open) => set({ propertiesPanelOpen: open }),
+      setSelectedComponentId: (id) => set({ selectedComponentId: id }),
+      setSelectedDatasetId: (id) => set({ selectedDatasetId: id }),
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       toggleComponentsPanel: () =>
@@ -393,6 +401,8 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
         componentsPanelOpen: state.componentsPanelOpen,
         agentPanelOpen: state.agentPanelOpen,
         propertiesPanelOpen: state.propertiesPanelOpen,
+        selectedComponentId: state.selectedComponentId,
+        selectedDatasetId: state.selectedDatasetId,
       }),
     },
   ),

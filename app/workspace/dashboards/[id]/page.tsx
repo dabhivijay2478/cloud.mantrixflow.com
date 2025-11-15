@@ -12,14 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { ComponentsPanel } from "@/components/workspace/components-panel";
 import { DashboardCanvasWithHandlers } from "@/components/workspace/dashboard-canvas";
-import { PropertiesPanel } from "@/components/workspace/properties-panel";
 import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
 import type { DashboardComponent } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -36,14 +29,12 @@ export default function DashboardEditorPage() {
     updateDashboardComponent,
     removeDashboardComponent,
     datasets,
+    setSelectedComponentId: setGlobalSelectedComponentId,
+    selectedComponentId: globalSelectedComponentId,
+    selectedDatasetId: globalSelectedDatasetId,
+    setSelectedDatasetId: setGlobalSelectedDatasetId,
   } = useWorkspaceStore();
   const [dashboard, setDashboard] = useState(currentDashboard);
-  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
-    null,
-  );
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(
-    null,
-  );
 
   useEffect(() => {
     const found = dashboards.find((d) => d.id === dashboardId);
@@ -56,14 +47,14 @@ export default function DashboardEditorPage() {
           (ds) => ds.dataSourceId === found.dataSourceId,
         );
         if (dataset) {
-          setSelectedDatasetId(dataset.id);
+          setGlobalSelectedDatasetId(dataset.id);
         }
       }
     } else {
       toast.error("Dashboard not found");
       router.push("/workspace/dashboards");
     }
-  }, [dashboardId, dashboards, setCurrentDashboard, router, datasets]);
+  }, [dashboardId, dashboards, setCurrentDashboard, router, datasets, setGlobalSelectedDatasetId]);
 
   const handleComponentsChange = useCallback(
     (components: DashboardComponent[]) => {
@@ -95,14 +86,9 @@ export default function DashboardEditorPage() {
   );
 
   const handleComponentSelect = useCallback((id: string | null) => {
-    setSelectedComponentId(id);
-  }, []);
+    setGlobalSelectedComponentId(id);
+  }, [setGlobalSelectedComponentId]);
 
-  const selectedComponent = dashboard?.components.find(
-    (c) => c.id === selectedComponentId,
-  ) || null;
-
-  const selectedDataset = datasets.find((d) => d.id === selectedDatasetId) || null;
 
   const handleComponentDelete = useCallback(
     (id: string) => {
@@ -141,9 +127,9 @@ export default function DashboardEditorPage() {
 
   return (
     <DashboardDndProvider>
-      <div className="h-screen flex flex-col bg-background">
+      <div className="h-full flex flex-col bg-background">
         {/* Top Header Bar */}
-        <div className="border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="border-b shrink-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
           <div className="flex items-center justify-between px-6 py-3">
             <div className="flex items-center gap-4 min-w-0 flex-1">
               <Button
@@ -169,9 +155,9 @@ export default function DashboardEditorPage() {
               <div className="flex items-center gap-2">
                 <Database className="h-4 w-4 text-muted-foreground" />
                 <Select
-                  value={selectedDatasetId || ""}
+                  value={globalSelectedDatasetId || ""}
                   onValueChange={(value) => {
-                    setSelectedDatasetId(value);
+                    setGlobalSelectedDatasetId(value);
                     if (dashboard) {
                       const dataset = datasets.find((d) => d.id === value);
                       if (dataset) {
@@ -221,58 +207,17 @@ export default function DashboardEditorPage() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 min-h-0">
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            {/* Components Panel */}
-            <ResizablePanel
-              defaultSize={15}
-              minSize={10}
-              maxSize={25}
-              collapsible
-              className="border-r"
-            >
-              <ComponentsPanel />
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            {/* Canvas Area */}
-            <ResizablePanel defaultSize={60} minSize={40}>
-              <div className="h-full border-r">
-                <DashboardCanvasWithHandlers
-                  components={dashboard.components}
-                  onComponentsChange={handleComponentsChange}
-                  onComponentUpdate={handleComponentUpdate}
-                  onComponentDelete={handleComponentDelete}
-                  onComponentSelect={handleComponentSelect}
-                  selectedComponentId={selectedComponentId}
-                  className="h-full"
-                />
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            {/* Properties Panel */}
-            <ResizablePanel
-              defaultSize={25}
-              minSize={20}
-              maxSize={40}
-              collapsible
-            >
-              <PropertiesPanel
-                component={selectedComponent}
-                dataset={selectedDataset}
-                onUpdate={(updates) => {
-                  if (selectedComponentId) {
-                    handleComponentUpdate(selectedComponentId, updates);
-                  }
-                }}
-                onClose={() => setSelectedComponentId(null)}
-              />
-            </ResizablePanel>
-          </ResizablePanelGroup>
+        {/* Canvas Area */}
+        <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
+          <DashboardCanvasWithHandlers
+            components={dashboard.components}
+            onComponentsChange={handleComponentsChange}
+            onComponentUpdate={handleComponentUpdate}
+            onComponentDelete={handleComponentDelete}
+            onComponentSelect={handleComponentSelect}
+            selectedComponentId={globalSelectedComponentId}
+            className="h-full"
+          />
         </div>
       </div>
     </DashboardDndProvider>

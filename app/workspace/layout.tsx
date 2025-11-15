@@ -13,6 +13,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AgentPanel } from "@/components/workspace/agent-panel";
 import { ComponentsPanel } from "@/components/workspace/components-panel";
 import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
+import { PropertiesPanel } from "@/components/workspace/properties-panel";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -34,13 +35,28 @@ export default function WorkspaceLayout({
     setSidebarOpen,
     componentsPanelOpen,
     agentPanelOpen,
+    propertiesPanelOpen,
     setComponentsPanelOpen,
     setAgentPanelOpen,
+    setPropertiesPanelOpen,
+    selectedComponentId,
+    selectedDatasetId,
+    currentDashboard,
+    datasets,
+    updateDashboardComponent,
   } = useWorkspaceStore();
   const componentsPanelRef =
     useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+  const propertiesPanelRef =
+    useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const agentPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const [mainPanelSize, setMainPanelSize] = useState(64);
+
+  // Get selected component and dataset for Properties Panel
+  const selectedComponent = currentDashboard?.components.find(
+    (c) => c.id === selectedComponentId,
+  ) || null;
+  const selectedDataset = datasets.find((d) => d.id === selectedDatasetId) || null;
 
   // Check if we're on a view-only page (dashboard view)
   const isViewMode = pathname?.includes("/view");
@@ -154,7 +170,9 @@ export default function WorkspaceLayout({
                 className="flex-1"
                 onLayout={(sizes) => {
                   // Update main panel size when layout changes
-                  if (sizes.length >= 3) {
+                  if (sizes.length >= 4) {
+                    setMainPanelSize(sizes[2] || 50);
+                  } else if (sizes.length >= 3) {
                     setMainPanelSize(sizes[1] || 64);
                   }
                 }}
@@ -165,20 +183,20 @@ export default function WorkspaceLayout({
                   defaultSize={
                     isMobile
                       ? componentsPanelOpen
-                        ? 50
+                        ? 25
                         : 0
                       : componentsPanelOpen
-                        ? 18
+                        ? 15
                         : 3
                   }
                   minSize={isMobile ? 0 : 3}
                   maxSize={
                     isMobile
                       ? componentsPanelOpen
-                        ? 80
+                        ? 40
                         : 0
                       : componentsPanelOpen
-                        ? 40
+                        ? 25
                         : 3
                   }
                   collapsible={true}
@@ -192,10 +210,62 @@ export default function WorkspaceLayout({
                   className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel
+                  ref={propertiesPanelRef}
+                  id="properties-panel"
+                  defaultSize={
+                    isMobile
+                      ? propertiesPanelOpen
+                        ? 25
+                        : 0
+                      : propertiesPanelOpen
+                        ? 20
+                        : 3
+                  }
+                  minSize={isMobile ? 0 : 3}
+                  maxSize={
+                    isMobile
+                      ? propertiesPanelOpen
+                        ? 40
+                        : 0
+                      : propertiesPanelOpen
+                        ? 30
+                        : 3
+                  }
+                  collapsible={true}
+                  collapsedSize={isMobile ? 0 : 3}
+                  key={`properties-${propertiesPanelOpen}-${isMobile}`}
+                >
+                  {(!isMobile || propertiesPanelOpen) && (
+                    <PropertiesPanel
+                      component={selectedComponent}
+                      dataset={selectedDataset}
+                      onUpdate={(updates) => {
+                        if (selectedComponentId && currentDashboard) {
+                          updateDashboardComponent(
+                            currentDashboard.id,
+                            selectedComponentId,
+                            updates,
+                          );
+                        }
+                      }}
+                      onClose={() => {
+                        // Clear selection when closing
+                        if (selectedComponentId) {
+                          // This will be handled by the store
+                        }
+                      }}
+                    />
+                  )}
+                </ResizablePanel>
+                <ResizableHandle
+                  withHandle={propertiesPanelOpen && !isMobile}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!propertiesPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
+                />
+                <ResizablePanel
                   id="main-panel"
                   defaultSize={mainPanelSize}
-                  minSize={isMobile ? 20 : 40}
-                  key={`main-${componentsPanelOpen}-${agentPanelOpen}-${isMobile}`}
+                  minSize={isMobile ? 20 : 30}
+                  key={`main-${componentsPanelOpen}-${propertiesPanelOpen}-${agentPanelOpen}-${isMobile}`}
                 >
                   <main
                     className="h-full overflow-visible p-3 md:p-6"
@@ -214,20 +284,20 @@ export default function WorkspaceLayout({
                   defaultSize={
                     isMobile
                       ? agentPanelOpen
-                        ? 50
+                        ? 25
                         : 0
                       : agentPanelOpen
-                        ? 18
+                        ? 15
                         : 3
                   }
                   minSize={isMobile ? 0 : 3}
                   maxSize={
                     isMobile
                       ? agentPanelOpen
-                        ? 80
+                        ? 40
                         : 0
                       : agentPanelOpen
-                        ? 40
+                        ? 25
                         : 3
                   }
                   collapsible={true}
