@@ -44,9 +44,11 @@ export function WorkspaceTopbar() {
   const {
     currentDashboard,
     datasets,
+    dataSources,
     selectedDatasetId,
     setSelectedDatasetId,
     updateDashboard,
+    updateDataSource,
   } = useWorkspaceStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMac, setIsMac] = useState(false);
@@ -102,17 +104,28 @@ export function WorkspaceTopbar() {
     }
   };
 
-  const handleDatasetChange = (value: string) => {
-    setSelectedDatasetId(value);
+  const handleTableChange = (value: string) => {
     if (currentDashboard) {
-      const dataset = datasets.find((d) => d.id === value);
-      if (dataset) {
-        updateDashboard(currentDashboard.id, {
-          dataSourceId: dataset.dataSourceId,
+      // Find the data source for the current dashboard
+      const dataSource = dataSources.find(
+        (ds) => ds.id === currentDashboard.dataSourceId,
+      );
+      if (dataSource) {
+        updateDataSource(dataSource.id, {
+          selectedTable: value,
         });
       }
     }
   };
+
+  // Get the connected data source for the current dashboard
+  const connectedDataSource = currentDashboard?.dataSourceId
+    ? dataSources.find((ds) => ds.id === currentDashboard.dataSourceId)
+    : null;
+
+  // Get tables from the connected data source
+  const availableTables = connectedDataSource?.tables || [];
+  const selectedTable = connectedDataSource?.selectedTable || "";
 
   // Dashboard edit mode header
   if (isDashboardEditMode && currentDashboard) {
@@ -120,6 +133,7 @@ export function WorkspaceTopbar() {
       <header className="border-b shrink-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4 min-w-0 flex-1">
+            <SidebarTrigger />
             <Button
               variant="ghost"
               size="icon"
@@ -143,21 +157,26 @@ export function WorkspaceTopbar() {
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4 text-muted-foreground" />
               <Select
-                value={selectedDatasetId || ""}
-                onValueChange={handleDatasetChange}
+                value={selectedTable || ""}
+                onValueChange={handleTableChange}
+                disabled={!connectedDataSource || availableTables.length === 0}
               >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select dataset" />
+                  <SelectValue placeholder="Select table" />
                 </SelectTrigger>
                 <SelectContent>
-                  {datasets.length === 0 ? (
+                  {!connectedDataSource ? (
                     <div className="p-2 text-sm text-muted-foreground">
-                      No datasets available
+                      No data source connected
+                    </div>
+                  ) : availableTables.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      No tables available
                     </div>
                   ) : (
-                    datasets.map((dataset) => (
-                      <SelectItem key={dataset.id} value={dataset.id}>
-                        {dataset.name}
+                    availableTables.map((table) => (
+                      <SelectItem key={table} value={table}>
+                        {table}
                       </SelectItem>
                     ))
                   )}

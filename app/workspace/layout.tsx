@@ -13,6 +13,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AgentPanel } from "@/components/workspace/agent-panel";
 import { ComponentsPanel } from "@/components/workspace/components-panel";
 import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
+import { DataPanel } from "@/components/workspace/data-panel";
 import { PropertiesPanel } from "@/components/workspace/properties-panel";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
@@ -36,15 +37,19 @@ export default function WorkspaceLayout({
     componentsPanelOpen,
     agentPanelOpen,
     propertiesPanelOpen,
+    dataPanelOpen,
     setPropertiesPanelOpen,
     setComponentsPanelOpen,
     setAgentPanelOpen,
+    setDataPanelOpen,
     selectedComponentId,
     selectedDatasetId,
     currentDashboard,
     datasets,
     updateDashboardComponent,
   } = useWorkspaceStore();
+  const dataPanelRef =
+    useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const componentsPanelRef =
     useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const propertiesPanelRef =
@@ -98,6 +103,9 @@ export default function WorkspaceLayout({
       if (propertiesPanelOpen) {
         setPropertiesPanelOpen(false);
       }
+      if (dataPanelOpen) {
+        setDataPanelOpen(false);
+      }
     }
   }, [
     isDashboardEditMode,
@@ -105,15 +113,20 @@ export default function WorkspaceLayout({
     componentsPanelOpen,
     agentPanelOpen,
     propertiesPanelOpen,
+    dataPanelOpen,
     setComponentsPanelOpen,
     setAgentPanelOpen,
     setPropertiesPanelOpen,
+    setDataPanelOpen,
   ]);
 
   // Calculate responsive panel sizes based on screen size and panel states
   useEffect(() => {
     if (isMobile) {
       // On mobile, panels should be smaller or hidden
+      if (!dataPanelOpen && dataPanelRef.current) {
+        dataPanelRef.current.resize(0);
+      }
       if (!componentsPanelOpen && componentsPanelRef.current) {
         componentsPanelRef.current.resize(0);
       }
@@ -122,6 +135,9 @@ export default function WorkspaceLayout({
       }
     } else {
       // On desktop, use normal sizes
+      if (!dataPanelOpen && dataPanelRef.current) {
+        dataPanelRef.current.resize(3);
+      }
       if (!componentsPanelOpen && componentsPanelRef.current) {
         componentsPanelRef.current.resize(3);
       }
@@ -129,32 +145,36 @@ export default function WorkspaceLayout({
         agentPanelRef.current.resize(3);
       }
     }
-  }, [componentsPanelOpen, agentPanelOpen, isMobile]);
+  }, [dataPanelOpen, componentsPanelOpen, agentPanelOpen, isMobile]);
 
   // Calculate main panel size based on open panels
   useEffect(() => {
     if (isMobile) {
       // On mobile, main panel takes full width when panels are closed
-      if (componentsPanelOpen && agentPanelOpen) {
+      const openPanels = [dataPanelOpen, componentsPanelOpen, agentPanelOpen].filter(Boolean).length;
+      if (openPanels === 3) {
+        setMainPanelSize(40);
+      } else if (openPanels === 2) {
         setMainPanelSize(50);
-      } else if (componentsPanelOpen || agentPanelOpen) {
+      } else if (openPanels === 1) {
         setMainPanelSize(70);
       } else {
         setMainPanelSize(100);
       }
     } else {
       // On desktop, calculate based on open panels
-      if (componentsPanelOpen && agentPanelOpen) {
+      const openPanels = [dataPanelOpen, componentsPanelOpen, agentPanelOpen].filter(Boolean).length;
+      if (openPanels === 3) {
+        setMainPanelSize(55);
+      } else if (openPanels === 2) {
         setMainPanelSize(64);
-      } else if (componentsPanelOpen) {
-        setMainPanelSize(79);
-      } else if (agentPanelOpen) {
+      } else if (openPanels === 1) {
         setMainPanelSize(79);
       } else {
         setMainPanelSize(94);
       }
     }
-  }, [componentsPanelOpen, agentPanelOpen, isMobile]);
+  }, [dataPanelOpen, componentsPanelOpen, agentPanelOpen, isMobile]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -196,13 +216,47 @@ export default function WorkspaceLayout({
                 className="flex-1"
                 onLayout={(sizes) => {
                   // Update main panel size when layout changes
-                  if (sizes.length >= 4) {
+                  if (sizes.length >= 5) {
+                    setMainPanelSize(sizes[3] || 50);
+                  } else if (sizes.length >= 4) {
                     setMainPanelSize(sizes[2] || 50);
                   } else if (sizes.length >= 3) {
                     setMainPanelSize(sizes[1] || 64);
                   }
                 }}
               >
+                <ResizablePanel
+                  ref={dataPanelRef}
+                  id="data-panel"
+                  defaultSize={
+                    isMobile
+                      ? dataPanelOpen
+                        ? 20
+                        : 0
+                      : dataPanelOpen
+                        ? 15
+                        : 3
+                  }
+                  minSize={isMobile ? 0 : 3}
+                  maxSize={
+                    isMobile
+                      ? dataPanelOpen
+                        ? 35
+                        : 0
+                      : dataPanelOpen
+                        ? 25
+                        : 3
+                  }
+                  collapsible={true}
+                  collapsedSize={isMobile ? 0 : 3}
+                  key={`data-${dataPanelOpen}-${isMobile}`}
+                >
+                  {(!isMobile || dataPanelOpen) && <DataPanel />}
+                </ResizablePanel>
+                <ResizableHandle
+                  withHandle={dataPanelOpen && !isMobile}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!dataPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
+                />
                 <ResizablePanel
                   ref={componentsPanelRef}
                   id="components-panel"

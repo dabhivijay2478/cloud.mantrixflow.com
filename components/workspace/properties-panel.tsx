@@ -33,9 +33,31 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import type { DashboardComponent, Dataset } from "@/lib/stores/workspace-store";
+import type { DashboardComponent, Dataset, DatasetColumn } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
+
+// Mock function to fetch columns from a table
+const fetchTableColumns = async (
+  _dataSourceId: string,
+  _tableName: string,
+): Promise<DatasetColumn[]> => {
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // Mock columns based on table
+  const mockColumns: DatasetColumn[] = [
+    { name: "id", type: "number", selected: false, order: 0 },
+    { name: "name", type: "string", selected: false, order: 1 },
+    { name: "email", type: "string", selected: false, order: 2 },
+    { name: "created_at", type: "date", selected: false, order: 3 },
+    { name: "status", type: "boolean", selected: false, order: 4 },
+    { name: "revenue", type: "number", selected: false, order: 5 },
+    { name: "category", type: "string", selected: false, order: 6 },
+  ];
+
+  return mockColumns;
+};
 
 interface PropertiesPanelProps {
   component: DashboardComponent | null;
@@ -58,8 +80,41 @@ export function PropertiesPanel({
   dataset,
   onUpdate,
 }: PropertiesPanelProps) {
-  const { propertiesPanelOpen, setPropertiesPanelOpen } = useWorkspaceStore();
+  const {
+    propertiesPanelOpen,
+    setPropertiesPanelOpen,
+    currentDashboard,
+    dataSources,
+  } = useWorkspaceStore();
   const [activeTab, setActiveTab] = useState<"data" | "appearance">("data");
+  const [tableColumns, setTableColumns] = useState<DatasetColumn[]>([]);
+  const [loadingColumns, setLoadingColumns] = useState(false);
+
+  // Get the connected data source and selected table
+  const connectedDataSource = currentDashboard?.dataSourceId
+    ? dataSources.find((ds) => ds.id === currentDashboard.dataSourceId)
+    : null;
+  const selectedTable = connectedDataSource?.selectedTable || "";
+
+  // Fetch columns when table changes
+  useEffect(() => {
+    if (connectedDataSource?.id && selectedTable) {
+      setLoadingColumns(true);
+      fetchTableColumns(connectedDataSource.id, selectedTable)
+        .then((cols) => {
+          setTableColumns(cols);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch columns:", error);
+          setTableColumns([]);
+        })
+        .finally(() => {
+          setLoadingColumns(false);
+        });
+    } else {
+      setTableColumns([]);
+    }
+  }, [connectedDataSource?.id, selectedTable]);
 
   const form = useForm({
     defaultValues: {
@@ -99,10 +154,12 @@ export function PropertiesPanel({
     }
   };
 
-  const selectedColumns = dataset?.columns.filter((c) => c.selected) || [];
-  const stringColumns = selectedColumns.filter((c) => c.type === "string");
-  const numberColumns = selectedColumns.filter((c) => c.type === "number");
-  const dateColumns = selectedColumns.filter((c) => c.type === "date");
+  // Use table columns if available, otherwise fall back to dataset columns
+  const availableColumns = tableColumns.length > 0 ? tableColumns : (dataset?.columns || []);
+  const selectedColumns = availableColumns.filter((c) => c.selected);
+  const stringColumns = availableColumns.filter((c) => c.type === "string");
+  const numberColumns = availableColumns.filter((c) => c.type === "number");
+  const dateColumns = availableColumns.filter((c) => c.type === "date");
 
   // Determine available columns based on component type
   const getAvailableXAxisColumns = () => {
@@ -212,28 +269,43 @@ export function PropertiesPanel({
           >
             {activeTab === "data" && (
               <>
-                {!dataset && (
+                {!connectedDataSource && (
                   <Card className="border-yellow-500/50 bg-yellow-500/10">
                     <CardContent className="p-4">
                       <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                        No dataset selected. Please select a dataset for this
-                        dashboard.
+                        No data source connected. Please connect a data source first.
                       </p>
                     </CardContent>
                   </Card>
                 )}
 
-                {dataset && (
+                {connectedDataSource && !selectedTable && (
+                  <Card className="border-yellow-500/50 bg-yellow-500/10">
+                    <CardContent className="p-4">
+                      <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                        No table selected. Please select a table from the topbar.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {connectedDataSource && selectedTable && (
                   <>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase">
-                        Dataset
-                      </p>
-                      <p className="text-sm font-medium">{dataset.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedColumns.length} columns available
-                      </p>
-                    </div>
+                    {loadingColumns ? (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-muted-foreground">Loading columns...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground uppercase">
+                            Table
+                          </p>
+                          <p className="text-sm font-medium">{selectedTable}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {connectedDataSource.name} • {availableColumns.length} columns available
+                          </p>
+                        </div>
 
                     <Separator />
 
@@ -377,6 +449,8 @@ export function PropertiesPanel({
                         </FormItem>
                       )}
                     />
+                      </>
+                    )}
                   </>
                 )}
               </>
