@@ -1,7 +1,16 @@
 "use client";
 
+import {
+  ArrowLeft,
+  ArrowRight,
+  Cloud,
+  Database,
+  FileSpreadsheet,
+  Globe,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,15 +20,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import {
-  ArrowRight,
-  ArrowLeft,
-  Database,
-  FileSpreadsheet,
-  Cloud,
-  Globe,
-} from "lucide-react";
-import { toast } from "sonner";
 
 const dataSourceTypes = [
   {
@@ -126,6 +126,7 @@ export default function DataSourcePage() {
                 return (
                   <button
                     key={type.id}
+                    type="button"
                     onClick={() => setSelectedType(type.id)}
                     className={`p-4 rounded-lg border-2 transition-all text-left ${
                       isSelected

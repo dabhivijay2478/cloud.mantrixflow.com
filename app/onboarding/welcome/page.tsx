@@ -1,7 +1,13 @@
 "use client";
 
+import { ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import {
+  CenteredCardLayout,
+  LoadingState,
+  StepIndicator,
+} from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,12 +18,6 @@ import {
 } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Sparkles, ArrowRight } from "lucide-react";
-import {
-  LoadingState,
-  CenteredCardLayout,
-  StepIndicator,
-} from "@/components/shared";
 
 export default function WelcomePage() {
   const router = useRouter();

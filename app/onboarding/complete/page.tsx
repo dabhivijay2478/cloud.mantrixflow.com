@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 
 export default function CompletePage() {
   const router = useRouter();

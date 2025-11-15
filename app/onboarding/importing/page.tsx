@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckCircle2, Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Database, CheckCircle2 } from "lucide-react";
 
 export default function ImportingPage() {
   const router = useRouter();

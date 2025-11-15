@@ -1,7 +1,9 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { ArrowLeft, ArrowRight, Loader2, Table } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,8 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { ArrowRight, ArrowLeft, Table, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 export default function SelectTablePage() {
   const router = useRouter();
@@ -21,7 +21,6 @@ export default function SelectTablePage() {
   const {
     currentDataSource,
     updateDataSource,
-    setOnboardingStep,
     completeOnboarding,
   } = useWorkspaceStore();
   const [tables, setTables] = useState<string[]>([]);
@@ -92,6 +91,7 @@ export default function SelectTablePage() {
                     return (
                       <button
                         key={table}
+                        type="button"
                         onClick={() => setSelectedTable(table)}
                         className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
                           isSelected
