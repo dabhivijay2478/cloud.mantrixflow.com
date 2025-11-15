@@ -14,7 +14,7 @@ import {
   Sparkline,
   StatChange,
   TrendLabel,
-} from "./index";
+} from "../index";
 
 /**
  * ExampleDashboard

@@ -11,65 +11,65 @@
 // Core BI Components - Charts
 // ============================================================================
 
-export type { AreaChartProps } from "./area-chart";
-export { AreaChart } from "./area-chart";
-export type { BarChartProps } from "./bar-chart";
-export { BarChart } from "./bar-chart";
-export type { ClusteredBarChartProps } from "./clustered-bar-chart";
-export { ClusteredBarChart } from "./clustered-bar-chart";
-export type { ClusteredColumnChartProps } from "./clustered-column-chart";
-export { ClusteredColumnChart } from "./clustered-column-chart";
-export type { DonutChartProps } from "./donut-chart";
-export { DonutChart } from "./donut-chart";
-export type { LineChartProps } from "./line-chart";
-export { LineChart } from "./line-chart";
-export type { LineStackedColumnChartProps } from "./line-stacked-column-chart";
-export { LineStackedColumnChart } from "./line-stacked-column-chart";
-export type { PieChartProps } from "./pie-chart";
-export { PieChart } from "./pie-chart";
-export type { RibbonChartProps } from "./ribbon-chart";
-export { RibbonChart } from "./ribbon-chart";
-export type { ScatterChartProps } from "./scatter-chart";
-export { ScatterChart } from "./scatter-chart";
-export type { StackedAreaChartProps } from "./stacked-area-chart";
-export { StackedAreaChart } from "./stacked-area-chart";
-export type { StackedBarChartProps } from "./stacked-bar-chart";
-export { StackedBarChart } from "./stacked-bar-chart";
-export type { StackedColumnChartProps } from "./stacked-column-chart";
-export { StackedColumnChart } from "./stacked-column-chart";
+export type { AreaChartProps } from "./charts/area-chart";
+export { AreaChart } from "./charts/area-chart";
+export type { BarChartProps } from "./charts/bar-chart";
+export { BarChart } from "./charts/bar-chart";
+export type { ClusteredBarChartProps } from "./charts/clustered-bar-chart";
+export { ClusteredBarChart } from "./charts/clustered-bar-chart";
+export type { ClusteredColumnChartProps } from "./charts/clustered-column-chart";
+export { ClusteredColumnChart } from "./charts/clustered-column-chart";
+export type { DonutChartProps } from "./charts/donut-chart";
+export { DonutChart } from "./charts/donut-chart";
+export type { LineChartProps } from "./charts/line-chart";
+export { LineChart } from "./charts/line-chart";
+export type { LineStackedColumnChartProps } from "./charts/line-stacked-column-chart";
+export { LineStackedColumnChart } from "./charts/line-stacked-column-chart";
+export type { PieChartProps } from "./charts/pie-chart";
+export { PieChart } from "./charts/pie-chart";
+export type { RibbonChartProps } from "./charts/ribbon-chart";
+export { RibbonChart } from "./charts/ribbon-chart";
+export type { ScatterChartProps } from "./charts/scatter-chart";
+export { ScatterChart } from "./charts/scatter-chart";
+export type { StackedAreaChartProps } from "./charts/stacked-area-chart";
+export { StackedAreaChart } from "./charts/stacked-area-chart";
+export type { StackedBarChartProps } from "./charts/stacked-bar-chart";
+export { StackedBarChart } from "./charts/stacked-bar-chart";
+export type { StackedColumnChartProps } from "./charts/stacked-column-chart";
+export { StackedColumnChart } from "./charts/stacked-column-chart";
 export type {
   WaterfallChartProps,
   WaterfallDataPoint,
-} from "./waterfall-chart";
-export { WaterfallChart } from "./waterfall-chart";
+} from "./charts/waterfall-chart";
+export { WaterfallChart } from "./charts/waterfall-chart";
 
 // ============================================================================
 // Core BI Components - Metrics
 // ============================================================================
 
-export type { KPICardProps } from "./kpi-card";
-export { KPICard } from "./kpi-card";
-export type { MetricCardProps } from "./metric-card";
-export { MetricCard } from "./metric-card";
-export type { CardRow, MultiRowCardProps } from "./multi-row-card";
-export { MultiRowCard } from "./multi-row-card";
-export type { ProgressBarProps } from "./progress-bar";
-export { ProgressBar } from "./progress-bar";
-export type { SparklineProps, SparklineType } from "./sparkline";
-export { Sparkline } from "./sparkline";
+export type { KPICardProps } from "./metrics/kpi-card";
+export { KPICard } from "./metrics/kpi-card";
+export type { MetricCardProps } from "./metrics/metric-card";
+export { MetricCard } from "./metrics/metric-card";
+export type { CardRow, MultiRowCardProps } from "./metrics/multi-row-card";
+export { MultiRowCard } from "./metrics/multi-row-card";
+export type { ProgressBarProps } from "./metrics/progress-bar";
+export { ProgressBar } from "./metrics/progress-bar";
+export type { SparklineProps, SparklineType } from "./metrics/sparkline";
+export { Sparkline } from "./metrics/sparkline";
 
 // ============================================================================
 // Core BI Components - Data Display
 // ============================================================================
 
-export type { DataTableProps } from "./data-table";
-export { createSortableHeader, DataTable } from "./data-table";
-export type { SQLEditorProps } from "./sql-editor";
-export { SQLEditor } from "./sql-editor";
-export type { SQLResultViewerProps } from "./sql-result-viewer";
-export { SQLResultViewer } from "./sql-result-viewer";
-export type { TableNavigationProps } from "./table-navigation";
-export { TableNavigation } from "./table-navigation";
+export type { DataTableProps } from "./data-display/data-table";
+export { createSortableHeader, DataTable } from "./data-display/data-table";
+export type { SQLEditorProps } from "./data-display/sql-editor";
+export { SQLEditor } from "./data-display/sql-editor";
+export type { SQLResultViewerProps } from "./data-display/sql-result-viewer";
+export { SQLResultViewer } from "./data-display/sql-result-viewer";
+export type { TableNavigationProps } from "./data-display/table-navigation";
+export { TableNavigation } from "./data-display/table-navigation";
 
 // ============================================================================
 // Layout & Container Components
@@ -111,8 +111,8 @@ export {
 } from "@/components/ui/sheet";
 // Re-export commonly used Shadcn components for BI layouts
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-export type { GridItemProps, GridLayoutProps } from "./grid-layout";
-export { GridItem, GridLayout } from "./grid-layout";
+export type { GridItemProps, GridLayoutProps } from "./layout/grid-layout";
+export { GridItem, GridLayout } from "./layout/grid-layout";
 
 // ============================================================================
 // Input & Filter Components
@@ -128,33 +128,33 @@ export {
 } from "@/components/ui/select";
 export { Slider } from "@/components/ui/slider";
 export { Switch } from "@/components/ui/switch";
-export type { DateRangePickerProps } from "./date-range-picker";
-export { DateRangePicker, dateRangePresets } from "./date-range-picker";
-export type { MultiSelectProps, SelectOption } from "./multi-select";
-export { MultiSelect } from "./multi-select";
-export type { SearchInputProps } from "./search-input";
-export { SearchInput } from "./search-input";
-export type { SlicerOption, SlicerProps, SlicerType } from "./slicer";
-export { Slicer } from "./slicer";
+export type { DateRangePickerProps } from "./filters/date-range-picker";
+export { DateRangePicker, dateRangePresets } from "./filters/date-range-picker";
+export type { MultiSelectProps, SelectOption } from "./filters/multi-select";
+export { MultiSelect } from "./filters/multi-select";
+export type { SearchInputProps } from "./filters/search-input";
+export { SearchInput } from "./filters/search-input";
+export type { SlicerOption, SlicerProps, SlicerType } from "./filters/slicer";
+export { Slicer } from "./filters/slicer";
 
 // ============================================================================
 // Advanced Analytics Components
 // ============================================================================
 
-export type { AnomalyBadgeProps, AnomalySeverity } from "./anomaly-badge";
-export { AnomalyBadge } from "./anomaly-badge";
-export type { BulletChartProps, BulletZone } from "./bullet-chart";
-export { BulletChart } from "./bullet-chart";
-export type { FilledMapProps, MapRegion } from "./filled-map";
-export { FilledMap } from "./filled-map";
-export type { ForecastLineProps } from "./forecast-line";
-export { ForecastLine } from "./forecast-line";
-export type { FunnelChartProps, FunnelStage } from "./funnel-chart";
-export { FunnelChart } from "./funnel-chart";
-export type { GaugeProps, GaugeThreshold } from "./gauge";
-export { Gauge } from "./gauge";
-export type { HeatmapCell, HeatmapProps } from "./heatmap";
-export { Heatmap } from "./heatmap";
+export type { AnomalyBadgeProps, AnomalySeverity } from "./advanced/anomaly-badge";
+export { AnomalyBadge } from "./advanced/anomaly-badge";
+export type { BulletChartProps, BulletZone } from "./advanced/bullet-chart";
+export { BulletChart } from "./advanced/bullet-chart";
+export type { FilledMapProps, MapRegion } from "./advanced/filled-map";
+export { FilledMap } from "./advanced/filled-map";
+export type { ForecastLineProps } from "./advanced/forecast-line";
+export { ForecastLine } from "./advanced/forecast-line";
+export type { FunnelChartProps, FunnelStage } from "./advanced/funnel-chart";
+export { FunnelChart } from "./advanced/funnel-chart";
+export type { GaugeProps, GaugeThreshold } from "./advanced/gauge";
+export { Gauge } from "./advanced/gauge";
+export type { HeatmapCell, HeatmapProps } from "./advanced/heatmap";
+export { Heatmap } from "./advanced/heatmap";
 export type {
   BasicLeafletMapProps,
   City,
@@ -165,7 +165,7 @@ export type {
   LeafletMapGrayscaleProps,
   LeafletMapWithPinProps,
   LeafletMarker,
-} from "./leaflet-map";
+} from "./advanced/leaflet-map";
 // Leaflet Map Components
 export {
   BasicLeafletMap,
@@ -175,59 +175,59 @@ export {
   LeafletMapCustomPopover,
   LeafletMapGrayscale,
   LeafletMapWithPin,
-} from "./leaflet-map";
-export type { MapMarker, MapProps } from "./map";
-export { MapComponent as Map } from "./map";
-export type { MatrixProps } from "./matrix";
-export { Matrix } from "./matrix";
-export type { RadarChartProps } from "./radar-chart";
-export { RadarChart } from "./radar-chart";
+} from "./advanced/leaflet-map";
+export type { MapMarker, MapProps } from "./advanced/map";
+export { MapComponent as Map } from "./advanced/map";
+export type { MatrixProps } from "./advanced/matrix";
+export { Matrix } from "./advanced/matrix";
+export type { RadarChartProps } from "./advanced/radar-chart";
+export { RadarChart } from "./advanced/radar-chart";
 export type {
   SankeyDiagramProps,
   SankeyLink,
   SankeyNode,
-} from "./sankey-diagram";
-export { SankeyDiagram } from "./sankey-diagram";
-export type { TreeMapNode, TreeMapProps } from "./treemap";
-export { TreeMap } from "./treemap";
+} from "./advanced/sankey-diagram";
+export { SankeyDiagram } from "./advanced/sankey-diagram";
+export type { TreeMapNode, TreeMapProps } from "./advanced/treemap";
+export { TreeMap } from "./advanced/treemap";
 
 // ============================================================================
 // Text & Insight Components
 // ============================================================================
 
-export type { AICommentaryProps } from "./ai-commentary";
-export { AICommentary } from "./ai-commentary";
-export type { InsightTextProps, InsightType } from "./insight-text";
-export { InsightText } from "./insight-text";
-export type { StatChangeProps, StatChangeSize } from "./stat-change";
-export { StatChange } from "./stat-change";
+export type { AICommentaryProps } from "./insights/ai-commentary";
+export { AICommentary } from "./insights/ai-commentary";
+export type { InsightTextProps, InsightType } from "./insights/insight-text";
+export { InsightText } from "./insights/insight-text";
+export type { StatChangeProps, StatChangeSize } from "./insights/stat-change";
+export { StatChange } from "./insights/stat-change";
 export type {
   TrendDirection,
   TrendLabelProps,
   TrendLabelVariant,
-} from "./trend-label";
-export { TrendLabel } from "./trend-label";
+} from "./insights/trend-label";
+export { TrendLabel } from "./insights/trend-label";
 
 // ============================================================================
 // Embed & Share Components
 // ============================================================================
 
-export type { EmbedCodeProps } from "./embed-code";
-export { EmbedCode } from "./embed-code";
+export type { EmbedCodeProps } from "./share/embed-code";
+export { EmbedCode } from "./share/embed-code";
 export type {
   ExportPDFProps,
   ExportPDFSize,
   ExportPDFVariant,
-} from "./export-pdf";
-export { ExportPDF } from "./export-pdf";
-export type { QRCodeProps } from "./qr-code";
-export { QRCode } from "./qr-code";
+} from "./share/export-pdf";
+export { ExportPDF } from "./share/export-pdf";
+export type { QRCodeProps } from "./share/qr-code";
+export { QRCode } from "./share/qr-code";
 export type {
   ShareButtonProps,
   ShareButtonSize,
   ShareButtonVariant,
-} from "./share-button";
-export { ShareButton } from "./share-button";
+} from "./share/share-button";
+export { ShareButton } from "./share/share-button";
 
 // ============================================================================
 // AI Prompt & Feedback Components
@@ -237,29 +237,29 @@ export type {
   EditPromptProps,
   EditPromptSize,
   EditPromptVariant,
-} from "./edit-prompt";
-export { EditPrompt } from "./edit-prompt";
+} from "./ai/edit-prompt";
+export { EditPrompt } from "./ai/edit-prompt";
 export type {
   FeedbackThumbsProps,
   FeedbackThumbsSize,
   FeedbackValue,
-} from "./feedback-thumbs";
-export { FeedbackThumbs } from "./feedback-thumbs";
-export type { PaginatedReportProps, ReportColumn } from "./paginated-report";
-export { PaginatedReport } from "./paginated-report";
-export type { PromptInputProps } from "./prompt-input";
-export { PromptInput } from "./prompt-input";
-export type { QAAnswer, QAProps } from "./qa";
-export { QA } from "./qa";
+} from "./ai/feedback-thumbs";
+export { FeedbackThumbs } from "./ai/feedback-thumbs";
+export type { PaginatedReportProps, ReportColumn } from "./ai/paginated-report";
+export { PaginatedReport } from "./ai/paginated-report";
+export type { PromptInputProps } from "./ai/prompt-input";
+export { PromptInput } from "./ai/prompt-input";
+export type { QAAnswer, QAProps } from "./ai/qa";
+export { QA } from "./ai/qa";
 export type {
   RegenerateButtonProps,
   RegenerateButtonSize,
   RegenerateButtonVariant,
-} from "./regenerate-button";
-export { RegenerateButton } from "./regenerate-button";
+} from "./ai/regenerate-button";
+export { RegenerateButton } from "./ai/regenerate-button";
 
 // ============================================================================
 // Example & Demo Components
 // ============================================================================
 
-export { ExampleDashboard } from "./example-dashboard";
+export { ExampleDashboard } from "./examples/example-dashboard";
