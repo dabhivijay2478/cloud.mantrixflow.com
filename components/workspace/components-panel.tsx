@@ -275,7 +275,7 @@ const allComponents = [
   {
     id: "leaflet-map-grayscale",
     name: "Leaflet Map Grayscale",
-    icon: Map,
+    icon: MapIcon,
     description: "Grayscale map",
   },
   {
