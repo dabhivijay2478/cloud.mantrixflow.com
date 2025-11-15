@@ -26,6 +26,8 @@ interface DashboardItemProps {
   onLayerChange: (id: string, direction: "front" | "back") => void;
   onUpdate: (id: string, updates: Partial<DashboardComponent>) => void;
   hasCollision?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
   children: React.ReactNode;
 }
 
@@ -41,10 +43,11 @@ export function DashboardItem({
   onLayerChange,
   onUpdate,
   hasCollision = false,
+  isSelected = false,
+  onSelect,
   children,
 }: DashboardItemProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isSelected, setIsSelected] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<ResizeHandle>(null);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -209,7 +212,7 @@ export function DashboardItem({
       <div
         key={handle}
         className={cn(
-          "absolute z-100 pointer-events-auto touch-none select-none",
+          "absolute z-[100] pointer-events-auto touch-none select-none",
           "bg-primary/30 border border-primary/60 rounded-sm",
           "hover:bg-primary/50 hover:border-primary transition-colors",
           (isHovered || isSelected) ? "opacity-100" : "opacity-0",
@@ -260,8 +263,9 @@ export function DashboardItem({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={(e) => {
-          if (!isResizing) {
-            setIsSelected(true);
+          if (!isResizing && onSelect) {
+            e.stopPropagation();
+            onSelect(component.id);
           }
         }}
       >

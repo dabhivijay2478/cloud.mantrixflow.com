@@ -133,7 +133,7 @@ export default function DashboardEditorPage() {
             onComponentsChange={handleComponentsChange}
             onComponentUpdate={handleComponentUpdate}
             onComponentDelete={handleComponentDelete}
-            className="h-full"
+            className="h-full mt-10"
           />
       </div>
     </div>

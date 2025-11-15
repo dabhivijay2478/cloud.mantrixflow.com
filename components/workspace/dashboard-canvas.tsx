@@ -47,6 +47,7 @@ export function DashboardCanvas({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
   const [showOccupiedAreas, setShowOccupiedAreas] = useState(false);
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const { active, over, delta } = useDndContext();
   const prevActiveRef = React.useRef(active);
@@ -139,7 +140,7 @@ export function DashboardCanvas({
         };
       }
 
-      // Calculate new position
+      // Calculate new position - follow mouse exactly for free rearrangement
       if (dragStartPositionRef.current) {
         const newX = dragStartPositionRef.current.x + delta.x;
         const newY = dragStartPositionRef.current.y + delta.y;
@@ -152,11 +153,12 @@ export function DashboardCanvas({
         const maxGridX = Math.floor(canvasSize.width / GRID_SIZE);
         const maxGridY = Math.floor(canvasSize.height / GRID_SIZE);
 
-        // Clamp to canvas bounds
+        // Clamp to canvas bounds (prevent going off canvas)
         gridX = Math.max(0, Math.min(gridX, maxGridX - component.position.w));
         gridY = Math.max(0, Math.min(gridY, maxGridY - component.position.h));
 
-        // Check for collisions
+        // Check for collisions - but DON'T auto-adjust position
+        // Allow user to move freely, just show visual warning
         const wouldCollide = !canPlaceComponent(
           gridX,
           gridY,
@@ -167,25 +169,15 @@ export function DashboardCanvas({
           GRID_SIZE
         );
 
+        // Show collision warning but allow free movement
         if (wouldCollide) {
-          // Try to find nearest valid position
-          const validPos = getNearestValidPosition(
-            gridX,
-            gridY,
-            component.position.w,
-            component.position.h,
-            components,
-            component.id,
-            GRID_SIZE
-          );
-          gridX = validPos.x;
-          gridY = validPos.y;
           setCollisionWarning(component.id);
         } else {
           setCollisionWarning(null);
         }
 
-        // Update position in real-time
+        // Update position in real-time - follow mouse exactly
+        // User can rearrange freely, even if it overlaps (they'll see warning)
         onComponentUpdate(component.id, {
           position: {
             ...component.position,
@@ -207,6 +199,38 @@ export function DashboardCanvas({
       setCollisionWarning(null);
     }
   }, [active]);
+
+  // Keyboard delete handler - Delete or Backspace to delete selected component
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Delete or Backspace key
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedComponentId) {
+        e.preventDefault();
+        onComponentDelete(selectedComponentId);
+        setSelectedComponentId(null);
+      }
+
+      // Escape to deselect
+      if (e.key === 'Escape' && selectedComponentId) {
+        setSelectedComponentId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedComponentId, onComponentDelete]);
 
   // Listen to drag events from the parent DndContext
   useEffect(() => {
@@ -424,6 +448,12 @@ export function DashboardCanvas({
               `,
               backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
             }}
+            onClick={(e) => {
+              // Deselect when clicking on blank canvas area
+              if (e.target === e.currentTarget || (e.target as HTMLElement).id === 'canvas-drop-zone') {
+                setSelectedComponentId(null);
+              }
+            }}
           >
           {/* Grid overlay - visible when dragging */}
           {isDragging && (
@@ -466,6 +496,8 @@ export function DashboardCanvas({
               onLayerChange={handleLayerChange}
               onUpdate={onComponentUpdate}
               hasCollision={collisionWarning === component.id}
+              isSelected={selectedComponentId === component.id}
+              onSelect={(id) => setSelectedComponentId(id)}
             >
               <ComponentRenderer component={component} />
             </DashboardItem>
