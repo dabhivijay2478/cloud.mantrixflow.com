@@ -25,6 +25,8 @@ interface DashboardCanvasProps {
   onComponentsChange: (components: DashboardComponent[]) => void;
   onComponentUpdate: (id: string, updates: Partial<DashboardComponent>) => void;
   onComponentDelete: (id: string) => void;
+  onComponentSelect?: (id: string | null) => void;
+  selectedComponentId?: string | null;
   className?: string;
 }
 
@@ -33,6 +35,8 @@ export function DashboardCanvas({
   onComponentsChange,
   onComponentUpdate,
   onComponentDelete,
+  onComponentSelect,
+  selectedComponentId: externalSelectedComponentId,
   className,
 }: DashboardCanvasProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -43,9 +47,22 @@ export function DashboardCanvas({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
   const [showOccupiedAreas, setShowOccupiedAreas] = useState(false);
-  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
+  const [internalSelectedComponentId, setInternalSelectedComponentId] = useState<string | null>(
     null,
   );
+
+  // Use external selectedComponentId if provided, otherwise use internal state
+  const selectedComponentId = externalSelectedComponentId !== undefined 
+    ? externalSelectedComponentId 
+    : internalSelectedComponentId;
+
+  const setSelectedComponentId = (id: string | null) => {
+    if (onComponentSelect) {
+      onComponentSelect(id);
+    } else {
+      setInternalSelectedComponentId(id);
+    }
+  };
   const canvasRef = useRef<HTMLElement>(null);
   const { active, delta } = useDndContext();
   const prevActiveRef = React.useRef(active);

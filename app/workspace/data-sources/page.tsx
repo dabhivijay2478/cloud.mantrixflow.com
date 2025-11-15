@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import { Database, Plus, Settings, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   allDataSources,
@@ -10,18 +11,30 @@ import {
   mockTables,
 } from "@/components/data-sources";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
+  const router = useRouter();
   const {
     dataSources,
     addDataSource,
     removeDataSource,
     updateDataSource,
     currentOrganization,
+    datasets,
   } = useWorkspaceStore();
 
   // Filter data sources by current organization
@@ -247,22 +260,123 @@ export default function DataSourcesPage() {
           onDataSourceClick={handleDataSourceClick}
         />
       ) : (
-        // Show table list view with only connected data sources
-        <DataSourceTable
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-          isConnected={isConnected}
-          getConnectedDataSource={getConnectedDataSource}
-          onDataSourceClick={handleDataSourceClick}
-          showOnlyConnected={true}
-          onDisconnect={handleDisconnect}
-          onDelete={handleDelete}
-        />
+        <>
+          {/* Show table list view with only connected data sources */}
+          <DataSourceTable
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            isConnected={isConnected}
+            getConnectedDataSource={getConnectedDataSource}
+            onDataSourceClick={handleDataSourceClick}
+            showOnlyConnected={true}
+            onDisconnect={handleDisconnect}
+            onDelete={handleDelete}
+          />
+
+          {/* Datasets Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Configured Datasets</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Datasets configured for analytics dashboards
+                  </p>
+                </div>
+                <Button
+                  onClick={() => router.push("/workspace/datasets/new")}
+                  size="sm"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Dataset
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {datasets.length === 0 ? (
+                <div className="text-center py-8">
+                  <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    No datasets configured yet
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/workspace/datasets/new")}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Dataset
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Columns</TableHead>
+                      <TableHead>Updated</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {datasets.map((dataset) => {
+                      const dataSource = dataSources.find(
+                        (ds) => ds.id === dataset.dataSourceId,
+                      );
+                      const selectedColumns = dataset.columns.filter(
+                        (c) => c.selected,
+                      );
+                      return (
+                        <TableRow key={dataset.id}>
+                          <TableCell className="font-medium">
+                            {dataset.name}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Database className="h-4 w-4 text-muted-foreground" />
+                              <span>{dataSource?.name || "Unknown"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {dataset.sourceType === "table" ? "Table" : "Query"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {selectedColumns.length} selected
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(dataset.updatedAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/workspace/datasets/${dataset.id}`)
+                              }
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              Configure
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Connection Sheet */}

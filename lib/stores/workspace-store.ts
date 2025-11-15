@@ -63,6 +63,27 @@ export interface DashboardComponent {
   zIndex?: number;
 }
 
+export interface DatasetColumn {
+  name: string;
+  type: "string" | "number" | "date" | "boolean";
+  selected: boolean;
+  order: number;
+}
+
+export interface Dataset {
+  id: string;
+  name: string;
+  description?: string;
+  dataSourceId: string;
+  sourceType: "table" | "custom_query";
+  sourceName: string; // table name or query name
+  query?: string; // if sourceType is custom_query
+  columns: DatasetColumn[];
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OnboardingState {
   currentStep:
     | "welcome"
@@ -92,6 +113,10 @@ interface WorkspaceState {
   dashboards: Dashboard[];
   currentDashboard: Dashboard | null;
 
+  // Datasets
+  datasets: Dataset[];
+  currentDataset: Dataset | null;
+
   // Onboarding
   onboarding: OnboardingState;
 
@@ -99,6 +124,7 @@ interface WorkspaceState {
   sidebarOpen: boolean;
   componentsPanelOpen: boolean;
   agentPanelOpen: boolean;
+  propertiesPanelOpen: boolean;
 }
 
 interface WorkspaceActions {
@@ -129,6 +155,12 @@ interface WorkspaceActions {
   ) => void;
   removeDashboardComponent: (dashboardId: string, componentId: string) => void;
 
+  // Dataset actions
+  setCurrentDataset: (dataset: Dataset | null) => void;
+  addDataset: (dataset: Dataset) => void;
+  updateDataset: (id: string, updates: Partial<Dataset>) => void;
+  removeDataset: (id: string) => void;
+
   // Onboarding actions
   setOnboardingStep: (step: OnboardingState["currentStep"]) => void;
   updateOnboarding: (updates: Partial<OnboardingState>) => void;
@@ -138,6 +170,7 @@ interface WorkspaceActions {
   setSidebarOpen: (open: boolean) => void;
   setComponentsPanelOpen: (open: boolean) => void;
   setAgentPanelOpen: (open: boolean) => void;
+  setPropertiesPanelOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   toggleComponentsPanel: () => void;
   toggleAgentPanel: () => void;
@@ -153,6 +186,8 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       currentDataSource: null,
       dashboards: [],
       currentDashboard: null,
+      datasets: [],
+      currentDataset: null,
       onboarding: {
         currentStep: "welcome",
         completed: false,
@@ -160,6 +195,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       sidebarOpen: true,
       componentsPanelOpen: true,
       agentPanelOpen: true,
+      propertiesPanelOpen: true,
 
       // Organization actions
       setCurrentOrganization: (org) => set({ currentOrganization: org }),
@@ -286,6 +322,30 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
               : state.currentDashboard,
         })),
 
+      // Dataset actions
+      setCurrentDataset: (dataset) => set({ currentDataset: dataset }),
+      addDataset: (dataset) =>
+        set((state) => ({
+          datasets: [...state.datasets, dataset],
+          currentDataset: dataset,
+        })),
+      updateDataset: (id, updates) =>
+        set((state) => ({
+          datasets: state.datasets.map((ds) =>
+            ds.id === id ? { ...ds, ...updates } : ds,
+          ),
+          currentDataset:
+            state.currentDataset?.id === id
+              ? { ...state.currentDataset, ...updates }
+              : state.currentDataset,
+        })),
+      removeDataset: (id) =>
+        set((state) => ({
+          datasets: state.datasets.filter((ds) => ds.id !== id),
+          currentDataset:
+            state.currentDataset?.id === id ? null : state.currentDataset,
+        })),
+
       // Onboarding actions
       setOnboardingStep: (step) =>
         set((state) => ({
@@ -308,6 +368,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setComponentsPanelOpen: (open) => set({ componentsPanelOpen: open }),
       setAgentPanelOpen: (open) => set({ agentPanelOpen: open }),
+      setPropertiesPanelOpen: (open) => set({ propertiesPanelOpen: open }),
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       toggleComponentsPanel: () =>
@@ -326,10 +387,12 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
         organizations: state.organizations,
         dataSources: state.dataSources,
         dashboards: state.dashboards,
+        datasets: state.datasets,
         onboarding: state.onboarding,
         sidebarOpen: state.sidebarOpen,
         componentsPanelOpen: state.componentsPanelOpen,
         agentPanelOpen: state.agentPanelOpen,
+        propertiesPanelOpen: state.propertiesPanelOpen,
       }),
     },
   ),
