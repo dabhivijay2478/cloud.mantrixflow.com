@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  DndContext,
   closestCenter,
-  DragEndEvent,
+  DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -17,10 +17,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
   Calendar,
-  Check,
   CheckSquare,
   Database,
   GripVertical,
@@ -28,14 +28,15 @@ import {
   Loader2,
   Save,
   Square,
-  ToggleLeft,
   ToggleRight,
   Type,
   X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -49,6 +50,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -56,21 +58,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import type {
-  Dataset,
-  DatasetColumn,
-} from "@/lib/stores/workspace-store";
+import type { Dataset, DatasetColumn } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 
 const datasetSchema = z.object({
-  name: z.string().min(1, "Dataset name is required").min(3, "Name must be at least 3 characters"),
+  name: z
+    .string()
+    .min(1, "Dataset name is required")
+    .min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
   dataSourceId: z.string().min(1, "Please select a data source"),
   sourceType: z.enum(["table", "custom_query"]),
@@ -81,9 +78,9 @@ type DatasetFormValues = z.infer<typeof datasetSchema>;
 
 // Mock function to fetch columns from a table or query
 const fetchColumns = async (
-  dataSourceId: string,
-  sourceType: "table" | "custom_query",
-  sourceName: string,
+  _dataSourceId: string,
+  _sourceType: "table" | "custom_query",
+  _sourceName: string,
 ): Promise<DatasetColumn[]> => {
   // Simulate API call
   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -119,14 +116,12 @@ function ColumnIcon({ type }: { type: DatasetColumn["type"] }) {
 
 interface SortableColumnItemProps {
   column: DatasetColumn;
-  onToggle: (name: string) => void;
   onRemove: (name: string) => void;
   isSelected: boolean;
 }
 
 function SortableColumnItem({
   column,
-  onToggle,
   onRemove,
   isSelected,
 }: SortableColumnItemProps) {
@@ -192,13 +187,22 @@ function AvailableColumnItem({
   onToggle,
   isSelected,
 }: AvailableColumnItemProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onToggle(column.name);
+    }
+  };
+
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        "flex items-center gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors",
+        "flex items-center gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors w-full text-left",
         isSelected && "border-primary bg-primary/5",
       )}
       onClick={() => onToggle(column.name)}
+      onKeyDown={handleKeyDown}
     >
       <Checkbox
         checked={isSelected}
@@ -211,7 +215,7 @@ function AvailableColumnItem({
           {column.type}
         </p>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -249,9 +253,7 @@ export default function DatasetConfigurationPage() {
   const dataSourceId = form.watch("dataSourceId");
   const sourceName = form.watch("sourceName");
 
-  const selectedDataSource = dataSources.find(
-    (ds) => ds.id === dataSourceId,
-  );
+  const selectedDataSource = dataSources.find((ds) => ds.id === dataSourceId);
 
   // Load existing dataset if editing
   useEffect(() => {
@@ -268,7 +270,9 @@ export default function DatasetConfigurationPage() {
         });
         setColumns(existing.columns);
         setSelectedColumns(
-          existing.columns.filter((c) => c.selected).sort((a, b) => a.order - b.order),
+          existing.columns
+            .filter((c) => c.selected)
+            .sort((a, b) => a.order - b.order),
         );
       }
     }
@@ -303,7 +307,7 @@ export default function DatasetConfigurationPage() {
           setFetchingColumns(false);
         });
     }
-  }, [dataSourceId, sourceType, sourceName]);
+  }, [dataSourceId, sourceType, sourceName, selectedColumns]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -324,9 +328,7 @@ export default function DatasetConfigurationPage() {
 
     if (isSelected) {
       // Remove from selected
-      setSelectedColumns((prev) =>
-        prev.filter((c) => c.name !== columnName),
-      );
+      setSelectedColumns((prev) => prev.filter((c) => c.name !== columnName));
       setColumns((prev) =>
         prev.map((c) =>
           c.name === columnName ? { ...c, selected: false } : c,
@@ -412,8 +414,7 @@ export default function DatasetConfigurationPage() {
           order: selectedColumns.findIndex((sc) => sc.name === col.name),
         })),
         organizationId: currentOrganization?.id || "",
-        createdAt:
-          currentDataset?.createdAt || new Date().toISOString(),
+        createdAt: currentDataset?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -741,7 +742,10 @@ export default function DatasetConfigurationPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || selectedColumns.length === 0}>
+            <Button
+              type="submit"
+              disabled={loading || selectedColumns.length === 0}
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -760,4 +764,3 @@ export default function DatasetConfigurationPage() {
     </div>
   );
 }
-

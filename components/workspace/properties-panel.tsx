@@ -11,8 +11,9 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -20,9 +21,9 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -30,19 +31,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import type { DashboardComponent, Dataset } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
 
 interface PropertiesPanelProps {
   component: DashboardComponent | null;
   dataset: Dataset | null;
   onUpdate: (updates: Partial<DashboardComponent>) => void;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 const colorSchemes = [
@@ -58,7 +57,6 @@ export function PropertiesPanel({
   component,
   dataset,
   onUpdate,
-  onClose,
 }: PropertiesPanelProps) {
   const { propertiesPanelOpen, setPropertiesPanelOpen } = useWorkspaceStore();
   const [activeTab, setActiveTab] = useState<"data" | "appearance">("data");
@@ -489,4 +487,3 @@ export function PropertiesPanel({
     </div>
   );
 }
-

@@ -184,7 +184,10 @@ export function WorkspaceTopbar() {
             <div className="flex items-center gap-2 ml-2 pl-2 border-l">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.user_metadata?.avatar_url} />
                       <AvatarFallback>

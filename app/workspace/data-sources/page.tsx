@@ -10,6 +10,7 @@ import {
   DataSourceTable,
   mockTables,
 } from "@/components/data-sources";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -20,7 +21,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 
@@ -345,7 +345,9 @@ export default function DataSourcesPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {dataset.sourceType === "table" ? "Table" : "Query"}
+                              {dataset.sourceType === "table"
+                                ? "Table"
+                                : "Query"}
                             </Badge>
                           </TableCell>
                           <TableCell>

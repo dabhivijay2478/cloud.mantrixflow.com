@@ -47,22 +47,25 @@ export function DashboardCanvas({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
   const [showOccupiedAreas, setShowOccupiedAreas] = useState(false);
-  const [internalSelectedComponentId, setInternalSelectedComponentId] = useState<string | null>(
-    null,
-  );
+  const [internalSelectedComponentId, setInternalSelectedComponentId] =
+    useState<string | null>(null);
 
   // Use external selectedComponentId if provided, otherwise use internal state
-  const selectedComponentId = externalSelectedComponentId !== undefined 
-    ? externalSelectedComponentId 
-    : internalSelectedComponentId;
+  const selectedComponentId =
+    externalSelectedComponentId !== undefined
+      ? externalSelectedComponentId
+      : internalSelectedComponentId;
 
-  const setSelectedComponentId = (id: string | null) => {
-    if (onComponentSelect) {
-      onComponentSelect(id);
-    } else {
-      setInternalSelectedComponentId(id);
-    }
-  };
+  const setSelectedComponentId = useCallback(
+    (id: string | null) => {
+      if (onComponentSelect) {
+        onComponentSelect(id);
+      } else {
+        setInternalSelectedComponentId(id);
+      }
+    },
+    [onComponentSelect],
+  );
   const canvasRef = useRef<HTMLElement>(null);
   const { active, delta } = useDndContext();
   const prevActiveRef = React.useRef(active);
@@ -300,7 +303,7 @@ export function DashboardCanvas({
     ) {
       setSelectedComponentId(null);
     }
-  }, [selectedComponentId, components]);
+  }, [selectedComponentId, components, setSelectedComponentId]);
 
   // Keyboard delete handler - Delete or Backspace to delete selected component
   useEffect(() => {
@@ -335,7 +338,7 @@ export function DashboardCanvas({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedComponentId, onComponentDelete]);
+  }, [selectedComponentId, onComponentDelete, setSelectedComponentId]);
 
   // Listen to drag events from the parent DndContext
   useEffect(() => {
@@ -356,7 +359,7 @@ export function DashboardCanvas({
     }
   }, [active]);
 
-  // Handle drag end when dropped on canvas (for new components from palette)
+  // Handle drag end when dropped on canvas (for new components from palette and moving existing components)
   useEffect(() => {
     // Detect when drag ends (active goes from non-null to null)
     const wasDragging = prevActiveRef.current !== null;
@@ -370,9 +373,54 @@ export function DashboardCanvas({
       const lastActiveData = (window as any).__lastDragData;
       // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag over
       const lastOver = (window as any).__lastOver;
+      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag delta
+      const lastDelta = (window as any).__lastDelta;
 
       if (lastOver?.id === "canvas-drop-zone") {
-        if (
+        // Handle moving existing components
+        if (lastActiveData?.type === "dashboard-item") {
+          const componentId =
+            lastActiveData?.componentId ||
+            (prevActiveRef.current?.id as string);
+          if (componentId && lastDelta && dragStartPositionRef.current) {
+            const component = components.find((c) => c.id === componentId);
+            if (component) {
+              // Calculate final position based on drag delta
+              const newX = dragStartPositionRef.current.x + lastDelta.x;
+              const newY = dragStartPositionRef.current.y + lastDelta.y;
+              const snapped = snapToGrid(newX, newY);
+              let gridX = pixelToGrid(snapped.x);
+              let gridY = pixelToGrid(snapped.y);
+
+              // Calculate canvas bounds in grid units
+              const maxGridX = Math.floor(canvasSize.width / GRID_SIZE);
+              const maxGridY = Math.floor(canvasSize.height / GRID_SIZE);
+
+              // Clamp to canvas bounds
+              gridX = Math.max(
+                0,
+                Math.min(gridX, maxGridX - component.position.w),
+              );
+              gridY = Math.max(
+                0,
+                Math.min(gridY, maxGridY - component.position.h),
+              );
+
+              // Update position (allow movement even with collision for now)
+              onComponentUpdate(componentId, {
+                position: {
+                  x: gridX,
+                  y: gridY,
+                  w: component.position.w,
+                  h: component.position.h,
+                },
+              });
+            }
+          }
+          // Reset drag state
+          dragStartPositionRef.current = null;
+          setCollisionWarning(null);
+        } else if (
           lastActiveData?.type === "palette" &&
           lastActiveData?.componentType
         ) {
@@ -480,7 +528,15 @@ export function DashboardCanvas({
         delete (window as any).__lastDropY;
       }
     }
-  }, [active, components, onComponentsChange, canvasSize]);
+  }, [
+    active,
+    components,
+    onComponentsChange,
+    onComponentUpdate,
+    canvasSize,
+    snapToGrid,
+    pixelToGrid,
+  ]);
 
   // Store drag data before it's cleared
   useEffect(() => {

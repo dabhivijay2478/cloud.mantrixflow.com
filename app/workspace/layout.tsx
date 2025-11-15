@@ -36,9 +36,9 @@ export default function WorkspaceLayout({
     componentsPanelOpen,
     agentPanelOpen,
     propertiesPanelOpen,
+    setPropertiesPanelOpen,
     setComponentsPanelOpen,
     setAgentPanelOpen,
-    setPropertiesPanelOpen,
     selectedComponentId,
     selectedDatasetId,
     currentDashboard,
@@ -53,10 +53,11 @@ export default function WorkspaceLayout({
   const [mainPanelSize, setMainPanelSize] = useState(64);
 
   // Get selected component and dataset for Properties Panel
-  const selectedComponent = currentDashboard?.components.find(
-    (c) => c.id === selectedComponentId,
-  ) || null;
-  const selectedDataset = datasets.find((d) => d.id === selectedDatasetId) || null;
+  const selectedComponent =
+    currentDashboard?.components.find((c) => c.id === selectedComponentId) ||
+    null;
+  const selectedDataset =
+    datasets.find((d) => d.id === selectedDatasetId) || null;
 
   // Check if we're on a view-only page (dashboard view)
   const isViewMode = pathname?.includes("/view");
@@ -64,6 +65,26 @@ export default function WorkspaceLayout({
   // Check if we're in dashboard edit mode (dashboard/[id] but not /view)
   const isDashboardEditMode =
     pathname?.match(/^\/workspace\/dashboards\/[^/]+$/) !== null;
+
+  // Open properties panel when component is first selected in dashboard edit mode
+  // Use a ref to track previous selectedComponentId to only open on change
+  const prevSelectedComponentIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      isDashboardEditMode &&
+      selectedComponentId &&
+      !propertiesPanelOpen &&
+      prevSelectedComponentIdRef.current !== selectedComponentId
+    ) {
+      setPropertiesPanelOpen(true);
+    }
+    prevSelectedComponentIdRef.current = selectedComponentId;
+  }, [
+    isDashboardEditMode,
+    selectedComponentId,
+    propertiesPanelOpen,
+    setPropertiesPanelOpen,
+  ]);
 
   // Close panels when leaving dashboard edit mode
   useEffect(() => {
@@ -74,14 +95,19 @@ export default function WorkspaceLayout({
       if (agentPanelOpen) {
         setAgentPanelOpen(false);
       }
+      if (propertiesPanelOpen) {
+        setPropertiesPanelOpen(false);
+      }
     }
   }, [
     isDashboardEditMode,
     isViewMode,
     componentsPanelOpen,
     agentPanelOpen,
+    propertiesPanelOpen,
     setComponentsPanelOpen,
     setAgentPanelOpen,
+    setPropertiesPanelOpen,
   ]);
 
   // Calculate responsive panel sizes based on screen size and panel states

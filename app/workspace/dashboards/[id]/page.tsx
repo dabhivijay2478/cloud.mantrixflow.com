@@ -4,7 +4,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DashboardCanvasWithHandlers } from "@/components/workspace/dashboard-canvas";
-import { DashboardDndProvider } from "@/components/workspace/dashboard-dnd-provider";
 import type { DashboardComponent } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
@@ -103,7 +102,6 @@ export default function DashboardEditorPage() {
     [dashboard, removeDashboardComponent],
   );
 
-
   if (!dashboard) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -116,21 +114,19 @@ export default function DashboardEditorPage() {
   }
 
   return (
-    <DashboardDndProvider>
-      <div className="h-full flex flex-col bg-background">
-        {/* Canvas Area */}
-        <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
-          <DashboardCanvasWithHandlers
-            components={dashboard.components}
-            onComponentsChange={handleComponentsChange}
-            onComponentUpdate={handleComponentUpdate}
-            onComponentDelete={handleComponentDelete}
-            onComponentSelect={handleComponentSelect}
-            selectedComponentId={globalSelectedComponentId}
-            className="h-full"
-          />
-        </div>
+    <div className="h-full flex flex-col bg-background">
+      {/* Canvas Area */}
+      <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
+        <DashboardCanvasWithHandlers
+          components={dashboard.components}
+          onComponentsChange={handleComponentsChange}
+          onComponentUpdate={handleComponentUpdate}
+          onComponentDelete={handleComponentDelete}
+          onComponentSelect={handleComponentSelect}
+          selectedComponentId={globalSelectedComponentId}
+          className="h-full"
+        />
       </div>
-    </DashboardDndProvider>
+    </div>
   );
 }
