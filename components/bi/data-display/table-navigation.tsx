@@ -88,9 +88,7 @@ export function TableNavigation({
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                Expand sidebar
-              </TooltipContent>
+              <TooltipContent side="right">Expand sidebar</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
@@ -100,7 +98,10 @@ export function TableNavigation({
             <Database className="h-4 w-4 text-teal-400" />
             <span className="font-semibold text-sm">Tables</span>
             {tables.length > 0 && (
-              <Badge variant="secondary" className="ml-2 bg-gray-700 text-white">
+              <Badge
+                variant="secondary"
+                className="ml-2 bg-gray-700 text-white"
+              >
                 {tables.length}
               </Badge>
             )}
@@ -117,9 +118,7 @@ export function TableNavigation({
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                Collapse sidebar
-              </TooltipContent>
+              <TooltipContent>Collapse sidebar</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
@@ -149,70 +148,72 @@ export function TableNavigation({
               : "space-y-1 p-2",
           )}
         >
-          {filteredTables.length > 0 ? (
-            filteredTables.map((table, index) => {
-              const isSelected = selectedTable === table;
-              // Add separator after first few items when collapsed (matching image style)
-              const showSeparator =
-                isCollapsed && index === Math.min(3, filteredTables.length - 1);
-              return (
-                <div key={table} className="w-full flex flex-col items-center">
-                  <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "transition-all duration-200",
-                            isCollapsed
-                              ? "w-10 h-10 p-0 justify-center rounded-md"
-                              : "w-full justify-start px-3 h-9",
-                            isSelected
-                              ? isCollapsed
-                                ? "bg-gray-800/80 text-white"
-                                : "bg-gray-700 text-white border-l-2 border-teal-400"
-                              : "text-gray-400 hover:bg-gray-800/30 hover:text-gray-300",
-                          )}
-                          onClick={() => onTableSelect?.(table)}
-                        >
-                          <TableIcon
+          {filteredTables.length > 0
+            ? filteredTables.map((table, index) => {
+                const isSelected = selectedTable === table;
+                // Add separator after first few items when collapsed (matching image style)
+                const showSeparator =
+                  isCollapsed &&
+                  index === Math.min(3, filteredTables.length - 1);
+                return (
+                  <div
+                    key={table}
+                    className="w-full flex flex-col items-center"
+                  >
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
                             className={cn(
-                              isCollapsed ? "h-5 w-5" : "h-4 w-4 mr-2",
+                              "transition-all duration-200",
+                              isCollapsed
+                                ? "w-10 h-10 p-0 justify-center rounded-md"
+                                : "w-full justify-start px-3 h-9",
                               isSelected
                                 ? isCollapsed
-                                  ? "text-white stroke-2"
-                                  : "text-teal-400"
-                                : isCollapsed
-                                  ? "text-gray-400 stroke-[1.5]"
-                                  : "text-gray-400",
+                                  ? "bg-gray-800/80 text-white"
+                                  : "bg-gray-700 text-white border-l-2 border-teal-400"
+                                : "text-gray-400 hover:bg-gray-800/30 hover:text-gray-300",
                             )}
-                            strokeWidth={isCollapsed && !isSelected ? 1.5 : 2}
-                          />
-                          {!isCollapsed && (
-                            <span className="truncate text-sm">{table}</span>
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      {isCollapsed && (
-                        <TooltipContent side="right">
-                          <p>{table}</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                  {showSeparator && (
-                    <div className="w-8 h-px bg-gray-700/50 my-2" />
-                  )}
+                            onClick={() => onTableSelect?.(table)}
+                          >
+                            <TableIcon
+                              className={cn(
+                                isCollapsed ? "h-5 w-5" : "h-4 w-4 mr-2",
+                                isSelected
+                                  ? isCollapsed
+                                    ? "text-white stroke-2"
+                                    : "text-teal-400"
+                                  : isCollapsed
+                                    ? "text-gray-400 stroke-[1.5]"
+                                    : "text-gray-400",
+                              )}
+                              strokeWidth={isCollapsed && !isSelected ? 1.5 : 2}
+                            />
+                            {!isCollapsed && (
+                              <span className="truncate text-sm">{table}</span>
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        {isCollapsed && (
+                          <TooltipContent side="right">
+                            <p>{table}</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                    {showSeparator && (
+                      <div className="w-8 h-px bg-gray-700/50 my-2" />
+                    )}
+                  </div>
+                );
+              })
+            : !isCollapsed && (
+                <div className="p-4 text-sm text-gray-400 text-center">
+                  {searchQuery ? "No tables found" : "No tables available"}
                 </div>
-              );
-            })
-          ) : (
-            !isCollapsed && (
-              <div className="p-4 text-sm text-gray-400 text-center">
-                {searchQuery ? "No tables found" : "No tables available"}
-              </div>
-            )
-          )}
+              )}
         </div>
       </ScrollArea>
     </div>

@@ -264,10 +264,7 @@ export function DataSourceTable({
                     : []);
 
                 return (
-                  <TableRow
-                    key={dataSource.id}
-                    className="hover:bg-muted/50"
-                  >
+                  <TableRow key={dataSource.id} className="hover:bg-muted/50">
                     <TableCell
                       className="font-medium cursor-pointer"
                       onClick={() => onDataSourceClick(dataSource.id)}

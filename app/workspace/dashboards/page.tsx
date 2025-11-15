@@ -212,44 +212,50 @@ export default function DashboardsPage() {
                         </div>
                       ) : (
                         <div className="max-h-[300px] overflow-y-auto">
-                          {dataSources.map((source) => (
-                            <SelectItem
-                              key={source.id}
-                              value={source.id}
-                              className="py-3"
-                            >
-                              <div className="flex items-center gap-3 w-full">
-                                <div
-                                  className={cn(
-                                    "h-8 w-8 rounded-md flex items-center justify-center shrink-0",
-                                    source.status === "connected"
-                                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                                      : "bg-muted text-muted-foreground",
-                                  )}
-                                >
-                                  <Database className="h-4 w-4" />
-                                </div>
-                                <div className="flex flex-col flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium truncate">
-                                      {source.name}
-                                    </span>
-                                    {source.status === "connected" && (
-                                      <Badge
-                                        variant="outline"
-                                        className="h-5 px-1.5 text-xs border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950"
-                                      >
-                                        Connected
-                                      </Badge>
+                          {dataSources
+                            .filter(
+                              (source, index, self) =>
+                                index ===
+                                self.findIndex((s) => s.id === source.id),
+                            )
+                            .map((source, index) => (
+                              <SelectItem
+                                key={`data-source-${index}-${source.id}`}
+                                value={source.id}
+                                className="py-3"
+                              >
+                                <div className="flex items-center gap-3 w-full">
+                                  <div
+                                    className={cn(
+                                      "h-8 w-8 rounded-md flex items-center justify-center shrink-0",
+                                      source.status === "connected"
+                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                                        : "bg-muted text-muted-foreground",
                                     )}
+                                  >
+                                    <Database className="h-4 w-4" />
                                   </div>
-                                  <span className="text-xs text-muted-foreground capitalize">
-                                    {source.type}
-                                  </span>
+                                  <div className="flex flex-col flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium truncate">
+                                        {source.name}
+                                      </span>
+                                      {source.status === "connected" && (
+                                        <Badge
+                                          variant="outline"
+                                          className="h-5 px-1.5 text-xs border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950"
+                                        >
+                                          Connected
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground capitalize">
+                                      {source.type}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            </SelectItem>
-                          ))}
+                              </SelectItem>
+                            ))}
                         </div>
                       )}
                     </SelectContent>
