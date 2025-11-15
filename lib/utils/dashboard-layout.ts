@@ -52,6 +52,7 @@ export function checkCollision(rect1: Rectangle, rect2: Rectangle): boolean {
 
 /**
  * Check if a rectangle overlaps with any existing components
+ * ROOT CAUSE FIX: Always filter out excluded component and validate component data
  */
 export function checkCollisionWithComponents(
   rect: Rectangle,
@@ -59,8 +60,22 @@ export function checkCollisionWithComponents(
   excludeId?: string,
   gridSize: number = GRID_SIZE
 ): boolean {
-  return components.some((component) => {
-    if (excludeId && component.id === excludeId) return false;
+  // ROOT CAUSE FIX: Filter out excluded component upfront to prevent any stale data issues
+  const componentsToCheck = excludeId 
+    ? components.filter((c) => c.id !== excludeId)
+    : components;
+  
+  // Defensive check: Ensure all components have valid position data
+  return componentsToCheck.some((component) => {
+    // Validate component has required position data
+    if (!component.position || 
+        typeof component.position.x !== 'number' || 
+        typeof component.position.y !== 'number' ||
+        typeof component.position.w !== 'number' ||
+        typeof component.position.h !== 'number') {
+      return false; // Skip invalid components
+    }
+    
     const componentRect = componentToRect(component, gridSize);
     return checkCollision(rect, componentRect);
   });
@@ -110,18 +125,31 @@ export function findAvailableSpace(
   const maxCols = Math.floor(canvasWidth / gridSize);
   const maxRows = Math.floor(canvasHeight / gridSize);
 
-  // Create occupancy map for faster lookup
+  // ROOT CAUSE FIX: Create occupancy map only from current valid components
+  // Filter out any invalid components and ensure we only use current data
   const occupied = new Set<string>();
   components.forEach((component) => {
+    // Validate component has required position data
+    if (!component.position || 
+        typeof component.position.x !== 'number' || 
+        typeof component.position.y !== 'number' ||
+        typeof component.position.w !== 'number' ||
+        typeof component.position.h !== 'number') {
+      return; // Skip invalid components
+    }
+    
     const rect = componentToRect(component, gridSize);
     const startCol = Math.floor(rect.x / gridSize);
     const endCol = Math.ceil((rect.x + rect.width) / gridSize);
     const startRow = Math.floor(rect.y / gridSize);
     const endRow = Math.ceil((rect.y + rect.height) / gridSize);
 
+    // Only add valid grid positions
     for (let col = startCol; col < endCol; col++) {
       for (let row = startRow; row < endRow; row++) {
-        occupied.add(`${col},${row}`);
+        if (col >= 0 && row >= 0) {
+          occupied.add(`${col},${row}`);
+        }
       }
     }
   });

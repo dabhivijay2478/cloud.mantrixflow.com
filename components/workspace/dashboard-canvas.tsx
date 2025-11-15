@@ -129,8 +129,24 @@ export function DashboardCanvas({
     if (!active || !delta) return;
 
     const activeData = active.data.current;
-    if (activeData?.type === "dashboard-item" && activeData?.component) {
-      const component = activeData.component as DashboardComponent;
+    // CRITICAL FIX: Check for componentId instead of component snapshot
+    if (activeData?.type === "dashboard-item") {
+      const componentId = active.id as string;
+      
+      // ROOT CAUSE FIX: Always get current component from components array
+      // Never trust active.data.current.component as it's a stale snapshot
+      const component = components.find((c) => c.id === componentId);
+      
+      // Safety check: If component was deleted during drag, cancel the drag
+      if (!component) {
+        // Component was deleted, clear drag state immediately
+        dragStartPositionRef.current = null;
+        setActiveId(null);
+        setDraggedComponentType(null);
+        setIsDragging(false);
+        setCollisionWarning(null);
+        return;
+      }
       
       // Store start position on drag start
       if (!dragStartPositionRef.current) {
@@ -157,15 +173,17 @@ export function DashboardCanvas({
         gridX = Math.max(0, Math.min(gridX, maxGridX - component.position.w));
         gridY = Math.max(0, Math.min(gridY, maxGridY - component.position.h));
 
-        // Check for collisions - but DON'T auto-adjust position
-        // Allow user to move freely, just show visual warning
+        // ROOT CAUSE FIX: Use current components array for collision detection
+        // Filter out the component being dragged to avoid self-collision
+        // This ensures deleted components are never included in collision checks
+        const otherComponents = components.filter((c) => c.id !== component.id);
         const wouldCollide = !canPlaceComponent(
           gridX,
           gridY,
           component.position.w,
           component.position.h,
-          components,
-          component.id,
+          otherComponents, // Only check against other components (excludes self and deleted ones)
+          undefined, // No need to exclude since we already filtered
           GRID_SIZE
         );
 
@@ -199,6 +217,25 @@ export function DashboardCanvas({
       setCollisionWarning(null);
     }
   }, [active]);
+
+  // CRITICAL FIX: Clear drag state if the component being dragged is deleted
+  useEffect(() => {
+    if (activeId && !components.find((c) => c.id === activeId)) {
+      // Component was deleted while being dragged, clear all drag state
+      dragStartPositionRef.current = null;
+      setActiveId(null);
+      setDraggedComponentType(null);
+      setIsDragging(false);
+      setCollisionWarning(null);
+    }
+  }, [activeId, components]);
+
+  // CRITICAL FIX: Clear selected component if it was deleted
+  useEffect(() => {
+    if (selectedComponentId && !components.find((c) => c.id === selectedComponentId)) {
+      setSelectedComponentId(null);
+    }
+  }, [selectedComponentId, components]);
 
   // Keyboard delete handler - Delete or Backspace to delete selected component
   useEffect(() => {
@@ -281,9 +318,9 @@ export function DashboardCanvas({
           const defaultWidth = 6;
           const defaultHeight = 4;
 
-          // Get viewport dimensions for placement
-          const scrollContainer = canvasElement?.parentElement?.parentElement;
-          const viewportWidth = scrollContainer?.clientWidth || canvasElement?.offsetWidth || GRID_COLS * GRID_SIZE;
+          // ROOT CAUSE FIX: Use actual canvas width, not just viewport width
+          // This ensures we can place components anywhere on the canvas, including right side
+          const actualCanvasWidth = canvasSize.width || canvasRect.width || GRID_COLS * GRID_SIZE;
           
           // Use a large canvas height for placement (allows infinite vertical space)
           // This ensures components can always be placed, canvas will expand with scrolling
@@ -292,16 +329,28 @@ export function DashboardCanvas({
             10000 // Large enough to allow many components
           );
 
-          // ALWAYS use intelligent auto-placement to find empty space
-          // This ensures components never overlap (like Power BI/Tableau)
-          const bestPosition = findBestPosition(
-            defaultWidth,
-            defaultHeight,
-            components,
-            viewportWidth,
-            placementCanvasHeight,
-            GRID_SIZE
-          );
+          // ROOT CAUSE FIX: Try to place near drop position first, then fall back to auto-placement
+          // Convert drop position to grid coordinates
+          const dropGridX = Math.max(0, Math.floor((dropX - 20) / GRID_SIZE)); // Subtract padding
+          const dropGridY = Math.max(0, Math.floor((dropY - 20) / GRID_SIZE)); // Subtract padding
+          
+          // Check if drop position is available
+          let bestPosition: { x: number; y: number };
+          if (canPlaceComponent(dropGridX, dropGridY, defaultWidth, defaultHeight, components, undefined, GRID_SIZE)) {
+            // Drop position is available, use it
+            bestPosition = { x: dropGridX, y: dropGridY };
+          } else {
+            // Drop position is occupied, use intelligent auto-placement
+            // This ensures components never overlap (like Power BI/Tableau)
+            bestPosition = findBestPosition(
+              defaultWidth,
+              defaultHeight,
+              components,
+              actualCanvasWidth, // Use actual canvas width, not viewport
+              placementCanvasHeight,
+              GRID_SIZE
+            );
+          }
 
           // Use auto-placement position (ensures no overlap)
           const finalX = bestPosition.x;
@@ -526,28 +575,33 @@ export function DashboardCanvas({
         <DragOverlay dropAnimation={null}>
           {(() => {
             const activeData = active.data.current;
-            if (activeData?.type === "dashboard-item" && activeData?.component) {
-              const component = activeData.component as DashboardComponent;
-              const width = component.position.w * GRID_SIZE;
-              const height = component.position.h * GRID_SIZE;
+            // ROOT CAUSE FIX: Get current component from array, not from stale snapshot
+            if (activeData?.type === "dashboard-item") {
+              const componentId = active.id as string;
+              const component = components.find((c) => c.id === componentId);
               
-              return (
-                <div
-                  className="bg-blue-500/90 border-2 border-blue-600 rounded-lg shadow-2xl rotate-2"
-                  style={{
-                    width: `${width}px`,
-                    height: `${height}px`,
-                    opacity: 0.95,
-                    cursor: 'grabbing',
-                  }}
-                >
-                  <div className="w-full h-full flex items-center justify-center p-2">
-                    <div className="text-white text-xs font-medium text-center">
-                      {component.type.replace(/-/g, ' ')}
+              if (component) {
+                const width = component.position.w * GRID_SIZE;
+                const height = component.position.h * GRID_SIZE;
+                
+                return (
+                  <div
+                    className="bg-blue-500/90 border-2 border-blue-600 rounded-lg shadow-2xl rotate-2"
+                    style={{
+                      width: `${width}px`,
+                      height: `${height}px`,
+                      opacity: 0.95,
+                      cursor: 'grabbing',
+                    }}
+                  >
+                    <div className="w-full h-full flex items-center justify-center p-2">
+                      <div className="text-white text-xs font-medium text-center">
+                        {component.type.replace(/-/g, ' ')}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
+                );
+              }
             } else if (activeData?.type === "palette" && activeData?.componentType) {
               // Preview for new component from palette
               const defaultWidth = 6 * GRID_SIZE;

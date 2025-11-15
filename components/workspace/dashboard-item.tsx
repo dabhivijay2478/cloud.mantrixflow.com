@@ -64,7 +64,9 @@ export function DashboardItem({
     id: component.id,
     data: {
       type: "dashboard-item",
-      component,
+      // CRITICAL FIX: Don't store component snapshot - only store ID
+      // The canvas will look up the current component from the array
+      componentId: component.id,
     },
     disabled: isResizing, // Disable drag when resizing
   });
