@@ -173,18 +173,15 @@ export function findAvailableSpace(
   });
 
   // Place at the bottom, starting from left
+  // Always allow placement (canvas will expand with scrolling)
   const bottomRow = maxBottom;
-  if (bottomRow + defaultHeight <= maxRows) {
-    return { x: 0, y: bottomRow };
-  }
-
-  // Canvas is full - return null (should scroll or prevent)
-  return null;
+  return { x: 0, y: bottomRow };
 }
 
 /**
  * Find the best position for a new component
  * Tries to place it next to existing components (left-to-right, top-to-bottom flow)
+ * Always allows placement - canvas will expand with scrolling
  */
 export function findBestPosition(
   defaultWidth: number,
@@ -208,9 +205,17 @@ export function findBestPosition(
     return availableSpace;
   }
 
-  // Fallback: If canvas is full, place at (0, 0) and let user handle it
-  // In production, you might want to scroll the canvas or show a warning
-  return { x: 0, y: 0 };
+  // Fallback: Place below all existing components
+  // Canvas will expand automatically to accommodate
+  let maxBottom = 0;
+  components.forEach((component) => {
+    const bottom = component.position.y + component.position.h;
+    if (bottom > maxBottom) {
+      maxBottom = bottom;
+    }
+  });
+
+  return { x: 0, y: maxBottom };
 }
 
 /**

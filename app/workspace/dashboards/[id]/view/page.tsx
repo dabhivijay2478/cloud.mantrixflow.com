@@ -1,11 +1,14 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState, useRef } from "react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { GridLayout, GridItem } from "@/components/bi/grid-layout";
-import { LineChart, BarChart, KPICard, DataTable } from "@/components/bi";
+import { ComponentRenderer } from "@/components/workspace/component-renderer";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { getBoundingBox } from "@/lib/utils/dashboard-layout";
+import { cn } from "@/lib/utils";
+
+const GRID_SIZE = 20; // Grid cell size in pixels
 
 export default function DashboardViewPage() {
   const params = useParams();
@@ -14,6 +17,8 @@ export default function DashboardViewPage() {
   const [dashboard, setDashboard] = useState(
     dashboards.find((d) => d.id === dashboardId)
   );
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const found = dashboards.find((d) => d.id === dashboardId);
@@ -21,6 +26,43 @@ export default function DashboardViewPage() {
       setDashboard(found);
     }
   }, [dashboardId, dashboards]);
+
+  // Calculate canvas size based on component positions
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (canvasRef.current && dashboard) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const viewportWidth = rect.width;
+        const viewportHeight = rect.height;
+        
+        const boundingBox = getBoundingBox(dashboard.components, GRID_SIZE);
+        const padding = 40;
+        
+        if (boundingBox && dashboard.components.length > 0) {
+          const contentHeight = boundingBox.y + boundingBox.height + padding;
+          setCanvasSize({ 
+            width: viewportWidth,
+            height: Math.max(viewportHeight, contentHeight)
+          });
+        } else {
+          setCanvasSize({ width: viewportWidth, height: viewportHeight });
+        }
+      }
+    };
+
+    updateCanvasSize();
+    
+    const resizeObserver = new ResizeObserver(updateCanvasSize);
+    if (canvasRef.current) {
+      resizeObserver.observe(canvasRef.current);
+    }
+    
+    window.addEventListener('resize', updateCanvasSize);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateCanvasSize);
+    };
+  }, [dashboard]);
 
   if (!dashboard) {
     return (
@@ -33,83 +75,74 @@ export default function DashboardViewPage() {
     );
   }
 
-  // Mock data for demonstration
-  const sampleData = [
-    { month: "Jan", revenue: 4000, profit: 2400 },
-    { month: "Feb", revenue: 3000, profit: 1398 },
-    { month: "Mar", revenue: 2000, profit: 9800 },
-    { month: "Apr", revenue: 2780, profit: 3908 },
-    { month: "May", revenue: 1890, profit: 4800 },
-    { month: "Jun", revenue: 2390, profit: 3800 },
-  ];
-
   return (
-    <div className="h-full bg-background p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{dashboard.name}</h1>
-          {dashboard.description && (
-            <p className="text-muted-foreground text-sm md:text-base">{dashboard.description}</p>
-          )}
-        </div>
-
-        {dashboard.components.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 md:p-12">
-              <div className="text-center space-y-4">
-                <p className="text-muted-foreground">Your dashboard is empty</p>
-                <p className="text-sm text-muted-foreground">
-                  Add components to start visualizing your data
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {dashboard.components.map((component) => (
-              <Card key={component.id} className="w-full">
-                <CardContent className="p-4 md:p-6">
-                  <div className="space-y-4">
-                    {component.type === "line-chart" && (
-                      <LineChart
-                        data={sampleData}
-                        xKey="month"
-                        yKeys={["revenue", "profit"]}
-                        title="Revenue Trends"
-                      />
-                    )}
-                    {component.type === "bar-chart" && (
-                      <BarChart
-                        data={sampleData}
-                        xKey="month"
-                        yKeys={["revenue"]}
-                        title="Revenue by Month"
-                      />
-                    )}
-                    {component.type === "kpi-card" && (
-                      <KPICard
-                        value="$45,231"
-                        label="Total Revenue"
-                        change={12.5}
-                        changeLabel="vs last month"
-                      />
-                    )}
-                    {component.type === "data-table" && (
-                      <DataTable
-                        data={sampleData}
-                        columns={[
-                          { accessorKey: "month", header: "Month" },
-                          { accessorKey: "revenue", header: "Revenue" },
-                          { accessorKey: "profit", header: "Profit" },
-                        ]}
-                      />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+    <div className="h-screen w-full flex flex-col bg-background">
+      {/* Header */}
+      <div className="shrink-0 p-4 md:p-6 border-b">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">{dashboard.name}</h1>
+        {dashboard.description && (
+          <p className="text-muted-foreground text-sm md:text-base">{dashboard.description}</p>
         )}
+      </div>
+
+      {/* Canvas */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ScrollArea className="w-full h-full">
+          <div
+            ref={canvasRef}
+            className="relative bg-background"
+            style={{
+              width: '100%',
+              height: `${canvasSize.height || '100%'}px`,
+              minHeight: '100%',
+              padding: '20px',
+              backgroundImage: `
+                linear-gradient(to right, hsl(var(--border) / 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, hsl(var(--border) / 0.05) 1px, transparent 1px)
+              `,
+              backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+            }}
+          >
+            {dashboard.components.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center space-y-4 p-8">
+                  <div className="text-4xl mb-4">📊</div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Your dashboard is empty
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Add components to start visualizing your data
+                  </p>
+                </div>
+              </div>
+            ) : (
+              dashboard.components.map((component) => {
+                const width = component.position.w * GRID_SIZE;
+                const height = component.position.h * GRID_SIZE;
+                const left = component.position.x * GRID_SIZE;
+                const top = component.position.y * GRID_SIZE;
+
+                return (
+                  <div
+                    key={component.id}
+                    className="absolute"
+                    style={{
+                      left: `${left}px`,
+                      top: `${top}px`,
+                      width: `${width}px`,
+                      height: `${height}px`,
+                      zIndex: component.zIndex || 1,
+                    }}
+                  >
+                    <div className="w-full h-full">
+                      <ComponentRenderer component={component} />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );

@@ -75,12 +75,14 @@ export function WaterfallChart({
   className,
 }: WaterfallChartProps) {
   // Process data to calculate cumulative values for waterfall effect
-  const processedData = data.map((point, index) => {
+  // Use reduce to build the array iteratively to avoid accessing uninitialized data
+  const processedData = data.reduce((acc, point, index) => {
     if (index === 0) {
-      return { ...point, cumulative: point.value, start: 0, end: point.value };
+      acc.push({ ...point, cumulative: point.value, start: 0, end: point.value });
+      return acc;
     }
     
-    const prevCumulative = processedData[index - 1].cumulative;
+    const prevCumulative = acc[index - 1].cumulative;
     let cumulative = prevCumulative;
     let start = prevCumulative;
     let end = prevCumulative;
@@ -101,8 +103,9 @@ export function WaterfallChart({
       end = point.value;
     }
     
-    return { ...point, cumulative, start, end };
-  });
+    acc.push({ ...point, cumulative, start, end });
+    return acc;
+  }, [] as Array<WaterfallDataPoint & { cumulative: number; start: number; end: number }>);
 
   const chartConfig = {
     positive: {

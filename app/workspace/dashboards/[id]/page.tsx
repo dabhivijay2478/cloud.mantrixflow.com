@@ -127,7 +127,7 @@ export default function DashboardEditorPage() {
         </div>
       </div>
 
-      <div className="border min-h-screen overflow-visible" style={{ overflow: 'visible' }}>
+      <div className="border flex-1 min-h-0 overflow-hidden">
           <DashboardCanvasWithHandlers
             components={dashboard.components}
             onComponentsChange={handleComponentsChange}

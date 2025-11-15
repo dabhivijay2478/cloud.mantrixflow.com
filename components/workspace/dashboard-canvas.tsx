@@ -12,12 +12,14 @@ import { cn } from "@/lib/utils";
 import type { DashboardComponent } from "@/lib/stores/workspace-store";
 import { DashboardItem } from "./dashboard-item";
 import { ComponentRenderer } from "./component-renderer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   findBestPosition,
   canPlaceComponent,
   getNearestValidPosition,
   checkCollisionWithComponents,
   componentToRect,
+  getBoundingBox,
 } from "@/lib/utils/dashboard-layout";
 
 const GRID_SIZE = 20; // Grid cell size in pixels
@@ -50,19 +52,63 @@ export function DashboardCanvas({
   const prevActiveRef = React.useRef(active);
   const dragStartPositionRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Update canvas size on mount and resize
+  // Calculate canvas size based on viewport and component positions
   useEffect(() => {
     const updateCanvasSize = () => {
-      if (canvasRef.current) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        setCanvasSize({ width: rect.width, height: rect.height });
+      // Get viewport from parent container, not canvas itself
+      const scrollContainer = canvasRef.current?.parentElement?.parentElement;
+      if (scrollContainer) {
+        const viewportWidth = scrollContainer.clientWidth;
+        const viewportHeight = scrollContainer.clientHeight;
+        
+        // Calculate content size based on component positions
+        const boundingBox = getBoundingBox(components, GRID_SIZE);
+        const padding = 200; // Extra padding for comfortable scrolling and adding new components
+        
+        if (boundingBox && components.length > 0) {
+          // Calculate the bottom-most point of all components (in pixels)
+          const bottomMostPoint = boundingBox.y + boundingBox.height;
+          const contentHeight = bottomMostPoint + padding;
+          
+          // Canvas width = viewport width (no horizontal scrolling)
+          // Canvas height = max of viewport or content (vertical scrolling when needed)
+          const newHeight = Math.max(viewportHeight + 400, contentHeight);
+          
+          setCanvasSize({ 
+            width: viewportWidth, // Always match viewport width
+            height: newHeight // Expand to fit all components with padding
+          });
+        } else {
+          // No components, use viewport size with minimum height
+          setCanvasSize({ 
+            width: viewportWidth, 
+            height: Math.max(viewportHeight, 1000) // Minimum 1000px height for empty canvas
+          });
+        }
       }
     };
 
+    // Update immediately and after a short delay to ensure DOM is ready
     updateCanvasSize();
+    const timeoutId = setTimeout(updateCanvasSize, 100);
+    
+    // Use ResizeObserver for better performance
+    const resizeObserver = new ResizeObserver(() => {
+      updateCanvasSize();
+    });
+    
+    const scrollContainer = canvasRef.current?.parentElement?.parentElement;
+    if (scrollContainer) {
+      resizeObserver.observe(scrollContainer);
+    }
+    
     window.addEventListener('resize', updateCanvasSize);
-    return () => window.removeEventListener('resize', updateCanvasSize);
-  }, []);
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateCanvasSize);
+    };
+  }, [components]);
 
   // Snap position to grid
   const snapToGrid = useCallback((x: number, y: number) => {
@@ -211,13 +257,16 @@ export function DashboardCanvas({
           const defaultWidth = 6;
           const defaultHeight = 4;
 
-          // Get canvas dimensions (ensure we have valid size)
-          const effectiveCanvasWidth = canvasSize.width > 0 
-            ? canvasSize.width 
-            : (canvasElement?.offsetWidth || GRID_COLS * GRID_SIZE);
-          const effectiveCanvasHeight = canvasSize.height > 0 
-            ? canvasSize.height 
-            : (canvasElement?.offsetHeight || GRID_ROWS * GRID_SIZE);
+          // Get viewport dimensions for placement
+          const scrollContainer = canvasElement?.parentElement?.parentElement;
+          const viewportWidth = scrollContainer?.clientWidth || canvasElement?.offsetWidth || GRID_COLS * GRID_SIZE;
+          
+          // Use a large canvas height for placement (allows infinite vertical space)
+          // This ensures components can always be placed, canvas will expand with scrolling
+          const placementCanvasHeight = Math.max(
+            canvasSize.height || 800,
+            10000 // Large enough to allow many components
+          );
 
           // ALWAYS use intelligent auto-placement to find empty space
           // This ensures components never overlap (like Power BI/Tableau)
@@ -225,8 +274,8 @@ export function DashboardCanvas({
             defaultWidth,
             defaultHeight,
             components,
-            effectiveCanvasWidth,
-            effectiveCanvasHeight,
+            viewportWidth,
+            placementCanvasHeight,
             GRID_SIZE
           );
 
@@ -355,22 +404,27 @@ export function DashboardCanvas({
   return (
     <>
       <CanvasDropZone>
-        <div
-          ref={canvasRef}
-          className={cn(
-            "relative w-full h-full min-h-[600px] bg-background overflow-visible",
-            isDragging && "bg-muted/50",
-            className
-          )}
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, hsl(var(--border) / 0.1) 1px, transparent 1px),
-              linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px)
-            `,
-            backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
-            overflow: 'visible',
-          }}
-        >
+        <ScrollArea className="w-full h-full">
+          <div
+            ref={canvasRef}
+            className={cn(
+              "relative bg-background",
+              isDragging && "bg-muted/50",
+              className
+            )}
+            style={{
+              width: '100%', // Always 100% of viewport width
+              height: `${Math.max(canvasSize.height || 1000, 1000)}px`, // Minimum 1000px, expand as needed
+              minHeight: '1000px', // Ensure minimum height for scrolling
+              padding: '20px',
+              boxSizing: 'border-box',
+              backgroundImage: `
+                linear-gradient(to right, hsl(var(--border) / 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px)
+              `,
+              backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+            }}
+          >
           {/* Grid overlay - visible when dragging */}
           {isDragging && (
             <div className="absolute inset-0 pointer-events-none opacity-30">
@@ -431,7 +485,8 @@ export function DashboardCanvas({
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </ScrollArea>
       </CanvasDropZone>
 
       {/* Drag Overlay - Blue preview when dragging */}
