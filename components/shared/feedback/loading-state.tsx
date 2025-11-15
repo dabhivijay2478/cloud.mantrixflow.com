@@ -37,7 +37,7 @@ export function LoadingState({
   className,
 }: LoadingStateProps) {
   const content = (
-    <div className={cn("flex flex-col items-center justify-center", className)}>
+    <div className="flex flex-col items-center justify-center">
       <Loader2
         className={cn("animate-spin text-primary mb-4", sizeClasses[size])}
         aria-hidden="true"
@@ -48,11 +48,11 @@ export function LoadingState({
 
   if (fullScreen) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className={cn("flex items-center justify-center min-h-screen", className)}>
         {content}
       </div>
     );
   }
 
-  return content;
+  return <div className={cn(className)}>{content}</div>;
 }

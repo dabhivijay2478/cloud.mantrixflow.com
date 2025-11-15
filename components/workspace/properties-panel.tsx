@@ -419,10 +419,11 @@ export function PropertiesPanel({
                           <FormLabel>Grouping (Optional)</FormLabel>
                           <Select
                             onValueChange={(value) => {
-                              field.onChange(value);
-                              handleUpdate({ grouping: value });
+                              const finalValue = value === "__none__" ? "" : value;
+                              field.onChange(finalValue);
+                              handleUpdate({ grouping: finalValue });
                             }}
-                            value={field.value}
+                            value={field.value || "__none__"}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -430,7 +431,7 @@ export function PropertiesPanel({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="__none__">None</SelectItem>
                               {getAvailableGroupingColumns().map((col) => (
                                 <SelectItem key={col.name} value={col.name}>
                                   {col.name} ({col.type})

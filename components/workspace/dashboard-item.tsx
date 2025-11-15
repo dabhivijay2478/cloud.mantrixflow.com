@@ -315,19 +315,28 @@ export function DashboardItem({
       >
         {/* Drag Handle - Only visible when not resizing */}
         {!isResizing && (
-          <button
-            type="button"
+          <div
             {...attributes}
             {...listeners}
+            role="button"
+            tabIndex={0}
+            aria-label="Drag to move component"
             className={cn(
               "absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing",
               "bg-background/90 backdrop-blur-sm rounded p-1.5 border shadow-sm",
               "hover:bg-blue-500/20 hover:border-blue-500 transition-all pointer-events-auto",
               "active:bg-blue-500/30 active:border-blue-600",
+              "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
               isHovered || isSelected ? "opacity-100" : "opacity-0",
             )}
             onMouseDown={(e) => {
               e.stopPropagation();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+              }
             }}
           >
             <GripVertical
@@ -336,61 +345,6 @@ export function DashboardItem({
                 isDragging ? "text-blue-600" : "text-muted-foreground",
               )}
             />
-          </button>
-        )}
-
-        {/* Toolbar - Only visible on hover/select, positioned outside content */}
-        {(isHovered || isSelected) && !isResizing && (
-          <div className="absolute -top-8 right-2 z-50 flex items-center gap-1 pointer-events-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 bg-background/95 backdrop-blur-sm border shadow-sm"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="w-3.5 h-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <DropdownMenuItem
-                  onClick={() => onLayerChange(component.id, "front")}
-                >
-                  <MoveUp className="w-4 h-4 mr-2" />
-                  Bring to Front
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onLayerChange(component.id, "back")}
-                >
-                  <MoveDown className="w-4 h-4 mr-2" />
-                  Send to Back
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => onDelete(component.id)}
-                  className="text-destructive"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 bg-background/95 backdrop-blur-sm border shadow-sm hover:bg-destructive/10 hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(component.id);
-              }}
-            >
-              <X className="w-3.5 h-3.5" />
-            </Button>
           </div>
         )}
 
@@ -435,6 +389,61 @@ export function DashboardItem({
           </>
         )}
       </button>
+
+      {/* Toolbar - Only visible on hover/select, positioned outside button */}
+      {(isHovered || isSelected) && !isResizing && (
+        <div className="absolute -top-8 right-2 z-50 flex items-center gap-1 pointer-events-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 bg-background/95 backdrop-blur-sm border shadow-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DropdownMenuItem
+                onClick={() => onLayerChange(component.id, "front")}
+              >
+                <MoveUp className="w-4 h-4 mr-2" />
+                Bring to Front
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onLayerChange(component.id, "back")}
+              >
+                <MoveDown className="w-4 h-4 mr-2" />
+                Send to Back
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete(component.id)}
+                className="text-destructive"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 bg-background/95 backdrop-blur-sm border shadow-sm hover:bg-destructive/10 hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(component.id);
+            }}
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
