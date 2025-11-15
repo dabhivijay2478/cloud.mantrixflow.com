@@ -58,7 +58,10 @@ export function SignupForm({
 
     if (error) {
       setIsSubmitting(false);
-      toast.error("Signup failed", error.message || "Failed to create account. Please try again.");
+      toast.error(
+        "Signup failed",
+        error.message || "Failed to create account. Please try again.",
+      );
       return;
     }
 
@@ -69,7 +72,10 @@ export function SignupForm({
 
     if (!sessionData.session) {
       // Email confirmation required - don't try to create user in DB yet
-      toast.success("Account created!", "Please check your email to confirm your account. The confirmation link will create your account.");
+      toast.success(
+        "Account created!",
+        "Please check your email to confirm your account. The confirmation link will create your account.",
+      );
       setIsSubmitting(false);
       // Redirect to login with message
       router.push("/auth/login?confirmEmail=true");
@@ -78,7 +84,10 @@ export function SignupForm({
 
     // Session exists (email confirmation not required or already confirmed)
     // Show success toast
-    toast.success("Account created successfully!", "Welcome! Your account has been created. You can now start using the app.");
+    toast.success(
+      "Account created successfully!",
+      "Welcome! Your account has been created. You can now start using the app.",
+    );
 
     // Redirect on success
     router.push("/");
@@ -89,7 +98,10 @@ export function SignupForm({
     setError(null);
     const { error } = await signInWithGitHub();
     if (error) {
-      toast.error("GitHub signup failed", error.message || "Failed to sign up with GitHub. Please try again.");
+      toast.error(
+        "GitHub signup failed",
+        error.message || "Failed to sign up with GitHub. Please try again.",
+      );
     }
   };
 
@@ -97,7 +109,10 @@ export function SignupForm({
     setError(null);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error("Google signup failed", error.message || "Failed to sign up with Google. Please try again.");
+      toast.error(
+        "Google signup failed",
+        error.message || "Failed to sign up with Google. Please try again.",
+      );
     }
   };
 

@@ -28,7 +28,7 @@ const GRID_SIZE = 20; // Grid cell size in pixels
  */
 export function componentToRect(
   component: DashboardComponent,
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): Rectangle {
   return {
     x: component.position.x * gridSize,
@@ -58,24 +58,26 @@ export function checkCollisionWithComponents(
   rect: Rectangle,
   components: DashboardComponent[],
   excludeId?: string,
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): boolean {
   // ROOT CAUSE FIX: Filter out excluded component upfront to prevent any stale data issues
-  const componentsToCheck = excludeId 
+  const componentsToCheck = excludeId
     ? components.filter((c) => c.id !== excludeId)
     : components;
-  
+
   // Defensive check: Ensure all components have valid position data
   return componentsToCheck.some((component) => {
     // Validate component has required position data
-    if (!component.position || 
-        typeof component.position.x !== 'number' || 
-        typeof component.position.y !== 'number' ||
-        typeof component.position.w !== 'number' ||
-        typeof component.position.h !== 'number') {
+    if (
+      !component.position ||
+      typeof component.position.x !== "number" ||
+      typeof component.position.y !== "number" ||
+      typeof component.position.w !== "number" ||
+      typeof component.position.h !== "number"
+    ) {
       return false; // Skip invalid components
     }
-    
+
     const componentRect = componentToRect(component, gridSize);
     return checkCollision(rect, componentRect);
   });
@@ -91,7 +93,7 @@ export function canPlaceComponent(
   height: number,
   components: DashboardComponent[],
   excludeId?: string,
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): boolean {
   const rect: Rectangle = {
     x: x * gridSize,
@@ -105,7 +107,7 @@ export function canPlaceComponent(
 /**
  * Find the next available empty space on the canvas
  * Algorithm: Scan left-to-right, top-to-bottom (like Power BI/Tableau)
- * 
+ *
  * @param defaultWidth - Default width in grid units
  * @param defaultHeight - Default height in grid units
  * @param components - Existing components on canvas
@@ -120,7 +122,7 @@ export function findAvailableSpace(
   components: DashboardComponent[],
   canvasWidth: number,
   canvasHeight: number,
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): { x: number; y: number } | null {
   const maxCols = Math.floor(canvasWidth / gridSize);
   const maxRows = Math.floor(canvasHeight / gridSize);
@@ -130,14 +132,16 @@ export function findAvailableSpace(
   const occupied = new Set<string>();
   components.forEach((component) => {
     // Validate component has required position data
-    if (!component.position || 
-        typeof component.position.x !== 'number' || 
-        typeof component.position.y !== 'number' ||
-        typeof component.position.w !== 'number' ||
-        typeof component.position.h !== 'number') {
+    if (
+      !component.position ||
+      typeof component.position.x !== "number" ||
+      typeof component.position.y !== "number" ||
+      typeof component.position.w !== "number" ||
+      typeof component.position.h !== "number"
+    ) {
       return; // Skip invalid components
     }
-    
+
     const rect = componentToRect(component, gridSize);
     const startCol = Math.floor(rect.x / gridSize);
     const endCol = Math.ceil((rect.x + rect.width) / gridSize);
@@ -160,7 +164,7 @@ export function findAvailableSpace(
     for (let col = 0; col <= maxCols - defaultWidth; col++) {
       // Check if this entire rectangle is available
       let isAvailable = true;
-      
+
       // Check all cells in the rectangle
       for (let c = col; c < col + defaultWidth && isAvailable; c++) {
         for (let r = row; r < row + defaultHeight && isAvailable; r++) {
@@ -182,7 +186,7 @@ export function findAvailableSpace(
             defaultHeight,
             components,
             undefined,
-            gridSize
+            gridSize,
           )
         ) {
           return { x: col, y: row };
@@ -217,7 +221,7 @@ export function findBestPosition(
   components: DashboardComponent[],
   canvasWidth: number,
   canvasHeight: number,
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): { x: number; y: number } {
   // First, try to find empty space using the scanning algorithm
   const availableSpace = findAvailableSpace(
@@ -226,7 +230,7 @@ export function findBestPosition(
     components,
     canvasWidth,
     canvasHeight,
-    gridSize
+    gridSize,
   );
 
   if (availableSpace) {
@@ -251,7 +255,7 @@ export function findBestPosition(
  */
 export function getOccupiedRegions(
   components: DashboardComponent[],
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): Rectangle[] {
   return components.map((component) => componentToRect(component, gridSize));
 }
@@ -264,7 +268,7 @@ export function canResizeTo(
   newWidth: number,
   newHeight: number,
   components: DashboardComponent[],
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): boolean {
   const component = components.find((c) => c.id === componentId);
   if (!component) return false;
@@ -276,7 +280,7 @@ export function canResizeTo(
     newHeight,
     components,
     componentId,
-    gridSize
+    gridSize,
   );
 }
 
@@ -291,7 +295,7 @@ export function getNearestValidPosition(
   height: number,
   components: DashboardComponent[],
   excludeId: string,
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): { x: number; y: number } {
   // Try the requested position first
   if (canPlaceComponent(x, y, width, height, components, excludeId, gridSize)) {
@@ -320,7 +324,7 @@ export function getNearestValidPosition(
               height,
               components,
               excludeId,
-              gridSize
+              gridSize,
             )
           ) {
             return { x: newX, y: newY };
@@ -339,7 +343,7 @@ export function getNearestValidPosition(
  */
 export function getBoundingBox(
   components: DashboardComponent[],
-  gridSize: number = GRID_SIZE
+  gridSize: number = GRID_SIZE,
 ): Rectangle | null {
   if (components.length === 0) return null;
 
@@ -363,4 +367,3 @@ export function getBoundingBox(
     height: maxY - minY,
   };
 }
-

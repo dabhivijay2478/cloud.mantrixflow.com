@@ -56,7 +56,7 @@ export function GridLayout({
         "grid w-full",
         colClasses[cols],
         gapClasses[gap],
-        className
+        className,
       )}
     >
       {children}
@@ -101,12 +101,6 @@ const spanClasses = {
   12: "col-span-12",
 };
 
-export function GridItem({
-  children,
-  colSpan = 1,
-  className,
-}: GridItemProps) {
-  return (
-    <div className={cn(spanClasses[colSpan], className)}>{children}</div>
-  );
+export function GridItem({ children, colSpan = 1, className }: GridItemProps) {
+  return <div className={cn(spanClasses[colSpan], className)}>{children}</div>;
 }

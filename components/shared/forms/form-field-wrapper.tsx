@@ -61,17 +61,12 @@ export function FormFieldWrapper({
       {children}
       {error && (
         <FieldError
-          errors={
-            typeof error === "string" ? [{ message: error }] : undefined
-          }
+          errors={typeof error === "string" ? [{ message: error }] : undefined}
         >
           {typeof error === "object" ? error : null}
         </FieldError>
       )}
-      {description && (
-        <FieldDescription>{description}</FieldDescription>
-      )}
+      {description && <FieldDescription>{description}</FieldDescription>}
     </Field>
   );
 }
-

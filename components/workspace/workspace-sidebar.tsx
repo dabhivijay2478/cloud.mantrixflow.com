@@ -47,7 +47,11 @@ function OrganizationSwitcher({
 }: {
   organizations: Array<{ id: string; name: string; slug: string }>;
   currentOrganization: { id: string; name: string; slug: string } | null;
-  onOrganizationChange: (org: { id: string; name: string; slug: string }) => void;
+  onOrganizationChange: (org: {
+    id: string;
+    name: string;
+    slug: string;
+  }) => void;
   onCreateOrganization: () => void;
 }) {
   const { isMobile } = useSidebar();
@@ -69,8 +73,12 @@ function OrganizationSwitcher({
                 <Building2 className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{currentOrganization.name}</span>
-                <span className="truncate text-xs text-muted-foreground">Organization</span>
+                <span className="truncate font-medium">
+                  {currentOrganization.name}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  Organization
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
@@ -98,11 +106,16 @@ function OrganizationSwitcher({
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2" onClick={onCreateOrganization}>
+            <DropdownMenuItem
+              className="gap-2 p-2"
+              onClick={onCreateOrganization}
+            >
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <Plus className="size-4" />
               </div>
-              <div className="text-muted-foreground font-medium">Add organization</div>
+              <div className="text-muted-foreground font-medium">
+                Add organization
+              </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -114,16 +127,27 @@ function OrganizationSwitcher({
 export function WorkspaceSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentOrganization, organizations, dashboards, dataSources, setCurrentOrganization } = useWorkspaceStore();
+  const {
+    currentOrganization,
+    organizations,
+    dashboards,
+    dataSources,
+    setCurrentOrganization,
+  } = useWorkspaceStore();
 
   // Filter dashboards by current organization
   const filteredDashboards = currentOrganization
-    ? dashboards.filter((dashboard) => dashboard.organizationId === currentOrganization.id)
+    ? dashboards.filter(
+        (dashboard) => dashboard.organizationId === currentOrganization.id,
+      )
     : [];
-  
+
   // Filter data sources by current organization
   const filteredDataSources = currentOrganization
-    ? dataSources.filter((ds) => !ds.organizationId || ds.organizationId === currentOrganization.id)
+    ? dataSources.filter(
+        (ds) =>
+          !ds.organizationId || ds.organizationId === currentOrganization.id,
+      )
     : dataSources.filter((ds) => !ds.organizationId);
 
   return (
@@ -131,7 +155,9 @@ export function WorkspaceSidebar() {
       <SidebarHeader className="p-2">
         <div className="flex items-center gap-2 px-2">
           <Logo className="h-6 w-6 shrink-0" />
-          <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">MantrixFlow</span>
+          <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
+            MantrixFlow
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -244,4 +270,3 @@ export function WorkspaceSidebar() {
     </Sidebar>
   );
 }
-

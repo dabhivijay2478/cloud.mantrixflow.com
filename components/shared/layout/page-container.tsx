@@ -29,10 +29,5 @@ export function PageContainer({
   className,
   maxWidth = "max-w-7xl",
 }: PageContainerProps) {
-  return (
-    <div className={cn("space-y-6", maxWidth, className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("space-y-6", maxWidth, className)}>{children}</div>;
 }
-

@@ -40,7 +40,9 @@ const buildConnectionSchema = (dataSourceType: string) => {
   // Add all fields from schema
   schema.fields.forEach((field) => {
     if (field.required) {
-      schemaObject[field.name] = z.string().min(1, `${field.label} is required`);
+      schemaObject[field.name] = z
+        .string()
+        .min(1, `${field.label} is required`);
     } else {
       schemaObject[field.name] = z.string().optional();
     }
@@ -55,12 +57,15 @@ const buildConnectionSchema = (dataSourceType: string) => {
       // Otherwise, all required fields must be present
       return schema.fields.every((field) => {
         if (!field.required) return true;
-        return data[field.name as keyof typeof data] && String(data[field.name as keyof typeof data]).trim().length > 0;
+        return (
+          data[field.name as keyof typeof data] &&
+          String(data[field.name as keyof typeof data]).trim().length > 0
+        );
       });
     },
     {
       message: "Please provide all required connection details",
-    }
+    },
   );
 };
 
@@ -69,15 +74,28 @@ interface ConnectionSheetProps {
   onOpenChange: (open: boolean) => void;
   dataSourceId: string | null;
   onConnect: (data: ConnectionFormValues) => Promise<void>;
-  onTestConnection?: (data: ConnectionFormValues) => Promise<{ success: boolean; message: string }>;
+  onTestConnection?: (
+    data: ConnectionFormValues,
+  ) => Promise<{ success: boolean; message: string }>;
 }
 
-export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, onTestConnection }: ConnectionSheetProps) {
+export function ConnectionSheet({
+  open,
+  onOpenChange,
+  dataSourceId,
+  onConnect,
+  onTestConnection,
+}: ConnectionSheetProps) {
   const [testingConnection, setTestingConnection] = useState(false);
-  const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [connectionTestResult, setConnectionTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const dataSource = dataSourceId ? allDataSources.find((ds) => ds.id === dataSourceId) : null;
+  const dataSource = dataSourceId
+    ? allDataSources.find((ds) => ds.id === dataSourceId)
+    : null;
   const schema = dataSource ? connectionSchemas[dataSource.type] : null;
 
   const getDefaultValues = () => {
@@ -130,7 +148,10 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
     const isValid = await form.trigger();
 
     if (!isValid) {
-      toast.error("Please fill in all required fields", "All required connection fields must be filled before testing.");
+      toast.error(
+        "Please fill in all required fields",
+        "All required connection fields must be filled before testing.",
+      );
       return;
     }
 
@@ -142,9 +163,16 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
         const result = await onTestConnection(formData);
         setConnectionTestResult(result);
         if (result.success) {
-          toast.success("Connection test successful!", "The connection to your data source was successful.");
+          toast.success(
+            "Connection test successful!",
+            "The connection to your data source was successful.",
+          );
         } else {
-          toast.error("Connection test failed", result.message || "Unable to connect to the data source. Please check your credentials and try again.");
+          toast.error(
+            "Connection test failed",
+            result.message ||
+              "Unable to connect to the data source. Please check your credentials and try again.",
+          );
         }
       } else {
         // Default test connection behavior
@@ -158,9 +186,15 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
         };
         setConnectionTestResult(result);
         if (success) {
-          toast.success("Connection test successful!", "The connection to your data source was successful.");
+          toast.success(
+            "Connection test successful!",
+            "The connection to your data source was successful.",
+          );
         } else {
-          toast.error("Connection test failed", "Unable to connect to the data source. Please check your credentials and try again.");
+          toast.error(
+            "Connection test failed",
+            "Unable to connect to the data source. Please check your credentials and try again.",
+          );
         }
       }
     } catch (error) {
@@ -168,7 +202,10 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
         success: false,
         message: "An error occurred while testing the connection.",
       });
-      toast.error("Connection test failed", "An error occurred while testing the connection. Please try again.");
+      toast.error(
+        "Connection test failed",
+        "An error occurred while testing the connection. Please try again.",
+      );
     } finally {
       setTestingConnection(false);
     }
@@ -200,7 +237,10 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0 h-full overflow-hidden">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-2xl flex flex-col p-0 h-full overflow-hidden"
+      >
         <SheetHeader className="px-6 pt-6 pb-4 border-b bg-muted/30 shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-background p-2 rounded-lg border flex items-center justify-center">
@@ -219,11 +259,20 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="px-6 py-6">
-            <form onSubmit={form.handleSubmit(handleConnect)} className="space-y-6">
+            <form
+              onSubmit={form.handleSubmit(handleConnect)}
+              className="space-y-6"
+            >
               {schema.connectionString && (
                 <div className="space-y-2">
-                  <Label htmlFor="connectionString" className="text-sm font-medium">
-                    Connection String <span className="text-muted-foreground font-normal">(Optional)</span>
+                  <Label
+                    htmlFor="connectionString"
+                    className="text-sm font-medium"
+                  >
+                    Connection String{" "}
+                    <span className="text-muted-foreground font-normal">
+                      (Optional)
+                    </span>
                   </Label>
                   <Textarea
                     id="connectionString"
@@ -250,7 +299,9 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
                     <span className="w-full border-t" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or</span>
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or
+                    </span>
                   </div>
                 </div>
               )}
@@ -260,7 +311,9 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
                   <div key={field.name} className="space-y-2">
                     <Label htmlFor={field.name} className="text-sm font-medium">
                       {field.label}
-                      {field.required && <span className="text-destructive ml-1">*</span>}
+                      {field.required && (
+                        <span className="text-destructive ml-1">*</span>
+                      )}
                     </Label>
                     {field.type === "textarea" ? (
                       <Textarea
@@ -268,7 +321,12 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
                         placeholder={field.placeholder}
                         {...form.register(field.name)}
                         rows={4}
-                        className={field.name === "credentials" || field.name === "headers" ? "font-mono text-sm" : ""}
+                        className={
+                          field.name === "credentials" ||
+                          field.name === "headers"
+                            ? "font-mono text-sm"
+                            : ""
+                        }
                       />
                     ) : (
                       <Input
@@ -280,7 +338,9 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
                       />
                     )}
                     {field.description && (
-                      <p className="text-xs text-muted-foreground">{field.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {field.description}
+                      </p>
                     )}
                     {form.formState.errors[field.name] && (
                       <p className="text-xs text-destructive">
@@ -297,7 +357,7 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
                     "p-4 rounded-lg border",
                     connectionTestResult.success
                       ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-                      : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
+                      : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800",
                   )}
                 >
                   <div className="flex items-start gap-2">
@@ -312,17 +372,19 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
                           "text-sm font-medium",
                           connectionTestResult.success
                             ? "text-green-800 dark:text-green-200"
-                            : "text-red-800 dark:text-red-200"
+                            : "text-red-800 dark:text-red-200",
                         )}
                       >
-                        {connectionTestResult.success ? "Connection Successful" : "Connection Failed"}
+                        {connectionTestResult.success
+                          ? "Connection Successful"
+                          : "Connection Failed"}
                       </p>
                       <p
                         className={cn(
                           "text-xs mt-1",
                           connectionTestResult.success
                             ? "text-green-700 dark:text-green-300"
-                            : "text-red-700 dark:text-red-300"
+                            : "text-red-700 dark:text-red-300",
                         )}
                       >
                         {connectionTestResult.message}
@@ -390,4 +452,3 @@ export function ConnectionSheet({ open, onOpenChange, dataSourceId, onConnect, o
     </Sheet>
   );
 }
-

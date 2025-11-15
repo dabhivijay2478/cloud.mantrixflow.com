@@ -75,16 +75,13 @@ export function RibbonChart({
   colors = CHART_COLORS,
   className,
 }: RibbonChartProps) {
-  const chartConfig = yKeys.reduce(
-    (config, key, index) => {
-      config[key] = {
-        label: key,
-        color: colors[index % colors.length],
-      };
-      return config;
-    },
-    {} as ChartConfig,
-  );
+  const chartConfig = yKeys.reduce((config, key, index) => {
+    config[key] = {
+      label: key,
+      color: colors[index % colors.length],
+    };
+    return config;
+  }, {} as ChartConfig);
 
   return (
     <Card className={cn("h-full flex flex-col", className)}>
@@ -103,7 +100,9 @@ export function RibbonChart({
             data={data}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+            {showGrid && (
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            )}
             <XAxis
               dataKey={xKey}
               tickLine={false}
@@ -141,4 +140,3 @@ export function RibbonChart({
     </Card>
   );
 }
-

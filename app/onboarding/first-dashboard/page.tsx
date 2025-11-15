@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PromptInput } from "@/components/bi/prompt-input";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
@@ -11,7 +17,12 @@ import { toast } from "sonner";
 
 export default function FirstDashboardPage() {
   const router = useRouter();
-  const { addDashboard, setOnboardingStep, currentOrganization, currentDataSource } = useWorkspaceStore();
+  const {
+    addDashboard,
+    setOnboardingStep,
+    currentOrganization,
+    currentDataSource,
+  } = useWorkspaceStore();
   const [loading, setLoading] = useState(false);
   const [prompt, setPrompt] = useState("");
 
@@ -71,14 +82,17 @@ export default function FirstDashboardPage() {
               </div>
               <div>
                 <CardTitle>Create Your First Dashboard</CardTitle>
-                <CardDescription>Step 3 of 3 - Use AI to generate insights from your data</CardDescription>
+                <CardDescription>
+                  Step 3 of 3 - Use AI to generate insights from your data
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Describe what you'd like to see in your dashboard. Our AI will create visualizations based on your data.
+                Describe what you'd like to see in your dashboard. Our AI will
+                create visualizations based on your data.
               </p>
             </div>
             <PromptInput
@@ -102,7 +116,10 @@ export default function FirstDashboardPage() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
-                <Button onClick={() => handleGenerate(prompt)} disabled={loading || !prompt.trim()}>
+                <Button
+                  onClick={() => handleGenerate(prompt)}
+                  disabled={loading || !prompt.trim()}
+                >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -123,4 +140,3 @@ export default function FirstDashboardPage() {
     </div>
   );
 }
-

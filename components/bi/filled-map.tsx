@@ -100,7 +100,8 @@ export function FilledMap({
               Filled map visualization ({mapType})
             </p>
             <p className="text-xs text-muted-foreground">
-              {regions.length} region{regions.length !== 1 ? "s" : ""} configured
+              {regions.length} region{regions.length !== 1 ? "s" : ""}{" "}
+              configured
             </p>
             {countryCode && (
               <p className="text-xs text-muted-foreground">
@@ -134,4 +135,3 @@ export function FilledMap({
     </Card>
   );
 }
-

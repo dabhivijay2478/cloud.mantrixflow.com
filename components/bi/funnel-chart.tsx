@@ -79,7 +79,9 @@ export function FunnelChart({
           {data.map((stage, index) => {
             const widthPercent = (stage.value / maxValue) * 100;
             const conversionRate =
-              index > 0 ? getConversionRate(stage.value, data[index - 1].value) : null;
+              index > 0
+                ? getConversionRate(stage.value, data[index - 1].value)
+                : null;
 
             return (
               <div key={stage.name} className="space-y-1">
@@ -99,7 +101,7 @@ export function FunnelChart({
                 <div className="relative h-12 w-full flex items-center justify-center">
                   <div
                     className={cn(
-                      "h-full rounded transition-all duration-300 flex items-center justify-center text-white font-medium"
+                      "h-full rounded transition-all duration-300 flex items-center justify-center text-white font-medium",
                     )}
                     style={{
                       width: `${widthPercent}%`,

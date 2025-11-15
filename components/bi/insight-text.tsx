@@ -43,7 +43,13 @@ export function InsightText({
   className,
 }: InsightTextProps) {
   return (
-    <p className={cn("flex items-start gap-2 text-sm", typeStyles[type], className)}>
+    <p
+      className={cn(
+        "flex items-start gap-2 text-sm",
+        typeStyles[type],
+        className,
+      )}
+    >
       {showIcon && (
         <Sparkles className="h-4 w-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
       )}

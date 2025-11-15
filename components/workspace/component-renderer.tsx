@@ -191,12 +191,14 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "waterfall-chart":
         return (
           <BIComponents.WaterfallChart
-            data={mergedConfig.data || [
-              { label: "Start", value: 100 },
-              { label: "Add", value: 50 },
-              { label: "Subtract", value: -20 },
-              { label: "End", value: 130 },
-            ]}
+            data={
+              mergedConfig.data || [
+                { label: "Start", value: 100 },
+                { label: "Add", value: 50 },
+                { label: "Subtract", value: -20 },
+                { label: "End", value: 130 },
+              ]
+            }
             labelKey={mergedConfig.labelKey || "label"}
             valueKey={mergedConfig.valueKey || "value"}
             title={mergedConfig.title}
@@ -207,11 +209,13 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "scatter-chart":
         return (
           <BIComponents.ScatterChart
-            data={mergedConfig.data || [
-              { x: 10, y: 20 },
-              { x: 15, y: 30 },
-              { x: 20, y: 25 },
-            ]}
+            data={
+              mergedConfig.data || [
+                { x: 10, y: 20 },
+                { x: 15, y: 30 },
+                { x: 20, y: 25 },
+              ]
+            }
             xKey={mergedConfig.xKey || "x"}
             yKey={mergedConfig.yKey || "y"}
             title={mergedConfig.title}
@@ -222,11 +226,13 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "radar-chart":
         return (
           <BIComponents.RadarChart
-            data={mergedConfig.data || [
-              { category: "A", value: 80 },
-              { category: "B", value: 90 },
-              { category: "C", value: 70 },
-            ]}
+            data={
+              mergedConfig.data || [
+                { category: "A", value: 80 },
+                { category: "B", value: 90 },
+                { category: "C", value: 70 },
+              ]
+            }
             categoryKey={mergedConfig.categoryKey || "category"}
             valueKeys={mergedConfig.valueKeys || ["value"]}
             title={mergedConfig.title}
@@ -237,11 +243,13 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "funnel-chart":
         return (
           <BIComponents.FunnelChart
-            data={mergedConfig.data || [
-              { name: "Visits", value: 1000 },
-              { name: "Leads", value: 500 },
-              { name: "Sales", value: 100 },
-            ]}
+            data={
+              mergedConfig.data || [
+                { name: "Visits", value: 1000 },
+                { name: "Leads", value: 500 },
+                { name: "Sales", value: 100 },
+              ]
+            }
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
@@ -250,12 +258,14 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "heatmap":
         return (
           <BIComponents.Heatmap
-            data={mergedConfig.data || [
-              { x: 0, y: 0, value: 10 },
-              { x: 1, y: 0, value: 20 },
-              { x: 0, y: 1, value: 15 },
-              { x: 1, y: 1, value: 25 },
-            ]}
+            data={
+              mergedConfig.data || [
+                { x: 0, y: 0, value: 10 },
+                { x: 1, y: 0, value: 20 },
+                { x: 0, y: 1, value: 15 },
+                { x: 1, y: 1, value: 25 },
+              ]
+            }
             xLabels={mergedConfig.xLabels || ["Mon", "Tue"]}
             yLabels={mergedConfig.yLabels || ["Week 1", "Week 2"]}
             title={mergedConfig.title}
@@ -266,11 +276,13 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "treemap":
         return (
           <BIComponents.TreeMap
-            data={mergedConfig.data || [
-              { name: "A", value: 100 },
-              { name: "B", value: 200 },
-              { name: "C", value: 150 },
-            ]}
+            data={
+              mergedConfig.data || [
+                { name: "A", value: 100 },
+                { name: "B", value: 200 },
+                { name: "C", value: 150 },
+              ]
+            }
             nameKey={mergedConfig.nameKey || "name"}
             valueKey={mergedConfig.valueKey || "value"}
             title={mergedConfig.title}
@@ -281,11 +293,15 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "sankey-diagram":
         return (
           <BIComponents.SankeyDiagram
-            nodes={mergedConfig.nodes || [
-              { id: "A", label: "Source A" },
-              { id: "B", label: "Target B" },
-            ]}
-            links={mergedConfig.links || [{ source: "A", target: "B", value: 100 }]}
+            nodes={
+              mergedConfig.nodes || [
+                { id: "A", label: "Source A" },
+                { id: "B", label: "Target B" },
+              ]
+            }
+            links={
+              mergedConfig.links || [{ source: "A", target: "B", value: 100 }]
+            }
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
@@ -295,10 +311,12 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
         return (
           <BIComponents.ForecastLine
             historicalData={mergedConfig.historicalData || sampleLineData}
-            forecastData={mergedConfig.forecastData || [
-              { month: "Jul", desktop: 250, mobile: 160 },
-              { month: "Aug", desktop: 280, mobile: 180 },
-            ]}
+            forecastData={
+              mergedConfig.forecastData || [
+                { month: "Jul", desktop: 250, mobile: 160 },
+                { month: "Aug", desktop: 280, mobile: 180 },
+              ]
+            }
             xKey={mergedConfig.xKey || "month"}
             yKey={mergedConfig.yKey || "desktop"}
             title={mergedConfig.title}
@@ -344,11 +362,13 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
             value={mergedConfig.value || 75}
             target={mergedConfig.target || 80}
             label={mergedConfig.label || "Revenue"}
-            zones={mergedConfig.zones || [
-              { max: 50, color: "#fecaca" },
-              { max: 70, color: "#fde68a" },
-              { max: 100, color: "#bbf7d0" },
-            ]}
+            zones={
+              mergedConfig.zones || [
+                { max: 50, color: "#fecaca" },
+                { max: 70, color: "#fde68a" },
+                { max: 100, color: "#bbf7d0" },
+              ]
+            }
           />
         );
 
@@ -373,10 +393,12 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "multi-row-card":
         return (
           <BIComponents.MultiRowCard
-            rows={mergedConfig.rows || [
-              { label: "Revenue", value: "$45,231" },
-              { label: "Profit", value: "$12,345" },
-            ]}
+            rows={
+              mergedConfig.rows || [
+                { label: "Revenue", value: "$45,231" },
+                { label: "Profit", value: "$12,345" },
+              ]
+            }
             title={mergedConfig.title}
           />
         );
@@ -385,24 +407,30 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "data-table":
         return (
           <BIComponents.DataTable
-            data={mergedConfig.data || [
-              { id: 1, name: "Item 1", value: 100 },
-              { id: 2, name: "Item 2", value: 200 },
-            ]}
-            columns={mergedConfig.columns || [
-              { accessorKey: "name", header: "Name" },
-              { accessorKey: "value", header: "Value" },
-            ]}
+            data={
+              mergedConfig.data || [
+                { id: 1, name: "Item 1", value: 100 },
+                { id: 2, name: "Item 2", value: 200 },
+              ]
+            }
+            columns={
+              mergedConfig.columns || [
+                { accessorKey: "name", header: "Name" },
+                { accessorKey: "value", header: "Value" },
+              ]
+            }
           />
         );
 
       case "matrix":
         return (
           <BIComponents.Matrix
-            data={mergedConfig.data || [
-              { row: "A", col: "X", value: 10 },
-              { row: "A", col: "Y", value: 20 },
-            ]}
+            data={
+              mergedConfig.data || [
+                { row: "A", col: "X", value: 10 },
+                { row: "A", col: "Y", value: 20 },
+              ]
+            }
             rowKey={mergedConfig.rowKey || "row"}
             colKey={mergedConfig.colKey || "col"}
             valueKey={mergedConfig.valueKey || "value"}
@@ -425,9 +453,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "map":
         return (
           <BIComponents.Map
-            markers={mergedConfig.markers || [
-              { lat: 40.7128, lng: -74.006, label: "New York" },
-            ]}
+            markers={
+              mergedConfig.markers || [
+                { lat: 40.7128, lng: -74.006, label: "New York" },
+              ]
+            }
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
@@ -460,14 +490,20 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       // Layout & Container
       case "grid-layout":
         return (
-          <BIComponents.GridLayout cols={mergedConfig.cols || 3} gap={mergedConfig.gap || "md"}>
+          <BIComponents.GridLayout
+            cols={mergedConfig.cols || 3}
+            gap={mergedConfig.gap || "md"}
+          >
             {mergedConfig.children || <div>Grid Layout</div>}
           </BIComponents.GridLayout>
         );
 
       case "section":
         return (
-          <BIComponents.Section title={mergedConfig.title} description={mergedConfig.description}>
+          <BIComponents.Section
+            title={mergedConfig.title}
+            description={mergedConfig.description}
+          >
             {mergedConfig.children || <div>Section Content</div>}
           </BIComponents.Section>
         );
@@ -573,4 +609,3 @@ function getDefaultConfig(type: string): Record<string, unknown> {
   // Return default configurations for each component type
   return {};
 }
-

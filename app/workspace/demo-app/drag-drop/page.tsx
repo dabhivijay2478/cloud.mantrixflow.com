@@ -172,11 +172,7 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
         );
       case "pie-chart":
         return (
-          <PieChart
-            data={samplePieData}
-            nameKey="name"
-            valueKey="value"
-          />
+          <PieChart data={samplePieData} nameKey="name" valueKey="value" />
         );
       case "kpi-card":
         return (
@@ -199,11 +195,7 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
         return <Gauge value={75} max={100} label="Progress" />;
       case "donut-chart":
         return (
-          <DonutChart
-            data={samplePieData}
-            nameKey="name"
-            valueKey="value"
-          />
+          <DonutChart data={samplePieData} nameKey="name" valueKey="value" />
         );
       case "radar-chart":
         return (
@@ -306,16 +298,16 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
       }}
       minConstraints={[200, 150]}
       maxConstraints={[800, 600]}
-      resizeHandles={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
+      resizeHandles={["n", "s", "e", "w", "ne", "nw", "se", "sw"]}
       className="group border border-border rounded-lg"
-      style={{ position: 'relative' }}
+      style={{ position: "relative" }}
     >
       <div
         ref={setNodeRef}
         style={style}
         className={cn(
           "relative bg-card rounded-lg shadow-sm w-full h-full",
-          isDragging && "z-50 opacity-50"
+          isDragging && "z-50 opacity-50",
         )}
       >
         {/* Drag Handle - Always visible and functional */}
@@ -349,9 +341,7 @@ function DraggableItem({ item, onDelete, onResize }: DraggableItemProps) {
 
         {/* Component Content */}
         <div className="p-4 h-full overflow-auto flex flex-col">
-          <div className="flex-1 min-h-0 w-full">
-            {renderComponent()}
-          </div>
+          <div className="flex-1 min-h-0 w-full">{renderComponent()}</div>
         </div>
       </div>
     </ResizableBox>
@@ -370,11 +360,20 @@ function CanvasDropZone({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PaletteItem({ id, name, icon }: { id: string; name: string; icon: string }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `palette-${id}`,
-    data: { type: "palette", componentType: id },
-  });
+function PaletteItem({
+  id,
+  name,
+  icon,
+}: {
+  id: string;
+  name: string;
+  icon: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `palette-${id}`,
+      data: { type: "palette", componentType: id },
+    });
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -408,7 +407,7 @@ export default function DragDropDemoPage() {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -417,7 +416,7 @@ export default function DragDropDemoPage() {
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    
+
     // Allow dropping palette items anywhere on canvas
     const activeData = active.data.current;
     if (activeData?.type === "palette" && over?.id === "canvas-drop-zone") {
@@ -433,7 +432,11 @@ export default function DragDropDemoPage() {
     const activeData = active.data.current;
     if (activeData?.type === "palette") {
       // Add new component to canvas if dropped on canvas or any existing item
-      if (over && (over.id === "canvas-drop-zone" || items.some(item => item.id === over.id))) {
+      if (
+        over &&
+        (over.id === "canvas-drop-zone" ||
+          items.some((item) => item.id === over.id))
+      ) {
         const newItem: DashboardItem = {
           id: `item-${Date.now()}`,
           type: activeData.componentType,
@@ -463,11 +466,16 @@ export default function DragDropDemoPage() {
     setItems(items.filter((item) => item.id !== id));
   };
 
-  const handleResize = (id: string, size: { width: number; height: number }) => {
+  const handleResize = (
+    id: string,
+    size: { width: number; height: number },
+  ) => {
     setItems(
       items.map((item) =>
-        item.id === id ? { ...item, width: size.width, height: size.height } : item
-      )
+        item.id === id
+          ? { ...item, width: size.width, height: size.height }
+          : item,
+      ),
     );
   };
 
@@ -523,7 +531,7 @@ export default function DragDropDemoPage() {
         <div
           className={cn(
             "border-r bg-card transition-all duration-300 overflow-y-auto",
-            isPaletteOpen ? "w-64" : "w-0 overflow-hidden"
+            isPaletteOpen ? "w-64" : "w-0 overflow-hidden",
           )}
         >
           <div className="p-4 space-y-4">
@@ -534,7 +542,11 @@ export default function DragDropDemoPage() {
                 size="icon"
                 onClick={() => setIsPaletteOpen(!isPaletteOpen)}
               >
-                {isPaletteOpen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {isPaletteOpen ? (
+                  <Minimize2 className="w-4 h-4" />
+                ) : (
+                  <Maximize2 className="w-4 h-4" />
+                )}
               </Button>
             </div>
             <div className="space-y-2">
@@ -555,7 +567,9 @@ export default function DragDropDemoPage() {
           {/* Toolbar */}
           <div className="border-b bg-card p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">Drag & Drop Dashboard Builder</h1>
+              <h1 className="text-xl font-bold">
+                Drag & Drop Dashboard Builder
+              </h1>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handleSave}>
@@ -587,7 +601,10 @@ export default function DragDropDemoPage() {
                 items={items.map((item) => item.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="flex flex-wrap gap-4 p-4" style={{ alignItems: 'flex-start' }}>
+                <div
+                  className="flex flex-wrap gap-4 p-4"
+                  style={{ alignItems: "flex-start" }}
+                >
                   {items.map((item) => (
                     <DraggableItem
                       key={item.id}
@@ -631,4 +648,3 @@ export default function DragDropDemoPage() {
     </DndContext>
   );
 }
-

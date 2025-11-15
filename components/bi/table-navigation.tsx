@@ -32,7 +32,7 @@ export function TableNavigation({
   const filteredTables = useMemo(() => {
     if (!searchQuery.trim()) return tables;
     return tables.filter((table) =>
-      table.toLowerCase().includes(searchQuery.toLowerCase())
+      table.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [tables, searchQuery]);
 
@@ -76,7 +76,7 @@ export function TableNavigation({
                 variant={selectedTable === table ? "secondary" : "ghost"}
                 className={cn(
                   "w-full justify-start",
-                  selectedTable === table && "bg-accent"
+                  selectedTable === table && "bg-accent",
                 )}
                 onClick={() => onTableSelect?.(table)}
               >
@@ -94,4 +94,3 @@ export function TableNavigation({
     </div>
   );
 }
-

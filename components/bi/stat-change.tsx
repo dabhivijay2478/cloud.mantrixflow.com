@@ -60,7 +60,9 @@ export function StatChange({
   const isNeutral = value === 0;
 
   const colorClass = cn({
-    "text-green-600 dark:text-green-400": invertColors ? isNegative : isPositive,
+    "text-green-600 dark:text-green-400": invertColors
+      ? isNegative
+      : isPositive,
     "text-red-600 dark:text-red-400": invertColors ? isPositive : isNegative,
     "text-muted-foreground": isNeutral,
   });

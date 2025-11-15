@@ -165,7 +165,7 @@ export function PaginatedReport({
                       className={cn(
                         "px-4 py-3 text-left text-sm font-medium",
                         column.align === "center" && "text-center",
-                        column.align === "right" && "text-right"
+                        column.align === "right" && "text-right",
                       )}
                     >
                       {column.label}
@@ -195,7 +195,7 @@ export function PaginatedReport({
                           className={cn(
                             "px-4 py-3 text-sm",
                             column.align === "center" && "text-center",
-                            column.align === "right" && "text-right"
+                            column.align === "right" && "text-right",
                           )}
                         >
                           {column.render
@@ -255,4 +255,3 @@ export function PaginatedReport({
     </Card>
   );
 }
-

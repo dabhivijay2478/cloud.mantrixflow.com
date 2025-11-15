@@ -3,7 +3,13 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { toast } from "@/lib/utils/toast";
 
@@ -19,13 +25,19 @@ export default function DashboardPage() {
 
   const handleSignOut = async () => {
     const { error } = await signOut();
-    
+
     if (error) {
-      toast.error("Sign out failed", error.message || "Failed to sign out. Please try again.");
+      toast.error(
+        "Sign out failed",
+        error.message || "Failed to sign out. Please try again.",
+      );
       return;
     }
 
-    toast.success("Signed out successfully", "You have been successfully logged out.");
+    toast.success(
+      "Signed out successfully",
+      "You have been successfully logged out.",
+    );
     router.push("/auth/login");
   };
 
@@ -66,10 +78,23 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>Name:</strong> {user.user_metadata?.full_name || "Not provided"}</p>
-              <p><strong>Created:</strong> {new Date(user.created_at).toLocaleDateString()}</p>
-              <p><strong>Last Sign In:</strong> {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : "Never"}</p>
+              <p>
+                <strong>Email:</strong> {user.email}
+              </p>
+              <p>
+                <strong>Name:</strong>{" "}
+                {user.user_metadata?.full_name || "Not provided"}
+              </p>
+              <p>
+                <strong>Created:</strong>{" "}
+                {new Date(user.created_at).toLocaleDateString()}
+              </p>
+              <p>
+                <strong>Last Sign In:</strong>{" "}
+                {user.last_sign_in_at
+                  ? new Date(user.last_sign_in_at).toLocaleDateString()
+                  : "Never"}
+              </p>
             </div>
           </CardContent>
         </Card>

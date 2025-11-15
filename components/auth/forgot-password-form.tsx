@@ -16,7 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
-import { type ForgotPasswordInput, forgotPasswordSchema } from "@/lib/validations/auth";
+import {
+  type ForgotPasswordInput,
+  forgotPasswordSchema,
+} from "@/lib/validations/auth";
 import {
   AuthFormHeader,
   AuthErrorDisplay,
@@ -46,15 +49,22 @@ export function ForgotPasswordForm({
 
     if (error) {
       setIsSubmitting(false);
-      toast.error("Failed to send reset email", error.message || "Unable to send password reset email. Please try again.");
+      toast.error(
+        "Failed to send reset email",
+        error.message ||
+          "Unable to send password reset email. Please try again.",
+      );
       return;
     }
 
     // Show success toast
-    toast.success("Reset email sent!", "Please check your email for password reset instructions.");
+    toast.success(
+      "Reset email sent!",
+      "Please check your email for password reset instructions.",
+    );
 
     setIsSubmitting(false);
-    
+
     // Redirect back to login after a short delay
     setTimeout(() => {
       router.push("/auth/login");

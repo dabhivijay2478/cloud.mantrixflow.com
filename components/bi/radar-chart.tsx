@@ -68,24 +68,24 @@ export function RadarChart({
   return (
     <ChartWrapper title={title} description={description} className={className}>
       <ChartContainer config={chartConfig} className="h-full w-full">
-          <RechartsRadarChart accessibilityLayer data={data}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey={categoryKey} />
-            <PolarRadiusAxis />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            {valueKeys.map((key) => (
-              <Radar
-                key={key}
-                name={key}
-                dataKey={key}
-                stroke={`var(--color-${key})`}
-                fill={`var(--color-${key})`}
-                fillOpacity={0.3}
-              />
-            ))}
-            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-          </RechartsRadarChart>
-        </ChartContainer>
+        <RechartsRadarChart accessibilityLayer data={data}>
+          <PolarGrid />
+          <PolarAngleAxis dataKey={categoryKey} />
+          <PolarRadiusAxis />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          {valueKeys.map((key) => (
+            <Radar
+              key={key}
+              name={key}
+              dataKey={key}
+              stroke={`var(--color-${key})`}
+              fill={`var(--color-${key})`}
+              fillOpacity={0.3}
+            />
+          ))}
+          {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+        </RechartsRadarChart>
+      </ChartContainer>
     </ChartWrapper>
   );
 }

@@ -22,14 +22,19 @@ interface DataSourceCardProps {
   onClick: () => void;
 }
 
-export function DataSourceCard({ dataSource, isConnected, connectedData, onClick }: DataSourceCardProps) {
+export function DataSourceCard({
+  dataSource,
+  isConnected,
+  connectedData,
+  onClick,
+}: DataSourceCardProps) {
   const router = useRouter();
 
   return (
     <Card
       className={cn(
         "relative cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-border/50 bg-card",
-        isConnected && "ring-2 ring-primary/30 border-primary/20"
+        isConnected && "ring-2 ring-primary/30 border-primary/20",
       )}
       onClick={onClick}
     >
@@ -61,7 +66,11 @@ export function DataSourceCard({ dataSource, isConnected, connectedData, onClick
           {isConnected && connectedData && (
             <div className="text-xs text-muted-foreground truncate mt-0.5">
               {(() => {
-                const selectedTables = connectedData.selectedTables || (connectedData.selectedTable ? [connectedData.selectedTable] : []);
+                const selectedTables =
+                  connectedData.selectedTables ||
+                  (connectedData.selectedTable
+                    ? [connectedData.selectedTable]
+                    : []);
                 if (selectedTables.length === 0) return null;
                 if (selectedTables.length === 1) return selectedTables[0];
                 return `${selectedTables.length} tables selected`;
@@ -87,4 +96,3 @@ export function DataSourceCard({ dataSource, isConnected, connectedData, onClick
     </Card>
   );
 }
-

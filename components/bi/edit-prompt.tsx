@@ -72,7 +72,7 @@ export function EditPrompt({
 
   const handleSubmit = async () => {
     if (!editedPrompt.trim()) return;
-    
+
     try {
       await onSubmit(editedPrompt);
       setOpen(false);

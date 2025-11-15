@@ -72,9 +72,7 @@ export function ExportPDF({
     >
       <Download className="h-4 w-4" />
       {showLabel && (
-        <span className="ml-2">
-          {loading ? "Exporting..." : "Export PDF"}
-        </span>
+        <span className="ml-2">{loading ? "Exporting..." : "Export PDF"}</span>
       )}
     </Button>
   );

@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -60,28 +66,37 @@ export function EmptyState({
           <div
             className={cn(
               "mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center",
-              !centered && "mx-0"
+              !centered && "mx-0",
             )}
           >
             <Icon className="h-8 w-8 text-primary" />
           </div>
         )}
-        <CardTitle className={cn("text-2xl", !Icon && !centered && "text-left")}>
+        <CardTitle
+          className={cn("text-2xl", !Icon && !centered && "text-left")}
+        >
           {title}
         </CardTitle>
         {description && (
-          <CardDescription className={cn("text-base mt-2", !centered && "text-left")}>
+          <CardDescription
+            className={cn("text-base mt-2", !centered && "text-left")}
+          >
             {description}
           </CardDescription>
         )}
       </CardHeader>
       {(action || (actionLabel && onAction) || children) && (
         <CardContent className={cn("space-y-4", centered && "text-center")}>
-          {action || (actionLabel && onAction && (
-            <Button onClick={onAction} size="lg" className={centered ? "w-full" : ""}>
-              {actionLabel}
-            </Button>
-          ))}
+          {action ||
+            (actionLabel && onAction && (
+              <Button
+                onClick={onAction}
+                size="lg"
+                className={centered ? "w-full" : ""}
+              >
+                {actionLabel}
+              </Button>
+            ))}
           {children}
         </CardContent>
       )}
@@ -98,4 +113,3 @@ export function EmptyState({
 
   return content;
 }
-

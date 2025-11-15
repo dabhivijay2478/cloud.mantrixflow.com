@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { GitBranch, ArrowRightLeft, Database, Sparkles } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { PageHeader } from "@/components/shared";
@@ -35,8 +41,9 @@ export default function DataPipelinesPage() {
           <CardContent className="space-y-6">
             <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                This feature will allow you to create and manage data pipelines that transfer data
-                from source systems to destination systems, enabling seamless data flow across your organization.
+                This feature will allow you to create and manage data pipelines
+                that transfer data from source systems to destination systems,
+                enabling seamless data flow across your organization.
               </p>
             </div>
 
@@ -55,7 +62,9 @@ export default function DataPipelinesPage() {
                 <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-3">
                   <ArrowRightLeft className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                 </div>
-                <h3 className="font-semibold text-sm mb-1">Data Transformation</h3>
+                <h3 className="font-semibold text-sm mb-1">
+                  Data Transformation
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Transform and process data in transit
                 </p>
@@ -65,7 +74,9 @@ export default function DataPipelinesPage() {
                 <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-3">
                   <Sparkles className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
-                <h3 className="font-semibold text-sm mb-1">Destination Systems</h3>
+                <h3 className="font-semibold text-sm mb-1">
+                  Destination Systems
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Deliver data to target systems
                 </p>
@@ -83,4 +94,3 @@ export default function DataPipelinesPage() {
     </div>
   );
 }
-

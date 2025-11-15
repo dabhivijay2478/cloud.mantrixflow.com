@@ -71,8 +71,7 @@ export function Slicer({
 }: SlicerProps) {
   const isMultiSelectDefault =
     multiSelect ?? (type === "checkbox" ? true : false);
-  const [selectedValues, setSelectedValues] =
-    useState<string[]>(defaultValues);
+  const [selectedValues, setSelectedValues] = useState<string[]>(defaultValues);
 
   const handleToggle = (value: string) => {
     let newValues: string[];
@@ -154,14 +153,12 @@ export function Slicer({
               <Button
                 key={option.value}
                 variant={
-                  selectedValues.includes(option.value)
-                    ? "default"
-                    : "outline"
+                  selectedValues.includes(option.value) ? "default" : "outline"
                 }
                 size="sm"
                 onClick={() => handleToggle(option.value)}
                 className={cn(
-                  selectedValues.includes(option.value) && "bg-primary"
+                  selectedValues.includes(option.value) && "bg-primary",
                 )}
               >
                 {option.label}
@@ -178,4 +175,3 @@ export function Slicer({
     </Card>
   );
 }
-

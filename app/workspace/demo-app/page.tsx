@@ -712,7 +712,8 @@ export default function DemoPage() {
               history={[
                 {
                   question: "What was the total revenue in Q1?",
-                  answer: "The total revenue in Q1 was $45,231, representing a 12.5% increase from the previous quarter.",
+                  answer:
+                    "The total revenue in Q1 was $45,231, representing a 12.5% increase from the previous quarter.",
                   timestamp: new Date(),
                 },
               ]}
@@ -779,10 +780,30 @@ export default function DemoPage() {
                   title="Sales by Location"
                   description="Store locations with sales data"
                   markers={[
-                    { lat: 40.7128, lng: -74.0060, label: "New York", value: 1000 },
-                    { lat: 34.0522, lng: -118.2437, label: "Los Angeles", value: 800 },
-                    { lat: 41.8781, lng: -87.6298, label: "Chicago", value: 600 },
-                    { lat: 29.7604, lng: -95.3698, label: "Houston", value: 500 },
+                    {
+                      lat: 40.7128,
+                      lng: -74.006,
+                      label: "New York",
+                      value: 1000,
+                    },
+                    {
+                      lat: 34.0522,
+                      lng: -118.2437,
+                      label: "Los Angeles",
+                      value: 800,
+                    },
+                    {
+                      lat: 41.8781,
+                      lng: -87.6298,
+                      label: "Chicago",
+                      value: 600,
+                    },
+                    {
+                      lat: 29.7604,
+                      lng: -95.3698,
+                      label: "Houston",
+                      value: 500,
+                    },
                   ]}
                   height={400}
                 />
@@ -803,7 +824,9 @@ export default function DemoPage() {
 
             {/* Leaflet Maps */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Leaflet Interactive Maps</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Leaflet Interactive Maps
+              </h3>
               <GridLayout cols={2} gap="lg">
                 <BasicLeafletMap
                   title="Basic Leaflet Map"
@@ -874,8 +897,8 @@ export default function DemoPage() {
                       popup: "Branch Office - Shoreditch",
                     },
                     {
-                      lat: 51.5200,
-                      lng: -0.1000,
+                      lat: 51.52,
+                      lng: -0.1,
                       label: "W",
                       color: "#8a2be2",
                       popup: "Warehouse - West End",
@@ -932,9 +955,19 @@ export default function DemoPage() {
                   description="Switch between different cities"
                   cities={[
                     { name: "London", lat: 51.5074, lng: -0.1278, zoom: 14 },
-                    { name: "Birmingham", lat: 52.4862, lng: -1.8904, zoom: 13 },
+                    {
+                      name: "Birmingham",
+                      lat: 52.4862,
+                      lng: -1.8904,
+                      zoom: 13,
+                    },
                     { name: "Leeds", lat: 53.8008, lng: -1.5491, zoom: 13 },
-                    { name: "Manchester", lat: 53.4808, lng: -2.2426, zoom: 13 },
+                    {
+                      name: "Manchester",
+                      lat: 53.4808,
+                      lng: -2.2426,
+                      zoom: 13,
+                    },
                   ]}
                   defaultCity="London"
                   markers={[

@@ -41,7 +41,8 @@ const defaultLabels = {
 const trendStyles = {
   up: "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400",
   down: "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400",
-  stable: "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800/30 dark:text-gray-400",
+  stable:
+    "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800/30 dark:text-gray-400",
 };
 
 export function TrendLabel({
@@ -52,7 +53,8 @@ export function TrendLabel({
   className,
 }: TrendLabelProps) {
   const displayLabel = label || defaultLabels[trend];
-  const Icon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : null;
+  const Icon =
+    trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : null;
 
   return (
     <Badge
@@ -60,7 +62,7 @@ export function TrendLabel({
       className={cn(
         "inline-flex items-center gap-1.5",
         variant === "default" && trendStyles[trend],
-        className
+        className,
       )}
     >
       {showIcon && Icon && <Icon className="h-3 w-3" />}

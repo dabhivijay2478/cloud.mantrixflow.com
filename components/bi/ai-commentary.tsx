@@ -78,7 +78,10 @@ export function AICommentary({
             <h4 className="text-sm font-semibold">Key Points:</h4>
             <ul className="space-y-1.5">
               {highlights.map((highlight, index) => (
-                <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                <li
+                  key={index}
+                  className="text-sm text-muted-foreground flex items-start gap-2"
+                >
                   <span className="text-blue-500 mt-1">•</span>
                   <span>{highlight}</span>
                 </li>

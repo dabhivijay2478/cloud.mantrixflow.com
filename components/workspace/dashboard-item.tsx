@@ -31,7 +31,7 @@ interface DashboardItemProps {
   children: React.ReactNode;
 }
 
-type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
+type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw" | null;
 
 export function DashboardItem({
   component,
@@ -50,31 +50,34 @@ export function DashboardItem({
   const [isHovered, setIsHovered] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<ResizeHandle>(null);
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [resizeStart, setResizeStart] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
   const itemRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<HTMLDivElement>(null);
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
-    id: component.id,
-    data: {
-      type: "dashboard-item",
-      // CRITICAL FIX: Don't store component snapshot - only store ID
-      // The canvas will look up the current component from the array
-      componentId: component.id,
-    },
-    disabled: isResizing, // Disable drag when resizing
-  });
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: component.id,
+      data: {
+        type: "dashboard-item",
+        // CRITICAL FIX: Don't store component snapshot - only store ID
+        // The canvas will look up the current component from the array
+        componentId: component.id,
+      },
+      disabled: isResizing, // Disable drag when resizing
+    });
 
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.3 : 1,
-    zIndex: isDragging || isResizing ? (component.zIndex || 1) + 1000 : component.zIndex || 1,
+    zIndex:
+      isDragging || isResizing
+        ? (component.zIndex || 1) + 1000
+        : component.zIndex || 1,
   };
 
   // Convert grid units to pixels
@@ -90,18 +93,21 @@ export function DashboardItem({
   const minHeight = gridSize * 2;
 
   // Handle resize start
-  const handleResizeStart = useCallback((e: React.MouseEvent, handle: ResizeHandle) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setIsResizing(true);
-    setResizeHandle(handle);
-    setResizeStart({
-      x: e.clientX,
-      y: e.clientY,
-      width,
-      height,
-    });
-  }, [width, height]);
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, handle: ResizeHandle) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setIsResizing(true);
+      setResizeHandle(handle);
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
+        width,
+        height,
+      });
+    },
+    [width, height],
+  );
 
   // Handle resize move
   useEffect(() => {
@@ -110,7 +116,7 @@ export function DashboardItem({
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - resizeStart.x;
       const deltaY = e.clientY - resizeStart.y;
-      
+
       let newWidth = resizeStart.width;
       let newHeight = resizeStart.height;
       let newX = component.position.x;
@@ -120,24 +126,36 @@ export function DashboardItem({
 
       // Calculate new dimensions based on handle
       // East (right) and South (bottom) handles: grow/shrink from bottom-right
-      if (resizeHandle.includes('e')) {
-        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + deltaX));
+      if (resizeHandle.includes("e")) {
+        newWidth = Math.max(
+          minWidth,
+          Math.min(maxWidth, resizeStart.width + deltaX),
+        );
       }
-      if (resizeHandle.includes('s')) {
-        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.height + deltaY));
+      if (resizeHandle.includes("s")) {
+        newHeight = Math.max(
+          minHeight,
+          Math.min(maxHeight, resizeStart.height + deltaY),
+        );
       }
-      
+
       // West (left) and North (top) handles: grow/shrink from top-left, need to adjust position
-      if (resizeHandle.includes('w')) {
-        const newW = Math.max(minWidth, Math.min(maxWidth, resizeStart.width - deltaX));
+      if (resizeHandle.includes("w")) {
+        const newW = Math.max(
+          minWidth,
+          Math.min(maxWidth, resizeStart.width - deltaX),
+        );
         const deltaW = resizeStart.width - newW; // Positive when shrinking, negative when growing
         const currentXPixels = component.position.x * gridSize;
         newXPixels = currentXPixels + deltaW; // Move left when shrinking, right when growing
         newX = Math.max(0, newXPixels) / gridSize;
         newWidth = newW;
       }
-      if (resizeHandle.includes('n')) {
-        const newH = Math.max(minHeight, Math.min(maxHeight, resizeStart.height - deltaY));
+      if (resizeHandle.includes("n")) {
+        const newH = Math.max(
+          minHeight,
+          Math.min(maxHeight, resizeStart.height - deltaY),
+        );
         const deltaH = resizeStart.height - newH; // Positive when shrinking, negative when growing
         const currentYPixels = component.position.y * gridSize;
         newYPixels = currentYPixels + deltaH; // Move up when shrinking, down when growing
@@ -152,7 +170,7 @@ export function DashboardItem({
       const snappedY = Math.round(newYPixels / gridSize);
 
       // Update position if resizing from top or left
-      if (resizeHandle.includes('w') || resizeHandle.includes('n')) {
+      if (resizeHandle.includes("w") || resizeHandle.includes("n")) {
         onUpdate(component.id, {
           position: {
             x: snappedX,
@@ -174,14 +192,26 @@ export function DashboardItem({
       setResizeHandle(null);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing, resizeHandle, resizeStart, component, gridSize, minWidth, minHeight, maxWidth, maxHeight, onResize, onUpdate]);
+  }, [
+    isResizing,
+    resizeHandle,
+    resizeStart,
+    component,
+    gridSize,
+    minWidth,
+    minHeight,
+    maxWidth,
+    maxHeight,
+    onResize,
+    onUpdate,
+  ]);
 
   // Handle click to select
   useEffect(() => {
@@ -193,7 +223,8 @@ export function DashboardItem({
 
     if (isSelected) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isSelected]);
 
@@ -217,13 +248,13 @@ export function DashboardItem({
           "absolute z-[100] pointer-events-auto touch-none select-none",
           "bg-primary/30 border border-primary/60 rounded-sm",
           "hover:bg-primary/50 hover:border-primary transition-colors",
-          (isHovered || isSelected) ? "opacity-100" : "opacity-0",
-          handleClasses[handle]
+          isHovered || isSelected ? "opacity-100" : "opacity-0",
+          handleClasses[handle],
         )}
         onMouseDown={(e) => handleResizeStart(e, handle)}
         style={{
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
+          userSelect: "none",
+          WebkitUserSelect: "none",
         }}
       />
     );
@@ -235,7 +266,7 @@ export function DashboardItem({
       className={cn(
         "group absolute",
         (isHovered || isSelected) && "resize-active",
-        isResizing && "resizing"
+        isResizing && "resizing",
       )}
       style={{
         left: `${left}px`,
@@ -243,7 +274,7 @@ export function DashboardItem({
         width: `${width}px`,
         height: `${height}px`,
         ...style,
-        overflow: 'visible',
+        overflow: "visible",
       }}
     >
       <div
@@ -253,11 +284,14 @@ export function DashboardItem({
         }}
         className={cn(
           "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm transition-all",
-          isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent",
+          isSelected
+            ? "border-primary ring-2 ring-primary/20"
+            : "border-transparent",
           isDragging && "opacity-30 cursor-grabbing border-blue-500/50",
           isHovered && !isResizing && "border-border",
           isResizing && "border-primary/50",
-          hasCollision && "border-destructive ring-2 ring-destructive/30 animate-pulse"
+          hasCollision &&
+            "border-destructive ring-2 ring-destructive/30 animate-pulse",
         )}
         style={{
           transform: CSS.Translate.toString(transform),
@@ -281,16 +315,18 @@ export function DashboardItem({
               "bg-background/90 backdrop-blur-sm rounded p-1.5 border shadow-sm",
               "hover:bg-blue-500/20 hover:border-blue-500 transition-all pointer-events-auto",
               "active:bg-blue-500/30 active:border-blue-600",
-              (isHovered || isSelected) ? "opacity-100" : "opacity-0"
+              isHovered || isSelected ? "opacity-100" : "opacity-0",
             )}
             onMouseDown={(e) => {
               e.stopPropagation();
             }}
           >
-            <GripVertical className={cn(
-              "w-4 h-4 transition-colors",
-              isDragging ? "text-blue-600" : "text-muted-foreground"
-            )} />
+            <GripVertical
+              className={cn(
+                "w-4 h-4 transition-colors",
+                isDragging ? "text-blue-600" : "text-muted-foreground",
+              )}
+            />
           </div>
         )}
 
@@ -308,12 +344,19 @@ export function DashboardItem({
                   <MoreVertical className="w-3.5 h-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={() => onLayerChange(component.id, "front")}>
+              <DropdownMenuContent
+                align="end"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DropdownMenuItem
+                  onClick={() => onLayerChange(component.id, "front")}
+                >
                   <MoveUp className="w-4 h-4 mr-2" />
                   Bring to Front
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onLayerChange(component.id, "back")}>
+                <DropdownMenuItem
+                  onClick={() => onLayerChange(component.id, "back")}
+                >
                   <MoveDown className="w-4 h-4 mr-2" />
                   Send to Back
                 </DropdownMenuItem>
@@ -343,7 +386,7 @@ export function DashboardItem({
         )}
 
         {/* Component Content - Responsive wrapper */}
-        <div 
+        <div
           className="h-full w-full overflow-hidden"
           style={{
             minWidth: 0,
@@ -372,18 +415,17 @@ export function DashboardItem({
         {/* Resize handles */}
         {(isHovered || isSelected || isResizing) && (
           <>
-            {renderResizeHandle('n')}
-            {renderResizeHandle('s')}
-            {renderResizeHandle('e')}
-            {renderResizeHandle('w')}
-            {renderResizeHandle('ne')}
-            {renderResizeHandle('nw')}
-            {renderResizeHandle('se')}
-            {renderResizeHandle('sw')}
+            {renderResizeHandle("n")}
+            {renderResizeHandle("s")}
+            {renderResizeHandle("e")}
+            {renderResizeHandle("w")}
+            {renderResizeHandle("ne")}
+            {renderResizeHandle("nw")}
+            {renderResizeHandle("se")}
+            {renderResizeHandle("sw")}
           </>
         )}
       </div>
     </div>
   );
 }
-

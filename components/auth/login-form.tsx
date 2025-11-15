@@ -46,9 +46,15 @@ function LoginFormContent({
     const confirmEmail = searchParams.get("confirmEmail");
 
     if (confirmed === "true") {
-      toast.success("Email confirmed!", "Your email has been confirmed. You can now sign in.");
+      toast.success(
+        "Email confirmed!",
+        "Your email has been confirmed. You can now sign in.",
+      );
     } else if (confirmEmail === "true") {
-      toast.info("Check your email", "Please check your email to confirm your account before signing in.");
+      toast.info(
+        "Check your email",
+        "Please check your email to confirm your account before signing in.",
+      );
     }
   }, [searchParams]);
 
@@ -68,12 +74,18 @@ function LoginFormContent({
 
     if (error) {
       setIsSubmitting(false);
-      toast.error("Login failed", error.message || "Invalid email or password. Please try again.");
+      toast.error(
+        "Login failed",
+        error.message || "Invalid email or password. Please try again.",
+      );
       return;
     }
 
     // Show success toast
-    toast.success("Login successful!", "Welcome back! You've been successfully logged in.");
+    toast.success(
+      "Login successful!",
+      "Welcome back! You've been successfully logged in.",
+    );
 
     // Redirect on success
     router.push("/");
@@ -84,7 +96,10 @@ function LoginFormContent({
     setError(null);
     const { error } = await signInWithGitHub();
     if (error) {
-      toast.error("GitHub login failed", error.message || "Failed to sign in with GitHub. Please try again.");
+      toast.error(
+        "GitHub login failed",
+        error.message || "Failed to sign in with GitHub. Please try again.",
+      );
     }
   };
 
@@ -92,7 +107,10 @@ function LoginFormContent({
     setError(null);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error("Google login failed", error.message || "Failed to sign in with Google. Please try again.");
+      toast.error(
+        "Google login failed",
+        error.message || "Failed to sign in with Google. Please try again.",
+      );
     }
   };
 

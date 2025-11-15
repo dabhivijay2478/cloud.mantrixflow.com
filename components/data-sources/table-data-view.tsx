@@ -29,11 +29,7 @@ export function TableDataView({
       <CardContent className="p-6 flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-            >
+            <Button variant="ghost" size="sm" onClick={onBack}>
               <X className="mr-2 h-4 w-4" />
               Back to Tables
             </Button>
@@ -42,7 +38,9 @@ export function TableDataView({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => router.push(`/workspace/data-sources/${dataSourceId}/query`)}
+            onClick={() =>
+              router.push(`/workspace/data-sources/${dataSourceId}/query`)
+            }
           >
             <Table2 className="mr-2 h-4 w-4" />
             Query Editor
@@ -60,4 +58,3 @@ export function TableDataView({
     </Card>
   );
 }
-

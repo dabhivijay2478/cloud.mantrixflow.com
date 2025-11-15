@@ -43,15 +43,15 @@ export function ErrorState({
   className,
 }: ErrorStateProps) {
   const errorMessage =
-    typeof error === "string" ? error : error?.message || "An unexpected error occurred";
+    typeof error === "string"
+      ? error
+      : error?.message || "An unexpected error occurred";
 
   const content = (
     <Alert variant="destructive" className={cn(className)}>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="mt-2">
-        {errorMessage}
-      </AlertDescription>
+      <AlertDescription className="mt-2">{errorMessage}</AlertDescription>
       {onRetry && (
         <div className="mt-4">
           <Button variant="outline" size="sm" onClick={onRetry}>
@@ -73,4 +73,3 @@ export function ErrorState({
 
   return content;
 }
-

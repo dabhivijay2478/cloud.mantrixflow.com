@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Database, CheckCircle2 } from "lucide-react";
@@ -57,7 +63,9 @@ export default function ImportingPage() {
               </div>
               <div>
                 <CardTitle>Importing Your Data</CardTitle>
-                <CardDescription>Step 2 of 3 - This may take a few moments</CardDescription>
+                <CardDescription>
+                  Step 2 of 3 - This may take a few moments
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -72,15 +80,13 @@ export default function ImportingPage() {
             {progress === 100 && (
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="w-5 h-5" />
-                <span className="text-sm font-medium">Data imported successfully!</span>
+                <span className="text-sm font-medium">
+                  Data imported successfully!
+                </span>
               </div>
             )}
             <div className="pt-4">
-              <Button
-                variant="ghost"
-                onClick={handleSkip}
-                className="w-full"
-              >
+              <Button variant="ghost" onClick={handleSkip} className="w-full">
                 Skip for now
               </Button>
             </div>
@@ -90,4 +96,3 @@ export default function ImportingPage() {
     </div>
   );
 }
-

@@ -49,7 +49,7 @@ export function FormActions({
       className={cn(
         "flex items-center gap-2",
         layout === "reverse" && "flex-row-reverse",
-        className
+        className,
       )}
     >
       {onCancel && (
@@ -68,4 +68,3 @@ export function FormActions({
     </div>
   );
 }
-

@@ -41,11 +41,15 @@ export function DataSourceDetail({
     <Card>
       <CardContent className="p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center justify-center">{getIconComponent(dataSource.iconType, 32)}</div>
+          <div className="flex items-center justify-center">
+            {getIconComponent(dataSource.iconType, 32)}
+          </div>
           <div>
             <h3 className="font-semibold text-lg">{dataSource.name}</h3>
             {dataSource.enterprise && (
-              <Badge className="mt-1 bg-black text-white text-xs">ENTERPRISE</Badge>
+              <Badge className="mt-1 bg-black text-white text-xs">
+                ENTERPRISE
+              </Badge>
             )}
           </div>
         </div>
@@ -58,13 +62,18 @@ export function DataSourceDetail({
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">
-              Connected on {new Date(connectedDataSource.connectedAt || "").toLocaleDateString()}
+              Connected on{" "}
+              {new Date(
+                connectedDataSource.connectedAt || "",
+              ).toLocaleDateString()}
             </div>
             <div className="space-y-2">
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => router.push(`/workspace/data-sources/${dataSourceId}/query`)}
+                onClick={() =>
+                  router.push(`/workspace/data-sources/${dataSourceId}/query`)
+                }
                 className="w-full"
               >
                 <Table2 className="mr-2 h-4 w-4" />
@@ -118,10 +127,7 @@ export function DataSourceDetail({
                 />
               </div>
             ) : (
-              <Button
-                onClick={onConnect}
-                className="w-full"
-              >
+              <Button onClick={onConnect} className="w-full">
                 <Plus className="mr-2 h-4 w-4" />
                 Connect {dataSource.name}
               </Button>
@@ -132,4 +138,3 @@ export function DataSourceDetail({
     </Card>
   );
 }
-

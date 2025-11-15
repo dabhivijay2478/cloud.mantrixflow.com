@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  * @returns {JSX.Element} SearchInput component
  * @example
  * const [search, setSearch] = useState("");
- * 
+ *
  * <SearchInput
  *   value={search}
  *   onChange={setSearch}
@@ -66,10 +66,7 @@ export function SearchInput({
         value={value}
         onChange={handleChange}
         disabled={disabled}
-        className={cn(
-          "pl-9",
-          showClear && value && "pr-9"
-        )}
+        className={cn("pl-9", showClear && value && "pr-9")}
       />
       {showClear && value && !disabled && (
         <Button

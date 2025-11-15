@@ -10,7 +10,15 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Download, Maximize2, Minimize2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowUpDown,
+  Download,
+  Maximize2,
+  Minimize2,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -74,7 +82,9 @@ export function SQLResultViewer({
           return (
             <Button
               variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
               className="h-8 px-2"
             >
               {col}
@@ -97,7 +107,7 @@ export function SQLResultViewer({
           return <span className="font-mono text-sm">{String(value)}</span>;
         },
       })),
-    [columns]
+    [columns],
   );
 
   const [pagination, setPagination] = React.useState({
@@ -129,12 +139,14 @@ export function SQLResultViewer({
       if (format === "csv") {
         const headers = columns.join(",");
         const csvRows = rows.map((row) =>
-          columns.map((col) => {
-            const val = row[col];
-            if (val === null || val === undefined) return "";
-            if (typeof val === "object") return JSON.stringify(val);
-            return String(val).replace(/"/g, '""');
-          }).join(",")
+          columns
+            .map((col) => {
+              const val = row[col];
+              if (val === null || val === undefined) return "";
+              if (typeof val === "object") return JSON.stringify(val);
+              return String(val).replace(/"/g, '""');
+            })
+            .join(","),
         );
         const csv = [headers, ...csvRows].join("\n");
         const blob = new Blob([csv], { type: "text/csv" });
@@ -258,12 +270,15 @@ export function SQLResultViewer({
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="whitespace-nowrap sticky top-0 bg-background z-10">
+                          <TableHead
+                            key={header.id}
+                            className="whitespace-nowrap sticky top-0 bg-background z-10"
+                          >
                             {header.isPlaceholder
                               ? null
                               : flexRender(
                                   header.column.columnDef.header,
-                                  header.getContext()
+                                  header.getContext(),
                                 )}
                           </TableHead>
                         ))}
@@ -278,10 +293,13 @@ export function SQLResultViewer({
                           data-state={row.getIsSelected() && "selected"}
                         >
                           {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className="whitespace-nowrap">
+                            <TableCell
+                              key={cell.id}
+                              className="whitespace-nowrap"
+                            >
                               {flexRender(
                                 cell.column.columnDef.cell,
-                                cell.getContext()
+                                cell.getContext(),
                               )}
                             </TableCell>
                           ))}
@@ -319,12 +337,14 @@ export function SQLResultViewer({
             {Math.min(
               (table.getState().pagination.pageIndex + 1) *
                 table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length
+              table.getFilteredRowModel().rows.length,
             )}{" "}
             of {table.getFilteredRowModel().rows.length} results
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Rows per page:</span>
+            <span className="text-sm text-muted-foreground">
+              Rows per page:
+            </span>
             <Select
               value={String(table.getState().pagination.pageSize)}
               onValueChange={(value) => {
@@ -332,7 +352,9 @@ export function SQLResultViewer({
               }}
             >
               <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
               </SelectTrigger>
               <SelectContent side="top">
                 {[10, 20, 30, 50, 100].map((pageSize) => (
@@ -398,4 +420,3 @@ export function SQLResultViewer({
     </div>
   );
 }
-

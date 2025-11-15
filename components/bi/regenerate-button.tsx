@@ -25,7 +25,11 @@ import { cn } from "@/lib/utils";
  * />
  */
 
-export type RegenerateButtonVariant = "default" | "outline" | "ghost" | "secondary";
+export type RegenerateButtonVariant =
+  | "default"
+  | "outline"
+  | "ghost"
+  | "secondary";
 export type RegenerateButtonSize = "sm" | "default" | "lg";
 
 export interface RegenerateButtonProps {

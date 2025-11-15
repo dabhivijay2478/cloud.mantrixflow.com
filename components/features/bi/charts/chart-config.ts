@@ -26,22 +26,19 @@ export const CHART_COLORS = [
 export function createChartConfig(
   yKeys: string[],
   customColor?: string,
-  customColors?: string[]
+  customColors?: string[],
 ): ChartConfig {
   const colors = customColors || CHART_COLORS;
-  return yKeys.reduce(
-    (config, key, index) => {
-      config[key] = {
-        label: key,
-        color:
-          index === 0 && customColor
-            ? customColor
-            : colors[index % colors.length],
-      };
-      return config;
-    },
-    {} as ChartConfig
-  );
+  return yKeys.reduce((config, key, index) => {
+    config[key] = {
+      label: key,
+      color:
+        index === 0 && customColor
+          ? customColor
+          : colors[index % colors.length],
+    };
+    return config;
+  }, {} as ChartConfig);
 }
 
 /**
@@ -53,4 +50,3 @@ export interface BaseChartProps {
   description?: string;
   className?: string;
 }
-

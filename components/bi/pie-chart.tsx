@@ -8,11 +8,7 @@ import {
   ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import {
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
 import { CHART_COLORS } from "@/components/features/bi/charts/chart-config";
 
@@ -67,48 +63,42 @@ export function PieChart({
   colors = CHART_COLORS,
   className,
 }: PieChartProps) {
-  const chartConfig = data.reduce(
-    (config, entry, index) => {
-      const name = entry[nameKey] as string;
-      config[name] = {
-        label: name,
-        color: colors[index % colors.length],
-      };
-      return config;
-    },
-    {} as ChartConfig,
-  );
+  const chartConfig = data.reduce((config, entry, index) => {
+    const name = entry[nameKey] as string;
+    config[name] = {
+      label: name,
+      color: colors[index % colors.length],
+    };
+    return config;
+  }, {} as ChartConfig);
 
   return (
     <ChartWrapper title={title} description={description} className={className}>
       <ChartContainer config={chartConfig} className="h-full w-full">
-          <RechartsPieChart>
-            <Pie
-              data={data}
-              dataKey={valueKey}
-              nameKey={nameKey}
-              cx="50%"
-              cy="50%"
-              innerRadius={innerRadius}
-              outerRadius={120}
-              paddingAngle={2}
-            >
-              {data.map((entry, index) => {
-                const name = entry[nameKey] as string;
-                return (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={`var(--color-${name})`}
-                  />
-                );
-              })}
-            </Pie>
-            <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} />} />
-            {showLegend && (
-              <ChartLegend content={<ChartLegendContent nameKey={nameKey} />} />
-            )}
-          </RechartsPieChart>
-        </ChartContainer>
+        <RechartsPieChart>
+          <Pie
+            data={data}
+            dataKey={valueKey}
+            nameKey={nameKey}
+            cx="50%"
+            cy="50%"
+            innerRadius={innerRadius}
+            outerRadius={120}
+            paddingAngle={2}
+          >
+            {data.map((entry, index) => {
+              const name = entry[nameKey] as string;
+              return (
+                <Cell key={`cell-${index}`} fill={`var(--color-${name})`} />
+              );
+            })}
+          </Pie>
+          <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} />} />
+          {showLegend && (
+            <ChartLegend content={<ChartLegendContent nameKey={nameKey} />} />
+          )}
+        </RechartsPieChart>
+      </ChartContainer>
     </ChartWrapper>
   );
 }

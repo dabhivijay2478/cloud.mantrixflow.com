@@ -32,4 +32,3 @@ export function AuthFormHeader({ title, description }: AuthFormHeaderProps) {
     </div>
   );
 }
-

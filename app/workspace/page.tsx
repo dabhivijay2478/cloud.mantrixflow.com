@@ -2,7 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Plus, FileText, ExternalLink } from "lucide-react";
 import { GridLayout, GridItem } from "@/components/bi/grid-layout";
@@ -10,11 +16,14 @@ import { PageHeader, EmptyState, Timestamp } from "@/components/shared";
 
 export default function WorkspacePage() {
   const router = useRouter();
-  const { dashboards, dataSources, currentOrganization, setCurrentDashboard } = useWorkspaceStore();
+  const { dashboards, dataSources, currentOrganization, setCurrentDashboard } =
+    useWorkspaceStore();
 
   // Filter dashboards by current organization
   const filteredDashboards = currentOrganization
-    ? dashboards.filter((dashboard) => dashboard.organizationId === currentOrganization.id)
+    ? dashboards.filter(
+        (dashboard) => dashboard.organizationId === currentOrganization.id,
+      )
     : [];
 
   const handleCreateDashboard = () => {
@@ -48,7 +57,9 @@ export default function WorkspacePage() {
               <CardTitle className="text-lg">Dashboards</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{filteredDashboards.length}</div>
+              <div className="text-3xl font-bold">
+                {filteredDashboards.length}
+              </div>
               <p className="text-sm text-muted-foreground">Total dashboards</p>
             </CardContent>
           </Card>
@@ -130,4 +141,3 @@ export default function WorkspacePage() {
     </div>
   );
 }
-

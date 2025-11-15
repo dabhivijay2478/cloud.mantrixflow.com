@@ -15,7 +15,10 @@ import {
   CartesianGrid,
 } from "recharts";
 import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
-import { createChartConfig, CHART_COLORS } from "@/components/features/bi/charts/chart-config";
+import {
+  createChartConfig,
+  CHART_COLORS,
+} from "@/components/features/bi/charts/chart-config";
 
 /**
  * StackedColumnChart
@@ -71,33 +74,32 @@ export function StackedColumnChart({
   return (
     <ChartWrapper title={title} description={description} className={className}>
       <ChartContainer config={chartConfig} className="h-full w-full">
-          <RechartsBarChart
-            accessibilityLayer
-            data={data}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
-            <XAxis
-              dataKey={xKey}
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
+        <RechartsBarChart
+          accessibilityLayer
+          data={data}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+          <XAxis
+            dataKey={xKey}
+            tickLine={false}
+            tickMargin={10}
+            axisLine={false}
+          />
+          <YAxis tickLine={false} axisLine={false} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+          {yKeys.map((key) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              fill={`var(--color-${key})`}
+              stackId="stack"
+              radius={[4, 4, 0, 0]}
             />
-            <YAxis tickLine={false} axisLine={false} />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-            {yKeys.map((key) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                fill={`var(--color-${key})`}
-                stackId="stack"
-                radius={[4, 4, 0, 0]}
-              />
-            ))}
-          </RechartsBarChart>
-        </ChartContainer>
+          ))}
+        </RechartsBarChart>
+      </ChartContainer>
     </ChartWrapper>
   );
 }
-

@@ -84,10 +84,15 @@ export function BulletChart({
           <span className="text-sm font-medium">{label}</span>
           <div className="flex items-center gap-3 text-sm">
             <span>
-              Actual: <span className="font-bold">{value}{unit}</span>
+              Actual:{" "}
+              <span className="font-bold">
+                {value}
+                {unit}
+              </span>
             </span>
             <span className="text-muted-foreground">
-              Target: {target}{unit}
+              Target: {target}
+              {unit}
             </span>
           </div>
         </div>

@@ -40,10 +40,7 @@ export function LoadingState({
   const content = (
     <div className={cn("flex flex-col items-center justify-center", className)}>
       <Loader2
-        className={cn(
-          "animate-spin text-primary mb-4",
-          sizeClasses[size]
-        )}
+        className={cn("animate-spin text-primary mb-4", sizeClasses[size])}
         aria-hidden="true"
       />
       <p className="text-sm text-muted-foreground">{message}</p>
@@ -60,4 +57,3 @@ export function LoadingState({
 
   return content;
 }
-

@@ -70,7 +70,7 @@ export function DataSourceTable({
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter((ds) =>
-        ds.name.toLowerCase().includes(searchQuery.toLowerCase())
+        ds.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -107,8 +107,12 @@ export function DataSourceTable({
         case "last-sync":
           const aData = getConnectedDataSource(a.id);
           const bData = getConnectedDataSource(b.id);
-          aValue = aData?.connectedAt ? new Date(aData.connectedAt).getTime() : 0;
-          bValue = bData?.connectedAt ? new Date(bData.connectedAt).getTime() : 0;
+          aValue = aData?.connectedAt
+            ? new Date(aData.connectedAt).getTime()
+            : 0;
+          bValue = bData?.connectedAt
+            ? new Date(bData.connectedAt).getTime()
+            : 0;
           break;
         case "status":
           aValue = isConnected(a.id) ? "connected" : "not-connected";
@@ -121,7 +125,9 @@ export function DataSourceTable({
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       } else {
-        return sortDirection === "asc" ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue);
+        return sortDirection === "asc"
+          ? Number(aValue) - Number(bValue)
+          : Number(bValue) - Number(aValue);
       }
     });
 
@@ -222,7 +228,11 @@ export function DataSourceTable({
               {getFilteredAndSortedDataSources().map((dataSource) => {
                 const connected = isConnected(dataSource.id);
                 const connectedData = getConnectedDataSource(dataSource.id);
-                const selectedTables = connectedData?.selectedTables || (connectedData?.selectedTable ? [connectedData.selectedTable] : []);
+                const selectedTables =
+                  connectedData?.selectedTables ||
+                  (connectedData?.selectedTable
+                    ? [connectedData.selectedTable]
+                    : []);
 
                 return (
                   <TableRow
@@ -230,7 +240,9 @@ export function DataSourceTable({
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => onDataSourceClick(dataSource.id)}
                   >
-                    <TableCell className="font-medium">{dataSource.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {dataSource.name}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="shrink-0 w-5 h-5 flex items-center justify-center">
@@ -246,7 +258,9 @@ export function DataSourceTable({
                     </TableCell>
                     <TableCell>
                       {connectedData?.connectedAt
-                        ? new Date(connectedData.connectedAt).toLocaleDateString()
+                        ? new Date(
+                            connectedData.connectedAt,
+                          ).toLocaleDateString()
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -269,4 +283,3 @@ export function DataSourceTable({
     </div>
   );
 }
-

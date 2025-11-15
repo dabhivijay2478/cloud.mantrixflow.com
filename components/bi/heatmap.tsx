@@ -50,10 +50,46 @@ export interface HeatmapProps {
 }
 
 const colorScales = {
-  blue: ["#eff6ff", "#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8"],
-  green: ["#f0fdf4", "#dcfce7", "#bbf7d0", "#86efac", "#4ade80", "#22c55e", "#16a34a", "#15803d"],
-  red: ["#fef2f2", "#fee2e2", "#fecaca", "#fca5a5", "#f87171", "#ef4444", "#dc2626", "#b91c1c"],
-  purple: ["#faf5ff", "#f3e8ff", "#e9d5ff", "#d8b4fe", "#c084fc", "#a855f7", "#9333ea", "#7e22ce"],
+  blue: [
+    "#eff6ff",
+    "#dbeafe",
+    "#bfdbfe",
+    "#93c5fd",
+    "#60a5fa",
+    "#3b82f6",
+    "#2563eb",
+    "#1d4ed8",
+  ],
+  green: [
+    "#f0fdf4",
+    "#dcfce7",
+    "#bbf7d0",
+    "#86efac",
+    "#4ade80",
+    "#22c55e",
+    "#16a34a",
+    "#15803d",
+  ],
+  red: [
+    "#fef2f2",
+    "#fee2e2",
+    "#fecaca",
+    "#fca5a5",
+    "#f87171",
+    "#ef4444",
+    "#dc2626",
+    "#b91c1c",
+  ],
+  purple: [
+    "#faf5ff",
+    "#f3e8ff",
+    "#e9d5ff",
+    "#d8b4fe",
+    "#c084fc",
+    "#a855f7",
+    "#9333ea",
+    "#7e22ce",
+  ],
 };
 
 export function Heatmap({
@@ -72,7 +108,9 @@ export function Heatmap({
 
   const getColor = (value: number) => {
     const normalized = (value - minValue) / range;
-    const colorIndex = Math.floor(normalized * (colorScales[colorScale].length - 1));
+    const colorIndex = Math.floor(
+      normalized * (colorScales[colorScale].length - 1),
+    );
     return colorScales[colorScale][colorIndex];
   };
 
@@ -132,7 +170,7 @@ export function Heatmap({
                           key={`${xIndex}-${yIndex}`}
                           className={cn(
                             "flex-1 h-12 rounded flex items-center justify-center text-sm font-medium transition-colors",
-                            value > maxValue * 0.6 && "text-white"
+                            value > maxValue * 0.6 && "text-white",
                           )}
                           style={{ backgroundColor: getColor(value) }}
                           title={`${xLabels[xIndex]}, ${yLabels[yIndex]}: ${value}`}

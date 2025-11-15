@@ -74,34 +74,34 @@ export function AreaChart({
   return (
     <ChartWrapper title={title} description={description} className={className}>
       <ChartContainer config={chartConfig} className="h-full w-full">
-          <RechartsAreaChart
-            accessibilityLayer
-            data={data}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
-            <XAxis
-              dataKey={xKey}
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
+        <RechartsAreaChart
+          accessibilityLayer
+          data={data}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+          <XAxis
+            dataKey={xKey}
+            tickLine={false}
+            tickMargin={10}
+            axisLine={false}
+          />
+          <YAxis tickLine={false} axisLine={false} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+          {yKeys.map((key) => (
+            <Area
+              key={key}
+              type="monotone"
+              dataKey={key}
+              stackId={stacked ? "stack" : undefined}
+              stroke={`var(--color-${key})`}
+              fill={`var(--color-${key})`}
+              fillOpacity={0.6}
             />
-            <YAxis tickLine={false} axisLine={false} />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-            {yKeys.map((key) => (
-              <Area
-                key={key}
-                type="monotone"
-                dataKey={key}
-                stackId={stacked ? "stack" : undefined}
-                stroke={`var(--color-${key})`}
-                fill={`var(--color-${key})`}
-                fillOpacity={0.6}
-              />
-            ))}
-          </RechartsAreaChart>
-        </ChartContainer>
+          ))}
+        </RechartsAreaChart>
+      </ChartContainer>
     </ChartWrapper>
   );
 }

@@ -85,49 +85,48 @@ export function ScatterChart({
   return (
     <ChartWrapper title={title} description={description} className={className}>
       <ChartContainer config={chartConfig} className="h-full w-full">
-          <RechartsScatterChart
-            accessibilityLayer
-            data={data}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
-            <XAxis
-              type="number"
-              dataKey={xKey}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              type="number"
-              dataKey={yKey}
-              tickLine={false}
-              axisLine={false}
-            />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value: number, name: string, props: any) => {
-                    if (nameKey && props.payload?.[nameKey]) {
-                      return [
-                        `${props.payload[nameKey]}: (${props.payload[xKey]}, ${props.payload[yKey]})`,
-                        "",
-                      ];
-                    }
-                    return [value, name === xKey ? "X" : "Y"];
-                  }}
-                />
-              }
-              cursor={{ strokeDasharray: "3 3" }}
-            />
-            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-            <Scatter name="data" data={data} fill={`var(--color-data)`}>
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={`var(--color-data)`} />
-              ))}
-            </Scatter>
-          </RechartsScatterChart>
-        </ChartContainer>
+        <RechartsScatterChart
+          accessibilityLayer
+          data={data}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+          <XAxis
+            type="number"
+            dataKey={xKey}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            type="number"
+            dataKey={yKey}
+            tickLine={false}
+            axisLine={false}
+          />
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                formatter={(value: number, name: string, props: any) => {
+                  if (nameKey && props.payload?.[nameKey]) {
+                    return [
+                      `${props.payload[nameKey]}: (${props.payload[xKey]}, ${props.payload[yKey]})`,
+                      "",
+                    ];
+                  }
+                  return [value, name === xKey ? "X" : "Y"];
+                }}
+              />
+            }
+            cursor={{ strokeDasharray: "3 3" }}
+          />
+          {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+          <Scatter name="data" data={data} fill={`var(--color-data)`}>
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={`var(--color-data)`} />
+            ))}
+          </Scatter>
+        </RechartsScatterChart>
+      </ChartContainer>
     </ChartWrapper>
   );
 }
-

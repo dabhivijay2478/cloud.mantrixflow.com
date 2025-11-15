@@ -3,9 +3,22 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { ArrowRight, ArrowLeft, Database, FileSpreadsheet, Cloud, Globe } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Database,
+  FileSpreadsheet,
+  Cloud,
+  Globe,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const dataSourceTypes = [
@@ -69,7 +82,8 @@ const dataSourceTypes = [
 
 export default function DataSourcePage() {
   const router = useRouter();
-  const { setOnboardingStep, updateOnboarding, completeOnboarding } = useWorkspaceStore();
+  const { setOnboardingStep, updateOnboarding, completeOnboarding } =
+    useWorkspaceStore();
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
   const handleSkip = () => {
@@ -98,7 +112,9 @@ export default function DataSourcePage() {
               </div>
               <div>
                 <CardTitle>Connect Your Data Source</CardTitle>
-                <CardDescription>Step 2 of 3 - Choose where your data lives</CardDescription>
+                <CardDescription>
+                  Step 2 of 3 - Choose where your data lives
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -123,7 +139,9 @@ export default function DataSourcePage() {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold mb-1">{type.name}</h3>
-                        <p className="text-sm text-muted-foreground">{type.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {type.description}
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -139,10 +157,7 @@ export default function DataSourcePage() {
                 Back
               </Button>
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={handleSkip}
-                >
+                <Button variant="ghost" onClick={handleSkip}>
                   Skip for now
                 </Button>
                 <Button onClick={handleContinue} disabled={!selectedType}>
@@ -157,4 +172,3 @@ export default function DataSourcePage() {
     </div>
   );
 }
-

@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
  * @returns {JSX.Element} MultiSelect component
  * @example
  * const [selected, setSelected] = useState<string[]>([]);
- * 
+ *
  * <MultiSelect
  *   options={[
  *     { value: "react", label: "React" },
@@ -83,7 +83,7 @@ export function MultiSelect({
     const newSelected = selected.includes(optionValue)
       ? selected.filter((v) => v !== optionValue)
       : [...selected, optionValue];
-    
+
     setSelected(newSelected);
     onChange?.(newSelected);
   };
@@ -106,10 +106,7 @@ export function MultiSelect({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn(
-            "w-full justify-between min-h-10 h-auto",
-            className
-          )}
+          className={cn("w-full justify-between min-h-10 h-auto", className)}
         >
           <div className="flex gap-1 flex-wrap">
             {selected.length > 0 ? (
@@ -168,7 +165,7 @@ export function MultiSelect({
                       "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
                       selected.includes(option.value)
                         ? "bg-primary text-primary-foreground"
-                        : "opacity-50 [&_svg]:invisible"
+                        : "opacity-50 [&_svg]:invisible",
                     )}
                   >
                     <span className="h-4 w-4">✓</span>

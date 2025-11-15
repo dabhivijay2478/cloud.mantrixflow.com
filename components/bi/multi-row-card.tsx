@@ -64,13 +64,17 @@ export function MultiRowCard({
             key={index}
             className={cn(
               "p-4",
-              showDividers && index < rows.length - 1 && "border-b border-border"
+              showDividers &&
+                index < rows.length - 1 &&
+                "border-b border-border",
             )}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  {row.icon && <div className="text-muted-foreground">{row.icon}</div>}
+                  {row.icon && (
+                    <div className="text-muted-foreground">{row.icon}</div>
+                  )}
                   <p className="text-sm font-medium">{row.label}</p>
                 </div>
                 <p className="text-2xl font-bold">{row.value}</p>
@@ -88,7 +92,7 @@ export function MultiRowCard({
                           ? "text-green-600 dark:text-green-400"
                           : row.change < 0
                             ? "text-red-600 dark:text-red-400"
-                            : "text-muted-foreground"
+                            : "text-muted-foreground",
                       )}
                     >
                       {row.change > 0 ? "+" : ""}
@@ -109,4 +113,3 @@ export function MultiRowCard({
     </Card>
   );
 }
-

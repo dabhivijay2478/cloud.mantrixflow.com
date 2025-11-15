@@ -57,7 +57,7 @@ export function QRCode({
         <div
           className={cn(
             "bg-white p-4 rounded-lg border-2 border-border",
-            "flex items-center justify-center"
+            "flex items-center justify-center",
           )}
         >
           <img

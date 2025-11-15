@@ -53,7 +53,9 @@ export function KPICard({
   className,
 }: KPICardProps) {
   // Determine trend from change value if not explicitly set
-  const trendDirection = trend || (change && change > 0 ? "up" : change && change < 0 ? "down" : "neutral");
+  const trendDirection =
+    trend ||
+    (change && change > 0 ? "up" : change && change < 0 ? "down" : "neutral");
   const isPositive = trendDirection === "up";
   const isNegative = trendDirection === "down";
 

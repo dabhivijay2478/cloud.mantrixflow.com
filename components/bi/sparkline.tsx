@@ -28,7 +28,7 @@ import {
  *   color="#10b981"
  *   height={40}
  * />
- * 
+ *
  * <Sparkline
  *   data={[{ value: 10 }, { value: 25 }, { value: 15 }]}
  *   dataKey="value"
@@ -59,7 +59,7 @@ export function Sparkline({
 }: SparklineProps) {
   // Transform simple number arrays to object arrays
   const chartData = data.map((point) =>
-    typeof point === "number" ? { [dataKey]: point } : point
+    typeof point === "number" ? { [dataKey]: point } : point,
   );
 
   return (

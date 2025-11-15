@@ -6,7 +6,11 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,14 +39,14 @@ import { cn } from "@/lib/utils";
 const executeQuery = async (
   dataSourceId: string,
   dataSourceType: string,
-  query: string
+  query: string,
 ): Promise<{ columns: string[]; rows: any[] }> => {
   // Simulate API call
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   // Mock data based on query
   const lowerQuery = query.toLowerCase().trim();
-  
+
   if (lowerQuery.includes("select") || lowerQuery.includes("from")) {
     // SQL-like query
     return {
@@ -51,7 +55,9 @@ const executeQuery = async (
         id: i + 1,
         name: `User ${i + 1}`,
         email: `user${i + 1}@example.com`,
-        created_at: new Date(Date.now() - Math.random() * 10000000000).toISOString().split("T")[0],
+        created_at: new Date(Date.now() - Math.random() * 10000000000)
+          .toISOString()
+          .split("T")[0],
         status: i % 3 === 0 ? "active" : i % 3 === 1 ? "inactive" : "pending",
       })),
     };
@@ -113,7 +119,7 @@ const getLanguageForDataSource = (type: string): string => {
 // Get default query based on data source type
 const getDefaultQuery = (type: string, tableName?: string): string => {
   const table = tableName || "users";
-  
+
   const queries: Record<string, string> = {
     postgres: `SELECT * FROM ${table} LIMIT 100;`,
     mysql: `SELECT * FROM ${table} LIMIT 100;`,
@@ -128,7 +134,7 @@ const getDefaultQuery = (type: string, tableName?: string): string => {
     excel: `SELECT * FROM [${table}] LIMIT 100`,
     csv: `SELECT * FROM ${table} LIMIT 100`,
   };
-  
+
   return queries[type] || `SELECT * FROM ${table} LIMIT 100;`;
 };
 
@@ -137,31 +143,37 @@ export default function DataSourceQueryPage() {
   const router = useRouter();
   const dataSourceId = params.id as string;
   const { dataSources } = useWorkspaceStore();
-  
+
   const dataSource = dataSources.find((ds) => ds.id === dataSourceId);
-  
+
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ columns: string[]; rows: any[] } | null>(null);
+  const [results, setResults] = useState<{
+    columns: string[];
+    rows: any[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [queryTitle, setQueryTitle] = useState("Untitled SQL query");
   const [selectedTable, setSelectedTable] = useState<string | undefined>();
   const [resultsFullScreen, setResultsFullScreen] = useState(false);
   const [editorSize, setEditorSize] = useState(60);
-  
+
   const editorRef = useRef<any>(null);
-  const language = dataSource ? getLanguageForDataSource(dataSource.type) : "sql";
-  
+  const language = dataSource
+    ? getLanguageForDataSource(dataSource.type)
+    : "sql";
+
   // Check if SQL editor should be shown
-  const shouldShowSQLEditor = dataSource && 
-    dataSource.status === "connected" && 
+  const shouldShowSQLEditor =
+    dataSource &&
+    dataSource.status === "connected" &&
     supportsSQLQueries(dataSource.type);
 
   useEffect(() => {
     if (dataSource && !query && shouldShowSQLEditor) {
       const defaultQuery = getDefaultQuery(
         dataSource.type,
-        dataSource.selectedTable || dataSource.tables?.[0]
+        dataSource.selectedTable || dataSource.tables?.[0],
       );
       setQuery(defaultQuery);
     }
@@ -195,9 +207,12 @@ export default function DataSourceQueryPage() {
           <CardContent className="p-6">
             <div className="text-center">
               <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-2">Data source is not connected</p>
+              <p className="text-muted-foreground mb-2">
+                Data source is not connected
+              </p>
               <p className="text-sm text-muted-foreground mb-4">
-                Please connect the data source first to view tables and run queries.
+                Please connect the data source first to view tables and run
+                queries.
               </p>
               <Button
                 variant="outline"
@@ -226,10 +241,16 @@ export default function DataSourceQueryPage() {
     try {
       const result = await executeQuery(dataSourceId, dataSource.type, query);
       setResults(result);
-      toast.success("Query executed successfully", `Returned ${result.rows.length} rows`);
+      toast.success(
+        "Query executed successfully",
+        `Returned ${result.rows.length} rows`,
+      );
     } catch (err: any) {
       setError(err.message || "Failed to execute query");
-      toast.error("Query execution failed", err.message || "An error occurred while executing the query.");
+      toast.error(
+        "Query execution failed",
+        err.message || "An error occurred while executing the query.",
+      );
     } finally {
       setLoading(false);
     }
@@ -246,16 +267,18 @@ export default function DataSourceQueryPage() {
 
   const handleDownload = (format: "csv" | "json" | "excel") => {
     if (!results) return;
-    
+
     if (format === "csv") {
       const headers = results.columns.join(",");
       const csvRows = results.rows.map((row) =>
-        results.columns.map((col) => {
-          const val = row[col];
-          if (val === null || val === undefined) return "";
-          if (typeof val === "object") return JSON.stringify(val);
-          return String(val).replace(/"/g, '""');
-        }).join(",")
+        results.columns
+          .map((col) => {
+            const val = row[col];
+            if (val === null || val === undefined) return "";
+            if (typeof val === "object") return JSON.stringify(val);
+            return String(val).replace(/"/g, '""');
+          })
+          .join(","),
       );
       const csv = [headers, ...csvRows].join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
@@ -275,7 +298,10 @@ export default function DataSourceQueryPage() {
       a.click();
       URL.revokeObjectURL(url);
     }
-    toast.success("Download started", `Downloading results as ${format.toUpperCase()}`);
+    toast.success(
+      "Download started",
+      `Downloading results as ${format.toUpperCase()}`,
+    );
   };
 
   return (
@@ -316,7 +342,12 @@ export default function DataSourceQueryPage() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Copy link">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Copy link"
+                >
                   <Link2 className="h-4 w-4" />
                 </Button>
                 <Button
@@ -413,8 +444,8 @@ export default function DataSourceQueryPage() {
                 </div>
               ) : (
                 // Normal split view
-                <ResizablePanelGroup 
-                  direction="vertical" 
+                <ResizablePanelGroup
+                  direction="vertical"
                   className="h-full"
                   key={results ? "with-results" : "no-results"}
                 >
@@ -450,7 +481,10 @@ export default function DataSourceQueryPage() {
                       {/* Results */}
                       <ResizablePanel
                         id="results-panel"
-                        defaultSize={Math.max(20, Math.min(80, 100 - editorSize))}
+                        defaultSize={Math.max(
+                          20,
+                          Math.min(80, 100 - editorSize),
+                        )}
                         minSize={20}
                         maxSize={80}
                         collapsible
@@ -475,7 +509,12 @@ export default function DataSourceQueryPage() {
           // View for non-SQL data sources
           <div className="flex-1 min-h-0">
             <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={30} collapsible>
+              <ResizablePanel
+                defaultSize={20}
+                minSize={15}
+                maxSize={30}
+                collapsible
+              >
                 <TableNavigation
                   tables={dataSource.tables || []}
                   onTableSelect={handleTableSelect}

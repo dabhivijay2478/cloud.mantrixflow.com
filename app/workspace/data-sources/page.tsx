@@ -16,16 +16,24 @@ import {
 type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
-  const { dataSources, addDataSource, currentOrganization } = useWorkspaceStore();
+  const { dataSources, addDataSource, currentOrganization } =
+    useWorkspaceStore();
 
   // Filter data sources by current organization
   const filteredDataSources = currentOrganization
-    ? dataSources.filter((ds) => !ds.organizationId || ds.organizationId === currentOrganization.id)
+    ? dataSources.filter(
+        (ds) =>
+          !ds.organizationId || ds.organizationId === currentOrganization.id,
+      )
     : dataSources.filter((ds) => !ds.organizationId);
 
-  const [selectedDataSource, setSelectedDataSource] = useState<string | null>(null);
+  const [selectedDataSource, setSelectedDataSource] = useState<string | null>(
+    null,
+  );
   const [showConnectionSheet, setShowConnectionSheet] = useState(false);
-  const [connectingDataSourceId, setConnectingDataSourceId] = useState<string | null>(null);
+  const [connectingDataSourceId, setConnectingDataSourceId] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -34,10 +42,14 @@ export default function DataSourcesPage() {
   const [showGridView, setShowGridView] = useState(false);
 
   // Check if there's at least one connected data source
-  const hasConnectedDataSources = filteredDataSources.some((ds) => ds.status === "connected");
+  const hasConnectedDataSources = filteredDataSources.some(
+    (ds) => ds.status === "connected",
+  );
 
   const isConnected = (dataSourceId: string) => {
-    return filteredDataSources.some((ds) => ds.id === dataSourceId && ds.status === "connected");
+    return filteredDataSources.some(
+      (ds) => ds.id === dataSourceId && ds.status === "connected",
+    );
   };
 
   const getConnectedDataSource = (dataSourceId: string) => {
@@ -63,7 +75,9 @@ export default function DataSourcesPage() {
   const handleConnect = async (data: ConnectionFormValues) => {
     if (!connectingDataSourceId) return;
 
-    const dataSource = allDataSources.find((ds) => ds.id === connectingDataSourceId);
+    const dataSource = allDataSources.find(
+      (ds) => ds.id === connectingDataSourceId,
+    );
     if (!dataSource) return;
 
     setLoading(true);
@@ -82,11 +96,17 @@ export default function DataSourcesPage() {
       };
 
       addDataSource(newDataSource);
-      toast.success(`${dataSource.name} connected successfully`, "Your data source has been connected and is ready to use.");
+      toast.success(
+        `${dataSource.name} connected successfully`,
+        "Your data source has been connected and is ready to use.",
+      );
       setSelectedDataSource(connectingDataSourceId);
       setShowGridView(false); // Hide grid view after successful connection
     } catch (error) {
-      toast.error("Failed to connect data source", "Unable to connect the data source. Please try again.");
+      toast.error(
+        "Failed to connect data source",
+        "Unable to connect the data source. Please try again.",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -100,7 +120,10 @@ export default function DataSourcesPage() {
     setLoading(true);
     try {
       // Simulate OAuth flow
-      toast.info("Redirecting to OAuth...", "You will be redirected to complete the OAuth authentication.");
+      toast.info(
+        "Redirecting to OAuth...",
+        "You will be redirected to complete the OAuth authentication.",
+      );
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const newDataSource = {
@@ -159,7 +182,9 @@ export default function DataSourcesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Sources</h1>
-          <p className="text-muted-foreground">Connect and manage your data sources</p>
+          <p className="text-muted-foreground">
+            Connect and manage your data sources
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {hasConnectedDataSources && !showGridView && (

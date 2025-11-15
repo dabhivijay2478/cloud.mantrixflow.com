@@ -74,7 +74,8 @@ export function Map({
               Map visualization ({mapType})
             </p>
             <p className="text-xs text-muted-foreground">
-              {markers.length} marker{markers.length !== 1 ? "s" : ""} configured
+              {markers.length} marker{markers.length !== 1 ? "s" : ""}{" "}
+              configured
             </p>
             {countryCode && (
               <p className="text-xs text-muted-foreground">
@@ -108,4 +109,3 @@ export function Map({
     </Card>
   );
 }
-

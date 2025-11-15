@@ -59,9 +59,10 @@ export function Timestamp({
   showTime = false,
   className,
 }: TimestampProps) {
-  const dateObj = typeof date === "string" || typeof date === "number"
-    ? new Date(date)
-    : date;
+  const dateObj =
+    typeof date === "string" || typeof date === "number"
+      ? new Date(date)
+      : date;
 
   if (!dateObj || isNaN(dateObj.getTime())) {
     return <span className={cn("text-muted-foreground", className)}>-</span>;
@@ -81,15 +82,18 @@ export function Timestamp({
     options.minute = "2-digit";
   }
 
-  const formatted = format(dateObj, formatStyle === "short" 
-    ? "MMM d, yyyy"
-    : formatStyle === "medium"
-    ? "MMM d, yyyy HH:mm"
-    : formatStyle === "long"
-    ? "MMMM d, yyyy"
-    : "MMMM d, yyyy HH:mm:ss"
+  const formatted = format(
+    dateObj,
+    formatStyle === "short"
+      ? "MMM d, yyyy"
+      : formatStyle === "medium"
+        ? "MMM d, yyyy HH:mm"
+        : formatStyle === "long"
+          ? "MMMM d, yyyy"
+          : "MMMM d, yyyy HH:mm:ss",
   );
 
-  return <span className={cn("text-muted-foreground", className)}>{formatted}</span>;
+  return (
+    <span className={cn("text-muted-foreground", className)}>{formatted}</span>
+  );
 }
-

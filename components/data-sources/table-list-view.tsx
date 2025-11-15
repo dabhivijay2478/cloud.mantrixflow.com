@@ -14,7 +14,10 @@ interface TableListViewProps {
   selectedTables: string[];
   onSelectTable: (table: string) => void;
   onViewTableData: (table: string) => void;
-  onUpdateDataSource: (updates: { selectedTables: string[]; selectedTable?: string }) => void;
+  onUpdateDataSource: (updates: {
+    selectedTables: string[];
+    selectedTable?: string;
+  }) => void;
 }
 
 export function TableListView({
@@ -26,7 +29,8 @@ export function TableListView({
   onUpdateDataSource,
 }: TableListViewProps) {
   const router = useRouter();
-  const allSelected = tables.length > 0 && selectedTables.length === tables.length;
+  const allSelected =
+    tables.length > 0 && selectedTables.length === tables.length;
 
   return (
     <Card>
@@ -37,14 +41,17 @@ export function TableListView({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/workspace/data-sources/${dataSourceId}/query`)}
+              onClick={() =>
+                router.push(`/workspace/data-sources/${dataSourceId}/query`)
+              }
             >
               <Table2 className="mr-2 h-4 w-4" />
               Query Editor
             </Button>
             {selectedTables.length > 0 && (
               <Badge variant="secondary" className="text-sm">
-                {selectedTables.length} {selectedTables.length === 1 ? 'table' : 'tables'} selected
+                {selectedTables.length}{" "}
+                {selectedTables.length === 1 ? "table" : "tables"} selected
               </Badge>
             )}
             {tables.length > 0 && (
@@ -55,13 +62,13 @@ export function TableListView({
                   if (allSelected) {
                     onUpdateDataSource({
                       selectedTables: [],
-                      selectedTable: undefined
+                      selectedTable: undefined,
                     });
                     toast.info("All tables deselected");
                   } else {
                     onUpdateDataSource({
                       selectedTables: tables,
-                      selectedTable: tables[0]
+                      selectedTable: tables[0],
                     });
                     toast.success(`All ${tables.length} tables selected`);
                   }
@@ -82,12 +89,12 @@ export function TableListView({
                     key={table}
                     className={cn(
                       "cursor-pointer transition-all hover:shadow-md",
-                      isSelected && "ring-2 ring-primary bg-primary/5"
+                      isSelected && "ring-2 ring-primary bg-primary/5",
                     )}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div 
+                        <div
                           className="flex items-center gap-3 flex-1 cursor-pointer"
                           onClick={() => onSelectTable(table)}
                         >
@@ -131,4 +138,3 @@ export function TableListView({
     </Card>
   );
 }
-

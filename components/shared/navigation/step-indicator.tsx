@@ -47,7 +47,7 @@ export function StepIndicator({
       className={cn(
         "space-y-4",
         orientation === "horizontal" && "flex flex-row space-y-0 space-x-4",
-        className
+        className,
       )}
     >
       {steps.map((step) => {
@@ -60,7 +60,8 @@ export function StepIndicator({
             key={step.number}
             className={cn(
               "flex items-start gap-4",
-              orientation === "horizontal" && "flex-col items-center text-center"
+              orientation === "horizontal" &&
+                "flex-col items-center text-center",
             )}
           >
             <div
@@ -69,7 +70,7 @@ export function StepIndicator({
                 isCompleted && "bg-primary text-primary-foreground",
                 isCurrent && "bg-primary/10 text-primary",
                 isUpcoming && "bg-muted text-muted-foreground",
-                orientation === "horizontal" && "mt-0.5"
+                orientation === "horizontal" && "mt-0.5",
               )}
             >
               {isCompleted ? (
@@ -83,13 +84,15 @@ export function StepIndicator({
                 className={cn(
                   "font-semibold mb-1",
                   isCurrent && "text-foreground",
-                  isUpcoming && "text-muted-foreground"
+                  isUpcoming && "text-muted-foreground",
                 )}
               >
                 {step.title}
               </h3>
               {step.description && (
-                <p className="text-sm text-muted-foreground">{step.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {step.description}
+                </p>
               )}
             </div>
           </div>
@@ -98,4 +101,3 @@ export function StepIndicator({
     </div>
   );
 }
-

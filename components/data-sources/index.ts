@@ -7,4 +7,3 @@ export { TableListView } from "./table-list-view";
 export { TableDataView } from "./table-data-view";
 export { getIconComponent, getConnectionFields } from "./utils";
 export { allDataSources, connectionSchemas, mockTables } from "./constants";
-

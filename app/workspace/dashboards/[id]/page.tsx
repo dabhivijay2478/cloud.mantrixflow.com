@@ -45,7 +45,7 @@ export default function DashboardEditorPage() {
         setDashboard({ ...dashboard, components });
       }
     },
-    [dashboard, updateDashboard]
+    [dashboard, updateDashboard],
   );
 
   const handleComponentUpdate = useCallback(
@@ -55,12 +55,12 @@ export default function DashboardEditorPage() {
         setDashboard({
           ...dashboard,
           components: dashboard.components.map((c) =>
-            c.id === id ? { ...c, ...updates } : c
+            c.id === id ? { ...c, ...updates } : c,
           ),
         });
       }
     },
-    [dashboard, updateDashboardComponent]
+    [dashboard, updateDashboardComponent],
   );
 
   const handleComponentDelete = useCallback(
@@ -74,7 +74,7 @@ export default function DashboardEditorPage() {
         toast.success("Component removed");
       }
     },
-    [dashboard, removeDashboardComponent]
+    [dashboard, removeDashboardComponent],
   );
 
   const handleSave = () => {
@@ -102,20 +102,31 @@ export default function DashboardEditorPage() {
     <div className="space-y-2 h-full flex flex-col">
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/workspace")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/workspace")}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-xl font-bold">{dashboard.name}</h1>
             {dashboard.description && (
-              <p className="text-muted-foreground text-sm">{dashboard.description}</p>
+              <p className="text-muted-foreground text-sm">
+                {dashboard.description}
+              </p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => window.open(`/workspace/dashboards/${dashboard.id}/view`, "_blank")}
+            onClick={() =>
+              window.open(
+                `/workspace/dashboards/${dashboard.id}/view`,
+                "_blank",
+              )
+            }
           >
             <ExternalLink className="mr-2 h-4 w-4" />
             View
@@ -128,15 +139,14 @@ export default function DashboardEditorPage() {
       </div>
 
       <div className="border flex-1 min-h-0 overflow-hidden">
-          <DashboardCanvasWithHandlers
-            components={dashboard.components}
-            onComponentsChange={handleComponentsChange}
-            onComponentUpdate={handleComponentUpdate}
-            onComponentDelete={handleComponentDelete}
-            className="h-full mt-10"
-          />
+        <DashboardCanvasWithHandlers
+          components={dashboard.components}
+          onComponentsChange={handleComponentsChange}
+          onComponentUpdate={handleComponentUpdate}
+          onComponentDelete={handleComponentDelete}
+          className="h-full mt-10"
+        />
       </div>
     </div>
   );
 }
-

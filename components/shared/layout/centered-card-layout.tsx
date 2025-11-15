@@ -29,11 +29,13 @@ export function CenteredCardLayout({
   className,
 }: CenteredCardLayoutProps) {
   return (
-    <div className={cn("min-h-screen flex items-center justify-center p-4", className)}>
-      <div className={cn("w-full", maxWidth)}>
-        {children}
-      </div>
+    <div
+      className={cn(
+        "min-h-screen flex items-center justify-center p-4",
+        className,
+      )}
+    >
+      <div className={cn("w-full", maxWidth)}>{children}</div>
     </div>
   );
 }
-

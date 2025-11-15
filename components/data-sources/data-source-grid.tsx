@@ -7,7 +7,11 @@ interface DataSourceGridProps {
   onDataSourceClick: (id: string) => void;
 }
 
-export function DataSourceGrid({ isConnected, getConnectedDataSource, onDataSourceClick }: DataSourceGridProps) {
+export function DataSourceGrid({
+  isConnected,
+  getConnectedDataSource,
+  onDataSourceClick,
+}: DataSourceGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
       {allDataSources.map((dataSource) => {
@@ -27,4 +31,3 @@ export function DataSourceGrid({ isConnected, getConnectedDataSource, onDataSour
     </div>
   );
 }
-

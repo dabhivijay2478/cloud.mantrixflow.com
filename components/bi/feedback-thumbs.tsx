@@ -61,11 +61,11 @@ export function FeedbackThumbs({
   const handleFeedback = (feedback: "positive" | "negative") => {
     // Toggle off if clicking the same button
     const newValue = value === feedback ? null : feedback;
-    
+
     if (controlledValue === undefined) {
       setInternalValue(newValue);
     }
-    
+
     if (newValue !== null) {
       onFeedback?.(newValue);
     }
@@ -73,7 +73,9 @@ export function FeedbackThumbs({
 
   return (
     <div className={cn("inline-flex items-center gap-2", className)}>
-      <span className="text-sm text-muted-foreground mr-1">Was this helpful?</span>
+      <span className="text-sm text-muted-foreground mr-1">
+        Was this helpful?
+      </span>
       <Button
         variant="ghost"
         size="sm"
@@ -81,7 +83,8 @@ export function FeedbackThumbs({
         disabled={disabled}
         className={cn(
           sizeClasses[size],
-          value === "positive" && "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+          value === "positive" &&
+            "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
         )}
         aria-label="Positive feedback"
         aria-pressed={value === "positive"}
@@ -95,7 +98,8 @@ export function FeedbackThumbs({
         disabled={disabled}
         className={cn(
           sizeClasses[size],
-          value === "negative" && "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+          value === "negative" &&
+            "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
         )}
         aria-label="Negative feedback"
         aria-pressed={value === "negative"}

@@ -30,7 +30,7 @@ import {
  *   from: new Date(2024, 0, 1),
  *   to: new Date(2024, 0, 31),
  * });
- * 
+ *
  * <DateRangePicker
  *   value={dateRange}
  *   onChange={setDateRange}
@@ -74,7 +74,7 @@ export function DateRangePicker({
             disabled={disabled}
             className={cn(
               "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground"
+              !date && "text-muted-foreground",
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />

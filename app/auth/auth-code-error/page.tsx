@@ -14,23 +14,25 @@ export default function AuthCodeErrorPage() {
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-md text-center space-y-6">
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-destructive">Authentication Error</h1>
+              <h1 className="text-2xl font-bold text-destructive">
+                Authentication Error
+              </h1>
               <p className="text-muted-foreground text-sm">
-                Sorry, there was an error during the authentication process. 
+                Sorry, there was an error during the authentication process.
                 This could be due to an invalid or expired authentication code.
               </p>
             </div>
-            
+
             <div className="space-y-3">
               <Button asChild className="w-full">
                 <a href="/auth/login">Try Again</a>
               </Button>
-              
+
               <Button variant="outline" asChild className="w-full">
                 <a href="/">Go Home</a>
               </Button>
             </div>
-            
+
             <p className="text-xs text-muted-foreground">
               If you continue to experience issues, please contact support.
             </p>

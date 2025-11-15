@@ -38,7 +38,8 @@ export interface AnomalyBadgeProps {
 
 const severityStyles = {
   low: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400",
-  medium: "bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400",
+  medium:
+    "bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400",
   high: "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400",
 };
 
@@ -55,7 +56,7 @@ export function AnomalyBadge({
       <Badge
         className={cn(
           "inline-flex items-center gap-1.5",
-          severityStyles[severity]
+          severityStyles[severity],
         )}
       >
         {showIcon && <AlertTriangle className="h-3 w-3" />}

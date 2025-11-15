@@ -58,13 +58,13 @@ export const toast = {
   /**
    * Show a promise toast (loading -> success/error)
    */
-  promise: <T,>(
+  promise: <T>(
     promise: Promise<T>,
     messages: {
       loading: string;
       success: string | ((data: T) => string);
       error: string | ((error: Error) => string);
-    }
+    },
   ) => {
     return sonnerToast.promise(promise, messages);
   },
@@ -76,4 +76,3 @@ export const toast = {
     sonnerToast.dismiss(toastId);
   },
 };
-

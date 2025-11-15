@@ -101,16 +101,13 @@ export function LineStackedColumnChart({
       label: key,
       color: lineColors[index % lineColors.length],
     })),
-  ].reduce(
-    (config, item) => {
-      config[item.key] = {
-        label: item.label,
-        color: item.color,
-      };
-      return config;
-    },
-    {} as ChartConfig,
-  );
+  ].reduce((config, item) => {
+    config[item.key] = {
+      label: item.label,
+      color: item.color,
+    };
+    return config;
+  }, {} as ChartConfig);
 
   return (
     <Card className={cn("h-full flex flex-col", className)}>
@@ -129,7 +126,9 @@ export function LineStackedColumnChart({
             data={data}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+            {showGrid && (
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            )}
             <XAxis
               dataKey={xKey}
               tickLine={false}
@@ -173,4 +172,3 @@ export function LineStackedColumnChart({
     </Card>
   );
 }
-

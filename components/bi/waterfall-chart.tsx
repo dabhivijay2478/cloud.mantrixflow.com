@@ -76,36 +76,46 @@ export function WaterfallChart({
 }: WaterfallChartProps) {
   // Process data to calculate cumulative values for waterfall effect
   // Use reduce to build the array iteratively to avoid accessing uninitialized data
-  const processedData = data.reduce((acc, point, index) => {
-    if (index === 0) {
-      acc.push({ ...point, cumulative: point.value, start: 0, end: point.value });
+  const processedData = data.reduce(
+    (acc, point, index) => {
+      if (index === 0) {
+        acc.push({
+          ...point,
+          cumulative: point.value,
+          start: 0,
+          end: point.value,
+        });
+        return acc;
+      }
+
+      const prevCumulative = acc[index - 1].cumulative;
+      let cumulative = prevCumulative;
+      let start = prevCumulative;
+      let end = prevCumulative;
+
+      if (point.type === "positive") {
+        cumulative = prevCumulative + point.value;
+        end = cumulative;
+      } else if (point.type === "negative") {
+        cumulative = prevCumulative + point.value;
+        end = cumulative;
+      } else if (point.type === "total") {
+        cumulative = point.value;
+        start = prevCumulative;
+        end = point.value;
+      } else {
+        cumulative = point.value;
+        start = 0;
+        end = point.value;
+      }
+
+      acc.push({ ...point, cumulative, start, end });
       return acc;
-    }
-    
-    const prevCumulative = acc[index - 1].cumulative;
-    let cumulative = prevCumulative;
-    let start = prevCumulative;
-    let end = prevCumulative;
-    
-    if (point.type === "positive") {
-      cumulative = prevCumulative + point.value;
-      end = cumulative;
-    } else if (point.type === "negative") {
-      cumulative = prevCumulative + point.value;
-      end = cumulative;
-    } else if (point.type === "total") {
-      cumulative = point.value;
-      start = prevCumulative;
-      end = point.value;
-    } else {
-      cumulative = point.value;
-      start = 0;
-      end = point.value;
-    }
-    
-    acc.push({ ...point, cumulative, start, end });
-    return acc;
-  }, [] as Array<WaterfallDataPoint & { cumulative: number; start: number; end: number }>);
+    },
+    [] as Array<
+      WaterfallDataPoint & { cumulative: number; start: number; end: number }
+    >,
+  );
 
   const chartConfig = {
     positive: {
@@ -156,7 +166,9 @@ export function WaterfallChart({
             data={processedData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+            {showGrid && (
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            )}
             <XAxis
               dataKey="name"
               tickLine={false}
@@ -168,7 +180,10 @@ export function WaterfallChart({
               content={
                 <ChartTooltipContent
                   formatter={(value: number, name: string, props: any) => {
-                    if (props.payload?.type === "start" || props.payload?.type === "total") {
+                    if (
+                      props.payload?.type === "start" ||
+                      props.payload?.type === "total"
+                    ) {
                       return [value, "Total"];
                     }
                     return [value > 0 ? `+${value}` : value, "Change"];
@@ -188,4 +203,3 @@ export function WaterfallChart({
     </Card>
   );
 }
-

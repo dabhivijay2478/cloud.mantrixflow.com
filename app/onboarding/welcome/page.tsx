@@ -3,16 +3,27 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { LoadingState, CenteredCardLayout, StepIndicator } from "@/components/shared";
+import {
+  LoadingState,
+  CenteredCardLayout,
+  StepIndicator,
+} from "@/components/shared";
 
 export default function WelcomePage() {
   const router = useRouter();
   const { user, loading } = useAuthStore();
-  const { onboarding, setOnboardingStep, completeOnboarding } = useWorkspaceStore();
+  const { onboarding, setOnboardingStep, completeOnboarding } =
+    useWorkspaceStore();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -87,4 +98,3 @@ export default function WelcomePage() {
     </CenteredCardLayout>
   );
 }
-

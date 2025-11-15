@@ -130,7 +130,7 @@ export function Matrix({
                           key={colKey}
                           className={cn(
                             "border border-border p-2 text-center text-sm",
-                            "transition-colors hover:opacity-80"
+                            "transition-colors hover:opacity-80",
                           )}
                           style={{ backgroundColor: color }}
                         >
@@ -139,7 +139,7 @@ export function Matrix({
                               className={cn(
                                 value > calculatedMin + valueRange * 0.5
                                   ? "text-white"
-                                  : "text-foreground"
+                                  : "text-foreground",
                               )}
                             >
                               {value}
@@ -175,4 +175,3 @@ export function Matrix({
     </Card>
   );
 }
-

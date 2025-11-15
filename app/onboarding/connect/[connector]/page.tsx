@@ -6,9 +6,23 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { ArrowRight, ArrowLeft, Database } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +41,13 @@ export default function ConnectPage() {
   const router = useRouter();
   const params = useParams();
   const connector = params.connector as string;
-  const { updateOnboarding, setOnboardingStep, addDataSource, completeOnboarding, currentOrganization } = useWorkspaceStore();
+  const {
+    updateOnboarding,
+    setOnboardingStep,
+    addDataSource,
+    completeOnboarding,
+    currentOrganization,
+  } = useWorkspaceStore();
   const [loading, setLoading] = useState(false);
 
   const handleSkip = () => {
@@ -104,15 +124,23 @@ export default function ConnectPage() {
                   <Database className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle>Connect {connector === "google-sheets" ? "Google Sheets" : connector}</CardTitle>
-                  <CardDescription>Step 2 of 3 - Authenticate with your account</CardDescription>
+                  <CardTitle>
+                    Connect{" "}
+                    {connector === "google-sheets"
+                      ? "Google Sheets"
+                      : connector}
+                  </CardTitle>
+                  <CardDescription>
+                    Step 2 of 3 - Authenticate with your account
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 mb-6">
                 <p className="text-sm text-muted-foreground">
-                  Click the button below to authenticate with your Google account and grant access to your sheets.
+                  Click the button below to authenticate with your Google
+                  account and grant access to your sheets.
                 </p>
               </div>
               <div className="flex items-center justify-between pt-4">
@@ -155,15 +183,20 @@ export default function ConnectPage() {
                   <Database className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle>Upload {connector === "excel" ? "Excel" : "CSV"} File</CardTitle>
-                  <CardDescription>Step 2 of 3 - Upload your data file</CardDescription>
+                  <CardTitle>
+                    Upload {connector === "excel" ? "Excel" : "CSV"} File
+                  </CardTitle>
+                  <CardDescription>
+                    Step 2 of 3 - Upload your data file
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 mb-6">
                 <p className="text-sm text-muted-foreground">
-                  Upload your {connector === "excel" ? "Excel" : "CSV"} file to get started.
+                  Upload your {connector === "excel" ? "Excel" : "CSV"} file to
+                  get started.
                 </p>
                 <Input
                   type="file"
@@ -194,10 +227,7 @@ export default function ConnectPage() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={handleSkip}
-                >
+                <Button variant="ghost" onClick={handleSkip}>
                   Skip for now
                 </Button>
               </div>
@@ -219,13 +249,18 @@ export default function ConnectPage() {
               </div>
               <div>
                 <CardTitle>Connect {connector}</CardTitle>
-                <CardDescription>Step 2 of 3 - Enter your connection details</CardDescription>
+                <CardDescription>
+                  Step 2 of 3 - Enter your connection details
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
                   name="host"
@@ -285,7 +320,11 @@ export default function ConnectPage() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input {...field} type="password" placeholder="••••••••" />
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="••••••••"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -323,4 +362,3 @@ export default function ConnectPage() {
     </div>
   );
 }
-

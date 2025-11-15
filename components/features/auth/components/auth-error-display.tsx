@@ -19,21 +19,17 @@ export interface AuthErrorDisplayProps {
   className?: string;
 }
 
-export function AuthErrorDisplay({
-  error,
-  className,
-}: AuthErrorDisplayProps) {
+export function AuthErrorDisplay({ error, className }: AuthErrorDisplayProps) {
   if (!error) return null;
 
   return (
     <FieldError
       className={cn(
         "bg-destructive/10 border-destructive/20 border rounded-md p-3 text-center",
-        className
+        className,
       )}
     >
       {error}
     </FieldError>
   );
 }
-

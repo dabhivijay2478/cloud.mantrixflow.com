@@ -1,22 +1,22 @@
-import { createClient } from '@/lib/supabase/server'
-import { signupSchema } from '@/lib/validations/auth'
-import { NextResponse } from 'next/server'
+import { createClient } from "@/lib/supabase/server";
+import { signupSchema } from "@/lib/validations/auth";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    
+    const body = await request.json();
+
     // Validate input
-    const result = signupSchema.safeParse(body)
+    const result = signupSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { error: 'Invalid input', details: result.error.issues },
-        { status: 400 }
-      )
+        { error: "Invalid input", details: result.error.issues },
+        { status: 400 },
+      );
     }
 
-    const { email, password, firstName, lastName } = result.data
-    const supabase = await createClient()
+    const { email, password, firstName, lastName } = result.data;
+    const supabase = await createClient();
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -28,23 +28,20 @@ export async function POST(request: Request) {
           full_name: `${firstName} ${lastName}`,
         },
       },
-    })
+    });
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({
       user: data.user,
       session: data.session,
-    })
+    });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

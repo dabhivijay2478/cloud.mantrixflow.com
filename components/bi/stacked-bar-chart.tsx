@@ -15,7 +15,10 @@ import {
   CartesianGrid,
 } from "recharts";
 import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
-import { createChartConfig, CHART_COLORS } from "@/components/features/bi/charts/chart-config";
+import {
+  createChartConfig,
+  CHART_COLORS,
+} from "@/components/features/bi/charts/chart-config";
 
 /**
  * StackedBarChart
@@ -71,34 +74,33 @@ export function StackedBarChart({
   return (
     <ChartWrapper title={title} description={description} className={className}>
       <ChartContainer config={chartConfig} className="h-full w-full">
-          <RechartsBarChart
-            accessibilityLayer
-            data={data}
-            layout="vertical"
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
-            <XAxis type="number" tickLine={false} axisLine={false} />
-            <YAxis
-              type="category"
-              dataKey={xKey}
-              tickLine={false}
-              axisLine={false}
+        <RechartsBarChart
+          accessibilityLayer
+          data={data}
+          layout="vertical"
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+          <XAxis type="number" tickLine={false} axisLine={false} />
+          <YAxis
+            type="category"
+            dataKey={xKey}
+            tickLine={false}
+            axisLine={false}
+          />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          {showLegend && <ChartLegend content={<ChartLegendContent />} />}
+          {yKeys.map((key) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              fill={`var(--color-${key})`}
+              stackId="stack"
+              radius={[0, 4, 4, 0]}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-            {yKeys.map((key) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                fill={`var(--color-${key})`}
-                stackId="stack"
-                radius={[0, 4, 4, 0]}
-              />
-            ))}
-          </RechartsBarChart>
-        </ChartContainer>
+          ))}
+        </RechartsBarChart>
+      </ChartContainer>
     </ChartWrapper>
   );
 }
-

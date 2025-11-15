@@ -46,16 +46,21 @@ export function WorkspaceTopbar() {
     };
   }, []);
 
-
   const handleSignOut = async () => {
     const { error } = await signOut();
-    
+
     if (error) {
-      toast.error("Sign out failed", error.message || "Failed to sign out. Please try again.");
+      toast.error(
+        "Sign out failed",
+        error.message || "Failed to sign out. Please try again.",
+      );
       return;
     }
 
-    toast.success("Signed out successfully", "You have been successfully logged out.");
+    toast.success(
+      "Signed out successfully",
+      "You have been successfully logged out.",
+    );
     router.push("/auth/login");
   };
 
@@ -72,9 +77,7 @@ export function WorkspaceTopbar() {
             className="pl-9 pr-20"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <Kbd className="h-5">
-              {isMac ? "⌘" : "Ctrl"}K
-            </Kbd>
+            <Kbd className="h-5">{isMac ? "⌘" : "Ctrl"}K</Kbd>
           </div>
         </div>
       </div>
@@ -102,11 +105,15 @@ export function WorkspaceTopbar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push("/workspace/settings")}>
+            <DropdownMenuItem
+              onClick={() => router.push("/workspace/settings")}
+            >
               <User className="mr-2 h-4 w-4" />
               <span>Account Settings</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push("/workspace/settings")}>
+            <DropdownMenuItem
+              onClick={() => router.push("/workspace/settings")}
+            >
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </DropdownMenuItem>
@@ -121,4 +128,3 @@ export function WorkspaceTopbar() {
     </header>
   );
 }
-

@@ -66,8 +66,10 @@ export function SankeyDiagram({
   className,
 }: SankeyDiagramProps) {
   // Calculate node positions (simplified layout)
-  const nodeMap = new Map(nodes.map((node, i) => [node.id, { ...node, index: i }]));
-  
+  const nodeMap = new Map(
+    nodes.map((node, i) => [node.id, { ...node, index: i }]),
+  );
+
   // Calculate total values for width scaling
   const maxValue = Math.max(...links.map((link) => link.value));
 
@@ -90,21 +92,23 @@ export function SankeyDiagram({
               {/* Source nodes */}
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-center">Source</h4>
-                {nodes.slice(0, Math.ceil(nodes.length / 3)).map((node, index) => (
-                  <div
-                    key={node.id}
-                    className={cn(
-                      "p-4 rounded-lg border-2 text-center font-medium",
-                      "transition-all hover:shadow-md"
-                    )}
-                    style={{
-                      borderColor: COLORS[index % COLORS.length],
-                      backgroundColor: `${COLORS[index % COLORS.length]}20`,
-                    }}
-                  >
-                    {node.name}
-                  </div>
-                ))}
+                {nodes
+                  .slice(0, Math.ceil(nodes.length / 3))
+                  .map((node, index) => (
+                    <div
+                      key={node.id}
+                      className={cn(
+                        "p-4 rounded-lg border-2 text-center font-medium",
+                        "transition-all hover:shadow-md",
+                      )}
+                      style={{
+                        borderColor: COLORS[index % COLORS.length],
+                        backgroundColor: `${COLORS[index % COLORS.length]}20`,
+                      }}
+                    >
+                      {node.name}
+                    </div>
+                  ))}
               </div>
 
               {/* Middle nodes */}
@@ -113,18 +117,21 @@ export function SankeyDiagram({
                 {nodes
                   .slice(
                     Math.ceil(nodes.length / 3),
-                    Math.ceil((nodes.length * 2) / 3)
+                    Math.ceil((nodes.length * 2) / 3),
                   )
                   .map((node, index) => (
                     <div
                       key={node.id}
                       className={cn(
                         "p-4 rounded-lg border-2 text-center font-medium",
-                        "transition-all hover:shadow-md"
+                        "transition-all hover:shadow-md",
                       )}
                       style={{
                         borderColor:
-                          COLORS[(index + Math.ceil(nodes.length / 3)) % COLORS.length],
+                          COLORS[
+                            (index + Math.ceil(nodes.length / 3)) %
+                              COLORS.length
+                          ],
                         backgroundColor: `${COLORS[(index + Math.ceil(nodes.length / 3)) % COLORS.length]}20`,
                       }}
                     >
@@ -136,22 +143,27 @@ export function SankeyDiagram({
               {/* Target nodes */}
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-center">Target</h4>
-                {nodes.slice(Math.ceil((nodes.length * 2) / 3)).map((node, index) => (
-                  <div
-                    key={node.id}
-                    className={cn(
-                      "p-4 rounded-lg border-2 text-center font-medium",
-                      "transition-all hover:shadow-md"
-                    )}
-                    style={{
-                      borderColor:
-                        COLORS[(index + Math.ceil((nodes.length * 2) / 3)) % COLORS.length],
-                      backgroundColor: `${COLORS[(index + Math.ceil((nodes.length * 2) / 3)) % COLORS.length]}20`,
-                    }}
-                  >
-                    {node.name}
-                  </div>
-                ))}
+                {nodes
+                  .slice(Math.ceil((nodes.length * 2) / 3))
+                  .map((node, index) => (
+                    <div
+                      key={node.id}
+                      className={cn(
+                        "p-4 rounded-lg border-2 text-center font-medium",
+                        "transition-all hover:shadow-md",
+                      )}
+                      style={{
+                        borderColor:
+                          COLORS[
+                            (index + Math.ceil((nodes.length * 2) / 3)) %
+                              COLORS.length
+                          ],
+                        backgroundColor: `${COLORS[(index + Math.ceil((nodes.length * 2) / 3)) % COLORS.length]}20`,
+                      }}
+                    >
+                      {node.name}
+                    </div>
+                  ))}
               </div>
             </div>
 

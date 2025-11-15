@@ -44,10 +44,7 @@ export function ChartWrapper({
           )}
         </CardHeader>
       )}
-      <CardContent className="flex-1 min-h-0">
-        {children}
-      </CardContent>
+      <CardContent className="flex-1 min-h-0">{children}</CardContent>
     </Card>
   );
 }
-
