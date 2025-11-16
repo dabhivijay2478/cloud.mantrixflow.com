@@ -4,7 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "@/lib/utils/toast";
+import {
+  AuthErrorDisplay,
+  AuthFormHeader,
+} from "@/components/features/auth/components";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -16,7 +19,11 @@ import {
 import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
-import { type ResetPasswordInput, resetPasswordSchema } from "@/lib/validations/auth";
+import { toast } from "@/lib/utils/toast";
+import {
+  type ResetPasswordInput,
+  resetPasswordSchema,
+} from "@/lib/validations/auth";
 
 function ResetPasswordFormContent({
   className,
@@ -32,7 +39,7 @@ function ResetPasswordFormContent({
   useEffect(() => {
     const accessToken = searchParams.get("access_token");
     const refreshToken = searchParams.get("refresh_token");
-    
+
     if (accessToken && refreshToken) {
       setIsValidToken(true);
       // Set the session with the tokens from URL
@@ -42,7 +49,10 @@ function ResetPasswordFormContent({
         refresh_token: refreshToken,
       });
     } else {
-      toast.error("Invalid reset link", "This password reset link is invalid or has expired.");
+      toast.error(
+        "Invalid reset link",
+        "This password reset link is invalid or has expired.",
+      );
       setTimeout(() => {
         router.push("/auth/forgot-password");
       }, 3000);
@@ -59,7 +69,10 @@ function ResetPasswordFormContent({
 
   const onSubmit = async (data: ResetPasswordInput) => {
     if (!isValidToken) {
-      toast.error("Invalid session", "Please request a new password reset link.");
+      toast.error(
+        "Invalid session",
+        "Please request a new password reset link.",
+      );
       return;
     }
 
@@ -70,12 +83,18 @@ function ResetPasswordFormContent({
 
     if (error) {
       setIsSubmitting(false);
-      toast.error("Password update failed", error.message || "Failed to update password. Please try again.");
+      toast.error(
+        "Password update failed",
+        error.message || "Failed to update password. Please try again.",
+      );
       return;
     }
 
     // Show success toast
-    toast.success("Password updated!", "Your password has been successfully updated. You can now login with your new password.");
+    toast.success(
+      "Password updated!",
+      "Your password has been successfully updated. You can now login with your new password.",
+    );
 
     // Redirect to login
     setTimeout(() => {
@@ -89,7 +108,8 @@ function ResetPasswordFormContent({
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Invalid Reset Link</h1>
           <p className="text-muted-foreground text-sm text-balance">
-            This password reset link is invalid or has expired. Please request a new one.
+            This password reset link is invalid or has expired. Please request a
+            new one.
           </p>
         </div>
         <Button onClick={() => router.push("/auth/forgot-password")}>
@@ -106,18 +126,12 @@ function ResetPasswordFormContent({
       {...props}
     >
       <FieldGroup>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Reset your password</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Enter your new password below
-          </p>
-        </div>
+        <AuthFormHeader
+          title="Reset your password"
+          description="Enter your new password below"
+        />
 
-        {authError && (
-          <FieldError className="bg-destructive/10 border-destructive/20 border rounded-md p-3 text-center">
-            {authError}
-          </FieldError>
-        )}
+        <AuthErrorDisplay error={authError} />
 
         <Field>
           <FieldLabel htmlFor="password">New Password</FieldLabel>
@@ -133,7 +147,9 @@ function ResetPasswordFormContent({
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="confirm-password">Confirm New Password</FieldLabel>
+          <FieldLabel htmlFor="confirm-password">
+            Confirm New Password
+          </FieldLabel>
           <PasswordInput
             id="confirm-password"
             autoComplete="new-password"
@@ -141,7 +157,9 @@ function ResetPasswordFormContent({
             {...register("confirmPassword")}
           />
           <FieldError
-            errors={errors.confirmPassword ? [errors.confirmPassword] : undefined}
+            errors={
+              errors.confirmPassword ? [errors.confirmPassword] : undefined
+            }
           />
         </Field>
 

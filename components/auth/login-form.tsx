@@ -4,9 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
-import { toast } from "@/lib/utils/toast";
+import {
+  AuthErrorDisplay,
+  AuthFormHeader,
+  OAuthButtons,
+} from "@/components/features/auth/components";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -20,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/utils/toast";
 import { type LoginInput, loginSchema } from "@/lib/validations/auth";
 
 function LoginFormContent({
@@ -43,9 +46,15 @@ function LoginFormContent({
     const confirmEmail = searchParams.get("confirmEmail");
 
     if (confirmed === "true") {
-      toast.success("Email confirmed!", "Your email has been confirmed. You can now sign in.");
+      toast.success(
+        "Email confirmed!",
+        "Your email has been confirmed. You can now sign in.",
+      );
     } else if (confirmEmail === "true") {
-      toast.info("Check your email", "Please check your email to confirm your account before signing in.");
+      toast.info(
+        "Check your email",
+        "Please check your email to confirm your account before signing in.",
+      );
     }
   }, [searchParams]);
 
@@ -65,12 +74,18 @@ function LoginFormContent({
 
     if (error) {
       setIsSubmitting(false);
-      toast.error("Login failed", error.message || "Invalid email or password. Please try again.");
+      toast.error(
+        "Login failed",
+        error.message || "Invalid email or password. Please try again.",
+      );
       return;
     }
 
     // Show success toast
-    toast.success("Login successful!", "Welcome back! You've been successfully logged in.");
+    toast.success(
+      "Login successful!",
+      "Welcome back! You've been successfully logged in.",
+    );
 
     // Redirect on success
     router.push("/");
@@ -81,7 +96,10 @@ function LoginFormContent({
     setError(null);
     const { error } = await signInWithGitHub();
     if (error) {
-      toast.error("GitHub login failed", error.message || "Failed to sign in with GitHub. Please try again.");
+      toast.error(
+        "GitHub login failed",
+        error.message || "Failed to sign in with GitHub. Please try again.",
+      );
     }
   };
 
@@ -89,7 +107,10 @@ function LoginFormContent({
     setError(null);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error("Google login failed", error.message || "Failed to sign in with Google. Please try again.");
+      toast.error(
+        "Google login failed",
+        error.message || "Failed to sign in with Google. Please try again.",
+      );
     }
   };
 
@@ -100,18 +121,12 @@ function LoginFormContent({
       {...props}
     >
       <FieldGroup>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Login to your account</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Enter your email below to login to your account
-          </p>
-        </div>
+        <AuthFormHeader
+          title="Login to your account"
+          description="Enter your email below to login to your account"
+        />
 
-        {authError && (
-          <FieldError className="bg-destructive/10 border-destructive/20 border rounded-md p-3 text-center">
-            {authError}
-          </FieldError>
-        )}
+        <AuthErrorDisplay error={authError} />
 
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -156,24 +171,11 @@ function LoginFormContent({
         <FieldSeparator>Or continue with</FieldSeparator>
 
         <Field>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleGitHubLogin}
+          <OAuthButtons
+            onGitHubClick={handleGitHubLogin}
+            onGoogleClick={handleGoogleLogin}
             disabled={isSubmitting}
-          >
-            <FaGithub className="size-4" />
-            Login with GitHub
-          </Button>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={isSubmitting}
-          >
-            <FcGoogle className="size-4" />
-            Login with Google
-          </Button>
+          />
           <FieldDescription className="text-center">
             Don&apos;t have an account?{" "}
             <a href="/auth/signup" className="underline underline-offset-4">

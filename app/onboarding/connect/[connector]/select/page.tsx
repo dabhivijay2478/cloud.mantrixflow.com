@@ -1,21 +1,33 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { ArrowRight, ArrowLeft, Table, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Table } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function SelectTablePage() {
   const router = useRouter();
   const params = useParams();
   const connector = params.connector as string;
-  const { currentDataSource, updateDataSource, setOnboardingStep } = useWorkspaceStore();
+  const { currentDataSource, updateDataSource, completeOnboarding } =
+    useWorkspaceStore();
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
+  };
 
   useEffect(() => {
     // Simulate fetching tables
@@ -57,7 +69,9 @@ export default function SelectTablePage() {
               </div>
               <div>
                 <CardTitle>Select Table or Sheet</CardTitle>
-                <CardDescription>Step 2 of 3 - Choose which data to import</CardDescription>
+                <CardDescription>
+                  Step 2 of 3 - Choose which data to import
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -74,6 +88,7 @@ export default function SelectTablePage() {
                     return (
                       <button
                         key={table}
+                        type="button"
                         onClick={() => setSelectedTable(table)}
                         className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
                           isSelected
@@ -92,15 +107,22 @@ export default function SelectTablePage() {
                 <div className="flex items-center justify-between pt-4">
                   <Button
                     variant="outline"
-                    onClick={() => router.push(`/onboarding/connect/${connector}`)}
+                    onClick={() =>
+                      router.push(`/onboarding/connect/${connector}`)
+                    }
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
-                  <Button onClick={handleContinue} disabled={!selectedTable}>
-                    Continue
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" onClick={handleSkip}>
+                      Skip for now
+                    </Button>
+                    <Button onClick={handleContinue} disabled={!selectedTable}>
+                      Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
@@ -110,4 +132,3 @@ export default function SelectTablePage() {
     </div>
   );
 }
-

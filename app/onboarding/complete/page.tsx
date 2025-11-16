@@ -1,15 +1,26 @@
 "use client";
 
+import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 
 export default function CompletePage() {
   const router = useRouter();
-  const { completeOnboarding, currentOrganization, currentDataSource, dashboards } = useWorkspaceStore();
+  const {
+    completeOnboarding,
+    currentOrganization,
+    currentDataSource,
+    dashboards,
+  } = useWorkspaceStore();
 
   useEffect(() => {
     completeOnboarding();
@@ -80,4 +91,3 @@ export default function CompletePage() {
     </div>
   );
 }
-

@@ -1,10 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
-import { useAuthStore } from "@/lib/stores/auth-store";
 
 export default function Home() {
   // const router = useRouter();
@@ -34,14 +30,15 @@ export default function Home() {
           <Logo />
           <h1 className="text-4xl font-bold">MantrixFlow</h1>
         </div>
-        
+
         <div className="max-w-2xl space-y-4">
           <h2 className="text-2xl font-semibold text-muted-foreground">
             AI-Powered Business Intelligence Platform
           </h2>
           <p className="text-lg text-muted-foreground">
-            Transform your data into actionable insights with our advanced AI-driven analytics platform.
-            Get started by creating an account or signing in to your existing one.
+            Transform your data into actionable insights with our advanced
+            AI-driven analytics platform. Get started by creating an account or
+            signing in to your existing one.
           </p>
         </div>
 
@@ -57,7 +54,10 @@ export default function Home() {
         <div className="text-sm text-muted-foreground">
           <p>
             New to MantrixFlow?{" "}
-            <a href="/auth/signup" className="underline underline-offset-4 hover:text-foreground">
+            <a
+              href="/auth/signup"
+              className="underline underline-offset-4 hover:text-foreground"
+            >
               Create your free account
             </a>
           </p>

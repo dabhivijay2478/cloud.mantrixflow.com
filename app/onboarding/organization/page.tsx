@@ -1,30 +1,62 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, ArrowRight, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { ArrowRight, ArrowLeft, Building2 } from "lucide-react";
-import { toast } from "sonner";
 
 const organizationSchema = z.object({
-  name: z.string().min(1, "Organization name is required").min(3, "Name must be at least 3 characters"),
-  slug: z.string().min(1, "Slug is required").regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+  name: z
+    .string()
+    .min(1, "Organization name is required")
+    .min(3, "Name must be at least 3 characters"),
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug must contain only lowercase letters, numbers, and hyphens",
+    ),
 });
 
 type OrganizationFormValues = z.infer<typeof organizationSchema>;
 
 export default function OrganizationPage() {
   const router = useRouter();
-  const { addOrganization, setOnboardingStep, updateOnboarding } = useWorkspaceStore();
+  const {
+    addOrganization,
+    setOnboardingStep,
+    updateOnboarding,
+    completeOnboarding,
+  } = useWorkspaceStore();
   const [loading, setLoading] = useState(false);
+
+  const handleSkip = () => {
+    completeOnboarding();
+    router.push("/workspace");
+  };
 
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationSchema),
@@ -33,8 +65,6 @@ export default function OrganizationPage() {
       slug: "",
     },
   });
-
-  const watchName = form.watch("name");
 
   // Auto-generate slug from name
   const generateSlug = (name: string) => {
@@ -90,7 +120,10 @@ export default function OrganizationPage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
                 <FormField
                   control={form.control}
                   name="name"
@@ -141,10 +174,20 @@ export default function OrganizationPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
-                  <Button type="submit" disabled={loading}>
-                    Continue
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleSkip}
+                      disabled={loading}
+                    >
+                      Skip for now
+                    </Button>
+                    <Button type="submit" disabled={loading}>
+                      Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </form>
             </Form>
@@ -154,4 +197,3 @@ export default function OrganizationPage() {
     </div>
   );
 }
-

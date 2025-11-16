@@ -1,40 +1,60 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Editor from "@monaco-editor/react";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { DataTable } from "@/components/bi/data-table";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
   ArrowLeft,
-  Play,
+  ChevronDown,
   Database,
+  Download,
+  Link2,
   Loader2,
-  Table as TableIcon,
-  Maximize2,
   Minimize2,
+  Play,
+  Save,
 } from "lucide-react";
-import { toast } from "@/lib/utils/toast";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { SQLEditor, SQLResultViewer, TableNavigation } from "@/components/bi";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import type { ColumnDef } from "@tanstack/react-table";
+import { toast } from "@/lib/utils/toast";
+import { DatasetConfigurationEmbedded } from "./dataset-config";
 
 // Mock query execution - replace with actual API call
 const executeQuery = async (
-  dataSourceId: string,
-  dataSourceType: string,
-  query: string
-): Promise<{ columns: string[]; rows: any[] }> => {
+  _dataSourceId: string,
+  _dataSourceType: string,
+  query: string,
+): Promise<{ columns: string[]; rows: Record<string, unknown>[] }> => {
   // Simulate API call
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   // Mock data based on query
   const lowerQuery = query.toLowerCase().trim();
-  
+
   if (lowerQuery.includes("select") || lowerQuery.includes("from")) {
     // SQL-like query
     return {
@@ -43,32 +63,10 @@ const executeQuery = async (
         id: i + 1,
         name: `User ${i + 1}`,
         email: `user${i + 1}@example.com`,
-        created_at: new Date(Date.now() - Math.random() * 10000000000).toISOString().split("T")[0],
+        created_at: new Date(Date.now() - Math.random() * 10000000000)
+          .toISOString()
+          .split("T")[0],
         status: i % 3 === 0 ? "active" : i % 3 === 1 ? "inactive" : "pending",
-      })),
-    };
-  } else if (lowerQuery.includes("find") || lowerQuery.includes("db.")) {
-    // MongoDB-like query
-    return {
-      columns: ["_id", "name", "email", "age", "city"],
-      rows: Array.from({ length: 30 }, (_, i) => ({
-        _id: `507f1f77bcf86cd79943901${i}`,
-        name: `Document ${i + 1}`,
-        email: `doc${i + 1}@example.com`,
-        age: 20 + (i % 40),
-        city: ["New York", "London", "Tokyo", "Paris"][i % 4],
-      })),
-    };
-  } else if (lowerQuery.includes("get") || lowerQuery.includes("api")) {
-    // API-like query
-    return {
-      columns: ["id", "title", "description", "status", "updated_at"],
-      rows: Array.from({ length: 25 }, (_, i) => ({
-        id: `api-${i + 1}`,
-        title: `API Resource ${i + 1}`,
-        description: `Description for resource ${i + 1}`,
-        status: i % 2 === 0 ? "success" : "error",
-        updated_at: new Date().toISOString(),
       })),
     };
   }
@@ -82,6 +80,26 @@ const executeQuery = async (
       column3: `Value ${i + 1}-3`,
     })),
   };
+};
+
+// Check if data source type supports SQL queries
+const supportsSQLQueries = (type: string): boolean => {
+  const sqlTypes = [
+    "postgres",
+    "mysql",
+    "mssql",
+    "redshift",
+    "clickhouse",
+    "pgvector",
+    "bigquery",
+    "snowflake",
+    "snowflake-cortex",
+    "databricks",
+    "google-sheets",
+    "excel",
+    "csv",
+  ];
+  return sqlTypes.includes(type);
 };
 
 // Get language for Monaco editor based on data source type
@@ -109,7 +127,7 @@ const getLanguageForDataSource = (type: string): string => {
 // Get default query based on data source type
 const getDefaultQuery = (type: string, tableName?: string): string => {
   const table = tableName || "users";
-  
+
   const queries: Record<string, string> = {
     postgres: `SELECT * FROM ${table} LIMIT 100;`,
     mysql: `SELECT * FROM ${table} LIMIT 100;`,
@@ -120,44 +138,74 @@ const getDefaultQuery = (type: string, tableName?: string): string => {
     snowflake: `SELECT * FROM ${table} LIMIT 100;`,
     "snowflake-cortex": `SELECT * FROM ${table} LIMIT 100;`,
     databricks: `SELECT * FROM ${table} LIMIT 100;`,
-    mongodb: `db.${table}.find({}).limit(100)`,
-    api: `GET /api/v1/${table}`,
     "google-sheets": `SELECT * FROM "${table}" LIMIT 100`,
     excel: `SELECT * FROM [${table}] LIMIT 100`,
     csv: `SELECT * FROM ${table} LIMIT 100`,
   };
-  
+
   return queries[type] || `SELECT * FROM ${table} LIMIT 100;`;
 };
 
 export default function DataSourceQueryPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dataSourceId = params.id as string;
-  const { dataSources } = useWorkspaceStore();
-  
+  const { dataSources, savedQueries, addSavedQuery, currentOrganization } =
+    useWorkspaceStore();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<"query" | "dataset">(
+    tabParam === "dataset" ? "dataset" : "query",
+  );
+
+  // Sync tab state with URL param
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "dataset") {
+      setActiveTab("dataset");
+    } else {
+      setActiveTab("query");
+    }
+  }, [searchParams]);
+
   const dataSource = dataSources.find((ds) => ds.id === dataSourceId);
-  
+
   const [query, setQuery] = useState("");
-  const [queryHistory, setQueryHistory] = useState<string[]>([]);
-  const [results, setResults] = useState<{ columns: string[]; rows: any[] } | null>(null);
+  const [results, setResults] = useState<{
+    columns: string[];
+    rows: Record<string, unknown>[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [editorExpanded, setEditorExpanded] = useState(false);
-  const [resultsExpanded, setResultsExpanded] = useState(false);
-  
-  const editorRef = useRef<any>(null);
-  const language = dataSource ? getLanguageForDataSource(dataSource.type) : "sql";
+  const [_error, setError] = useState<string | null>(null);
+  const [_queryTitle, _setQueryTitle] = useState("Untitled SQL query");
+  const [selectedTable, setSelectedTable] = useState<string | undefined>();
+  const [resultsFullScreen, setResultsFullScreen] = useState(false);
+  const [editorSize, setEditorSize] = useState(60);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveAsNew, setSaveAsNew] = useState(false);
+  const [queryName, setQueryName] = useState("");
+
+  const editorRef = useRef<{ setValue: (value: string) => void } | null>(null);
+  const language = dataSource
+    ? getLanguageForDataSource(dataSource.type)
+    : "sql";
+
+  // Check if SQL editor should be shown
+  const shouldShowSQLEditor =
+    dataSource &&
+    dataSource.status === "connected" &&
+    supportsSQLQueries(dataSource.type);
 
   useEffect(() => {
-    if (dataSource && !query) {
+    if (dataSource && !query && shouldShowSQLEditor) {
       const defaultQuery = getDefaultQuery(
         dataSource.type,
-        dataSource.selectedTable || dataSource.tables?.[0]
+        dataSource.selectedTable || dataSource.tables?.[0],
       );
       setQuery(defaultQuery);
     }
-  }, [dataSource, query]);
+  }, [dataSource, query, shouldShowSQLEditor]);
 
   if (!dataSource) {
     return (
@@ -179,6 +227,35 @@ export default function DataSourceQueryPage() {
     );
   }
 
+  // Check if data source is connected
+  if (dataSource.status !== "connected") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">
+                Data source is not connected
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Please connect the data source first to view tables and run
+                queries.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/workspace/data-sources")}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Data Sources
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const handleExecuteQuery = async () => {
     if (!query.trim()) {
       toast.error("Query is empty", "Please enter a query to execute.");
@@ -192,17 +269,22 @@ export default function DataSourceQueryPage() {
     try {
       const result = await executeQuery(dataSourceId, dataSource.type, query);
       setResults(result);
-      setQueryHistory((prev) => [query, ...prev.slice(0, 9)]);
-      toast.success("Query executed successfully", `Returned ${result.rows.length} rows`);
-    } catch (err: any) {
-      setError(err.message || "Failed to execute query");
-      toast.error("Query execution failed", err.message || "An error occurred while executing the query.");
+      toast.success(
+        "Query executed successfully",
+        `Returned ${result.rows.length} rows`,
+      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to execute query";
+      setError(errorMessage);
+      toast.error("Query execution failed", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTableClick = (tableName: string) => {
+  const handleTableSelect = (tableName: string) => {
+    setSelectedTable(tableName);
     const newQuery = getDefaultQuery(dataSource.type, tableName);
     setQuery(newQuery);
     if (editorRef.current) {
@@ -210,256 +292,406 @@ export default function DataSourceQueryPage() {
     }
   };
 
-  // Create columns for data table
-  const columns: ColumnDef<any>[] =
-    results?.columns.map((col) => ({
-      accessorKey: col,
-      header: col,
-      cell: ({ getValue }) => {
-        const value = getValue();
-        if (value === null || value === undefined) {
-          return <span className="text-muted-foreground">NULL</span>;
-        }
-        if (typeof value === "object") {
-          return <span className="text-muted-foreground">{JSON.stringify(value)}</span>;
-        }
-        return <span>{String(value)}</span>;
-      },
-    })) || [];
+  const handleSaveQuery = () => {
+    if (!query.trim()) {
+      toast.error("Query is empty", "Please enter a query to save.");
+      return;
+    }
+    setSaveAsNew(false);
+    setQueryName(_queryTitle);
+    setShowSaveDialog(true);
+  };
+
+  const handleSaveAsNewQuery = () => {
+    if (!query.trim()) {
+      toast.error("Query is empty", "Please enter a query to save.");
+      return;
+    }
+    setSaveAsNew(true);
+    setQueryName("");
+    setShowSaveDialog(true);
+  };
+
+  const handleConfirmSave = () => {
+    if (!queryName.trim()) {
+      toast.error("Query name required", "Please enter a name for the query.");
+      return;
+    }
+
+    const savedQuery = {
+      id: `query_${Date.now()}`,
+      name: queryName,
+      query: query,
+      dataSourceId: dataSourceId,
+      organizationId: currentOrganization?.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    addSavedQuery(savedQuery);
+    toast.success("Query saved successfully", `"${queryName}" has been saved.`);
+    setShowSaveDialog(false);
+    setQueryName("");
+  };
+
+  const handleDownload = (format: "csv" | "json" | "excel") => {
+    if (!results) return;
+
+    if (format === "csv") {
+      const headers = results.columns.join(",");
+      const csvRows = results.rows.map((row) =>
+        results.columns
+          .map((col) => {
+            const val = row[col];
+            if (val === null || val === undefined) return "";
+            if (typeof val === "object") return JSON.stringify(val);
+            return String(val).replace(/"/g, '""');
+          })
+          .join(","),
+      );
+      const csv = [headers, ...csvRows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "query-results.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === "json") {
+      const json = JSON.stringify(results.rows, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "query-results.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    toast.success(
+      "Download started",
+      `Downloading results as ${format.toUpperCase()}`,
+    );
+  };
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
-        <div className="flex items-center justify-between px-6 py-4">
+    <div className="h-screen flex flex-col bg-background">
+      {/* Top Header Bar */}
+      <div className="border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between px-6 py-1">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push("/workspace/data-sources")}
+              className="h-8"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Database className="h-6 w-6" />
-                {dataSource.name}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Query Editor - {dataSource.type.toUpperCase()}
-              </p>
+            <div className="flex items-center gap-4">
+              <Tabs value={activeTab} onValueChange={(v) => {
+                const newTab = v as "query" | "dataset";
+                setActiveTab(newTab);
+                if (newTab === "dataset") {
+                  router.push(`/workspace/data-sources/${dataSourceId}/query?tab=dataset`);
+                } else {
+                  router.push(`/workspace/data-sources/${dataSourceId}/query`);
+                }
+              }}>
+                <TabsList>
+                  <TabsTrigger value="query">Query</TabsTrigger>
+                  <TabsTrigger value="dataset">Dataset</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={dataSource.status === "connected" ? "default" : "secondary"}>
-              {dataSource.status}
-            </Badge>
-            <Button
-              onClick={handleExecuteQuery}
-              disabled={loading || !query.trim()}
-              size="sm"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Executing...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Run Query
-                </>
-              )}
-            </Button>
+            {shouldShowSQLEditor && activeTab === "query" && (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8">
+                      <Save className="h-4 w-4 mr-1" />
+                      Save
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleSaveQuery}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save query
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSaveAsNewQuery}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save as new query
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Copy link"
+                >
+                  <Link2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={handleExecuteQuery}
+                  disabled={loading || !query.trim()}
+                  size="sm"
+                  className="h-8"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Executing...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Run query
+                    </>
+                  )}
+                </Button>
+                {results && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => {
+                        setActiveTab("dataset");
+                        router.push(`/workspace/data-sources/${dataSourceId}/query?tab=dataset`);
+                      }}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save as Dataset
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDownload("csv")}>
+                          Download as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload("json")}>
+                          Download as JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                          Download as Excel
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 min-h-0">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Tables Sidebar */}
-          <ResizablePanel
-            defaultSize={20}
-            minSize={15}
-            maxSize={30}
-            collapsible
-            className="border-r bg-muted/30"
-          >
-            <div className="h-full flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b">
-                <div className="flex items-center gap-2">
-                  <Database className="h-4 w-4" />
-                  <span className="font-semibold">Tables</span>
-                  {dataSource.tables && (
-                    <Badge variant="secondary" className="ml-2">
-                      {dataSource.tables.length}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {dataSource.tables && dataSource.tables.length > 0 ? (
-                    dataSource.tables.map((table) => (
-                      <Button
-                        key={table}
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => handleTableClick(table)}
-                      >
-                        <TableIcon className="mr-2 h-4 w-4" />
-                        {table}
-                      </Button>
-                    ))
-                  ) : (
-                    <div className="p-4 text-sm text-muted-foreground text-center">
-                      No tables available
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+        {activeTab === "query" ? (
+          <>
+            {shouldShowSQLEditor ? (
+          <div className="flex h-full">
+            {/* Tables Sidebar - Fixed width based on collapsed state */}
+            <div
+              className={cn(
+                "shrink-0 transition-all duration-200 border-r",
+                sidebarCollapsed ? "w-16" : "w-64",
+              )}
+            >
+              <TableNavigation
+                tables={dataSource.tables || []}
+                onTableSelect={handleTableSelect}
+                selectedTable={selectedTable}
+                defaultCollapsed={sidebarCollapsed}
+                onCollapsedChange={setSidebarCollapsed}
+              />
             </div>
-          </ResizablePanel>
 
-          <ResizableHandle withHandle />
-
-          {/* Query Editor and Results */}
-          <ResizablePanel defaultSize={80} minSize={50}>
-            <ResizablePanelGroup direction="vertical" className="h-full">
-              {/* Query Editor */}
-              <ResizablePanel
-                defaultSize={editorExpanded ? 100 : 50}
-                minSize={20}
-                maxSize={resultsExpanded ? 20 : 100}
-                collapsible
-              >
-                <Card className="h-full flex flex-col border-0 rounded-none">
-                  <CardHeader className="flex-shrink-0 border-b px-4 py-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium">Query Editor</CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditorExpanded(!editorExpanded);
-                          setResultsExpanded(false);
-                        }}
-                      >
-                        {editorExpanded ? (
-                          <Minimize2 className="h-4 w-4" />
-                        ) : (
-                          <Maximize2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 min-h-0 p-0">
-                    <Editor
-                      height="100%"
-                      language={language}
-                      value={query}
-                      onChange={(value) => setQuery(value || "")}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        wordWrap: "on",
-                        automaticLayout: true,
-                        scrollBeyondLastLine: false,
-                        tabSize: 2,
-                        insertSpaces: true,
-                        formatOnPaste: true,
-                        formatOnType: true,
-                      }}
-                      onMount={(editor) => {
-                        editorRef.current = editor;
-                      }}
+            {/* Editor and Results */}
+            <div className="flex-1 min-w-0">
+              {resultsFullScreen && results ? (
+                // Full-screen results view
+                <div className="h-full flex flex-col bg-background">
+                  <div className="flex items-center justify-between p-4 border-b shrink-0">
+                    <h2 className="text-sm font-medium">Query Results</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setResultsFullScreen(false)}
+                      className="h-8"
+                    >
+                      <Minimize2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <SQLResultViewer
+                      columns={results.columns}
+                      rows={results.rows}
+                      loading={loading}
+                      error={_error}
+                      fullScreen={resultsFullScreen}
+                      onFullScreen={setResultsFullScreen}
+                      onDownload={handleDownload}
                     />
-                  </CardContent>
-                </Card>
-              </ResizablePanel>
-
-              <ResizableHandle withHandle />
-
-              {/* Results */}
-              <ResizablePanel
-                defaultSize={resultsExpanded ? 100 : 50}
-                minSize={20}
-                maxSize={editorExpanded ? 20 : 100}
-                collapsible
-              >
-                <Card className="h-full flex flex-col border-0 rounded-none">
-                  <CardHeader className="flex-shrink-0 border-b px-4 py-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium">
-                        Results
-                        {results && (
-                          <Badge variant="secondary" className="ml-2">
-                            {results.rows.length} rows
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setResultsExpanded(!resultsExpanded);
-                          setEditorExpanded(false);
+                  </div>
+                </div>
+              ) : (
+                // Normal split view
+                <ResizablePanelGroup
+                  direction="vertical"
+                  className="h-full"
+                  key={results ? "with-results" : "no-results"}
+                >
+                  {/* Query Editor */}
+                  <ResizablePanel
+                    id="editor-panel"
+                    defaultSize={results ? editorSize : 100}
+                    minSize={20}
+                    maxSize={results ? 80 : 100}
+                    collapsible={!!results}
+                    onResize={(size) => {
+                      if (results) {
+                        setEditorSize(size);
+                      }
+                    }}
+                  >
+                    <div className="h-full flex flex-col border-b">
+                      <SQLEditor
+                        value={query}
+                        onChange={setQuery}
+                        language={language}
+                        onMount={(editor) => {
+                          editorRef.current = editor as {
+                            setValue: (value: string) => void;
+                          };
                         }}
-                      >
-                        {resultsExpanded ? (
-                          <Minimize2 className="h-4 w-4" />
-                        ) : (
-                          <Maximize2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 min-h-0 overflow-auto p-4">
-                    {loading ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                          <p className="text-muted-foreground">Executing query...</p>
-                        </div>
-                      </div>
-                    ) : error ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <p className="text-destructive font-medium mb-2">Error</p>
-                          <p className="text-sm text-muted-foreground">{error}</p>
-                        </div>
-                      </div>
-                    ) : results ? (
-                      <DataTable
-                        columns={columns}
-                        data={results.rows}
-                        pagination={true}
-                        pageSize={20}
-                        filterable={true}
-                        filterColumn={results.columns[0]}
-                        filterPlaceholder="Filter results..."
+                        className="h-full"
                       />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                          <p className="text-muted-foreground">
-                            Click "Run Query" to execute your query
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+                    </div>
+                  </ResizablePanel>
+
+                  {results && (
+                    <>
+                      <ResizableHandle withHandle className="bg-border" />
+                      {/* Results */}
+                      <ResizablePanel
+                        id="results-panel"
+                        defaultSize={Math.max(
+                          20,
+                          Math.min(80, 100 - editorSize),
+                        )}
+                        minSize={20}
+                        maxSize={80}
+                        collapsible
+                      >
+                        <SQLResultViewer
+                          columns={results.columns}
+                          rows={results.rows}
+                          loading={loading}
+                          error={_error}
+                          fullScreen={resultsFullScreen}
+                          onFullScreen={setResultsFullScreen}
+                          onDownload={handleDownload}
+                        />
+                      </ResizablePanel>
+                    </>
+                  )}
+                </ResizablePanelGroup>
+              )}
+            </div>
+          </div>
+        ) : (
+          // View for non-SQL data sources
+          <div className="flex-1 min-h-0 flex">
+            {/* Tables Sidebar - Fixed width based on collapsed state */}
+            <div
+              className={cn(
+                "shrink-0 transition-all duration-200 border-r",
+                sidebarCollapsed ? "w-16" : "w-64",
+              )}
+            >
+              <TableNavigation
+                tables={dataSource.tables || []}
+                onTableSelect={handleTableSelect}
+                selectedTable={selectedTable}
+                defaultCollapsed={sidebarCollapsed}
+                onCollapsedChange={setSidebarCollapsed}
+              />
+            </div>
+            <div className="flex-1 min-w-0 flex items-center justify-center">
+              <div className="text-center">
+                <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Select a table from the sidebar to view data
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+          </>
+        ) : (
+          <div className="h-full overflow-auto">
+            <DatasetConfigurationEmbedded
+              dataSourceId={dataSourceId}
+              onBack={() => {
+                setActiveTab("query");
+                router.push(`/workspace/data-sources/${dataSourceId}/query`);
+              }}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Save Query Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {saveAsNew ? "Save as New Query" : "Save Query"}
+            </DialogTitle>
+            <DialogDescription>
+              {saveAsNew
+                ? "Enter a name for your new query"
+                : "Update the name for this query"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="query-name">Query Name</Label>
+              <Input
+                id="query-name"
+                value={queryName}
+                onChange={(e) => setQueryName(e.target.value)}
+                placeholder="e.g., Sales by Region"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleConfirmSave();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSaveDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmSave}>
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

@@ -1,90 +1,100 @@
 "use client";
 
+import { ExternalLink, FileText, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EmptyState, PageHeader, Timestamp } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Plus, FileText, Database, ArrowRight, ExternalLink } from "lucide-react";
-import { GridLayout, GridItem } from "@/components/bi/grid-layout";
 
 export default function WorkspacePage() {
   const router = useRouter();
-  const { dashboards, dataSources, currentOrganization, setCurrentDashboard } = useWorkspaceStore();
+  const { dashboards, dataSources, currentOrganization, setCurrentDashboard } =
+    useWorkspaceStore();
+
+  // Filter dashboards by current organization
+  const filteredDashboards = currentOrganization
+    ? dashboards.filter(
+        (dashboard) => dashboard.organizationId === currentOrganization.id,
+      )
+    : [];
 
   const handleCreateDashboard = () => {
     router.push("/workspace/dashboards");
   };
 
   const handleOpenDashboard = (dashboardId: string) => {
-    const dashboard = dashboards.find((d) => d.id === dashboardId);
+    const dashboard = filteredDashboards.find((d) => d.id === dashboardId);
     if (dashboard) {
       setCurrentDashboard(dashboard);
       router.push(`/workspace/dashboards/${dashboardId}`);
     }
   };
 
-  if (dashboards.length === 0) {
+  if (filteredDashboards.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="w-full max-w-2xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome to Your Workspace</CardTitle>
-            <CardDescription>
-              {currentOrganization
-                ? `Get started by creating your first dashboard for ${currentOrganization.name}`
-                : "Get started by creating your first dashboard"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button onClick={handleCreateDashboard} className="w-full" size="lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Dashboard
-            </Button>
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Dashboards</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{dashboards.length}</div>
-                  <p className="text-sm text-muted-foreground">Total dashboards</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Data Sources</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{dataSources.length}</div>
-                  <p className="text-sm text-muted-foreground">Connected sources</p>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="Welcome to Your Workspace"
+        description={
+          currentOrganization
+            ? `Get started by creating your first dashboard for ${currentOrganization.name}`
+            : "Get started by creating your first dashboard"
+        }
+        actionLabel="Create Your First Dashboard"
+        onAction={handleCreateDashboard}
+      >
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Dashboards</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {filteredDashboards.length}
+              </div>
+              <p className="text-sm text-muted-foreground">Total dashboards</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Data Sources</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{dataSources.length}</div>
+              <p className="text-sm text-muted-foreground">Connected sources</p>
+            </CardContent>
+          </Card>
+        </div>
+      </EmptyState>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            {currentOrganization
-              ? `Manage your dashboards for ${currentOrganization.name}`
-              : "Manage your dashboards"}
-          </p>
-        </div>
-        <Button onClick={handleCreateDashboard}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Dashboard
-        </Button>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description={
+          currentOrganization
+            ? `Manage your dashboards for ${currentOrganization.name}`
+            : "Manage your dashboards"
+        }
+        action={
+          <Button onClick={handleCreateDashboard}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Dashboard
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {dashboards.map((dashboard) => (
+        {filteredDashboards.map((dashboard) => (
           <Card
             key={dashboard.id}
             className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden group relative"
@@ -116,27 +126,11 @@ export default function WorkspacePage() {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Created:</span>
-                  <span>
-                    {dashboard.createdAt
-                      ? new Date(dashboard.createdAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "-"}
-                  </span>
+                  <Timestamp date={dashboard.createdAt || ""} />
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Updated:</span>
-                  <span>
-                    {dashboard.updatedAt
-                      ? new Date(dashboard.updatedAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "-"}
-                  </span>
+                  <Timestamp date={dashboard.updatedAt || ""} />
                 </div>
               </div>
             </CardContent>
@@ -146,4 +140,3 @@ export default function WorkspacePage() {
     </div>
   );
 }
-

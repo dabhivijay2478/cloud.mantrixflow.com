@@ -4,9 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
-import { toast } from "@/lib/utils/toast";
+import {
+  AuthErrorDisplay,
+  AuthFormHeader,
+  OAuthButtons,
+} from "@/components/features/auth/components";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -20,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/utils/toast";
 import { type SignupInput, signupSchema } from "@/lib/validations/auth";
 
 export function SignupForm({
@@ -55,7 +58,10 @@ export function SignupForm({
 
     if (error) {
       setIsSubmitting(false);
-      toast.error("Signup failed", error.message || "Failed to create account. Please try again.");
+      toast.error(
+        "Signup failed",
+        error.message || "Failed to create account. Please try again.",
+      );
       return;
     }
 
@@ -66,7 +72,10 @@ export function SignupForm({
 
     if (!sessionData.session) {
       // Email confirmation required - don't try to create user in DB yet
-      toast.success("Account created!", "Please check your email to confirm your account. The confirmation link will create your account.");
+      toast.success(
+        "Account created!",
+        "Please check your email to confirm your account. The confirmation link will create your account.",
+      );
       setIsSubmitting(false);
       // Redirect to login with message
       router.push("/auth/login?confirmEmail=true");
@@ -75,7 +84,10 @@ export function SignupForm({
 
     // Session exists (email confirmation not required or already confirmed)
     // Show success toast
-    toast.success("Account created successfully!", "Welcome! Your account has been created. You can now start using the app.");
+    toast.success(
+      "Account created successfully!",
+      "Welcome! Your account has been created. You can now start using the app.",
+    );
 
     // Redirect on success
     router.push("/");
@@ -86,7 +98,10 @@ export function SignupForm({
     setError(null);
     const { error } = await signInWithGitHub();
     if (error) {
-      toast.error("GitHub signup failed", error.message || "Failed to sign up with GitHub. Please try again.");
+      toast.error(
+        "GitHub signup failed",
+        error.message || "Failed to sign up with GitHub. Please try again.",
+      );
     }
   };
 
@@ -94,7 +109,10 @@ export function SignupForm({
     setError(null);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error("Google signup failed", error.message || "Failed to sign up with Google. Please try again.");
+      toast.error(
+        "Google signup failed",
+        error.message || "Failed to sign up with Google. Please try again.",
+      );
     }
   };
 
@@ -105,18 +123,12 @@ export function SignupForm({
       {...props}
     >
       <FieldGroup className="gap-3">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-xl font-bold">Create your account</h1>
-          <p className="text-muted-foreground text-xs text-balance">
-            Fill in the form below to create your account
-          </p>
-        </div>
+        <AuthFormHeader
+          title="Create your account"
+          description="Fill in the form below to create your account"
+        />
 
-        {authError && (
-          <FieldError className="bg-destructive/10 border-destructive/20 border rounded-md p-3 text-center">
-            {authError}
-          </FieldError>
-        )}
+        <AuthErrorDisplay error={authError} />
 
         {/* Two column grid for name fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -215,28 +227,12 @@ export function SignupForm({
         <FieldSeparator className="text-xs">Or continue with</FieldSeparator>
 
         <Field>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              className="h-8 text-xs"
-              onClick={handleGitHubLogin}
-              disabled={isSubmitting}
-            >
-              <FaGithub className="size-3" />
-              GitHub
-            </Button>
-            <Button
-              variant="outline"
-              type="button"
-              className="h-8 text-xs"
-              onClick={handleGoogleLogin}
-              disabled={isSubmitting}
-            >
-              <FcGoogle className="size-3" />
-              Google
-            </Button>
-          </div>
+          <OAuthButtons
+            onGitHubClick={handleGitHubLogin}
+            onGoogleClick={handleGoogleLogin}
+            disabled={isSubmitting}
+            variant="compact"
+          />
 
           <FieldDescription className="text-center text-xs">
             Already have an account?{" "}

@@ -1,19 +1,28 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { GridLayout, GridItem } from "@/components/bi/grid-layout";
-import { ArrowLeft, Save, ExternalLink } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { DashboardCanvasWithHandlers } from "@/components/workspace/dashboard-canvas";
+import type { DashboardComponent } from "@/lib/stores/workspace-store";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function DashboardEditorPage() {
   const router = useRouter();
   const params = useParams();
   const dashboardId = params.id as string;
-  const { dashboards, currentDashboard, setCurrentDashboard, updateDashboard } = useWorkspaceStore();
+  const {
+    dashboards,
+    currentDashboard,
+    setCurrentDashboard,
+    updateDashboard,
+    updateDashboardComponent,
+    removeDashboardComponent,
+    datasets,
+    setSelectedComponentId: setGlobalSelectedComponentId,
+    selectedComponentId: globalSelectedComponentId,
+    setSelectedDatasetId: setGlobalSelectedDatasetId,
+  } = useWorkspaceStore();
   const [dashboard, setDashboard] = useState(currentDashboard);
 
   useEffect(() => {
@@ -21,21 +30,77 @@ export default function DashboardEditorPage() {
     if (found) {
       setCurrentDashboard(found);
       setDashboard(found);
+      // Load dataset if dashboard has one configured
+      if (found.dataSourceId) {
+        const dataset = datasets.find(
+          (ds) => ds.dataSourceId === found.dataSourceId,
+        );
+        if (dataset) {
+          setGlobalSelectedDatasetId(dataset.id);
+        }
+      }
     } else {
       toast.error("Dashboard not found");
       router.push("/workspace/dashboards");
     }
-  }, [dashboardId, dashboards, setCurrentDashboard, router]);
+  }, [
+    dashboardId,
+    dashboards,
+    setCurrentDashboard,
+    router,
+    datasets,
+    setGlobalSelectedDatasetId,
+  ]);
 
-  const handleSave = () => {
-    if (dashboard) {
-      updateDashboard(dashboard.id, {
-        ...dashboard,
-        updatedAt: new Date().toISOString(),
-      });
-      toast.success("Dashboard saved successfully");
-    }
-  };
+  const handleComponentsChange = useCallback(
+    (components: DashboardComponent[]) => {
+      if (dashboard) {
+        updateDashboard(dashboard.id, {
+          ...dashboard,
+          components,
+          updatedAt: new Date().toISOString(),
+        });
+        setDashboard({ ...dashboard, components });
+      }
+    },
+    [dashboard, updateDashboard],
+  );
+
+  const handleComponentUpdate = useCallback(
+    (id: string, updates: Partial<DashboardComponent>) => {
+      if (dashboard) {
+        updateDashboardComponent(dashboard.id, id, updates);
+        setDashboard({
+          ...dashboard,
+          components: dashboard.components.map((c) =>
+            c.id === id ? { ...c, ...updates } : c,
+          ),
+        });
+      }
+    },
+    [dashboard, updateDashboardComponent],
+  );
+
+  const handleComponentSelect = useCallback(
+    (id: string | null) => {
+      setGlobalSelectedComponentId(id);
+    },
+    [setGlobalSelectedComponentId],
+  );
+
+  const handleComponentDelete = useCallback(
+    (id: string) => {
+      if (dashboard) {
+        removeDashboardComponent(dashboard.id, id);
+        setDashboard({
+          ...dashboard,
+          components: dashboard.components.filter((c) => c.id !== id),
+        });
+        toast.success("Component removed");
+      }
+    },
+    [dashboard, removeDashboardComponent],
+  );
 
   if (!dashboard) {
     return (
@@ -49,80 +114,19 @@ export default function DashboardEditorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/workspace")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{dashboard.name}</h1>
-            {dashboard.description && (
-              <p className="text-muted-foreground">{dashboard.description}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => window.open(`/workspace/dashboards/${dashboard.id}/view`, "_blank")}
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Open in New Tab
-          </Button>
-          <Button onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </Button>
-        </div>
+    <div className="h-full flex flex-col bg-background">
+      {/* Canvas Area */}
+      <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
+        <DashboardCanvasWithHandlers
+          components={dashboard.components}
+          onComponentsChange={handleComponentsChange}
+          onComponentUpdate={handleComponentUpdate}
+          onComponentDelete={handleComponentDelete}
+          onComponentSelect={handleComponentSelect}
+          selectedComponentId={globalSelectedComponentId}
+          className="h-full"
+        />
       </div>
-
-      <Card>
-        <CardContent className="p-6">
-          <div className="min-h-[400px]">
-            {dashboard.components.length === 0 ? (
-              <div className="flex items-center justify-center h-[400px] border-2 border-dashed rounded-lg">
-                <div className="text-center space-y-4">
-                  <p className="text-muted-foreground">Your dashboard is empty</p>
-                  <p className="text-sm text-muted-foreground">
-                    Drag components from the left panel or use the AI agent to generate components
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <GridLayout
-                cols={12}
-                rowHeight={60}
-                onLayoutChange={(layout) => {
-                  // Handle layout changes
-                  console.log("Layout changed", layout);
-                }}
-              >
-                {dashboard.components.map((component) => (
-                  <GridItem
-                    key={component.id}
-                    i={component.id}
-                    x={component.position.x}
-                    y={component.position.y}
-                    w={component.position.w}
-                    h={component.position.h}
-                  >
-                    <Card className="h-full">
-                      <CardContent className="p-4">
-                        <div className="text-sm font-medium mb-2">{component.type}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Component configuration goes here
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </GridItem>
-                ))}
-              </GridLayout>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
-

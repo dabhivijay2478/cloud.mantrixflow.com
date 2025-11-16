@@ -1,19 +1,29 @@
 "use client";
 
+import type { ToolUIPart } from "ai";
+import { GlobeIcon, MicIcon, Sparkles, X } from "lucide-react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
+  Message,
   MessageBranch,
   MessageBranchContent,
   MessageBranchNext,
   MessageBranchPage,
   MessageBranchPrevious,
   MessageBranchSelector,
+  MessageContent,
+  MessageResponse,
 } from "@/components/ai-elements/message";
 import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
-import { Message, MessageContent } from "@/components/ai-elements/message";
+  ModelSelectorLogo,
+  ModelSelectorName,
+} from "@/components/ai-elements/model-selector";
 import {
   PromptInput,
   PromptInputActionAddAttachments,
@@ -32,9 +42,18 @@ import {
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import {
-  ModelSelectorLogo,
-  ModelSelectorName,
-} from "@/components/ai-elements/model-selector";
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
+import {
+  Source,
+  Sources,
+  SourcesContent,
+  SourcesTrigger,
+} from "@/components/ai-elements/sources";
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -45,25 +64,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Reasoning,
-  ReasoningContent,
-  ReasoningTrigger,
-} from "@/components/ai-elements/reasoning";
-import { MessageResponse } from "@/components/ai-elements/message";
-import {
-  Source,
-  Sources,
-  SourcesContent,
-  SourcesTrigger,
-} from "@/components/ai-elements/sources";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import type { ToolUIPart } from "ai";
-import { GlobeIcon, MicIcon, Sparkles, X } from "lucide-react";
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type MessageType = {
   key: string;
@@ -144,14 +150,23 @@ const mockResponses = [
 ];
 
 export function AgentPanel() {
-  const { agentPanelOpen, setAgentPanelOpen, currentDashboard, addComponentToDashboard } = useWorkspaceStore();
+  const {
+    agentPanelOpen,
+    setAgentPanelOpen,
+    currentDashboard,
+    addComponentToDashboard,
+  } = useWorkspaceStore();
   const [model, setModel] = useState<string>(models[0].id);
   const [text, setText] = useState<string>("");
   const [useWebSearch, setUseWebSearch] = useState<boolean>(false);
   const [useMicrophone, setUseMicrophone] = useState<boolean>(false);
-  const [status, setStatus] = useState<"submitted" | "streaming" | "ready" | "error">("ready");
+  const [status, setStatus] = useState<
+    "submitted" | "streaming" | "ready" | "error"
+  >("ready");
   const [messages, setMessages] = useState<MessageType[]>([]);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [_streamingMessageId, setStreamingMessageId] = useState<string | null>(
+    null,
+  );
 
   const selectedModelData = models.find((m) => m.id === model);
 
@@ -172,23 +187,23 @@ export function AgentPanel() {
               return {
                 ...msg,
                 versions: msg.versions.map((v) =>
-                  v.id === messageId ? { ...v, content: currentContent } : v
+                  v.id === messageId ? { ...v, content: currentContent } : v,
                 ),
               };
             }
             return msg;
-          })
+          }),
         );
 
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.random() * 100 + 50)
+          setTimeout(resolve, Math.random() * 100 + 50),
         );
       }
 
       setStatus("ready");
       setStreamingMessageId(null);
     },
-    []
+    [],
   );
 
   const addUserMessage = useCallback(
@@ -246,11 +261,17 @@ export function AgentPanel() {
 
           // Determine component type based on content
           let componentType = "line-chart";
-          if (content.toLowerCase().includes("map") || content.toLowerCase().includes("regional")) {
+          if (
+            content.toLowerCase().includes("map") ||
+            content.toLowerCase().includes("regional")
+          ) {
             componentType = "map";
           } else if (content.toLowerCase().includes("funnel")) {
             componentType = "funnel-chart";
-          } else if (content.toLowerCase().includes("pie") || content.toLowerCase().includes("breakdown")) {
+          } else if (
+            content.toLowerCase().includes("pie") ||
+            content.toLowerCase().includes("breakdown")
+          ) {
             componentType = "pie-chart";
           } else if (content.toLowerCase().includes("bar")) {
             componentType = "bar-chart";
@@ -278,7 +299,7 @@ export function AgentPanel() {
         }
       }, 500);
     },
-    [currentDashboard, addComponentToDashboard, streamResponse]
+    [currentDashboard, addComponentToDashboard, streamResponse],
   );
 
   const handleSubmit = (message: PromptInputMessage) => {
@@ -308,7 +329,8 @@ export function AgentPanel() {
 
   if (!agentPanelOpen) {
     return (
-      <div 
+      <button
+        type="button"
         className="h-full w-full border-l bg-muted/30 flex flex-col items-center relative cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={() => setAgentPanelOpen(true)}
       >
@@ -327,19 +349,19 @@ export function AgentPanel() {
             </Tooltip>
           </TooltipProvider>
           <div className="flex-1 flex items-center justify-center">
-            <span 
+            <span
               className="text-xs text-muted-foreground select-none"
-              style={{ 
-                writingMode: 'vertical-rl',
-                transform: 'rotate(180deg)',
-                textOrientation: 'mixed'
+              style={{
+                writingMode: "vertical-rl",
+                transform: "rotate(180deg)",
+                textOrientation: "mixed",
               }}
             >
               Agent
             </span>
           </div>
         </div>
-      </div>
+      </button>
     );
   }
 
@@ -472,7 +494,9 @@ export function AgentPanel() {
                   <SelectTrigger className="h-auto border-none bg-transparent shadow-none hover:bg-accent data-[size=default]:h-auto data-[size=sm]:h-auto px-2 py-1.5">
                     <div className="flex items-center gap-2">
                       {selectedModelData?.chefSlug && (
-                        <ModelSelectorLogo provider={selectedModelData.chefSlug} />
+                        <ModelSelectorLogo
+                          provider={selectedModelData.chefSlug}
+                        />
                       )}
                       <SelectValue>
                         {selectedModelData?.name || "Select model"}
@@ -509,4 +533,3 @@ export function AgentPanel() {
     </div>
   );
 }
-

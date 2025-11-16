@@ -1,3 +1,5 @@
+import Image from "next/image";
+import type { ComponentProps, ReactNode } from "react";
 import {
   Command,
   CommandDialog,
@@ -16,7 +18,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type { ReactNode, ComponentProps } from "react";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;
 
@@ -170,13 +171,14 @@ export const ModelSelectorLogo = ({
   className,
   ...props
 }: ModelSelectorLogoProps) => (
-  <img
+  <Image
     {...props}
     alt={`${provider} logo`}
     className={cn("size-3", className)}
     height={12}
     src={`https://models.dev/logos/${provider}.svg`}
     width={12}
+    unoptimized
   />
 );
 
@@ -189,7 +191,7 @@ export const ModelSelectorLogoGroup = ({
   <div
     className={cn(
       "-space-x-1 flex shrink-0 items-center [&>img]:rounded-full [&>img]:bg-background [&>img]:p-px [&>img]:ring-1 [&>img]:ring-border",
-      className
+      className,
     )}
     {...props}
   />

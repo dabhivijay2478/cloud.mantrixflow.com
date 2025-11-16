@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import {
+  Bot,
+  Check,
+  Crown,
+  Edit,
+  Mail,
+  MoreVertical,
+  Shield,
+  Trash2,
+  User,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +34,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Shield, User, Crown, Trash2, Edit, Bot, X, UserPlus, Check, Mail } from "lucide-react";
-import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
@@ -40,7 +58,10 @@ interface TeamMember {
   allowedModels?: string[];
 }
 
-const roleConfig: Record<TeamMemberRole, { label: string; icon: typeof Shield; color: string; description: string }> = {
+const roleConfig: Record<
+  TeamMemberRole,
+  { label: string; icon: typeof Shield; color: string; description: string }
+> = {
   owner: {
     label: "Owner",
     icon: Crown,
@@ -87,7 +108,11 @@ export default function TeamPage() {
       status: "active",
       joinedAt: "2024-01-15",
       agentPanelAccess: true,
-      allowedModels: ["gpt-4o", "claude-opus-4-20250514", "gemini-2.0-flash-exp"],
+      allowedModels: [
+        "gpt-4o",
+        "claude-opus-4-20250514",
+        "gemini-2.0-flash-exp",
+      ],
     },
     {
       id: "2",
@@ -135,12 +160,11 @@ export default function TeamPage() {
     },
   ]);
 
-
   const handleRoleChange = (memberId: string, newRole: TeamMemberRole) => {
     setTeamMembers(
       teamMembers.map((member) =>
-        member.id === memberId ? { ...member, role: newRole } : member
-      )
+        member.id === memberId ? { ...member, role: newRole } : member,
+      ),
     );
     toast.success("Role updated successfully");
   };
@@ -164,11 +188,16 @@ export default function TeamPage() {
         variant="outline"
         className={cn(
           "flex items-center gap-1.5 px-2 py-1",
-          role === "owner" && "border-purple-500/50 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950",
-          role === "admin" && "border-blue-500/50 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950",
-          role === "member" && "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
-          role === "viewer" && "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
-          role === "guest" && "border-orange-500/50 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950"
+          role === "owner" &&
+            "border-purple-500/50 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950",
+          role === "admin" &&
+            "border-blue-500/50 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950",
+          role === "member" &&
+            "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
+          role === "viewer" &&
+            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
+          role === "guest" &&
+            "border-orange-500/50 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950",
         )}
       >
         <Icon className="h-3 w-3" />
@@ -183,9 +212,12 @@ export default function TeamPage() {
         variant="outline"
         className={cn(
           "text-xs",
-          status === "active" && "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
-          status === "pending" && "border-yellow-500/50 text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950",
-          status === "inactive" && "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950"
+          status === "active" &&
+            "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
+          status === "pending" &&
+            "border-yellow-500/50 text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950",
+          status === "inactive" &&
+            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
         )}
       >
         {status === "active" && "Active"}
@@ -200,7 +232,9 @@ export default function TeamPage() {
       <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
         <div>
           <h1 className="text-3xl font-bold">Team</h1>
-          <p className="text-muted-foreground">Manage your team members and permissions</p>
+          <p className="text-muted-foreground">
+            Manage your team members and permissions
+          </p>
         </div>
         <Button
           onClick={() => router.push("/workspace/team/invite")}
@@ -215,9 +249,11 @@ export default function TeamPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-          <CardTitle>Team Members</CardTitle>
+              <CardTitle>Team Members</CardTitle>
               <CardDescription>
-                {teamMembers.length} {teamMembers.length === 1 ? "member" : "members"} in your organization
+                {teamMembers.length}{" "}
+                {teamMembers.length === 1 ? "member" : "members"} in your
+                organization
               </CardDescription>
             </div>
           </div>
@@ -230,7 +266,9 @@ export default function TeamPage() {
                   <TableHead className="w-[300px]">Member</TableHead>
                   <TableHead className="hidden md:table-cell">Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Role</TableHead>
-                  <TableHead className="hidden lg:table-cell">Agent Panel</TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Agent Panel
+                  </TableHead>
                   <TableHead className="hidden lg:table-cell">Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -241,7 +279,9 @@ export default function TeamPage() {
                     <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <User className="h-12 w-12 text-muted-foreground" />
-                        <p className="text-muted-foreground">No team members yet</p>
+                        <p className="text-muted-foreground">
+                          No team members yet
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           Invite team members to get started
                         </p>
@@ -250,30 +290,30 @@ export default function TeamPage() {
                   </TableRow>
                 ) : (
                   teamMembers.map((member) => {
-                    const roleInfo = roleConfig[member.role];
-                    const RoleIcon = roleInfo.icon;
                     return (
                       <TableRow key={member.id} className="hover:bg-muted/50">
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
-                    <AvatarImage src={member.avatar || undefined} />
-                    <AvatarFallback>
-                      {member.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                              <AvatarImage src={member.avatar || undefined} />
+                              <AvatarFallback>
+                                {member.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="flex flex-col min-w-0">
-                              <div className="font-medium truncate">{member.name}</div>
+                              <div className="font-medium truncate">
+                                {member.name}
+                              </div>
                               <div className="text-sm text-muted-foreground flex items-center gap-1 truncate">
                                 <Mail className="h-3 w-3 flex-shrink-0" />
                                 <span className="truncate">{member.email}</span>
-                    </div>
-                  </div>
-                </div>
+                              </div>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {getStatusBadge(member.status)}
@@ -281,67 +321,91 @@ export default function TeamPage() {
                         <TableCell className="hidden lg:table-cell">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-auto p-0 hover:bg-transparent">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto p-0 hover:bg-transparent"
+                              >
                                 {getRoleBadge(member.role)}
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-56">
                               <DropdownMenuLabel>Change Role</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              {Object.entries(roleConfig).map(([key, config]) => {
-                                const Icon = config.icon;
-                                return (
-                                  <DropdownMenuItem
-                                    key={key}
-                                    onClick={() => handleRoleChange(member.id, key as TeamMemberRole)}
-                                    className={cn(
-                                      "flex items-center gap-2",
-                                      member.role === key && "bg-accent"
-                                    )}
-                                  >
-                                    <Icon className="h-4 w-4" />
-                                    <div className="flex flex-col flex-1">
-                                      <span>{config.label}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {config.description}
-                                      </span>
-                                    </div>
-                                    {member.role === key && (
-                                      <Check className="h-4 w-4 ml-auto" />
-                                    )}
-                                  </DropdownMenuItem>
-                                );
-                              })}
+                              {Object.entries(roleConfig).map(
+                                ([key, config]) => {
+                                  const Icon = config.icon;
+                                  return (
+                                    <DropdownMenuItem
+                                      key={key}
+                                      onClick={() =>
+                                        handleRoleChange(
+                                          member.id,
+                                          key as TeamMemberRole,
+                                        )
+                                      }
+                                      className={cn(
+                                        "flex items-center gap-2",
+                                        member.role === key && "bg-accent",
+                                      )}
+                                    >
+                                      <Icon className="h-4 w-4" />
+                                      <div className="flex flex-col flex-1">
+                                        <span>{config.label}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {config.description}
+                                        </span>
+                                      </div>
+                                      {member.role === key && (
+                                        <Check className="h-4 w-4 ml-auto" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  );
+                                },
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="flex items-center gap-2">
                             {member.agentPanelAccess ? (
-                              <Badge variant="outline" className="border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950">
+                              <Badge
+                                variant="outline"
+                                className="border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950"
+                              >
                                 <Bot className="h-3 w-3 mr-1" />
                                 Enabled
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950">
+                              <Badge
+                                variant="outline"
+                                className="border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950"
+                              >
                                 <X className="h-3 w-3 mr-1" />
                                 Disabled
                               </Badge>
                             )}
-                            {member.agentPanelAccess && member.allowedModels && member.allowedModels.length > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                ({member.allowedModels.length} model{member.allowedModels.length !== 1 ? "s" : ""})
-                              </span>
-                            )}
+                            {member.agentPanelAccess &&
+                              member.allowedModels &&
+                              member.allowedModels.length > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({member.allowedModels.length} model
+                                  {member.allowedModels.length !== 1 ? "s" : ""}
+                                  )
+                                </span>
+                              )}
                           </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-muted-foreground">
                           {member.joinedAt
-                            ? new Date(member.joinedAt).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })
+                            ? new Date(member.joinedAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )
                             : "-"}
                         </TableCell>
                         <TableCell className="text-right">
@@ -354,7 +418,11 @@ export default function TeamPage() {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                >
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -376,7 +444,7 @@ export default function TeamPage() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-              </div>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -387,7 +455,6 @@ export default function TeamPage() {
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 }
