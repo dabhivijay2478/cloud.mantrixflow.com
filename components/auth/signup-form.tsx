@@ -1,10 +1,8 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useActionState } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -24,76 +22,40 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import { type SignupInput, signupSchema } from "@/lib/validations/auth";
+import {
+  signupAction,
+  type AuthActionResult,
+} from "@/lib/actions/auth";
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    signUp,
-    signInWithGitHub,
-    signInWithGoogle,
-    error: authError,
-    setError,
-  } = useAuthStore();
+  const { signInWithGitHub, signInWithGoogle, setError } = useAuthStore();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SignupInput>({
-    resolver: zodResolver(signupSchema),
-  });
+  const [state, formAction, isPending] = useActionState<
+    AuthActionResult<{ requiresEmailConfirmation: boolean }> | null,
+    FormData
+  >(signupAction, null);
 
-  const onSubmit = async (data: SignupInput) => {
-    setIsSubmitting(true);
-    setError(null);
-
-    const { error } = await signUp(data.email, data.password, {
-      firstName: data.firstName,
-      lastName: data.lastName,
-    });
-
-    if (error) {
-      setIsSubmitting(false);
-      toast.error(
-        "Signup failed",
-        error.message || "Failed to create account. Please try again.",
-      );
-      return;
+  // Handle form state changes
+  useEffect(() => {
+    if (state?.success) {
+      if (state.data?.requiresEmailConfirmation) {
+        toast.success("Account created!", state.message);
+        router.push("/auth/login?confirmEmail=true");
+      } else {
+        toast.success(
+          "Account created successfully!",
+          "Welcome! Your account has been created.",
+        );
+      }
+    } else if (state && !state.success) {
+      setError(state.error);
+      toast.error("Signup failed", state.error);
     }
-
-    // Check if email confirmation is required
-    // If session is null, it means email confirmation is required
-    const { supabase } = await import("@/lib/supabase/client");
-    const { data: sessionData } = await supabase.auth.getSession();
-
-    if (!sessionData.session) {
-      // Email confirmation required - don't try to create user in DB yet
-      toast.success(
-        "Account created!",
-        "Please check your email to confirm your account. The confirmation link will create your account.",
-      );
-      setIsSubmitting(false);
-      // Redirect to login with message
-      router.push("/auth/login?confirmEmail=true");
-      return;
-    }
-
-    // Session exists (email confirmation not required or already confirmed)
-    // Show success toast
-    toast.success(
-      "Account created successfully!",
-      "Welcome! Your account has been created. You can now start using the app.",
-    );
-
-    // Redirect on success
-    router.push("/");
-    router.refresh();
-  };
+  }, [state, router, setError]);
 
   const handleGitHubLogin = async () => {
     setError(null);
@@ -119,8 +81,9 @@ export function SignupForm({
 
   return (
     <form
+      action={formAction}
       className={cn("flex flex-col gap-3", className)}
-      onSubmit={handleSubmit(onSubmit)}
+      noValidate
       {...props}
     >
       <FieldGroup className="gap-3">
@@ -129,7 +92,9 @@ export function SignupForm({
           description="Fill in the form below to create your account"
         />
 
-        <AuthErrorDisplay error={authError} />
+        {state && !state.success && (
+          <AuthErrorDisplay error={state.error} />
+        )}
 
         {/* Two column grid for name fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -139,15 +104,28 @@ export function SignupForm({
             </FieldLabel>
             <Input
               id="first-name"
+              name="firstName"
               type="text"
               placeholder="John"
               className="h-8 text-sm"
-              aria-invalid={errors.firstName ? "true" : "false"}
-              {...register("firstName")}
+              required
+              aria-invalid={
+                state && !state.success && state.fieldErrors?.firstName
+                  ? "true"
+                  : "false"
+              }
+              aria-describedby={
+                state && !state.success && state.fieldErrors?.firstName
+                  ? "first-name-error"
+                  : undefined
+              }
             />
-            <FieldError
-              errors={errors.firstName ? [errors.firstName] : undefined}
-            />
+            {state && !state.success && state.fieldErrors?.firstName && (
+              <FieldError
+                id="first-name-error"
+                errors={state.fieldErrors.firstName}
+              />
+            )}
           </Field>
           <Field>
             <FieldLabel htmlFor="last-name" className="text-xs">
@@ -155,15 +133,28 @@ export function SignupForm({
             </FieldLabel>
             <Input
               id="last-name"
+              name="lastName"
               type="text"
               placeholder="Doe"
               className="h-8 text-sm"
-              aria-invalid={errors.lastName ? "true" : "false"}
-              {...register("lastName")}
+              required
+              aria-invalid={
+                state && !state.success && state.fieldErrors?.lastName
+                  ? "true"
+                  : "false"
+              }
+              aria-describedby={
+                state && !state.success && state.fieldErrors?.lastName
+                  ? "last-name-error"
+                  : undefined
+              }
             />
-            <FieldError
-              errors={errors.lastName ? [errors.lastName] : undefined}
-            />
+            {state && !state.success && state.fieldErrors?.lastName && (
+              <FieldError
+                id="last-name-error"
+                errors={state.fieldErrors.lastName}
+              />
+            )}
           </Field>
         </div>
 
@@ -173,14 +164,26 @@ export function SignupForm({
           </FieldLabel>
           <Input
             id="email"
+            name="email"
             type="email"
             placeholder="m@example.com"
             className="h-8 text-sm"
             autoComplete="email"
-            aria-invalid={errors.email ? "true" : "false"}
-            {...register("email")}
+            required
+            aria-invalid={
+              state && !state.success && state.fieldErrors?.email
+                ? "true"
+                : "false"
+            }
+            aria-describedby={
+              state && !state.success && state.fieldErrors?.email
+                ? "email-error"
+                : undefined
+            }
           />
-          <FieldError errors={errors.email ? [errors.email] : undefined} />
+          {state && !state.success && state.fieldErrors?.email && (
+            <FieldError id="email-error" errors={state.fieldErrors.email} />
+          )}
         </Field>
 
         {/* Two column grid for password fields */}
@@ -191,14 +194,27 @@ export function SignupForm({
             </FieldLabel>
             <PasswordInput
               id="password"
+              name="password"
               className="h-8 text-sm"
               autoComplete="new-password"
-              aria-invalid={errors.password ? "true" : "false"}
-              {...register("password")}
+              required
+              aria-invalid={
+                state && !state.success && state.fieldErrors?.password
+                  ? "true"
+                  : "false"
+              }
+              aria-describedby={
+                state && !state.success && state.fieldErrors?.password
+                  ? "password-error"
+                  : undefined
+              }
             />
-            <FieldError
-              errors={errors.password ? [errors.password] : undefined}
-            />
+            {state && !state.success && state.fieldErrors?.password && (
+              <FieldError
+                id="password-error"
+                errors={state.fieldErrors.password}
+              />
+            )}
           </Field>
           <Field>
             <FieldLabel htmlFor="confirm-password" className="text-xs">
@@ -206,22 +222,40 @@ export function SignupForm({
             </FieldLabel>
             <PasswordInput
               id="confirm-password"
+              name="confirmPassword"
               className="h-8 text-sm"
               autoComplete="new-password"
-              aria-invalid={errors.confirmPassword ? "true" : "false"}
-              {...register("confirmPassword")}
-            />
-            <FieldError
-              errors={
-                errors.confirmPassword ? [errors.confirmPassword] : undefined
+              required
+              aria-invalid={
+                state && !state.success && state.fieldErrors?.confirmPassword
+                  ? "true"
+                  : "false"
+              }
+              aria-describedby={
+                state && !state.success && state.fieldErrors?.confirmPassword
+                  ? "confirm-password-error"
+                  : undefined
               }
             />
+            {state &&
+              !state.success &&
+              state.fieldErrors?.confirmPassword && (
+                <FieldError
+                  id="confirm-password-error"
+                  errors={state.fieldErrors.confirmPassword}
+                />
+              )}
           </Field>
         </div>
 
         <Field>
-          <Button type="submit" className="h-8 text-sm" disabled={isSubmitting}>
-            {isSubmitting ? "Creating account..." : "Create Account"}
+          <Button
+            type="submit"
+            className="h-8 text-sm"
+            disabled={isPending}
+            aria-busy={isPending}
+          >
+            {isPending ? "Creating account..." : "Create Account"}
           </Button>
         </Field>
 
@@ -231,7 +265,7 @@ export function SignupForm({
           <OAuthButtons
             onGitHubClick={handleGitHubLogin}
             onGoogleClick={handleGoogleLogin}
-            disabled={isSubmitting}
+            disabled={isPending}
             variant="compact"
           />
 

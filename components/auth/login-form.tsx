@@ -1,10 +1,8 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useActionState } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -24,27 +22,25 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import { type LoginInput, loginSchema } from "@/lib/validations/auth";
+import { loginAction, type AuthActionResult } from "@/lib/actions/auth";
 
 function LoginFormContent({
   className,
   ...props
 }: React.ComponentProps<"form">) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    signIn,
-    signInWithGitHub,
-    signInWithGoogle,
-    error: authError,
-    setError,
-  } = useAuthStore();
+  const { signInWithGitHub, signInWithGoogle, setError } = useAuthStore();
+
+  const [state, formAction, isPending] = useActionState<
+    AuthActionResult | null,
+    FormData
+  >(loginAction, null);
 
   // Check for email confirmation or other URL params
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
     const confirmEmail = searchParams.get("confirmEmail");
+    const reset = searchParams.get("reset");
 
     if (confirmed === "true") {
       toast.success(
@@ -56,42 +52,21 @@ function LoginFormContent({
         "Check your email",
         "Please check your email to confirm your account before signing in.",
       );
+    } else if (reset === "success") {
+      toast.success(
+        "Password reset successful!",
+        "Your password has been updated. You can now sign in.",
+      );
     }
   }, [searchParams]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data: LoginInput) => {
-    setIsSubmitting(true);
-    setError(null);
-
-    const { error } = await signIn(data.email, data.password);
-
-    if (error) {
-      setIsSubmitting(false);
-      toast.error(
-        "Login failed",
-        error.message || "Invalid email or password. Please try again.",
-      );
-      return;
+  // Handle form errors
+  useEffect(() => {
+    if (state && !state.success) {
+      setError(state.error);
+      toast.error("Login failed", state.error);
     }
-
-    // Show success toast
-    toast.success(
-      "Login successful!",
-      "Welcome back! You've been successfully logged in.",
-    );
-
-    // Redirect on success
-    router.push("/");
-    router.refresh();
-  };
+  }, [state, setError]);
 
   const handleGitHubLogin = async () => {
     setError(null);
@@ -117,8 +92,9 @@ function LoginFormContent({
 
   return (
     <form
+      action={formAction}
       className={cn("flex flex-col gap-6", className)}
-      onSubmit={handleSubmit(onSubmit)}
+      noValidate
       {...props}
     >
       <FieldGroup>
@@ -127,19 +103,36 @@ function LoginFormContent({
           description="Enter your email below to login to your account"
         />
 
-        <AuthErrorDisplay error={authError} />
+        {state && !state.success && (
+          <AuthErrorDisplay error={state.error} />
+        )}
 
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input
             id="email"
+            name="email"
             type="email"
             placeholder="m@example.com"
             autoComplete="email"
-            aria-invalid={errors.email ? "true" : "false"}
-            {...register("email")}
+            required
+            aria-invalid={
+              state && !state.success && state.fieldErrors?.email
+                ? "true"
+                : "false"
+            }
+            aria-describedby={
+              state && !state.success && state.fieldErrors?.email
+                ? "email-error"
+                : undefined
+            }
           />
-          <FieldError errors={errors.email ? [errors.email] : undefined} />
+          {state && !state.success && state.fieldErrors?.email && (
+            <FieldError
+              id="email-error"
+              errors={state.fieldErrors.email}
+            />
+          )}
         </Field>
 
         <Field>
@@ -154,18 +147,31 @@ function LoginFormContent({
           </div>
           <PasswordInput
             id="password"
+            name="password"
             autoComplete="current-password"
-            aria-invalid={errors.password ? "true" : "false"}
-            {...register("password")}
+            required
+            aria-invalid={
+              state && !state.success && state.fieldErrors?.password
+                ? "true"
+                : "false"
+            }
+            aria-describedby={
+              state && !state.success && state.fieldErrors?.password
+                ? "password-error"
+                : undefined
+            }
           />
-          <FieldError
-            errors={errors.password ? [errors.password] : undefined}
-          />
+          {state && !state.success && state.fieldErrors?.password && (
+            <FieldError
+              id="password-error"
+              errors={state.fieldErrors.password}
+            />
+          )}
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Logging in..." : "Login"}
+          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+            {isPending ? "Logging in..." : "Login"}
           </Button>
         </Field>
 
@@ -175,7 +181,7 @@ function LoginFormContent({
           <OAuthButtons
             onGitHubClick={handleGitHubLogin}
             onGoogleClick={handleGoogleLogin}
-            disabled={isSubmitting}
+            disabled={isPending}
           />
           <FieldDescription className="text-center">
             Don&apos;t have an account?{" "}

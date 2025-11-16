@@ -11,8 +11,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useActionState, useState } from "react";
 import { toast } from "sonner";
+import {
+  inviteTeamMemberAction,
+  type TeamActionResult,
+} from "@/lib/actions/team";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -130,42 +134,30 @@ const availableModels = [
 
 export default function InviteTeamMemberPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("member");
   const [agentPanelAccess, setAgentPanelAccess] = useState(false);
   const [allowedModels, setAllowedModels] = useState<string[]>([]);
+
+  const [state, formAction, isPending] = useActionState<
+    TeamActionResult | null,
+    FormData
+  >(inviteTeamMemberAction, null);
+
+  // Handle form state changes
+  useEffect(() => {
+    if (state?.success) {
+      toast.success("Invitation sent!", state.message || `Invitation sent to ${email}`);
+    } else if (state && !state.success) {
+      toast.error("Failed to send invitation", state.error);
+    }
+  }, [state, email]);
 
   const toggleModelPermission = (modelId: string) => {
     if (allowedModels.includes(modelId)) {
       setAllowedModels(allowedModels.filter((id) => id !== modelId));
     } else {
       setAllowedModels([...allowedModels, modelId]);
-    }
-  };
-
-  const handleInvite = async () => {
-    if (!email.trim()) {
-      toast.error("Please enter an email address");
-      return;
-    }
-
-    if (agentPanelAccess && allowedModels.length === 0) {
-      toast.error(
-        "Please select at least one model if agent panel access is enabled",
-      );
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success(`Invitation sent to ${email}`);
-      router.push("/workspace/team");
-    } catch {
-      toast.error("Failed to send invitation");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -219,13 +211,25 @@ export default function InviteTeamMemberPage() {
               </Label>
               <Input
                 id="invite-email"
+                name="email"
                 type="email"
                 placeholder="colleague@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-11 text-base"
-                disabled={loading}
+                required
+                disabled={isPending}
+                aria-invalid={
+                  state && !state.success && state.fieldErrors?.email
+                    ? "true"
+                    : "false"
+                }
               />
+              {state && !state.success && state.fieldErrors?.email && (
+                <p className="text-sm text-destructive mt-1">
+                  {state.fieldErrors.email[0]}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Mail className="h-3 w-3" />
                 An invitation email will be sent to this address
@@ -246,7 +250,8 @@ export default function InviteTeamMemberPage() {
                 onValueChange={(value) =>
                   setSelectedRole(value as TeamMemberRole)
                 }
-                disabled={loading}
+                disabled={isPending}
+                name="role"
               >
                 <SelectTrigger id="invite-role" className="h-12 border-2">
                   <SelectValue />
@@ -349,9 +354,15 @@ export default function InviteTeamMemberPage() {
               </div>
               <Switch
                 id="agent-panel-access"
+                name="agentPanelAccess"
                 checked={agentPanelAccess}
                 onCheckedChange={setAgentPanelAccess}
-                disabled={loading}
+                disabled={isPending}
+              />
+              <input
+                type="hidden"
+                name="agentPanelAccess"
+                value={agentPanelAccess ? "true" : "false"}
               />
             </div>
           </CardHeader>
@@ -458,38 +469,57 @@ export default function InviteTeamMemberPage() {
         {/* Action Buttons */}
         <Card className="border-2 bg-muted/30">
           <CardContent className="pt-6">
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/workspace/team")}
-                disabled={loading}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleInvite}
-                disabled={
-                  loading ||
-                  !email.trim() ||
-                  (agentPanelAccess && allowedModels.length === 0)
-                }
-                className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
-                size="lg"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending Invitation...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Send Invitation
-                  </>
-                )}
-              </Button>
-            </div>
+            <form action={formAction} noValidate>
+              <input type="hidden" name="email" value={email} />
+              <input type="hidden" name="role" value={selectedRole} />
+              <input
+                type="hidden"
+                name="agentPanelAccess"
+                value={agentPanelAccess ? "true" : "false"}
+              />
+              {allowedModels.map((modelId) => (
+                <input
+                  key={modelId}
+                  type="hidden"
+                  name="allowedModels"
+                  value={modelId}
+                />
+              ))}
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/workspace/team")}
+                  disabled={isPending}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    isPending ||
+                    !email.trim() ||
+                    (agentPanelAccess && allowedModels.length === 0)
+                  }
+                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                  size="lg"
+                  aria-busy={isPending}
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending Invitation...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Invitation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
 
