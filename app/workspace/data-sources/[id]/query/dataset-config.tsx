@@ -203,8 +203,9 @@ function AvailableColumnItem({
   };
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="sm"
       className={cn(
         "flex items-center gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors w-full text-left",
         isSelected && "border-primary bg-primary/5",
@@ -223,7 +224,7 @@ function AvailableColumnItem({
           {column.type}
         </p>
       </div>
-    </button>
+    </Button>
   );
 }
 

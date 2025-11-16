@@ -144,10 +144,9 @@ export default function WorkspaceLayout({
   useEffect(() => {
     if (isMobile) {
       // On mobile, main panel takes full width when panels are closed
-      const openPanels = [
-        componentsPanelOpen,
-        agentPanelOpen,
-      ].filter(Boolean).length;
+      const openPanels = [componentsPanelOpen, agentPanelOpen].filter(
+        Boolean,
+      ).length;
       if (openPanels === 2) {
         setMainPanelSize(50);
       } else if (openPanels === 1) {
@@ -157,10 +156,9 @@ export default function WorkspaceLayout({
       }
     } else {
       // On desktop, calculate based on open panels
-      const openPanels = [
-        componentsPanelOpen,
-        agentPanelOpen,
-      ].filter(Boolean).length;
+      const openPanels = [componentsPanelOpen, agentPanelOpen].filter(
+        Boolean,
+      ).length;
       if (openPanels === 2) {
         setMainPanelSize(64);
       } else if (openPanels === 1) {

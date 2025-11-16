@@ -24,28 +24,6 @@ import {
 } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 
-// Mock function to fetch columns from a table
-const fetchTableColumns = async (
-  _dataSourceId: string,
-  _tableName: string,
-): Promise<DatasetColumn[]> => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 300));
-
-  // Mock columns based on table
-  const mockColumns: DatasetColumn[] = [
-    { name: "id", type: "number", selected: false, order: 0 },
-    { name: "name", type: "string", selected: false, order: 1 },
-    { name: "email", type: "string", selected: false, order: 2 },
-    { name: "created_at", type: "date", selected: false, order: 3 },
-    { name: "status", type: "boolean", selected: false, order: 4 },
-    { name: "revenue", type: "number", selected: false, order: 5 },
-    { name: "category", type: "string", selected: false, order: 6 },
-  ];
-
-  return mockColumns;
-};
-
 function ColumnIcon({ type }: { type: DatasetColumn["type"] }) {
   switch (type) {
     case "number":
@@ -87,7 +65,6 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
   } = useWorkspaceStore();
 
   const [columns, setColumns] = useState<DatasetColumn[]>([]);
-  const [loading, setLoading] = useState(false);
 
   // Get available datasets for the current dashboard's data source
   const dashboardDataSourceId = currentDashboard?.dataSourceId;
@@ -99,11 +76,10 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
     ? datasets.find((ds) => ds.id === selectedDatasetId)
     : null;
 
-  // Get the connected data source and selected table
+  // Get the connected data source for display purposes
   const connectedDataSource = currentDashboard?.dataSourceId
     ? dataSources.find((ds) => ds.id === currentDashboard.dataSourceId)
     : null;
-  const selectedTable = connectedDataSource?.selectedTable || "";
 
   const handleDatasetChange = (value: string) => {
     if (value && value !== "__none__") {
@@ -113,29 +89,15 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
     }
   };
 
-  // Fetch columns when table changes or selected dataset changes
+  // Update columns when selected dataset changes
   useEffect(() => {
-    if (connectedDataSource?.id && selectedTable) {
-      setLoading(true);
-      fetchTableColumns(connectedDataSource.id, selectedTable)
-        .then((cols) => {
-          setColumns(cols);
-        })
-        .catch((error) => {
-          console.error("Failed to fetch columns:", error);
-          setColumns([]);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else if (selectedDataset) {
-      // If we have a selected dataset, use its columns
+    if (selectedDataset) {
+      // Use columns from the selected dataset
       setColumns(selectedDataset.columns || []);
-      setLoading(false);
     } else {
       setColumns([]);
     }
-  }, [connectedDataSource?.id, selectedTable, selectedDataset]);
+  }, [selectedDataset]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -182,35 +144,20 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
           {/* Data View */}
           <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-4 pr-4">
-              {!connectedDataSource && !selectedDataset ? (
+              {!selectedDataset ? (
                 <Card className="border-yellow-500/50 bg-yellow-500/10">
                   <CardContent className="p-4">
                     <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      No data source connected. Please connect a data source
-                      first.
+                      No dataset selected. Please select a dataset from the
+                      dropdown above.
                     </p>
                   </CardContent>
                 </Card>
-              ) : !selectedTable && !selectedDataset ? (
-                <Card className="border-yellow-500/50 bg-yellow-500/10">
-                  <CardContent className="p-4">
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      No table or dataset selected. Please select a dataset from
-                      the dropdown above.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : loading ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground">
-                    Loading columns...
-                  </p>
-                </div>
               ) : columns.length === 0 ? (
                 <Card>
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">
-                      No columns available.
+                      No columns available for this dataset.
                     </p>
                   </CardContent>
                 </Card>
@@ -219,26 +166,23 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-medium text-muted-foreground uppercase">
-                        {selectedDataset ? "Dataset" : "Table"}
+                        Dataset
                       </p>
                       <Badge variant="outline" className="text-xs">
                         {columns.length} columns
                       </Badge>
                     </div>
                     <p className="text-sm font-medium">
-                      {selectedDataset
-                        ? selectedDataset.name
-                        : selectedTable}
+                      {selectedDataset.name}
                     </p>
-                    {selectedDataset ? (
-                      selectedDataset.description && (
-                        <p className="text-xs text-muted-foreground">
-                          {selectedDataset.description}
-                        </p>
-                      )
-                    ) : (
+                    {selectedDataset.description && (
                       <p className="text-xs text-muted-foreground">
-                        {connectedDataSource?.name}
+                        {selectedDataset.description}
+                      </p>
+                    )}
+                    {connectedDataSource && (
+                      <p className="text-xs text-muted-foreground">
+                        Data Source: {connectedDataSource.name}
                       </p>
                     )}
                   </div>
@@ -287,5 +231,3 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
     </Dialog>
   );
 }
-
-
