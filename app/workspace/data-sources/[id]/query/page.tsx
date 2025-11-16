@@ -434,14 +434,6 @@ export default function DataSourceQueryPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  title="Copy link"
-                >
-                  <Link2 className="h-4 w-4" />
-                </Button>
-                <Button
                   onClick={handleExecuteQuery}
                   disabled={loading || !query.trim()}
                   size="sm"
