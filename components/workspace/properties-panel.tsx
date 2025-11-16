@@ -161,10 +161,16 @@ export function PropertiesPanel({
     return (
       <div className="h-full w-full border-l bg-muted/30 flex flex-col items-center justify-center">
         <div className="text-center p-6">
-          <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">
-            Select a component to configure
-          </p>
+          <span
+            className="text-xs text-muted-foreground select-none"
+            style={{
+              writingMode: "vertical-rl",
+              transform: "rotate(180deg)",
+              textOrientation: "mixed",
+            }}
+          >
+            Properties
+          </span>
         </div>
       </div>
     );
@@ -179,7 +185,6 @@ export function PropertiesPanel({
       >
         <div className="absolute right-0 top-0 bottom-0 w-px bg-border" />
         <div className="flex flex-col items-center justify-center flex-1 w-full py-4">
-          <Settings className="h-8 w-8 mb-4 text-muted-foreground" />
           <span
             className="text-xs text-muted-foreground select-none"
             style={{
@@ -254,149 +259,149 @@ export function PropertiesPanel({
                       </p>
                     </div>
 
-                <Separator />
+                    <Separator />
 
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Type className="h-4 w-4" />
-                        Title
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Component title"
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleUpdate({ title: e.target.value });
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Display title for this component
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Type className="h-4 w-4" />
+                            Title
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Component title"
+                              onChange={(e) => {
+                                field.onChange(e);
+                                handleUpdate({ title: e.target.value });
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Display title for this component
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="xAxis"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>X-Axis</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleUpdate({ xAxis: value });
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select X-axis column" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {getAvailableXAxisColumns().map((col) => (
-                            <SelectItem key={col.name} value={col.name}>
-                              {col.name} ({col.type})
-                            </SelectItem>
-                          ))}
-                          {getAvailableXAxisColumns().length === 0 && (
-                            <div className="p-2 text-sm text-muted-foreground">
-                              No available columns
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Column to use for the X-axis
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="xAxis"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>X-Axis</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              handleUpdate({ xAxis: value });
+                            }}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select X-axis column" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {getAvailableXAxisColumns().map((col) => (
+                                <SelectItem key={col.name} value={col.name}>
+                                  {col.name} ({col.type})
+                                </SelectItem>
+                              ))}
+                              {getAvailableXAxisColumns().length === 0 && (
+                                <div className="p-2 text-sm text-muted-foreground">
+                                  No available columns
+                                </div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Column to use for the X-axis
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="yAxis"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Y-Axis</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleUpdate({ yAxis: value });
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Y-axis column" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {getAvailableYAxisColumns().map((col) => (
-                            <SelectItem key={col.name} value={col.name}>
-                              {col.name} ({col.type})
-                            </SelectItem>
-                          ))}
-                          {getAvailableYAxisColumns().length === 0 && (
-                            <div className="p-2 text-sm text-muted-foreground">
-                              No numeric columns available
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Column to use for the Y-axis (must be numeric)
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="yAxis"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Y-Axis</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              handleUpdate({ yAxis: value });
+                            }}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Y-axis column" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {getAvailableYAxisColumns().map((col) => (
+                                <SelectItem key={col.name} value={col.name}>
+                                  {col.name} ({col.type})
+                                </SelectItem>
+                              ))}
+                              {getAvailableYAxisColumns().length === 0 && (
+                                <div className="p-2 text-sm text-muted-foreground">
+                                  No numeric columns available
+                                </div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Column to use for the Y-axis (must be numeric)
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="grouping"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Grouping (Optional)</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          const finalValue = value === "__none__" ? "" : value;
-                          field.onChange(finalValue);
-                          handleUpdate({ grouping: finalValue });
-                        }}
-                        value={field.value || "__none__"}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select grouping column" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="__none__">None</SelectItem>
-                          {getAvailableGroupingColumns().map((col) => (
-                            <SelectItem key={col.name} value={col.name}>
-                              {col.name} ({col.type})
-                            </SelectItem>
-                          ))}
-                          {getAvailableGroupingColumns().length === 0 && (
-                            <div className="p-2 text-sm text-muted-foreground">
-                              No grouping columns available
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Optional column to group data by (creates series)
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="grouping"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Grouping (Optional)</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              const finalValue = value === "__none__" ? "" : value;
+                              field.onChange(finalValue);
+                              handleUpdate({ grouping: finalValue });
+                            }}
+                            value={field.value || "__none__"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select grouping column" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="__none__">None</SelectItem>
+                              {getAvailableGroupingColumns().map((col) => (
+                                <SelectItem key={col.name} value={col.name}>
+                                  {col.name} ({col.type})
+                                </SelectItem>
+                              ))}
+                              {getAvailableGroupingColumns().length === 0 && (
+                                <div className="p-2 text-sm text-muted-foreground">
+                                  No grouping columns available
+                                </div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Optional column to group data by (creates series)
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
                   </>
                 )}
               </>

@@ -112,7 +112,6 @@ export function DataPanel() {
       >
         <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
         <div className="flex flex-col items-center justify-center flex-1 w-full py-4">
-          <Database className="h-8 w-8 mb-4 text-muted-foreground" />
           <span
             className="text-xs text-muted-foreground select-none"
             style={{
