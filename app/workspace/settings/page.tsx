@@ -13,6 +13,7 @@ import {
   Shield,
   Trash2,
   User,
+  Check,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
@@ -165,14 +167,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your workspace, preferences, and account settings
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
+      {/* Header */}
+      <div className="mb-8 space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Settings</h1>
+        <p className="text-base sm:text-lg text-muted-foreground">
+          Manage your workspace, preferences, and account settings
+        </p>
       </div>
 
       <Tabs
@@ -180,448 +181,510 @@ export default function SettingsPage() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto p-1 bg-muted/50">
-          <TabsTrigger value="organization" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Organization</span>
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Preferences</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="notifications"
-            className="flex items-center gap-2"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Appearance</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Security</span>
-          </TabsTrigger>
-        </TabsList>
+        {/* Improved TabsList */}
+        <div className="border-b">
+          <TabsList className="inline-flex h-auto w-full sm:w-auto bg-transparent p-0 space-x-1 sm:space-x-2">
+            <TabsTrigger 
+              value="organization" 
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+            >
+              <Building2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Organization</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="preferences" 
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Preferences</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="notifications"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Notifications</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="appearance" 
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+            >
+              <Palette className="h-4 w-4" />
+              <span className="hidden sm:inline">Appearance</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="security" 
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+            >
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Security</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Organization Settings */}
-        <TabsContent value="organization" className="space-y-4">
-          <div className="max-w-2xl space-y-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="org-name"
-                className="text-base font-semibold flex items-center gap-2"
-              >
-                Organization Name
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="org-name"
-                value={orgName}
-                onChange={(e) => {
-                  setOrgName(e.target.value);
-                  if (
-                    !orgSlug ||
-                    orgSlug === generateSlug(currentOrganization?.name || "")
-                  ) {
-                    setOrgSlug(generateSlug(e.target.value));
-                  }
-                }}
-                placeholder="Acme Corporation"
-                className="h-11 text-base"
-                disabled={loading}
-              />
-              <p className="text-xs text-muted-foreground">
-                This is your organization's display name
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="org-slug" className="text-base font-semibold">
-                Organization Slug
-              </Label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  workspace.com/
-                </span>
+        <TabsContent value="organization" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Organization Details</CardTitle>
+              <CardDescription>
+                Update your organization information and settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label
+                  htmlFor="org-name"
+                  className="text-sm font-medium flex items-center gap-2"
+                >
+                  Organization Name
+                  <span className="text-destructive text-xs">*</span>
+                </Label>
                 <Input
-                  id="org-slug"
-                  value={orgSlug}
-                  onChange={(e) => setOrgSlug(e.target.value)}
-                  placeholder="acme-corp"
-                  className="h-11 text-base flex-1"
+                  id="org-name"
+                  value={orgName}
+                  onChange={(e) => {
+                    setOrgName(e.target.value);
+                    if (
+                      !orgSlug ||
+                      orgSlug === generateSlug(currentOrganization?.name || "")
+                    ) {
+                      setOrgSlug(generateSlug(e.target.value));
+                    }
+                  }}
+                  placeholder="Acme Corporation"
+                  className="h-10"
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This is your organization's display name
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="org-slug" className="text-sm font-medium">
+                  Organization Slug
+                </Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                    workspace.com/
+                  </span>
+                  <Input
+                    id="org-slug"
+                    value={orgSlug}
+                    onChange={(e) => setOrgSlug(e.target.value)}
+                    placeholder="acme-corp"
+                    className="h-10 flex-1"
+                    disabled={loading}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Used in URLs and must be unique. Only lowercase letters,
+                  numbers, and hyphens.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label
+                  htmlFor="org-description"
+                  className="text-sm font-medium"
+                >
+                  Description
+                  <span className="text-muted-foreground font-normal ml-2 text-xs">
+                    (Optional)
+                  </span>
+                </Label>
+                <Textarea
+                  id="org-description"
+                  value={orgDescription}
+                  onChange={(e) => setOrgDescription(e.target.value)}
+                  placeholder="A brief description of your organization..."
+                  className="min-h-[100px] resize-none"
                   disabled={loading}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Used in URLs and must be unique. Only lowercase letters,
-                numbers, and hyphens.
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Label
-                htmlFor="org-description"
-                className="text-base font-semibold"
-              >
-                Description
-                <span className="text-muted-foreground font-normal ml-2">
-                  (Optional)
-                </span>
-              </Label>
-              <Textarea
-                id="org-description"
-                value={orgDescription}
-                onChange={(e) => setOrgDescription(e.target.value)}
-                placeholder="A brief description of your organization..."
-                className="min-h-[100px] resize-none"
-                disabled={loading}
-              />
-            </div>
-
-            <Separator className="my-3" />
-
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOrgName(currentOrganization?.name || "");
-                  setOrgSlug(currentOrganization?.slug || "");
-                }}
-                disabled={loading}
-              >
-                Reset
-              </Button>
-              <Button
-                onClick={handleSaveOrganization}
-                disabled={loading || !orgName.trim()}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setOrgName(currentOrganization?.name || "");
+                    setOrgSlug(currentOrganization?.slug || "");
+                  }}
+                  disabled={loading}
+                  className="w-full sm:w-auto"
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={handleSaveOrganization}
+                  disabled={loading || !orgName.trim()}
+                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Preferences */}
-        <TabsContent value="preferences" className="space-y-4">
-          <div className="max-w-2xl space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="compact-mode"
-                    className="text-base font-semibold"
-                  >
-                    Compact Mode
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Reduce spacing and padding for a more compact interface
-                  </p>
+        <TabsContent value="preferences" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Preferences</CardTitle>
+              <CardDescription>
+                Customize your workspace experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div className="space-y-1 flex-1">
+                    <Label
+                      htmlFor="compact-mode"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Compact Mode
+                    </Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Reduce spacing and padding for a more compact interface
+                    </p>
+                  </div>
+                  <Switch
+                    id="compact-mode"
+                    checked={compactMode}
+                    onCheckedChange={setCompactMode}
+                    disabled={loading}
+                  />
                 </div>
-                <Switch
-                  id="compact-mode"
-                  checked={compactMode}
-                  onCheckedChange={setCompactMode}
-                  disabled={loading}
-                />
+
+                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div className="space-y-1 flex-1">
+                    <Label
+                      htmlFor="show-tooltips"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Show Tooltips
+                    </Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Display helpful tooltips on hover
+                    </p>
+                  </div>
+                  <Switch
+                    id="show-tooltips"
+                    checked={showTooltips}
+                    onCheckedChange={setShowTooltips}
+                    disabled={loading}
+                  />
+                </div>
               </div>
 
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="show-tooltips"
-                    className="text-base font-semibold"
-                  >
-                    Show Tooltips
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Display helpful tooltips on hover
-                  </p>
-                </div>
-                <Switch
-                  id="show-tooltips"
-                  checked={showTooltips}
-                  onCheckedChange={setShowTooltips}
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCompactMode(false);
+                    setShowTooltips(true);
+                  }}
                   disabled={loading}
-                />
+                  className="w-full sm:w-auto"
+                >
+                  Reset to Defaults
+                </Button>
+                <Button 
+                  onClick={handleSavePreferences} 
+                  disabled={loading}
+                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Preferences
+                    </>
+                  )}
+                </Button>
               </div>
-            </div>
-
-            <Separator className="my-3" />
-
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setCompactMode(false);
-                  setShowTooltips(true);
-                }}
-                disabled={loading}
-              >
-                Reset to Defaults
-              </Button>
-              <Button onClick={handleSavePreferences} disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Preferences
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Notifications */}
-        <TabsContent value="notifications" className="space-y-4">
-          <div className="max-w-2xl space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="email-notifications"
-                    className="text-base font-semibold"
-                  >
-                    Email Notifications
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications via email
-                  </p>
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+              <CardDescription>
+                Choose how you want to be notified about updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border-2 bg-card hover:bg-accent/50 transition-colors">
+                  <div className="space-y-1 flex-1">
+                    <Label
+                      htmlFor="email-notifications"
+                      className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                    >
+                      <Mail className="h-4 w-4 text-primary" />
+                      Email Notifications
+                    </Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Receive notifications via email
+                    </p>
+                  </div>
+                  <Switch
+                    id="email-notifications"
+                    checked={emailNotifications}
+                    onCheckedChange={setEmailNotifications}
+                    disabled={loading}
+                  />
                 </div>
-                <Switch
-                  id="email-notifications"
-                  checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
+
+                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div className="space-y-1 flex-1">
+                    <Label
+                      htmlFor="dashboard-updates"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Dashboard Updates
+                    </Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Get notified when dashboards are updated
+                    </p>
+                  </div>
+                  <Switch
+                    id="dashboard-updates"
+                    checked={dashboardUpdates}
+                    onCheckedChange={setDashboardUpdates}
+                    disabled={loading || !emailNotifications}
+                  />
+                </div>
+
+                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div className="space-y-1 flex-1">
+                    <Label
+                      htmlFor="data-source-alerts"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Data Source Alerts
+                    </Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Receive alerts about data source issues
+                    </p>
+                  </div>
+                  <Switch
+                    id="data-source-alerts"
+                    checked={dataSourceAlerts}
+                    onCheckedChange={setDataSourceAlerts}
+                    disabled={loading || !emailNotifications}
+                  />
+                </div>
+
+                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div className="space-y-1 flex-1">
+                    <Label
+                      htmlFor="weekly-reports"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Weekly Reports
+                    </Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Receive weekly summary reports
+                    </p>
+                  </div>
+                  <Switch
+                    id="weekly-reports"
+                    checked={weeklyReports}
+                    onCheckedChange={setWeeklyReports}
+                    disabled={loading || !emailNotifications}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEmailNotifications(true);
+                    setDashboardUpdates(true);
+                    setDataSourceAlerts(true);
+                    setWeeklyReports(false);
+                  }}
                   disabled={loading}
-                />
+                  className="w-full sm:w-auto"
+                >
+                  Reset to Defaults
+                </Button>
+                <Button 
+                  onClick={handleSavePreferences} 
+                  disabled={loading}
+                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Preferences
+                    </>
+                  )}
+                </Button>
               </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="dashboard-updates"
-                    className="text-base font-semibold"
-                  >
-                    Dashboard Updates
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified when dashboards are updated
-                  </p>
-                </div>
-                <Switch
-                  id="dashboard-updates"
-                  checked={dashboardUpdates}
-                  onCheckedChange={setDashboardUpdates}
-                  disabled={loading || !emailNotifications}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="data-source-alerts"
-                    className="text-base font-semibold"
-                  >
-                    Data Source Alerts
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive alerts about data source issues
-                  </p>
-                </div>
-                <Switch
-                  id="data-source-alerts"
-                  checked={dataSourceAlerts}
-                  onCheckedChange={setDataSourceAlerts}
-                  disabled={loading || !emailNotifications}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label
-                    htmlFor="weekly-reports"
-                    className="text-base font-semibold"
-                  >
-                    Weekly Reports
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive weekly summary reports
-                  </p>
-                </div>
-                <Switch
-                  id="weekly-reports"
-                  checked={weeklyReports}
-                  onCheckedChange={setWeeklyReports}
-                  disabled={loading || !emailNotifications}
-                />
-              </div>
-            </div>
-
-            <Separator className="my-3" />
-
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEmailNotifications(true);
-                  setDashboardUpdates(true);
-                  setDataSourceAlerts(true);
-                  setWeeklyReports(false);
-                }}
-                disabled={loading}
-              >
-                Reset to Defaults
-              </Button>
-              <Button onClick={handleSavePreferences} disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Preferences
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Appearance */}
-        <TabsContent value="appearance" className="space-y-4">
-          <div className="max-w-2xl space-y-4">
-            <div className="space-y-3">
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Theme</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <TabsContent value="appearance" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance Settings</CardTitle>
+              <CardDescription>
+                Customize the look and feel of your workspace
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Theme Preference</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {(["light", "dark", "system"] as const).map((themeOption) => (
                     <button
                       key={themeOption}
                       type="button"
                       onClick={() => setTheme(themeOption)}
                       className={cn(
-                        "p-4 rounded-lg border-2 text-left transition-all hover:shadow-sm",
+                        "group relative p-5 rounded-xl border-2 text-left transition-all duration-300 hover:shadow-md",
                         theme === themeOption
-                          ? "border-primary bg-primary/10 shadow-sm"
-                          : "border-border hover:border-primary/50 hover:bg-muted/50",
+                          ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/50 hover:bg-accent/50",
                       )}
                       aria-pressed={theme === themeOption}
                     >
-                      <div className="font-semibold capitalize mb-1.5">
-                        {themeOption}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-semibold capitalize text-base">
+                          {themeOption}
+                        </div>
+                        {theme === themeOption && (
+                          <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          </div>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {themeOption === "system" && "Follow system preference"}
-                        {themeOption === "light" && "Light mode"}
-                        {themeOption === "dark" && "Dark mode"}
+                        {themeOption === "light" && "Always use light mode"}
+                        {themeOption === "dark" && "Always use dark mode"}
                       </div>
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
 
-            <Separator className="my-3" />
-
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setTheme("system")}
-                disabled={loading}
-              >
-                Reset
-              </Button>
-              <Button onClick={handleSaveAppearance} disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Appearance
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setTheme("system")}
+                  disabled={loading}
+                  className="w-full sm:w-auto"
+                >
+                  Reset
+                </Button>
+                <Button 
+                  onClick={handleSaveAppearance} 
+                  disabled={loading}
+                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Appearance
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Security */}
-        <TabsContent value="security" className="space-y-4">
-          <div className="max-w-2xl space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  API keys allow you to access the API programmatically
-                </p>
+        <TabsContent value="security" className="space-y-6">
+          {/* API Keys Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>API Keys</CardTitle>
+                  <CardDescription className="mt-1">
+                    Manage your API keys for programmatic access
+                  </CardDescription>
+                </div>
+                <Button size="sm" className="w-full sm:w-auto shadow-sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create API Key
+                </Button>
               </div>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Create API Key
-              </Button>
-            </div>
-
-            <div className="space-y-4">
+            </CardHeader>
+            <CardContent className="space-y-4">
               {apiKeys.map((apiKey) => (
-                <div key={apiKey.id} className="border rounded-lg p-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{apiKey.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {apiKey.key.includes("live")
-                            ? "Production"
-                            : "Development"}
+                <div 
+                  key={apiKey.id} 
+                  className="group border-2 rounded-xl p-4 sm:p-5 hover:border-primary/50 hover:shadow-md transition-all duration-300"
+                >
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div className="flex-1 space-y-3 w-full">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <span className="font-semibold text-base">{apiKey.name}</span>
+                        <Badge 
+                          variant={apiKey.key.includes("live") ? "default" : "secondary"}
+                          className="text-xs w-fit"
+                        >
+                          {apiKey.key.includes("live") ? "Production" : "Development"}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="font-mono">{apiKey.key}</span>
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                        <code className="flex-1 text-sm font-mono truncate">
+                          {apiKey.key}
+                        </code>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleCopyApiKey(apiKey.key)}
-                          className="h-6 px-2"
+                          className="h-8 px-3 shrink-0 hover:bg-background"
                         >
-                          <Copy className="h-3 w-3" />
+                          <Copy className="h-3.5 w-3.5 mr-1.5" />
+                          Copy
                         </Button>
                       </div>
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
                         <span>
-                          Created:{" "}
-                          {new Date(apiKey.created).toLocaleDateString()}
+                          Created: {new Date(apiKey.created).toLocaleDateString()}
                         </span>
                         <span>
-                          Last used:{" "}
-                          {new Date(apiKey.lastUsed).toLocaleDateString()}
+                          Last used: {new Date(apiKey.lastUsed).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -629,54 +692,68 @@ export default function SettingsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteApiKey(apiKey.id)}
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full lg:w-auto"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
                     </Button>
                   </div>
                 </div>
               ))}
-            </div>
 
-            {apiKeys.length === 0 && (
-              <div className="text-center py-12">
-                <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-2">
-                  No API keys created yet
-                </p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Create an API key to get started with programmatic access
-                </p>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First API Key
-                </Button>
-              </div>
-            )}
-
-            {/* Account Security */}
-            <div className="space-y-4 pt-4 border-t">
-              {user && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                        <Mail className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Email Address</p>
-                        <p className="text-sm text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline">Verified</Badge>
+              {apiKeys.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                    <Key className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <Button variant="outline">Change Password</Button>
+                  <p className="text-lg font-medium mb-2">
+                    No API keys created yet
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                    Create an API key to get started with programmatic access to your workspace
+                  </p>
+                  <Button className="shadow-sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Your First API Key
+                  </Button>
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          {/* Account Security Section */}
+          {user && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Security</CardTitle>
+                <CardDescription>
+                  Manage your account credentials and security settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-2 rounded-xl hover:border-primary/50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Mail className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Email Address</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
+                    <Check className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                </div>
+                <Button variant="outline" className="w-full sm:w-auto">
+                  Change Password
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
