@@ -24,7 +24,7 @@ export function DashboardDndProvider({
   onDragEnd: customOnDragEnd,
   onDragStart: customOnDragStart,
 }: DashboardDndProviderProps) {
-  // Use MouseSensor and TouchSensor like in the examples for better responsiveness
+  // Use MouseSensor and TouchSensor for better responsiveness
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
       distance: 8, // Require 8px movement before drag starts
@@ -45,7 +45,6 @@ export function DashboardDndProvider({
   const handleDragStart = (event: DragStartEvent) => {
     // Store active drag info for canvas to use
     if (event.active.data.current) {
-      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
       (window as any).__lastDragData = event.active.data.current;
     }
 
@@ -56,7 +55,7 @@ export function DashboardDndProvider({
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    // If custom handler provided, call it first (for sortable mode)
+    // Call custom handler first (important for sortable mode)
     if (customOnDragEnd) {
       customOnDragEnd(event);
     }
@@ -65,18 +64,15 @@ export function DashboardDndProvider({
 
     // Store drag data and drop position for canvas to use (for free mode)
     if (active.data.current) {
-      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
       (window as any).__lastDragData = active.data.current;
     }
 
     // Store delta for position calculation
     if (delta) {
-      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag delta
       (window as any).__lastDelta = delta;
     }
 
     // Store over target
-    // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag over
     (window as any).__lastOver = over;
 
     if (over?.id === "canvas-drop-zone") {
@@ -86,9 +82,7 @@ export function DashboardDndProvider({
         const mouseEvent = event.activatorEvent as MouseEvent | undefined;
 
         if (mouseEvent) {
-          // biome-ignore lint/suspicious/noExplicitAny: Window extension for drop coordinates
           (window as any).__lastDropX = mouseEvent.clientX - canvasRect.left;
-          // biome-ignore lint/suspicious/noExplicitAny: Window extension for drop coordinates
           (window as any).__lastDropY = mouseEvent.clientY - canvasRect.top;
         }
       }

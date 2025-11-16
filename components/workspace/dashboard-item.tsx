@@ -28,6 +28,9 @@ interface DashboardItemProps {
   hasCollision?: boolean;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
+  onPositionUpdate?: (id: string, delta: { x: number; y: number }) => void;
+  onDragEnd?: (id: string) => void;
+  currentPosition?: { x: number; y: number };
   children: React.ReactNode;
 }
 
@@ -45,6 +48,9 @@ export function DashboardItem({
   hasCollision = false,
   isSelected = false,
   onSelect,
+  onPositionUpdate,
+  onDragEnd,
+  currentPosition,
   children,
 }: DashboardItemProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -58,40 +64,44 @@ export function DashboardItem({
   });
   const itemRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<HTMLDivElement>(null);
+  const prevDeltaRef = useRef({ x: 0, y: 0 });
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: component.id,
-      data: {
-        type: "dashboard-item",
-        // CRITICAL FIX: Don't store component snapshot - only store ID
-        // The canvas will look up the current component from the array
-        componentId: component.id,
-      },
-      disabled: isResizing, // Disable drag when resizing
-    });
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: component.id,
+    data: {
+      type: "dashboard-item",
+      componentId: component.id,
+    },
+    disabled: isResizing,
+  });
 
-  // Style for free positioning: use transform during drag, position after drag
-  // The component itself moves during drag (no ghost/shadow overlay)
-  const style = {
-    // Apply transform during drag for smooth visual movement
-    // The transform is relative to the element's current position
-    transform: isDragging && transform 
-      ? CSS.Translate.toString(transform) 
-      : undefined,
-    opacity: isDragging ? 0.7 : 1, // Slightly transparent during drag, but still visible
-    transition: isDragging ? "none" : "opacity 0.2s ease-out",
-    zIndex:
-      isDragging || isResizing
-        ? (component.zIndex || 1) + 1000
-        : component.zIndex || 1,
-  };
+  // Handle position updates during drag (like BasicSetup example)
+  useEffect(() => {
+    if (isDragging && transform && onPositionUpdate) {
+      const deltaX = transform.x - prevDeltaRef.current.x;
+      const deltaY = transform.y - prevDeltaRef.current.y;
+      
+      if (deltaX !== 0 || deltaY !== 0) {
+        onPositionUpdate(component.id, { x: deltaX, y: deltaY });
+        prevDeltaRef.current = { x: transform.x, y: transform.y };
+      }
+    }
 
-  // Convert grid units to pixels
+    if (!isDragging && prevDeltaRef.current.x !== 0 && prevDeltaRef.current.y !== 0) {
+      // Drag ended
+      prevDeltaRef.current = { x: 0, y: 0 };
+      if (onDragEnd) {
+        onDragEnd(component.id);
+      }
+    }
+  }, [isDragging, transform, onPositionUpdate, onDragEnd, component.id]);
+
+  // Calculate position: use currentPosition from parent during drag, otherwise use component.position
+  const left = currentPosition ? currentPosition.x : component.position.x * gridSize;
+  const top = currentPosition ? currentPosition.y : component.position.y * gridSize;
+  
   const width = component.position.w * gridSize;
   const height = component.position.h * gridSize;
-  const left = component.position.x * gridSize;
-  const top = component.position.y * gridSize;
 
   // Calculate max size based on canvas bounds
   const maxWidth = (canvasWidth / gridSize - component.position.x) * gridSize;
@@ -126,57 +136,36 @@ export function DashboardItem({
 
       let newWidth = resizeStart.width;
       let newHeight = resizeStart.height;
-      let _newX = component.position.x;
-      let _newY = component.position.y;
       let newXPixels = component.position.x * gridSize;
       let newYPixels = component.position.y * gridSize;
 
-      // Calculate new dimensions based on handle
-      // East (right) and South (bottom) handles: grow/shrink from bottom-right
       if (resizeHandle.includes("e")) {
-        newWidth = Math.max(
-          minWidth,
-          Math.min(maxWidth, resizeStart.width + deltaX),
-        );
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + deltaX));
       }
       if (resizeHandle.includes("s")) {
-        newHeight = Math.max(
-          minHeight,
-          Math.min(maxHeight, resizeStart.height + deltaY),
-        );
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.height + deltaY));
       }
 
-      // West (left) and North (top) handles: grow/shrink from top-left, need to adjust position
       if (resizeHandle.includes("w")) {
-        const newW = Math.max(
-          minWidth,
-          Math.min(maxWidth, resizeStart.width - deltaX),
-        );
-        const deltaW = resizeStart.width - newW; // Positive when shrinking, negative when growing
+        const newW = Math.max(minWidth, Math.min(maxWidth, resizeStart.width - deltaX));
+        const deltaW = resizeStart.width - newW;
         const currentXPixels = component.position.x * gridSize;
-        newXPixels = currentXPixels + deltaW; // Move left when shrinking, right when growing
-        _newX = Math.max(0, newXPixels) / gridSize;
+        newXPixels = currentXPixels + deltaW;
         newWidth = newW;
       }
       if (resizeHandle.includes("n")) {
-        const newH = Math.max(
-          minHeight,
-          Math.min(maxHeight, resizeStart.height - deltaY),
-        );
-        const deltaH = resizeStart.height - newH; // Positive when shrinking, negative when growing
+        const newH = Math.max(minHeight, Math.min(maxHeight, resizeStart.height - deltaY));
+        const deltaH = resizeStart.height - newH;
         const currentYPixels = component.position.y * gridSize;
-        newYPixels = currentYPixels + deltaH; // Move up when shrinking, down when growing
-        _newY = Math.max(0, newYPixels) / gridSize;
+        newYPixels = currentYPixels + deltaH;
         newHeight = newH;
       }
 
-      // Snap to grid
       const snappedWidth = Math.round(newWidth / gridSize) * gridSize;
       const snappedHeight = Math.round(newHeight / gridSize) * gridSize;
       const snappedX = Math.round(newXPixels / gridSize);
       const snappedY = Math.round(newYPixels / gridSize);
 
-      // Update position if resizing from top or left
       if (resizeHandle.includes("w") || resizeHandle.includes("n")) {
         onUpdate(component.id, {
           position: {
@@ -220,9 +209,6 @@ export function DashboardItem({
     onUpdate,
   ]);
 
-  // Handle click to select - removed as selection is handled by parent canvas
-
-  // Render resize handles
   const renderResizeHandle = (handle: ResizeHandle) => {
     const handleClasses = {
       n: "top-0 left-1/2 -translate-x-1/2 w-12 h-2 cursor-ns-resize",
@@ -277,7 +263,7 @@ export function DashboardItem({
         top: `${top}px`,
         width: `${width}px`,
         height: `${height}px`,
-        ...style,
+        zIndex: isDragging || isResizing ? (component.zIndex || 1) + 1000 : component.zIndex || 1,
         overflow: "visible",
       }}
     >
@@ -291,20 +277,13 @@ export function DashboardItem({
         className={cn(
           "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm",
           "transition-all duration-200 ease-out",
-          isSelected
-            ? "border-primary ring-2 ring-primary/20"
-            : "border-transparent",
-          isDragging && "opacity-40 cursor-grabbing border-primary/50",
+          isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent",
+          isDragging && "opacity-70 cursor-grabbing border-primary/50",
           isHovered && !isResizing && !isDragging && "border-border",
           isResizing && "border-primary/50 cursor-default",
           !isResizing && !isDragging && "cursor-move",
-          hasCollision &&
-            "border-destructive ring-2 ring-destructive/30 animate-pulse",
+          hasCollision && "border-destructive ring-2 ring-destructive/30 animate-pulse",
         )}
-        style={{
-          // Transform is handled in the parent div's style
-          transition: isDragging ? "none" : "all 0.2s ease-out",
-        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={(e) => {
@@ -314,7 +293,7 @@ export function DashboardItem({
           }
         }}
       >
-        {/* Drag Handle - Visual indicator only, dragging works from entire component */}
+        {/* Drag Handle */}
         {!isResizing && (
           <div
             role="button"
@@ -336,14 +315,8 @@ export function DashboardItem({
           </div>
         )}
 
-        {/* Component Content - Responsive wrapper */}
-        <div
-          className="h-full w-full overflow-hidden"
-          style={{
-            minWidth: 0,
-            minHeight: 0,
-          }}
-        >
+        {/* Component Content */}
+        <div className="h-full w-full overflow-hidden" style={{ minWidth: 0, minHeight: 0 }}>
           {children}
         </div>
 
@@ -354,7 +327,7 @@ export function DashboardItem({
           </div>
         )}
 
-        {/* Collision warning indicator */}
+        {/* Collision warning */}
         {hasCollision && (
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
             <div className="bg-destructive text-destructive-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
@@ -378,7 +351,7 @@ export function DashboardItem({
         )}
       </div>
 
-      {/* Toolbar - Only visible on hover/select, positioned outside button */}
+      {/* Toolbar */}
       {(isHovered || isSelected) && !isResizing && (
         <div className="absolute -top-8 right-2 z-50 flex items-center gap-1 pointer-events-auto">
           <DropdownMenu>
@@ -392,27 +365,17 @@ export function DashboardItem({
                 <MoreVertical className="w-3.5 h-3.5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <DropdownMenuItem
-                onClick={() => onLayerChange(component.id, "front")}
-              >
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => onLayerChange(component.id, "front")}>
                 <MoveUp className="w-4 h-4 mr-2" />
                 Bring to Front
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onLayerChange(component.id, "back")}
-              >
+              <DropdownMenuItem onClick={() => onLayerChange(component.id, "back")}>
                 <MoveDown className="w-4 h-4 mr-2" />
                 Send to Back
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete(component.id)}
-                className="text-destructive"
-              >
+              <DropdownMenuItem onClick={() => onDelete(component.id)} className="text-destructive">
                 <X className="w-4 h-4 mr-2" />
                 Delete
               </DropdownMenuItem>
