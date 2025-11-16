@@ -75,6 +75,7 @@ export function DashboardCanvas({
   const { active, delta } = useDndContext();
   const prevActiveRef = React.useRef(active);
   const dragStartPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const activeComponentIdRef = useRef<string | null>(null);
 
   // Calculate canvas size based on viewport and component positions
   useEffect(() => {
@@ -166,80 +167,28 @@ export function DashboardCanvas({
     return Math.round(pixels / GRID_SIZE);
   }, []);
 
-  // Handle real-time drag updates
+  // Store drag start position when drag begins (for free positioning)
   useEffect(() => {
-    if (!active || !delta) return;
+    if (active) {
+      const activeData = active.data.current;
+      if (activeData?.type === "dashboard-item") {
+        const componentId = active.id as string;
+        activeComponentIdRef.current = componentId;
+        const component = components.find((c) => c.id === componentId);
 
-    const activeData = active.data.current;
-    if (activeData?.type === "dashboard-item") {
-      const componentId = active.id as string;
-      const component = components.find((c) => c.id === componentId);
-
-      if (!component) {
-        dragStartPositionRef.current = null;
-        setActiveId(null);
-        setDraggedComponentType(null);
-        setIsDragging(false);
-        setCollisionWarning(null);
-        return;
-      }
-
-      if (!dragStartPositionRef.current) {
-        dragStartPositionRef.current = {
-          x: component.position.x * GRID_SIZE,
-          y: component.position.y * GRID_SIZE,
-        };
-      }
-
-      if (dragStartPositionRef.current) {
-        const newX = dragStartPositionRef.current.x + delta.x;
-        const newY = dragStartPositionRef.current.y + delta.y;
-
-        const snapped = snapToGrid(newX, newY);
-        let gridX = pixelToGrid(snapped.x);
-        let gridY = pixelToGrid(snapped.y);
-
-        const maxGridX = Math.floor(canvasSize.width / GRID_SIZE);
-        const maxGridY = Math.floor(canvasSize.height / GRID_SIZE);
-
-        gridX = Math.max(-component.position.w, Math.min(gridX, maxGridX));
-        gridY = Math.max(-component.position.h, Math.min(gridY, maxGridY));
-
-        const otherComponents = components.filter((c) => c.id !== component.id);
-        const wouldCollide = !canPlaceComponent(
-          gridX,
-          gridY,
-          component.position.w,
-          component.position.h,
-          otherComponents,
-          undefined,
-          GRID_SIZE,
-        );
-
-        if (wouldCollide) {
-          setCollisionWarning(component.id);
-        } else {
-          setCollisionWarning(null);
+        if (component && !dragStartPositionRef.current) {
+          // Store the initial position in pixels when drag starts
+          dragStartPositionRef.current = {
+            x: component.position.x * GRID_SIZE,
+            y: component.position.y * GRID_SIZE,
+          };
         }
-
-        onComponentUpdate(component.id, {
-          position: {
-            ...component.position,
-            x: gridX,
-            y: gridY,
-          },
-        });
       }
+    } else {
+      // Clear when drag ends
+      activeComponentIdRef.current = null;
     }
-  }, [
-    active,
-    delta,
-    canvasSize,
-    snapToGrid,
-    pixelToGrid,
-    onComponentUpdate,
-    components,
-  ]);
+  }, [active, components]);
 
   // Reset drag start position and clear active state when drag ends
   useEffect(() => {
@@ -341,32 +290,58 @@ export function DashboardCanvas({
       const lastDelta = (window as any).__lastDelta;
 
       if (lastOver?.id === "canvas-drop-zone") {
-        // Handle moving existing components
+        // Handle moving existing components (free positioning)
         if (lastActiveData?.type === "dashboard-item") {
+          // Use stored component ID from ref (more reliable than prevActiveRef)
           const componentId =
+            activeComponentIdRef.current ||
             lastActiveData?.componentId ||
             (prevActiveRef.current?.id as string);
           if (componentId && lastDelta && dragStartPositionRef.current) {
             const component = components.find((c) => c.id === componentId);
             if (component) {
+              // Calculate new position: start position + delta movement
               const newX = dragStartPositionRef.current.x + lastDelta.x;
               const newY = dragStartPositionRef.current.y + lastDelta.y;
+              
+              // Snap to grid
               const snapped = snapToGrid(newX, newY);
               let gridX = pixelToGrid(snapped.x);
               let gridY = pixelToGrid(snapped.y);
 
+              // Calculate canvas bounds in grid units
               const maxGridX = Math.floor(canvasSize.width / GRID_SIZE);
               const maxGridY = Math.floor(canvasSize.height / GRID_SIZE);
 
+              // Clamp to canvas bounds (allow slight negative for flexibility)
               gridX = Math.max(
-                0,
-                Math.min(gridX, maxGridX - component.position.w),
+                -component.position.w,
+                Math.min(gridX, maxGridX),
               );
               gridY = Math.max(
-                0,
-                Math.min(gridY, maxGridY - component.position.h),
+                -component.position.h,
+                Math.min(gridY, maxGridY),
               );
 
+              // Check for collisions
+              const otherComponents = components.filter((c) => c.id !== component.id);
+              const wouldCollide = !canPlaceComponent(
+                gridX,
+                gridY,
+                component.position.w,
+                component.position.h,
+                otherComponents,
+                undefined,
+                GRID_SIZE,
+              );
+
+              if (wouldCollide) {
+                setCollisionWarning(component.id);
+              } else {
+                setCollisionWarning(null);
+              }
+
+              // Update position (allow even with collision for free positioning)
               onComponentUpdate(componentId, {
                 position: {
                   x: gridX,
@@ -378,7 +353,6 @@ export function DashboardCanvas({
             }
           }
           dragStartPositionRef.current = null;
-          setCollisionWarning(null);
         } else if (
           lastActiveData?.type === "palette" &&
           lastActiveData?.componentType

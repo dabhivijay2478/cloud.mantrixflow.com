@@ -71,11 +71,16 @@ export function DashboardItem({
       disabled: isResizing, // Disable drag when resizing
     });
 
-  // Enhanced style with smooth transitions (like in examples)
+  // Style for free positioning: use transform during drag, position after drag
+  // Like the GitHub example: transform provides visual feedback during drag
   const style = {
-    transform: CSS.Translate.toString(transform),
+    // Apply transform during drag for smooth visual movement
+    // The transform is relative to the element's current position
+    transform: isDragging && transform 
+      ? CSS.Translate.toString(transform) 
+      : undefined,
     opacity: isDragging ? 0.4 : 1,
-    transition: isDragging ? "none" : "opacity 0.2s ease-out, transform 0.2s ease-out",
+    transition: isDragging ? "none" : "opacity 0.2s ease-out",
     zIndex:
       isDragging || isResizing
         ? (component.zIndex || 1) + 1000
@@ -215,20 +220,7 @@ export function DashboardItem({
     onUpdate,
   ]);
 
-  // Handle click to select
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (itemRef.current && !itemRef.current.contains(event.target as Node)) {
-        setIsSelected(false);
-      }
-    };
-
-    if (isSelected) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isSelected]);
+  // Handle click to select - removed as selection is handled by parent canvas
 
   // Render resize handles
   const renderResizeHandle = (handle: ResizeHandle) => {
@@ -286,12 +278,13 @@ export function DashboardItem({
         overflow: "visible",
       }}
     >
-      <button
-        type="button"
+      <div
         ref={(node) => {
           setNodeRef(node);
-          itemRef.current = node as HTMLButtonElement;
+          itemRef.current = node as HTMLDivElement;
         }}
+        {...attributes}
+        {...(!isResizing ? listeners : {})}
         className={cn(
           "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm",
           "transition-all duration-200 ease-out",
@@ -300,12 +293,13 @@ export function DashboardItem({
             : "border-transparent",
           isDragging && "opacity-40 cursor-grabbing border-primary/50",
           isHovered && !isResizing && !isDragging && "border-border",
-          isResizing && "border-primary/50",
+          isResizing && "border-primary/50 cursor-default",
+          !isResizing && !isDragging && "cursor-move",
           hasCollision &&
             "border-destructive ring-2 ring-destructive/30 animate-pulse",
         )}
         style={{
-          transform: CSS.Translate.toString(transform),
+          // Transform is handled in the parent div's style
           transition: isDragging ? "none" : "all 0.2s ease-out",
         }}
         onMouseEnter={() => setIsHovered(true)}
@@ -317,33 +311,18 @@ export function DashboardItem({
           }
         }}
       >
-        {/* Drag Handle - Only visible when not resizing */}
-        {/* Enhanced for better responsiveness like in examples */}
+        {/* Drag Handle - Visual indicator only, dragging works from entire component */}
         {!isResizing && (
           <div
-            {...attributes}
-            {...listeners}
             role="button"
-            tabIndex={0}
-            aria-label="Drag to move component"
+            tabIndex={-1}
+            aria-label="Drag handle"
             className={cn(
-              "absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing",
+              "absolute top-2 left-2 z-20 pointer-events-none",
               "bg-background/90 backdrop-blur-sm rounded p-1.5 border shadow-sm",
-              "hover:bg-primary/20 hover:border-primary transition-all duration-150 pointer-events-auto",
-              "active:bg-primary/30 active:border-primary active:scale-110",
-              "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-              "touch-none select-none", // Prevent text selection during drag
+              "touch-none select-none",
               isHovered || isSelected ? "opacity-100" : "opacity-0",
             )}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                e.stopPropagation();
-              }
-            }}
           >
             <GripVertical
               className={cn(
@@ -394,7 +373,7 @@ export function DashboardItem({
             {renderResizeHandle("sw")}
           </>
         )}
-      </button>
+      </div>
 
       {/* Toolbar - Only visible on hover/select, positioned outside button */}
       {(isHovered || isSelected) && !isResizing && (
