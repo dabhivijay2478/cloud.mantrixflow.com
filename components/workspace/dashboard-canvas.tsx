@@ -194,21 +194,28 @@ export function DashboardCanvas({
   useEffect(() => {
     if (!active) {
       dragStartPositionRef.current = null;
+      activeComponentIdRef.current = null;
       setActiveId(null);
       setDraggedComponentType(null);
       setIsDragging(false);
       setCollisionWarning(null);
+      // Clear occupied areas overlay after drag ends
+      if (showOccupiedAreas) {
+        setTimeout(() => setShowOccupiedAreas(false), 500);
+      }
     }
-  }, [active]);
+  }, [active, showOccupiedAreas]);
 
-  // Clear drag state if component was deleted
+  // Clear drag state if component was deleted during drag
   useEffect(() => {
     if (activeId && !components.find((c) => c.id === activeId)) {
       dragStartPositionRef.current = null;
+      activeComponentIdRef.current = null;
       setActiveId(null);
       setDraggedComponentType(null);
       setIsDragging(false);
       setCollisionWarning(null);
+      setShowOccupiedAreas(false);
     }
   }, [activeId, components]);
 
@@ -300,12 +307,19 @@ export function DashboardCanvas({
           if (componentId && lastDelta && dragStartPositionRef.current) {
             const component = components.find((c) => c.id === componentId);
             if (component) {
-              // Calculate new position: start position + delta movement
+              // Calculate new position: start position (in pixels, relative to canvas) + delta movement
+              // dragStartPositionRef is already in pixels relative to canvas (without padding)
+              // lastDelta is the movement in viewport coordinates, which is correct for our calculation
               const newX = dragStartPositionRef.current.x + lastDelta.x;
               const newY = dragStartPositionRef.current.y + lastDelta.y;
               
+              // Ensure position is not negative (account for canvas padding)
+              const canvasPadding = 20; // Match the padding in the canvas style
+              const minX = -component.position.w * GRID_SIZE; // Allow component to go slightly off left edge
+              const minY = -component.position.h * GRID_SIZE; // Allow component to go slightly off top edge
+              
               // Snap to grid
-              const snapped = snapToGrid(newX, newY);
+              const snapped = snapToGrid(Math.max(minX, newX), Math.max(minY, newY));
               let gridX = pixelToGrid(snapped.x);
               let gridY = pixelToGrid(snapped.y);
 
@@ -350,9 +364,18 @@ export function DashboardCanvas({
                   h: component.position.h,
                 },
               });
+              
+              // Clear collision warning after a short delay
+              if (collisionWarning === componentId) {
+                setTimeout(() => {
+                  setCollisionWarning(null);
+                }, 500);
+              }
             }
           }
+          // Clean up drag state
           dragStartPositionRef.current = null;
+          activeComponentIdRef.current = null;
         } else if (
           lastActiveData?.type === "palette" &&
           lastActiveData?.componentType
@@ -658,51 +681,16 @@ export function DashboardCanvas({
         </ScrollArea>
       </CanvasDropZone>
 
-      {/* Drag Overlay - Enhanced preview when dragging */}
+      {/* Drag Overlay - Only show for new components from palette, not for existing components */}
       {isDragging && active && (
         <DragOverlay
-          dropAnimation={{
-            duration: 200,
-            easing: "ease-out",
-          }}
-          adjustScale={true}
+          dropAnimation={null}
+          adjustScale={false}
         >
           {(() => {
             const activeData = active.data.current;
-            if (activeData?.type === "dashboard-item") {
-              const componentId = active.id as string;
-              const component = components.find((c) => c.id === componentId);
-
-              if (component) {
-                const width = component.position.w * GRID_SIZE;
-                const height = component.position.h * GRID_SIZE;
-                const hasCollision = collisionWarning === component.id;
-
-                return (
-                  <div
-                    className={cn(
-                      "border-2 rounded-lg shadow-2xl transition-all",
-                      hasCollision
-                        ? "bg-destructive/90 border-destructive rotate-2"
-                        : "bg-primary/90 border-primary rotate-2",
-                    )}
-                    style={{
-                      width: `${width}px`,
-                      height: `${height}px`,
-                      opacity: 0.95,
-                      cursor: "grabbing",
-                      transform: "rotate(2deg) scale(1.02)",
-                    }}
-                  >
-                    <div className="w-full h-full flex items-center justify-center p-2">
-                      <div className="text-white text-xs font-medium text-center">
-                        {component.type.replace(/-/g, " ")}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-            } else if (
+            // Only show overlay for new components from palette, not existing components
+            if (
               activeData?.type === "palette" &&
               activeData?.componentType
             ) {
@@ -712,21 +700,21 @@ export function DashboardCanvas({
 
               return (
                 <div
-                  className="bg-primary/90 border-2 border-primary rounded-lg shadow-2xl flex items-center justify-center"
+                  className="bg-background/80 border-2 border-border rounded-lg backdrop-blur-sm flex items-center justify-center"
                   style={{
                     width: `${defaultWidth}px`,
                     height: `${defaultHeight}px`,
-                    opacity: 0.95,
+                    opacity: 0.9,
                     cursor: "grabbing",
-                    transform: "rotate(2deg) scale(1.02)",
                   }}
                 >
-                  <div className="text-white text-xs font-medium text-center px-2">
+                  <div className="text-foreground text-xs font-medium text-center px-2">
                     {activeData.componentType.replace(/-/g, " ")}
                   </div>
                 </div>
               );
             }
+            // Return null for existing components - they will move directly without overlay
             return null;
           })()}
         </DragOverlay>

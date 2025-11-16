@@ -72,14 +72,14 @@ export function DashboardItem({
     });
 
   // Style for free positioning: use transform during drag, position after drag
-  // Like the GitHub example: transform provides visual feedback during drag
+  // The component itself moves during drag (no ghost/shadow overlay)
   const style = {
     // Apply transform during drag for smooth visual movement
     // The transform is relative to the element's current position
     transform: isDragging && transform 
       ? CSS.Translate.toString(transform) 
       : undefined,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.7 : 1, // Slightly transparent during drag, but still visible
     transition: isDragging ? "none" : "opacity 0.2s ease-out",
     zIndex:
       isDragging || isResizing

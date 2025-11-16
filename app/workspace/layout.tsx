@@ -72,16 +72,25 @@ export default function WorkspaceLayout({
     pathname?.match(/^\/workspace\/dashboards\/[^/]+$/) !== null;
 
   // Open properties panel when component is first selected in dashboard edit mode
+  // Close it when no component is selected
   // Use a ref to track previous selectedComponentId to only open on change
   const prevSelectedComponentIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (
-      isDashboardEditMode &&
-      selectedComponentId &&
-      !propertiesPanelOpen &&
-      prevSelectedComponentIdRef.current !== selectedComponentId
-    ) {
-      setPropertiesPanelOpen(true);
+    if (isDashboardEditMode) {
+      if (selectedComponentId) {
+        // Open panel when component is selected (only if it wasn't already open for this component)
+        if (
+          !propertiesPanelOpen &&
+          prevSelectedComponentIdRef.current !== selectedComponentId
+        ) {
+          setPropertiesPanelOpen(true);
+        }
+      } else {
+        // Close panel when no component is selected
+        if (propertiesPanelOpen) {
+          setPropertiesPanelOpen(false);
+        }
+      }
     }
     prevSelectedComponentIdRef.current = selectedComponentId;
   }, [
