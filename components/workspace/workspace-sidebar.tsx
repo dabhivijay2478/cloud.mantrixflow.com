@@ -37,7 +37,10 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import {
+  useWorkspaceStore,
+  type Organization,
+} from "@/lib/stores/workspace-store";
 
 function OrganizationSwitcher({
   organizations,
@@ -45,20 +48,12 @@ function OrganizationSwitcher({
   onOrganizationChange,
   onCreateOrganization,
 }: {
-  organizations: Array<{ id: string; name: string; slug: string }>;
-  currentOrganization: { id: string; name: string; slug: string } | null;
-  onOrganizationChange: (org: {
-    id: string;
-    name: string;
-    slug: string;
-  }) => void;
+  organizations: Organization[];
+  currentOrganization: Organization | null;
+  onOrganizationChange: (org: Organization | null) => void;
   onCreateOrganization: () => void;
 }) {
   const { isMobile } = useSidebar();
-
-  if (!currentOrganization) {
-    return null;
-  }
 
   return (
     <SidebarMenu>
@@ -74,7 +69,7 @@ function OrganizationSwitcher({
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {currentOrganization.name}
+                  {currentOrganization?.name || "Select Organization"}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
                   Organization
@@ -92,19 +87,28 @@ function OrganizationSwitcher({
             <DropdownMenuLabel className="text-muted-foreground text-xs">
               Organizations
             </DropdownMenuLabel>
-            {organizations.map((org, index) => (
-              <DropdownMenuItem
-                key={org.id}
-                onClick={() => onOrganizationChange(org)}
-                className="gap-2 p-2"
-              >
+            {organizations.length > 0 ? (
+              organizations.map((org, index) => (
+                <DropdownMenuItem
+                  key={org.id}
+                  onClick={() => onOrganizationChange(org)}
+                  className="gap-2 p-2"
+                >
+                  <div className="flex size-6 items-center justify-center rounded-md border">
+                    <Building2 className="size-3.5 shrink-0" />
+                  </div>
+                  {org.name}
+                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled className="gap-2 p-2">
                 <div className="flex size-6 items-center justify-center rounded-md border">
                   <Building2 className="size-3.5 shrink-0" />
                 </div>
-                {org.name}
-                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                No organizations
               </DropdownMenuItem>
-            ))}
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="gap-2 p-2"
