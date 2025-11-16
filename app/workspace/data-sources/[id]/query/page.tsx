@@ -5,9 +5,11 @@ import {
   ChevronDown,
   Database,
   Download,
+  ExternalLink,
   Loader2,
   Minimize2,
   Play,
+  RefreshCw,
   Save,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -184,6 +186,11 @@ export default function DataSourceQueryPage() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveAsNew, setSaveAsNew] = useState(false);
   const [queryName, setQueryName] = useState("");
+  const [tableData, setTableData] = useState<{
+    columns: string[];
+    rows: Record<string, unknown>[];
+  } | null>(null);
+  const [tableDataLoading, setTableDataLoading] = useState(false);
 
   const editorRef = useRef<{ setValue: (value: string) => void } | null>(null);
   const language = dataSource
@@ -284,11 +291,73 @@ export default function DataSourceQueryPage() {
 
   const handleTableSelect = (tableName: string) => {
     setSelectedTable(tableName);
-    const newQuery = getDefaultQuery(dataSource.type, tableName);
-    setQuery(newQuery);
-    if (editorRef.current) {
-      editorRef.current.setValue(newQuery);
+    if (shouldShowSQLEditor) {
+      const newQuery = getDefaultQuery(dataSource.type, tableName);
+      setQuery(newQuery);
+      if (editorRef.current) {
+        editorRef.current.setValue(newQuery);
+      }
+    } else {
+      // For non-SQL data sources, fetch table data
+      fetchTableData(tableName);
     }
+  };
+
+  const fetchTableData = async (tableName: string) => {
+    setTableDataLoading(true);
+    try {
+      // Mock API call - replace with actual API
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const mockData = {
+        columns: ["id", "name", "value", "created_at"],
+        rows: Array.from({ length: 30 }, (_, i) => ({
+          id: i + 1,
+          name: `${tableName}_item_${i + 1}`,
+          value: Math.random() * 1000,
+          created_at: new Date(Date.now() - Math.random() * 10000000000)
+            .toISOString()
+            .split("T")[0],
+        })),
+      };
+      setTableData(mockData);
+    } catch (err) {
+      toast.error(
+        "Failed to load table data",
+        err instanceof Error ? err.message : "Unknown error",
+      );
+    } finally {
+      setTableDataLoading(false);
+    }
+  };
+
+  const handleRefreshTableData = () => {
+    if (selectedTable) {
+      fetchTableData(selectedTable);
+    }
+  };
+
+  const handleOpenInNewTab = (
+    data: {
+      columns: string[];
+      rows: Record<string, unknown>[];
+    },
+    viewType: "query" | "table" = "query",
+  ) => {
+    // Store data in sessionStorage
+    const dataToStore = {
+      results: data,
+      viewType,
+      query: viewType === "query" ? query : "",
+      tableName: viewType === "table" ? selectedTable : "",
+    };
+
+    sessionStorage.setItem(
+      `query-results-${dataSourceId}`,
+      JSON.stringify(dataToStore),
+    );
+
+    // Open new tab with the view route
+    window.open(`/workspace/data-sources/${dataSourceId}/query/view`, "_blank");
   };
 
   const handleSaveQuery = () => {
@@ -546,6 +615,9 @@ export default function DataSourceQueryPage() {
                         fullScreen={resultsFullScreen}
                         onFullScreen={setResultsFullScreen}
                         onDownload={handleDownload}
+                        onOpenInNewTab={() =>
+                          handleOpenInNewTab(results, "query")
+                        }
                       />
                     </div>
                   </div>
@@ -606,6 +678,9 @@ export default function DataSourceQueryPage() {
                             fullScreen={resultsFullScreen}
                             onFullScreen={setResultsFullScreen}
                             onDownload={handleDownload}
+                            onOpenInNewTab={() =>
+                              handleOpenInNewTab(results, "query")
+                            }
                           />
                         </ResizablePanel>
                       </>
@@ -632,13 +707,85 @@ export default function DataSourceQueryPage() {
                   onCollapsedChange={setSidebarCollapsed}
                 />
               </div>
-              <div className="flex-1 min-w-0 flex items-center justify-center">
-                <div className="text-center">
-                  <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Select a table from the sidebar to view data
-                  </p>
-                </div>
+              <div className="flex-1 min-w-0 flex flex-col">
+                {tableData || tableDataLoading ? (
+                  <>
+                    {/* Header with buttons */}
+                    <div className="flex items-center justify-between p-4 border-b shrink-0">
+                      <div className="flex items-center gap-2">
+                        {selectedTable && (
+                          <h3 className="text-sm font-medium">
+                            Table: {selectedTable}
+                          </h3>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {tableData && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleOpenInNewTab(tableData, "table")
+                              }
+                              className="h-8"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View in New Tab
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleRefreshTableData}
+                              disabled={tableDataLoading}
+                              className="h-8"
+                            >
+                              <RefreshCw
+                                className={cn(
+                                  "h-4 w-4 mr-2",
+                                  tableDataLoading && "animate-spin",
+                                )}
+                              />
+                              Refresh
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {/* Table Data Viewer */}
+                    <div className="flex-1 min-h-0">
+                      {tableData ? (
+                        <SQLResultViewer
+                          columns={tableData.columns}
+                          rows={tableData.rows}
+                          loading={tableDataLoading}
+                          error={null}
+                          onOpenInNewTab={() =>
+                            handleOpenInNewTab(tableData, "table")
+                          }
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                            <p className="text-muted-foreground">
+                              Loading table data...
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        Select a table from the sidebar to view data
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )

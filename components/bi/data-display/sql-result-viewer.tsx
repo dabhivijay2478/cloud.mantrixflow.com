@@ -18,9 +18,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
+  ExternalLink,
   Loader2,
-  Maximize2,
-  Minimize2,
 } from "lucide-react";
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
@@ -62,9 +61,9 @@ export interface SQLResultViewerProps {
   loading?: boolean;
   error?: string | null;
   className?: string;
-  onFullScreen?: (fullScreen: boolean) => void;
-  fullScreen?: boolean;
   onDownload?: (format: "csv" | "json" | "excel") => void;
+  onOpenInNewTab?: () => void;
+  hideExternalTabButton?: boolean;
 }
 
 /**
@@ -94,9 +93,9 @@ export function SQLResultViewer({
   loading = false,
   error = null,
   className,
-  onFullScreen,
-  fullScreen = false,
   onDownload,
+  onOpenInNewTab,
+  hideExternalTabButton = false,
 }: SQLResultViewerProps) {
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [columnVisibility, setColumnVisibility] =
@@ -265,19 +264,15 @@ export function SQLResultViewer({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          {onFullScreen && (
+          {onOpenInNewTab && !hideExternalTabButton && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onFullScreen(!fullScreen)}
+              onClick={onOpenInNewTab}
               className="h-8"
-              aria-label={fullScreen ? "Exit full screen" : "Enter full screen"}
+              aria-label="Open in new tab"
             >
-              {fullScreen ? (
-                <Minimize2 className="h-4 w-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
-              )}
+              <ExternalLink className="h-4 w-4" />
             </Button>
           )}
           <DropdownMenu>
