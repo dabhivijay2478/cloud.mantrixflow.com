@@ -88,7 +88,7 @@ export function PieChart({
             animationDuration={800}
             animationBegin={0}
           >
-            {data.map((entry, index) => {
+            {data.map((entry) => {
               const name = entry[nameKey] as string;
               return (
                 <Cell

@@ -256,125 +256,129 @@ export function DataSourceTable({
               </TableHeader>
               <TableBody>
                 {getFilteredAndSortedDataSources().map((dataSource) => {
-                const connected = isConnected(dataSource.id);
-                const connectedData = getConnectedDataSource(dataSource.id);
-                const selectedTables =
-                  connectedData?.selectedTables ||
-                  (connectedData?.selectedTable
-                    ? [connectedData.selectedTable]
-                    : []);
+                  const connected = isConnected(dataSource.id);
+                  const connectedData = getConnectedDataSource(dataSource.id);
+                  const selectedTables =
+                    connectedData?.selectedTables ||
+                    (connectedData?.selectedTable
+                      ? [connectedData.selectedTable]
+                      : []);
 
-                return (
-                  <TableRow
-                    key={dataSource.id}
-                    className="hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => onDataSourceClick(dataSource.id)}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                          {getIconComponent(dataSource.iconType, 16)}
+                  return (
+                    <TableRow
+                      key={dataSource.id}
+                      className="hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => onDataSourceClick(dataSource.id)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                            {getIconComponent(dataSource.iconType, 16)}
+                          </div>
+                          <span className="font-semibold">
+                            {dataSource.name}
+                          </span>
                         </div>
-                        <span className="font-semibold">{dataSource.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="capitalize text-sm text-muted-foreground">
-                        {dataSource.type}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {connected && selectedTables.length > 0 ? (
-                        <span className="text-sm font-medium">
-                          {selectedTables.length}{" "}
-                          {selectedTables.length === 1 ? "table" : "tables"}
+                      </TableCell>
+                      <TableCell>
+                        <span className="capitalize text-sm text-muted-foreground">
+                          {dataSource.type}
                         </span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {connectedData?.connectedAt ? (
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(
-                            connectedData.connectedAt,
-                          ).toLocaleDateString()}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {connected ? (
-                        <Badge
-                          className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-0 font-medium"
-                        >
-                          <Check className="h-3 w-3 mr-1" />
-                          Connected
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">
-                          Not connected
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {connected && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  router.push(
-                                    `/workspace/data-sources/${dataSource.id}/query`,
-                                  );
-                                }}
-                              >
-                                <TableIcon className="mr-2 h-4 w-4" />
-                                View table navigation
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  if (onDisconnect) {
-                                    onDisconnect(dataSource.id);
-                                  }
-                                }}
-                                className="text-orange-600 focus:text-orange-600"
-                              >
-                                <Unlink className="mr-2 h-4 w-4" />
-                                Disconnect
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (onDelete) {
-                                onDelete(dataSource.id);
-                              }
-                            }}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      </TableCell>
+                      <TableCell>
+                        {connected && selectedTables.length > 0 ? (
+                          <span className="text-sm font-medium">
+                            {selectedTables.length}{" "}
+                            {selectedTables.length === 1 ? "table" : "tables"}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {connectedData?.connectedAt ? (
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(
+                              connectedData.connectedAt,
+                            ).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {connected ? (
+                          <Badge className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-0 font-medium">
+                            <Check className="h-3 w-3 mr-1" />
+                            Connected
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            Not connected
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {connected && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    router.push(
+                                      `/workspace/data-sources/${dataSource.id}/query`,
+                                    );
+                                  }}
+                                >
+                                  <TableIcon className="mr-2 h-4 w-4" />
+                                  View table navigation
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    if (onDisconnect) {
+                                      onDisconnect(dataSource.id);
+                                    }
+                                  }}
+                                  className="text-orange-600 focus:text-orange-600"
+                                >
+                                  <Unlink className="mr-2 h-4 w-4" />
+                                  Disconnect
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (onDelete) {
+                                  onDelete(dataSource.id);
+                                }
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

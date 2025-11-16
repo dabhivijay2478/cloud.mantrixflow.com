@@ -12,6 +12,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type * as React from "react";
+import type { WindowWithDragData } from "./dashboard-canvas";
 
 interface DashboardDndProviderProps {
   children: React.ReactNode;
@@ -45,7 +46,7 @@ export function DashboardDndProvider({
   const handleDragStart = (event: DragStartEvent) => {
     // Store active drag info for canvas to use
     if (event.active.data.current) {
-      (window as any).__lastDragData = event.active.data.current;
+      (window as WindowWithDragData).__lastDragData = event.active.data.current;
     }
 
     // Call custom handler if provided
@@ -61,19 +62,20 @@ export function DashboardDndProvider({
     }
 
     const { active, over, delta } = event;
+    const windowWithData = window as WindowWithDragData;
 
     // Store drag data and drop position for canvas to use (for free mode)
     if (active.data.current) {
-      (window as any).__lastDragData = active.data.current;
+      windowWithData.__lastDragData = active.data.current;
     }
 
     // Store delta for position calculation
     if (delta) {
-      (window as any).__lastDelta = delta;
+      windowWithData.__lastDelta = delta;
     }
 
     // Store over target
-    (window as any).__lastOver = over;
+    windowWithData.__lastOver = over;
 
     if (over?.id === "canvas-drop-zone") {
       const canvasElement = document.getElementById("canvas-drop-zone");
@@ -82,8 +84,8 @@ export function DashboardDndProvider({
         const mouseEvent = event.activatorEvent as MouseEvent | undefined;
 
         if (mouseEvent) {
-          (window as any).__lastDropX = mouseEvent.clientX - canvasRect.left;
-          (window as any).__lastDropY = mouseEvent.clientY - canvasRect.top;
+          windowWithData.__lastDropX = mouseEvent.clientX - canvasRect.left;
+          windowWithData.__lastDropY = mouseEvent.clientY - canvasRect.top;
         }
       }
     }

@@ -1,7 +1,6 @@
 "use client";
 
-import { Database, Plus, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import {
   allDataSources,
@@ -18,7 +17,6 @@ import { toast } from "@/lib/utils/toast";
 type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
-  const router = useRouter();
   const {
     dataSources,
     addDataSource,

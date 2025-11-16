@@ -47,30 +47,38 @@ export function ChartSkeleton({
               {type === "bar" ? (
                 // Bar chart skeleton
                 <div className="h-full flex items-end justify-between gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <Skeleton
-                      key={i}
-                      className="w-full"
-                      style={{
-                        height: `${Math.random() * 60 + 20}%`,
-                        animationDelay: `${i * 100}ms`,
-                      }}
-                    />
-                  ))}
+                  {Array.from({ length: 6 }, (_, i) => {
+                    // Static skeleton loader - index is safe as items never reorder
+                    return (
+                      <Skeleton
+                        // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton loaders, order never changes
+                        key={`bar-skeleton-${i}`}
+                        className="w-full"
+                        style={{
+                          height: `${Math.random() * 60 + 20}%`,
+                          animationDelay: `${i * 100}ms`,
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
                 // Line chart skeleton
                 <div className="h-full flex flex-col justify-end space-y-2">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton
-                      key={i}
-                      className="w-full"
-                      style={{
-                        height: `${Math.random() * 30 + 10}%`,
-                        animationDelay: `${i * 80}ms`,
-                      }}
-                    />
-                  ))}
+                  {Array.from({ length: 8 }, (_, i) => {
+                    // Static skeleton loader - index is safe as items never reorder
+                    return (
+                      <Skeleton
+                        // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton loaders, order never changes
+                        key={`line-skeleton-${i}`}
+                        className="w-full"
+                        style={{
+                          height: `${Math.random() * 30 + 10}%`,
+                          animationDelay: `${i * 80}ms`,
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -87,4 +95,3 @@ export function ChartSkeleton({
     </Card>
   );
 }
-

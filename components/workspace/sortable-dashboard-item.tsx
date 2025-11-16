@@ -27,7 +27,7 @@ interface SortableDashboardItemProps {
 
 export function SortableDashboardItem({
   component,
-  index,
+  index: _index,
   onDelete,
   isSelected = false,
   onSelect,
@@ -51,32 +51,47 @@ export function SortableDashboardItem({
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: Role is set conditionally when interactive handlers are present
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
         "relative group bg-card border-2 rounded-lg shadow-sm transition-all duration-200",
-        isSelected
-          ? "border-primary ring-2 ring-primary/20"
-          : "border-border",
+        isSelected ? "border-primary ring-2 ring-primary/20" : "border-border",
         isDragging && "opacity-50 cursor-grabbing border-primary/50",
         isHovered && !isDragging && "border-border shadow-md",
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={(e) => {
-        if (onSelect) {
-          e.stopPropagation();
-          onSelect(component.id);
-        }
-      }}
+      onClick={
+        onSelect
+          ? (e) => {
+              e.stopPropagation();
+              onSelect(component.id);
+            }
+          : undefined
+      }
+      onKeyDown={
+        onSelect
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onSelect(component.id);
+              }
+            }
+          : undefined
+      }
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      {...(onSelect && { "aria-label": "Select component" })}
     >
       {/* Drag Handle */}
       {!isDragging && (
-        <div
+        <button
           {...attributes}
           {...listeners}
-          role="button"
+          type="button"
           tabIndex={0}
           aria-label="Drag to reorder component"
           className={cn(
@@ -104,7 +119,7 @@ export function SortableDashboardItem({
               isDragging ? "text-primary" : "text-muted-foreground",
             )}
           />
-        </div>
+        </button>
       )}
 
       {/* Component Content */}
@@ -155,4 +170,3 @@ export function SortableDashboardItem({
     </div>
   );
 }
-

@@ -1,19 +1,15 @@
 "use client";
 
-import {
-  Database,
-  Hash,
-  Calendar,
-  ToggleLeft,
-  Type,
-  X,
-} from "lucide-react";
+import { Calendar, Hash, ToggleLeft, Type, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { useWorkspaceStore, type DatasetColumn } from "@/lib/stores/workspace-store";
+import {
+  type DatasetColumn,
+  useWorkspaceStore,
+} from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 
 // Mock function to fetch columns from a table
@@ -46,7 +42,6 @@ function ColumnIcon({ type }: { type: DatasetColumn["type"] }) {
       return <Calendar className="h-3.5 w-3.5" />;
     case "boolean":
       return <ToggleLeft className="h-3.5 w-3.5" />;
-    case "string":
     default:
       return <Type className="h-3.5 w-3.5" />;
   }
@@ -60,19 +55,14 @@ function getTypeColor(type: DatasetColumn["type"]) {
       return "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20";
     case "boolean":
       return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
-    case "string":
     default:
       return "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20";
   }
 }
 
 export function DataPanel() {
-  const {
-    dataPanelOpen,
-    setDataPanelOpen,
-    currentDashboard,
-    dataSources,
-  } = useWorkspaceStore();
+  const { dataPanelOpen, setDataPanelOpen, currentDashboard, dataSources } =
+    useWorkspaceStore();
 
   const [columns, setColumns] = useState<DatasetColumn[]>([]);
   const [loading, setLoading] = useState(false);
@@ -161,7 +151,9 @@ export function DataPanel() {
             </Card>
           ) : loading ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">Loading columns...</p>
+              <p className="text-sm text-muted-foreground">
+                Loading columns...
+              </p>
             </div>
           ) : columns.length === 0 ? (
             <Card>
@@ -198,11 +190,14 @@ export function DataPanel() {
                       key={column.name}
                       className={cn(
                         "flex items-center justify-between p-2 rounded-md border bg-background hover:bg-accent transition-colors",
-                        column.selected && "ring-2 ring-primary"
+                        column.selected && "ring-2 ring-primary",
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <ColumnIcon type={column.type} className="shrink-0 text-muted-foreground" />
+                        <ColumnIcon
+                          type={column.type}
+                          className="shrink-0 text-muted-foreground"
+                        />
                         <span className="text-sm font-medium truncate">
                           {column.name}
                         </span>
@@ -211,7 +206,7 @@ export function DataPanel() {
                         variant="outline"
                         className={cn(
                           "text-xs shrink-0",
-                          getTypeColor(column.type)
+                          getTypeColor(column.type),
                         )}
                       >
                         {column.type}
@@ -227,4 +222,3 @@ export function DataPanel() {
     </div>
   );
 }
-

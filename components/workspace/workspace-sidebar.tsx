@@ -38,8 +38,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  useWorkspaceStore,
   type Organization,
+  useWorkspaceStore,
 } from "@/lib/stores/workspace-store";
 
 function OrganizationSwitcher({

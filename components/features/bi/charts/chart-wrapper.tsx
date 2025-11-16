@@ -35,7 +35,12 @@ export function ChartWrapper({
   className,
 }: ChartWrapperProps) {
   return (
-    <Card className={cn("h-full flex flex-col border transition-all hover:shadow-md", className)}>
+    <Card
+      className={cn(
+        "h-full flex flex-col border transition-all hover:shadow-md",
+        className,
+      )}
+    >
       {(title || description) && (
         <CardHeader className="flex-shrink-0 pb-4">
           {title && (
@@ -44,7 +49,9 @@ export function ChartWrapper({
             </CardTitle>
           )}
           {description && (
-            <p className="text-sm text-muted-foreground mt-1.5">{description}</p>
+            <p className="text-sm text-muted-foreground mt-1.5">
+              {description}
+            </p>
           )}
         </CardHeader>
       )}

@@ -45,11 +45,9 @@ export function WorkspaceTopbar() {
   const {
     currentDashboard,
     datasets,
-    dataSources,
     selectedDatasetId,
     setSelectedDatasetId,
     updateDashboard,
-    updateDataSource,
   } = useWorkspaceStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMac, setIsMac] = useState(false);
@@ -118,7 +116,7 @@ export function WorkspaceTopbar() {
   const availableDatasets = dashboardDataSourceId
     ? datasets.filter((ds) => ds.dataSourceId === dashboardDataSourceId)
     : datasets;
-  const selectedDataset = selectedDatasetId
+  const _selectedDataset = selectedDatasetId
     ? datasets.find((ds) => ds.id === selectedDatasetId)
     : null;
 
@@ -254,66 +252,66 @@ export function WorkspaceTopbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-      <SidebarTrigger />
-      <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={searchInputRef}
-            type="search"
-            placeholder="Search dashboards, data sources..."
-            className="pl-9 pr-20 h-9"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <Kbd className="h-5 text-xs">{isMac ? "⌘" : "Ctrl"}K</Kbd>
+        <SidebarTrigger />
+        <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              ref={searchInputRef}
+              type="search"
+              placeholder="Search dashboards, data sources..."
+              className="pl-9 pr-20 h-9"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <Kbd className="h-5 text-xs">{isMac ? "⌘" : "Ctrl"}K</Kbd>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback>
-                  {user?.email?.charAt(0).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {user?.user_metadata?.full_name || "User"}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => router.push("/workspace/settings")}
-            >
-              <User className="mr-2 h-4 w-4" />
-              <span>Account Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => router.push("/workspace/settings")}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarFallback>
+                    {user?.email?.charAt(0).toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user?.user_metadata?.full_name || "User"}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.push("/workspace/settings")}
+              >
+                <User className="mr-2 h-4 w-4" />
+                <span>Account Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/workspace/settings")}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );

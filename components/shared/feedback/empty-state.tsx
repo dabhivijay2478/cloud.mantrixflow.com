@@ -92,16 +92,15 @@ export function EmptyState({
         )}
       </CardHeader>
       {(action || (actionLabel && onAction) || children) && (
-        <CardContent className={cn("space-y-4 pt-0", centered && "text-center")}>
+        <CardContent
+          className={cn("space-y-4 pt-0", centered && "text-center")}
+        >
           {action ||
             (actionLabel && onAction && (
               <Button
                 onClick={onAction}
                 size="lg"
-                className={cn(
-                  "font-medium",
-                  centered && "w-full sm:w-auto",
-                )}
+                className={cn("font-medium", centered && "w-full sm:w-auto")}
               >
                 {actionLabel}
               </Button>

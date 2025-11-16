@@ -44,15 +44,18 @@ export function LoadingState({
   const content = children || (
     <div className="flex flex-col items-center justify-center gap-3">
       <Skeleton className={cn(sizeClasses[size], "rounded-full")} />
-      {message && (
-        <Skeleton className="h-4 w-32" />
-      )}
+      {message && <Skeleton className="h-4 w-32" />}
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className={cn("flex items-center justify-center min-h-screen", className)}>
+      <div
+        className={cn(
+          "flex items-center justify-center min-h-screen",
+          className,
+        )}
+      >
         {content}
       </div>
     );

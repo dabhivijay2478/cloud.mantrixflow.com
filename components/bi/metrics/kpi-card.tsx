@@ -60,7 +60,12 @@ export function KPICard({
   const isNegative = trendDirection === "down";
 
   return (
-    <Card className={cn("h-full overflow-hidden border transition-all hover:shadow-md", className)}>
+    <Card
+      className={cn(
+        "h-full overflow-hidden border transition-all hover:shadow-md",
+        className,
+      )}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {label}
@@ -82,9 +87,7 @@ export function KPICard({
             {isPositive && (
               <ArrowUp className="h-4 w-4 text-[hsl(var(--success))]" />
             )}
-            {isNegative && (
-              <ArrowDown className="h-4 w-4 text-destructive" />
-            )}
+            {isNegative && <ArrowDown className="h-4 w-4 text-destructive" />}
             <span
               className={cn("font-medium", {
                 "text-[hsl(var(--success))]": isPositive,

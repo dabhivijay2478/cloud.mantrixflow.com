@@ -24,10 +24,7 @@ export interface ThemeToggleProps {
   className?: string;
 }
 
-export function ThemeToggle({
-  variant = "menu",
-  className,
-}: ThemeToggleProps) {
+export function ThemeToggle({ variant = "menu", className }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -64,7 +61,12 @@ export function ThemeToggle({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className={className} aria-label="Theme options">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={className}
+          aria-label="Theme options"
+        >
           {theme === "dark" ? (
             <Moon className="h-4 w-4" />
           ) : (
@@ -89,4 +91,3 @@ export function ThemeToggle({
     </DropdownMenu>
   );
 }
-

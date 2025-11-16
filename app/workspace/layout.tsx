@@ -48,8 +48,7 @@ export default function WorkspaceLayout({
     datasets,
     updateDashboardComponent,
   } = useWorkspaceStore();
-  const dataPanelRef =
-    useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+  const dataPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const componentsPanelRef =
     useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const propertiesPanelRef =
@@ -160,7 +159,11 @@ export default function WorkspaceLayout({
   useEffect(() => {
     if (isMobile) {
       // On mobile, main panel takes full width when panels are closed
-      const openPanels = [dataPanelOpen, componentsPanelOpen, agentPanelOpen].filter(Boolean).length;
+      const openPanels = [
+        dataPanelOpen,
+        componentsPanelOpen,
+        agentPanelOpen,
+      ].filter(Boolean).length;
       if (openPanels === 3) {
         setMainPanelSize(40);
       } else if (openPanels === 2) {
@@ -172,7 +175,11 @@ export default function WorkspaceLayout({
       }
     } else {
       // On desktop, calculate based on open panels
-      const openPanels = [dataPanelOpen, componentsPanelOpen, agentPanelOpen].filter(Boolean).length;
+      const openPanels = [
+        dataPanelOpen,
+        componentsPanelOpen,
+        agentPanelOpen,
+      ].filter(Boolean).length;
       if (openPanels === 3) {
         setMainPanelSize(55);
       } else if (openPanels === 2) {
@@ -238,23 +245,11 @@ export default function WorkspaceLayout({
                   ref={dataPanelRef}
                   id="data-panel"
                   defaultSize={
-                    isMobile
-                      ? dataPanelOpen
-                        ? 20
-                        : 0
-                      : dataPanelOpen
-                        ? 15
-                        : 3
+                    isMobile ? (dataPanelOpen ? 20 : 0) : dataPanelOpen ? 15 : 3
                   }
                   minSize={isMobile ? 0 : 3}
                   maxSize={
-                    isMobile
-                      ? dataPanelOpen
-                        ? 35
-                        : 0
-                      : dataPanelOpen
-                        ? 25
-                        : 3
+                    isMobile ? (dataPanelOpen ? 35 : 0) : dataPanelOpen ? 25 : 3
                   }
                   collapsible={true}
                   collapsedSize={isMobile ? 0 : 3}

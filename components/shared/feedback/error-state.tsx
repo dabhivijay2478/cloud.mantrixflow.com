@@ -1,8 +1,8 @@
 "use client";
 
 import { AlertCircle, RefreshCw } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -51,7 +51,10 @@ export function ErrorState({
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-            <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
+            <AlertCircle
+              className="h-5 w-5 text-destructive"
+              aria-hidden="true"
+            />
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-foreground">{title}</h3>
