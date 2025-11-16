@@ -16,6 +16,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  ChartLoadingState,
+  ChartErrorState,
+  ChartEmptyState,
+} from "./chart-states";
 
 /**
  * LineChart
@@ -56,6 +61,9 @@ export interface LineChartProps {
   showGrid?: boolean;
   showLegend?: boolean;
   className?: string;
+  loading?: boolean;
+  error?: string | null;
+  emptyMessage?: string;
 }
 
 export function LineChart({
@@ -68,16 +76,49 @@ export function LineChart({
   showGrid = true,
   showLegend = true,
   className,
+  loading = false,
+  error = null,
+  emptyMessage = "No data available",
 }: LineChartProps) {
   const chartConfig = createChartConfig(yKeys, color);
 
+  if (loading) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartLoadingState />
+      </ChartWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartErrorState error={error} />
+      </ChartWrapper>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartEmptyState message={emptyMessage} />
+      </ChartWrapper>
+    );
+  }
+
   return (
     <ChartWrapper title={title} description={description} className={className}>
-      <ChartContainer config={chartConfig} className="h-full w-full">
+      <ChartContainer
+        config={chartConfig}
+        className="h-full w-full"
+        aria-label={title || "Line chart"}
+      >
         <RechartsLineChart
           accessibilityLayer
           data={data}
           margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+          role="img"
+          aria-label={title ? `${title} chart` : "Line chart"}
         >
           {showGrid && (
             <CartesianGrid

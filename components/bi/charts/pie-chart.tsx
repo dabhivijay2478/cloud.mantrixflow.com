@@ -11,6 +11,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  ChartLoadingState,
+  ChartErrorState,
+  ChartEmptyState,
+} from "./chart-states";
 
 /**
  * PieChart
@@ -50,6 +55,9 @@ export interface PieChartProps {
   showLegend?: boolean;
   colors?: string[];
   className?: string;
+  loading?: boolean;
+  error?: string | null;
+  emptyMessage?: string;
 }
 
 export function PieChart({
@@ -62,7 +70,34 @@ export function PieChart({
   showLegend = true,
   colors = CHART_COLORS,
   className,
+  loading = false,
+  error = null,
+  emptyMessage = "No data available",
 }: PieChartProps) {
+  if (loading) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartLoadingState />
+      </ChartWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartErrorState error={error} />
+      </ChartWrapper>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartEmptyState message={emptyMessage} />
+      </ChartWrapper>
+    );
+  }
+
   const chartConfig = data.reduce((config, entry, index) => {
     const name = entry[nameKey] as string;
     config[name] = {
@@ -74,8 +109,12 @@ export function PieChart({
 
   return (
     <ChartWrapper title={title} description={description} className={className}>
-      <ChartContainer config={chartConfig} className="h-full w-full">
-        <RechartsPieChart>
+      <ChartContainer
+        config={chartConfig}
+        className="h-full w-full"
+        aria-label={title || "Pie chart"}
+      >
+        <RechartsPieChart role="img" aria-label={title ? `${title} chart` : "Pie chart"}>
           <Pie
             data={data}
             dataKey={valueKey}

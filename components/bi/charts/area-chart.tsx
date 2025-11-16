@@ -16,6 +16,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  ChartLoadingState,
+  ChartErrorState,
+  ChartEmptyState,
+} from "./chart-states";
 
 /**
  * AreaChart
@@ -56,6 +61,9 @@ export interface AreaChartProps {
   showGrid?: boolean;
   showLegend?: boolean;
   className?: string;
+  loading?: boolean;
+  error?: string | null;
+  emptyMessage?: string;
 }
 
 export function AreaChart({
@@ -68,16 +76,49 @@ export function AreaChart({
   showGrid = true,
   showLegend = true,
   className,
+  loading = false,
+  error = null,
+  emptyMessage = "No data available",
 }: AreaChartProps) {
   const chartConfig = createChartConfig(yKeys);
 
+  if (loading) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartLoadingState />
+      </ChartWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartErrorState error={error} />
+      </ChartWrapper>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartEmptyState message={emptyMessage} />
+      </ChartWrapper>
+    );
+  }
+
   return (
     <ChartWrapper title={title} description={description} className={className}>
-      <ChartContainer config={chartConfig} className="h-full w-full">
+      <ChartContainer
+        config={chartConfig}
+        className="h-full w-full"
+        aria-label={title || "Area chart"}
+      >
         <RechartsAreaChart
           accessibilityLayer
           data={data}
           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          role="img"
+          aria-label={title ? `${title} chart` : "Area chart"}
         >
           {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
           <XAxis

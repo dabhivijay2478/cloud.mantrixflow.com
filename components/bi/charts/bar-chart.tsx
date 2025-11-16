@@ -16,6 +16,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  ChartLoadingState,
+  ChartErrorState,
+  ChartEmptyState,
+} from "./chart-states";
 
 /**
  * BarChart
@@ -58,6 +63,9 @@ export interface BarChartProps {
   showGrid?: boolean;
   showLegend?: boolean;
   className?: string;
+  loading?: boolean;
+  error?: string | null;
+  emptyMessage?: string;
 }
 
 export function BarChart({
@@ -71,17 +79,50 @@ export function BarChart({
   showGrid = true,
   showLegend = true,
   className,
+  loading = false,
+  error = null,
+  emptyMessage = "No data available",
 }: BarChartProps) {
   const chartConfig = createChartConfig(yKeys);
 
+  if (loading) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartLoadingState />
+      </ChartWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartErrorState error={error} />
+      </ChartWrapper>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <ChartWrapper title={title} description={description} className={className}>
+        <ChartEmptyState message={emptyMessage} />
+      </ChartWrapper>
+    );
+  }
+
   return (
     <ChartWrapper title={title} description={description} className={className}>
-      <ChartContainer config={chartConfig} className="h-full w-full">
+      <ChartContainer
+        config={chartConfig}
+        className="h-full w-full"
+        aria-label={title || "Bar chart"}
+      >
         <RechartsBarChart
           accessibilityLayer
           data={data}
           layout={horizontal ? "vertical" : "horizontal"}
           margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+          role="img"
+          aria-label={title ? `${title} chart` : "Bar chart"}
         >
           {showGrid && (
             <CartesianGrid
