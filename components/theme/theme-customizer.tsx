@@ -132,18 +132,21 @@ export function ThemeCustomizer() {
                 value={themeStore.theme.fonts.sans}
                 onChange={(font) => themeStore.setFont("sans", font)}
                 description="Primary font for body text"
+                category="sans-serif"
               />
               <FontSelector
                 label="Serif"
                 value={themeStore.theme.fonts.serif}
                 onChange={(font) => themeStore.setFont("serif", font)}
                 description="Font for serif text"
+                category="serif"
               />
               <FontSelector
                 label="Monospace"
                 value={themeStore.theme.fonts.mono}
                 onChange={(font) => themeStore.setFont("mono", font)}
                 description="Font for code and monospace text"
+                category="monospace"
               />
             </CardContent>
           </Card>

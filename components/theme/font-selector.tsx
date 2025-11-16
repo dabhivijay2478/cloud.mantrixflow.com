@@ -23,13 +23,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useFontSearch } from "@/lib/hooks/use-font-search";
 import type { FilterFontCategory, FontInfo } from "@/lib/types/fonts";
 import {
@@ -45,6 +38,8 @@ interface FontSelectorProps {
   onChange: (font: string) => void;
   description?: string;
   className?: string;
+  category?: FilterFontCategory;
+  onCategoryChange?: (category: FilterFontCategory) => void;
 }
 
 export function FontSelector({
@@ -53,12 +48,17 @@ export function FontSelector({
   onChange,
   description,
   className,
+  category: externalCategory,
+  onCategoryChange,
 }: FontSelectorProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<FilterFontCategory>("all");
+  const [internalCategory, setInternalCategory] = useState<FilterFontCategory>("all");
   const [loadingFont, setLoadingFont] = useState<string | null>(null);
+  
+  // Use external category if provided, otherwise use internal
+  const selectedCategory = externalCategory ?? internalCategory;
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedFontRef = useRef<HTMLDivElement>(null);
   const hasScrolledToSelectedFont = useRef(false);
@@ -79,10 +79,10 @@ export function FontSelector({
 
   // Initialize category
   useEffect(() => {
-    if (defaultCategory !== "all") {
-      setSelectedCategory(defaultCategory);
+    if (defaultCategory !== "all" && !externalCategory) {
+      setInternalCategory(defaultCategory);
     }
-  }, [defaultCategory]);
+  }, [defaultCategory, externalCategory]);
 
   // Debounce search query
   useEffect(() => {
@@ -244,24 +244,6 @@ export function FontSelector({
                     <X className="h-4 w-4" />
                   </Button>
                 )}
-              </div>
-              <div className="px-2 py-1">
-                <Select
-                  value={selectedCategory}
-                  onValueChange={(value) => setSelectedCategory(value as FilterFontCategory)}
-                >
-                  <SelectTrigger className="h-8 px-2 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Fonts</SelectItem>
-                    <SelectItem value="sans-serif">Sans Serif</SelectItem>
-                    <SelectItem value="serif">Serif</SelectItem>
-                    <SelectItem value="monospace">Monospace</SelectItem>
-                    <SelectItem value="display">Display</SelectItem>
-                    <SelectItem value="handwriting">Handwriting</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 
