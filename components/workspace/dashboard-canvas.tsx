@@ -1,6 +1,10 @@
 "use client";
 
-import { DragOverlay, useDndContext, useDroppable } from "@dnd-kit/core";
+import {
+  DragOverlay,
+  useDndContext,
+  useDroppable,
+} from "@dnd-kit/core";
 import { nanoid } from "nanoid";
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -66,6 +70,7 @@ export function DashboardCanvas({
     },
     [onComponentSelect],
   );
+
   const canvasRef = useRef<HTMLElement>(null);
   const { active, delta } = useDndContext();
   const prevActiveRef = React.useRef(active);
@@ -74,65 +79,51 @@ export function DashboardCanvas({
   // Calculate canvas size based on viewport and component positions
   useEffect(() => {
     const updateCanvasSize = () => {
-      // Get viewport from parent container, not canvas itself
-      // Try multiple parent levels to find the actual scroll container
       let scrollContainer = canvasRef.current?.parentElement?.parentElement;
 
-      // If not found, try going up more levels (for responsive layout changes)
       if (!scrollContainer || scrollContainer.clientWidth === 0) {
         scrollContainer =
           canvasRef.current?.parentElement?.parentElement?.parentElement;
       }
 
       if (scrollContainer) {
-        const viewportWidth = Math.max(scrollContainer.clientWidth || 0, 320); // Minimum 320px for mobile
-        const viewportHeight = Math.max(scrollContainer.clientHeight || 0, 400); // Minimum height
+        const viewportWidth = Math.max(scrollContainer.clientWidth || 0, 320);
+        const viewportHeight = Math.max(scrollContainer.clientHeight || 0, 400);
 
-        // Calculate content size based on component positions
         const boundingBox = getBoundingBox(components, GRID_SIZE);
-        const padding = 200; // Extra padding for comfortable scrolling and adding new components
+        const padding = 200;
 
         if (boundingBox && components.length > 0) {
-          // Calculate the bottom-most point of all components (in pixels)
           const bottomMostPoint = boundingBox.y + boundingBox.height;
           const contentHeight = bottomMostPoint + padding;
-
-          // Canvas width = viewport width (no horizontal scrolling)
-          // Canvas height = max of viewport or content (vertical scrolling when needed)
           const newHeight = Math.max(viewportHeight + 400, contentHeight);
 
           setCanvasSize({
-            width: viewportWidth, // Always match viewport width
-            height: newHeight, // Expand to fit all components with padding
+            width: viewportWidth,
+            height: newHeight,
           });
         } else {
-          // No components, use viewport size with minimum height
           setCanvasSize({
             width: viewportWidth,
-            height: Math.max(viewportHeight, 1000), // Minimum 1000px height for empty canvas
+            height: Math.max(viewportHeight, 1000),
           });
         }
       }
     };
 
-    // Update immediately and after a short delay to ensure DOM is ready
     updateCanvasSize();
     const timeoutId = setTimeout(updateCanvasSize, 100);
-    const timeoutId2 = setTimeout(updateCanvasSize, 500); // Additional delay for panel animations
+    const timeoutId2 = setTimeout(updateCanvasSize, 500);
 
-    // Use ResizeObserver for better performance - observe multiple containers
     const resizeObserver = new ResizeObserver(() => {
-      // Use requestAnimationFrame to batch updates
       requestAnimationFrame(updateCanvasSize);
     });
 
-    // Observe the canvas container and its parents
     const scrollContainer = canvasRef.current?.parentElement?.parentElement;
     if (scrollContainer) {
       resizeObserver.observe(scrollContainer);
     }
 
-    // Also observe the main panel container if available
     const mainPanel = document.getElementById("main-panel");
     if (mainPanel) {
       resizeObserver.observe(mainPanel);
@@ -140,12 +131,6 @@ export function DashboardCanvas({
 
     window.addEventListener("resize", updateCanvasSize);
 
-    // Listen for panel resize events (from ResizablePanelGroup)
-    const _handlePanelResize = () => {
-      requestAnimationFrame(updateCanvasSize);
-    };
-
-    // Use a MutationObserver to detect when panels expand/collapse
     const mutationObserver = new MutationObserver(() => {
       requestAnimationFrame(updateCanvasSize);
     });
@@ -181,22 +166,16 @@ export function DashboardCanvas({
     return Math.round(pixels / GRID_SIZE);
   }, []);
 
-  // Handle real-time drag updates with collision detection
+  // Handle real-time drag updates
   useEffect(() => {
     if (!active || !delta) return;
 
     const activeData = active.data.current;
-    // CRITICAL FIX: Check for componentId instead of component snapshot
     if (activeData?.type === "dashboard-item") {
       const componentId = active.id as string;
-
-      // ROOT CAUSE FIX: Always get current component from components array
-      // Never trust active.data.current.component as it's a stale snapshot
       const component = components.find((c) => c.id === componentId);
 
-      // Safety check: If component was deleted during drag, cancel the drag
       if (!component) {
-        // Component was deleted, clear drag state immediately
         dragStartPositionRef.current = null;
         setActiveId(null);
         setDraggedComponentType(null);
@@ -205,7 +184,6 @@ export function DashboardCanvas({
         return;
       }
 
-      // Store start position on drag start
       if (!dragStartPositionRef.current) {
         dragStartPositionRef.current = {
           x: component.position.x * GRID_SIZE,
@@ -213,7 +191,6 @@ export function DashboardCanvas({
         };
       }
 
-      // Calculate new position - follow mouse exactly for free rearrangement
       if (dragStartPositionRef.current) {
         const newX = dragStartPositionRef.current.x + delta.x;
         const newY = dragStartPositionRef.current.y + delta.y;
@@ -222,37 +199,29 @@ export function DashboardCanvas({
         let gridX = pixelToGrid(snapped.x);
         let gridY = pixelToGrid(snapped.y);
 
-        // Calculate canvas bounds in grid units
         const maxGridX = Math.floor(canvasSize.width / GRID_SIZE);
         const maxGridY = Math.floor(canvasSize.height / GRID_SIZE);
 
-        // Clamp to canvas bounds (prevent going off canvas)
-        gridX = Math.max(0, Math.min(gridX, maxGridX - component.position.w));
-        gridY = Math.max(0, Math.min(gridY, maxGridY - component.position.h));
+        gridX = Math.max(-component.position.w, Math.min(gridX, maxGridX));
+        gridY = Math.max(-component.position.h, Math.min(gridY, maxGridY));
 
-        // ROOT CAUSE FIX: Use current components array for collision detection
-        // Filter out the component being dragged to avoid self-collision
-        // This ensures deleted components are never included in collision checks
         const otherComponents = components.filter((c) => c.id !== component.id);
         const wouldCollide = !canPlaceComponent(
           gridX,
           gridY,
           component.position.w,
           component.position.h,
-          otherComponents, // Only check against other components (excludes self and deleted ones)
-          undefined, // No need to exclude since we already filtered
+          otherComponents,
+          undefined,
           GRID_SIZE,
         );
 
-        // Show collision warning but allow free movement
         if (wouldCollide) {
           setCollisionWarning(component.id);
         } else {
           setCollisionWarning(null);
         }
 
-        // Update position in real-time - follow mouse exactly
-        // User can rearrange freely, even if it overlaps (they'll see warning)
         onComponentUpdate(component.id, {
           position: {
             ...component.position,
@@ -283,10 +252,9 @@ export function DashboardCanvas({
     }
   }, [active]);
 
-  // CRITICAL FIX: Clear drag state if the component being dragged is deleted
+  // Clear drag state if component was deleted
   useEffect(() => {
     if (activeId && !components.find((c) => c.id === activeId)) {
-      // Component was deleted while being dragged, clear all drag state
       dragStartPositionRef.current = null;
       setActiveId(null);
       setDraggedComponentType(null);
@@ -295,7 +263,7 @@ export function DashboardCanvas({
     }
   }, [activeId, components]);
 
-  // CRITICAL FIX: Clear selected component if it was deleted
+  // Clear selected component if it was deleted
   useEffect(() => {
     if (
       selectedComponentId &&
@@ -305,10 +273,9 @@ export function DashboardCanvas({
     }
   }, [selectedComponentId, components, setSelectedComponentId]);
 
-  // Keyboard delete handler - Delete or Backspace to delete selected component
+  // Keyboard delete handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if not typing in an input/textarea
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -318,7 +285,6 @@ export function DashboardCanvas({
         return;
       }
 
-      // Delete or Backspace key
       if (
         (e.key === "Delete" || e.key === "Backspace") &&
         selectedComponentId
@@ -328,7 +294,6 @@ export function DashboardCanvas({
         setSelectedComponentId(null);
       }
 
-      // Escape to deselect
       if (e.key === "Escape" && selectedComponentId) {
         setSelectedComponentId(null);
       }
@@ -359,9 +324,8 @@ export function DashboardCanvas({
     }
   }, [active]);
 
-  // Handle drag end when dropped on canvas (for new components from palette and moving existing components)
+  // Handle drag end when dropped on canvas
   useEffect(() => {
-    // Detect when drag ends (active goes from non-null to null)
     const wasDragging = prevActiveRef.current !== null;
     const justEnded = wasDragging && active === null;
 
@@ -385,18 +349,15 @@ export function DashboardCanvas({
           if (componentId && lastDelta && dragStartPositionRef.current) {
             const component = components.find((c) => c.id === componentId);
             if (component) {
-              // Calculate final position based on drag delta
               const newX = dragStartPositionRef.current.x + lastDelta.x;
               const newY = dragStartPositionRef.current.y + lastDelta.y;
               const snapped = snapToGrid(newX, newY);
               let gridX = pixelToGrid(snapped.x);
               let gridY = pixelToGrid(snapped.y);
 
-              // Calculate canvas bounds in grid units
               const maxGridX = Math.floor(canvasSize.width / GRID_SIZE);
               const maxGridY = Math.floor(canvasSize.height / GRID_SIZE);
 
-              // Clamp to canvas bounds
               gridX = Math.max(
                 0,
                 Math.min(gridX, maxGridX - component.position.w),
@@ -406,7 +367,6 @@ export function DashboardCanvas({
                 Math.min(gridY, maxGridY - component.position.h),
               );
 
-              // Update position (allow movement even with collision for now)
               onComponentUpdate(componentId, {
                 position: {
                   x: gridX,
@@ -417,7 +377,6 @@ export function DashboardCanvas({
               });
             }
           }
-          // Reset drag state
           dragStartPositionRef.current = null;
           setCollisionWarning(null);
         } else if (
@@ -438,28 +397,20 @@ export function DashboardCanvas({
           // biome-ignore lint/suspicious/noExplicitAny: Window extension for drop coordinates
           const dropY = (window as any).__lastDropY || canvasRect.height / 2;
 
-          // Default component size
           const defaultWidth = 6;
           const defaultHeight = 4;
 
-          // ROOT CAUSE FIX: Use actual canvas width, not just viewport width
-          // This ensures we can place components anywhere on the canvas, including right side
           const actualCanvasWidth =
             canvasSize.width || canvasRect.width || GRID_COLS * GRID_SIZE;
 
-          // Use a large canvas height for placement (allows infinite vertical space)
-          // This ensures components can always be placed, canvas will expand with scrolling
           const placementCanvasHeight = Math.max(
             canvasSize.height || 800,
-            10000, // Large enough to allow many components
+            10000,
           );
 
-          // ROOT CAUSE FIX: Try to place near drop position first, then fall back to auto-placement
-          // Convert drop position to grid coordinates
-          const dropGridX = Math.max(0, Math.floor((dropX - 20) / GRID_SIZE)); // Subtract padding
-          const dropGridY = Math.max(0, Math.floor((dropY - 20) / GRID_SIZE)); // Subtract padding
+          const dropGridX = Math.max(0, Math.floor((dropX - 20) / GRID_SIZE));
+          const dropGridY = Math.max(0, Math.floor((dropY - 20) / GRID_SIZE));
 
-          // Check if drop position is available
           let bestPosition: { x: number; y: number };
           if (
             canPlaceComponent(
@@ -472,22 +423,18 @@ export function DashboardCanvas({
               GRID_SIZE,
             )
           ) {
-            // Drop position is available, use it
             bestPosition = { x: dropGridX, y: dropGridY };
           } else {
-            // Drop position is occupied, use intelligent auto-placement
-            // This ensures components never overlap (like Power BI/Tableau)
             bestPosition = findBestPosition(
               defaultWidth,
               defaultHeight,
               components,
-              actualCanvasWidth, // Use actual canvas width, not viewport
+              actualCanvasWidth,
               placementCanvasHeight,
               GRID_SIZE,
             );
           }
 
-          // Use auto-placement position (ensures no overlap)
           const finalX = bestPosition.x;
           const finalY = bestPosition.y;
 
@@ -509,7 +456,6 @@ export function DashboardCanvas({
 
           onComponentsChange([...components, newComponent]);
 
-          // Show occupied areas briefly after adding component
           setShowOccupiedAreas(true);
           setTimeout(() => setShowOccupiedAreas(false), 1000);
         }
@@ -551,7 +497,6 @@ export function DashboardCanvas({
       const component = components.find((c) => c.id === id);
       if (!component) return;
 
-      // Check if resize would cause collision
       const wouldCollide = !canPlaceComponent(
         component.position.x,
         component.position.y,
@@ -564,8 +509,6 @@ export function DashboardCanvas({
 
       if (wouldCollide) {
         setCollisionWarning(id);
-        // Still allow resize but show warning
-        // In production, you might want to prevent resize or auto-adjust
       } else {
         setCollisionWarning(null);
       }
@@ -586,7 +529,6 @@ export function DashboardCanvas({
       const component = components.find((c) => c.id === id);
       if (!component) return;
 
-      const _currentZIndex = component.zIndex || 0;
       let newZIndex: number;
 
       if (direction === "front") {
@@ -638,9 +580,9 @@ export function DashboardCanvas({
               className,
             )}
             style={{
-              width: "100%", // Always 100% of viewport width
-              height: `${Math.max(canvasSize.height || 1000, 1000)}px`, // Minimum 1000px, expand as needed
-              minHeight: "1000px", // Ensure minimum height for scrolling
+              width: "100%",
+              height: `${Math.max(canvasSize.height || 1000, 1000)}px`,
+              minHeight: "1000px",
               padding: "20px",
               boxSizing: "border-box",
               backgroundImage: `
@@ -648,6 +590,7 @@ export function DashboardCanvas({
                 linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px)
               `,
               backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+              transition: isDragging ? "none" : "background-size 0.2s ease-out",
             }}
             onClick={(e) => {
               // Deselect when clicking on blank canvas area
@@ -741,12 +684,17 @@ export function DashboardCanvas({
         </ScrollArea>
       </CanvasDropZone>
 
-      {/* Drag Overlay - Blue preview when dragging */}
+      {/* Drag Overlay - Enhanced preview when dragging */}
       {isDragging && active && (
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay
+          dropAnimation={{
+            duration: 200,
+            easing: "ease-out",
+          }}
+          adjustScale={true}
+        >
           {(() => {
             const activeData = active.data.current;
-            // ROOT CAUSE FIX: Get current component from array, not from stale snapshot
             if (activeData?.type === "dashboard-item") {
               const componentId = active.id as string;
               const component = components.find((c) => c.id === componentId);
@@ -754,15 +702,22 @@ export function DashboardCanvas({
               if (component) {
                 const width = component.position.w * GRID_SIZE;
                 const height = component.position.h * GRID_SIZE;
+                const hasCollision = collisionWarning === component.id;
 
                 return (
                   <div
-                    className="bg-blue-500/90 border-2 border-blue-600 rounded-lg shadow-2xl rotate-2"
+                    className={cn(
+                      "border-2 rounded-lg shadow-2xl transition-all",
+                      hasCollision
+                        ? "bg-destructive/90 border-destructive rotate-2"
+                        : "bg-primary/90 border-primary rotate-2",
+                    )}
                     style={{
                       width: `${width}px`,
                       height: `${height}px`,
                       opacity: 0.95,
                       cursor: "grabbing",
+                      transform: "rotate(2deg) scale(1.02)",
                     }}
                   >
                     <div className="w-full h-full flex items-center justify-center p-2">
@@ -783,12 +738,13 @@ export function DashboardCanvas({
 
               return (
                 <div
-                  className="bg-blue-500/90 border-2 border-blue-600 rounded-lg shadow-2xl flex items-center justify-center rotate-2"
+                  className="bg-primary/90 border-2 border-primary rounded-lg shadow-2xl flex items-center justify-center"
                   style={{
                     width: `${defaultWidth}px`,
                     height: `${defaultHeight}px`,
                     opacity: 0.95,
                     cursor: "grabbing",
+                    transform: "rotate(2deg) scale(1.02)",
                   }}
                 >
                   <div className="text-white text-xs font-medium text-center px-2">

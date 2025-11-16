@@ -71,9 +71,11 @@ export function DashboardItem({
       disabled: isResizing, // Disable drag when resizing
     });
 
+  // Enhanced style with smooth transitions (like in examples)
   const style = {
     transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.3 : 1,
+    opacity: isDragging ? 0.4 : 1,
+    transition: isDragging ? "none" : "opacity 0.2s ease-out, transform 0.2s ease-out",
     zIndex:
       isDragging || isResizing
         ? (component.zIndex || 1) + 1000
@@ -291,18 +293,20 @@ export function DashboardItem({
           itemRef.current = node as HTMLButtonElement;
         }}
         className={cn(
-          "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm transition-all",
+          "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm",
+          "transition-all duration-200 ease-out",
           isSelected
             ? "border-primary ring-2 ring-primary/20"
             : "border-transparent",
-          isDragging && "opacity-30 cursor-grabbing border-blue-500/50",
-          isHovered && !isResizing && "border-border",
+          isDragging && "opacity-40 cursor-grabbing border-primary/50",
+          isHovered && !isResizing && !isDragging && "border-border",
           isResizing && "border-primary/50",
           hasCollision &&
             "border-destructive ring-2 ring-destructive/30 animate-pulse",
         )}
         style={{
           transform: CSS.Translate.toString(transform),
+          transition: isDragging ? "none" : "all 0.2s ease-out",
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -314,6 +318,7 @@ export function DashboardItem({
         }}
       >
         {/* Drag Handle - Only visible when not resizing */}
+        {/* Enhanced for better responsiveness like in examples */}
         {!isResizing && (
           <div
             {...attributes}
@@ -324,9 +329,10 @@ export function DashboardItem({
             className={cn(
               "absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing",
               "bg-background/90 backdrop-blur-sm rounded p-1.5 border shadow-sm",
-              "hover:bg-blue-500/20 hover:border-blue-500 transition-all pointer-events-auto",
-              "active:bg-blue-500/30 active:border-blue-600",
+              "hover:bg-primary/20 hover:border-primary transition-all duration-150 pointer-events-auto",
+              "active:bg-primary/30 active:border-primary active:scale-110",
               "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+              "touch-none select-none", // Prevent text selection during drag
               isHovered || isSelected ? "opacity-100" : "opacity-0",
             )}
             onMouseDown={(e) => {
@@ -341,8 +347,8 @@ export function DashboardItem({
           >
             <GripVertical
               className={cn(
-                "w-4 h-4 transition-colors",
-                isDragging ? "text-blue-600" : "text-muted-foreground",
+                "w-4 h-4 transition-colors duration-150",
+                isDragging ? "text-primary" : "text-muted-foreground",
               )}
             />
           </div>

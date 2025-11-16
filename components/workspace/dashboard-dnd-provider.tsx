@@ -4,8 +4,10 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
+  type DragStartEvent,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -13,22 +15,55 @@ import type * as React from "react";
 
 interface DashboardDndProviderProps {
   children: React.ReactNode;
+  onDragEnd?: (event: DragEndEvent) => void;
+  onDragStart?: (event: DragStartEvent) => void;
 }
 
-export function DashboardDndProvider({ children }: DashboardDndProviderProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor),
-  );
+export function DashboardDndProvider({
+  children,
+  onDragEnd: customOnDragEnd,
+  onDragStart: customOnDragStart,
+}: DashboardDndProviderProps) {
+  // Use MouseSensor and TouchSensor like in the examples for better responsiveness
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 8, // Require 8px movement before drag starts
+    },
+  });
+
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 200, // 200ms delay for touch to distinguish from scroll
+      tolerance: 5, // 5px tolerance for touch
+    },
+  });
+
+  const keyboardSensor = useSensor(KeyboardSensor, {});
+
+  const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    // Store active drag info for canvas to use
+    if (event.active.data.current) {
+      // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
+      (window as any).__lastDragData = event.active.data.current;
+    }
+
+    // Call custom handler if provided
+    if (customOnDragStart) {
+      customOnDragStart(event);
+    }
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    // If custom handler provided, call it first (for sortable mode)
+    if (customOnDragEnd) {
+      customOnDragEnd(event);
+    }
+
     const { active, over, delta } = event;
 
-    // Store drag data and drop position for canvas to use
+    // Store drag data and drop position for canvas to use (for free mode)
     if (active.data.current) {
       // biome-ignore lint/suspicious/noExplicitAny: Window extension for drag data
       (window as any).__lastDragData = active.data.current;
@@ -64,6 +99,7 @@ export function DashboardDndProvider({ children }: DashboardDndProviderProps) {
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       {children}
