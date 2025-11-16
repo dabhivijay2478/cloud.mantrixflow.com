@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -144,12 +145,12 @@ function LoginFormContent({
         <Field>
           <div className="flex items-center">
             <FieldLabel htmlFor="password">Password</FieldLabel>
-            <a
+            <Link
               href="/auth/forgot-password"
               className="ml-auto text-sm underline-offset-4 hover:underline"
             >
               Forgot your password?
-            </a>
+            </Link>
           </div>
           <PasswordInput
             id="password"
@@ -178,9 +179,9 @@ function LoginFormContent({
           />
           <FieldDescription className="text-center">
             Don&apos;t have an account?{" "}
-            <a href="/auth/signup" className="underline underline-offset-4">
+            <Link href="/auth/signup" className="underline underline-offset-4">
               Sign up
-            </a>
+            </Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

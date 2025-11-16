@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -107,9 +108,9 @@ export function ForgotPasswordForm({
         <Field>
           <FieldDescription className="text-center">
             Remember your password?{" "}
-            <a href="/auth/login" className="underline underline-offset-4">
+            <Link href="/auth/login" className="underline underline-offset-4">
               Back to login
-            </a>
+            </Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

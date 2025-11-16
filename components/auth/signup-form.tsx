@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -236,9 +237,9 @@ export function SignupForm({
 
           <FieldDescription className="text-center text-xs">
             Already have an account?{" "}
-            <a href="/auth/login" className="underline underline-offset-4">
+            <Link href="/auth/login" className="underline underline-offset-4">
               Sign in
-            </a>
+            </Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

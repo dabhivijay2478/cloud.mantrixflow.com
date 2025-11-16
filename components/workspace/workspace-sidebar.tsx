@@ -11,6 +11,7 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 import {
@@ -170,10 +171,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname === "/workspace"}
                   tooltip="Dashboard"
                 >
-                  <a href="/workspace">
+                  <Link href="/workspace">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -182,7 +183,7 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/dashboards")}
                   tooltip="Dashboards"
                 >
-                  <a href="/workspace/dashboards">
+                  <Link href="/workspace/dashboards">
                     <FileText className="h-4 w-4" />
                     <span>Dashboards</span>
                     {filteredDashboards.length > 0 && (
@@ -190,7 +191,7 @@ export function WorkspaceSidebar() {
                         {filteredDashboards.length}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -199,7 +200,7 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/data-sources")}
                   tooltip="Data Sources"
                 >
-                  <a href="/workspace/data-sources">
+                  <Link href="/workspace/data-sources">
                     <Database className="h-4 w-4" />
                     <span>Data Sources</span>
                     {filteredDataSources.length > 0 && (
@@ -207,7 +208,7 @@ export function WorkspaceSidebar() {
                         {filteredDataSources.length}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -216,10 +217,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/data-pipelines")}
                   tooltip="Data Pipelines"
                 >
-                  <a href="/workspace/data-pipelines">
+                  <Link href="/workspace/data-pipelines">
                     <GitBranch className="h-4 w-4" />
                     <span>Data Pipelines</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -236,10 +237,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/settings")}
                   tooltip="Settings"
                 >
-                  <a href="/workspace/settings">
+                  <Link href="/workspace/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -248,10 +249,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/team")}
                   tooltip="Team"
                 >
-                  <a href="/workspace/team">
+                  <Link href="/workspace/team">
                     <Users className="h-4 w-4" />
                     <span>Team</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
