@@ -70,6 +70,16 @@ export interface DatasetColumn {
   order: number;
 }
 
+export interface SavedQuery {
+  id: string;
+  name: string;
+  query: string;
+  dataSourceId: string;
+  organizationId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Dataset {
   id: string;
   name: string;
@@ -116,6 +126,9 @@ interface WorkspaceState {
   // Datasets
   datasets: Dataset[];
   currentDataset: Dataset | null;
+
+  // Saved Queries
+  savedQueries: SavedQuery[];
 
   // Onboarding
   onboarding: OnboardingState;
@@ -164,6 +177,11 @@ interface WorkspaceActions {
   updateDataset: (id: string, updates: Partial<Dataset>) => void;
   removeDataset: (id: string) => void;
 
+  // Saved Query actions
+  addSavedQuery: (query: SavedQuery) => void;
+  updateSavedQuery: (id: string, updates: Partial<SavedQuery>) => void;
+  removeSavedQuery: (id: string) => void;
+
   // Onboarding actions
   setOnboardingStep: (step: OnboardingState["currentStep"]) => void;
   updateOnboarding: (updates: Partial<OnboardingState>) => void;
@@ -194,6 +212,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       currentDashboard: null,
       datasets: [],
       currentDataset: null,
+      savedQueries: [],
       onboarding: {
         currentStep: "welcome",
         completed: false,
@@ -355,6 +374,22 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
             state.currentDataset?.id === id ? null : state.currentDataset,
         })),
 
+      // Saved Query actions
+      addSavedQuery: (query) =>
+        set((state) => ({
+          savedQueries: [...state.savedQueries, query],
+        })),
+      updateSavedQuery: (id, updates) =>
+        set((state) => ({
+          savedQueries: state.savedQueries.map((q) =>
+            q.id === id ? { ...q, ...updates } : q,
+          ),
+        })),
+      removeSavedQuery: (id) =>
+        set((state) => ({
+          savedQueries: state.savedQueries.filter((q) => q.id !== id),
+        })),
+
       // Onboarding actions
       setOnboardingStep: (step) =>
         set((state) => ({
@@ -400,6 +435,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
         dataSources: state.dataSources,
         dashboards: state.dashboards,
         datasets: state.datasets,
+        savedQueries: state.savedQueries,
         onboarding: state.onboarding,
         sidebarOpen: state.sidebarOpen,
         componentsPanelOpen: state.componentsPanelOpen,

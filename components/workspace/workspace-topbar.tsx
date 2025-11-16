@@ -104,28 +104,22 @@ export function WorkspaceTopbar() {
     }
   };
 
-  const handleTableChange = (value: string) => {
-    if (currentDashboard) {
-      // Find the data source for the current dashboard
-      const dataSource = dataSources.find(
-        (ds) => ds.id === currentDashboard.dataSourceId,
-      );
-      if (dataSource) {
-        updateDataSource(dataSource.id, {
-          selectedTable: value,
-        });
-      }
+  const handleDatasetChange = (value: string) => {
+    if (value && value !== "__none__") {
+      setSelectedDatasetId(value);
+    } else {
+      setSelectedDatasetId(null);
     }
   };
 
-  // Get the connected data source for the current dashboard
-  const connectedDataSource = currentDashboard?.dataSourceId
-    ? dataSources.find((ds) => ds.id === currentDashboard.dataSourceId)
+  // Get available datasets for the current dashboard's data source
+  const dashboardDataSourceId = currentDashboard?.dataSourceId;
+  const availableDatasets = dashboardDataSourceId
+    ? datasets.filter((ds) => ds.dataSourceId === dashboardDataSourceId)
+    : datasets;
+  const selectedDataset = selectedDatasetId
+    ? datasets.find((ds) => ds.id === selectedDatasetId)
     : null;
-
-  // Get tables from the connected data source
-  const availableTables = connectedDataSource?.tables || [];
-  const selectedTable = connectedDataSource?.selectedTable || "";
 
   // Dashboard edit mode header
   if (isDashboardEditMode && currentDashboard) {
@@ -157,28 +151,29 @@ export function WorkspaceTopbar() {
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4 text-muted-foreground" />
               <Select
-                value={selectedTable || ""}
-                onValueChange={handleTableChange}
-                disabled={!connectedDataSource || availableTables.length === 0}
+                value={selectedDatasetId || "__none__"}
+                onValueChange={handleDatasetChange}
+                disabled={availableDatasets.length === 0}
               >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select table" />
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Select dataset" />
                 </SelectTrigger>
                 <SelectContent>
-                  {!connectedDataSource ? (
+                  {availableDatasets.length === 0 ? (
                     <div className="p-2 text-sm text-muted-foreground">
-                      No data source connected
-                    </div>
-                  ) : availableTables.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      No tables available
+                      No datasets available
                     </div>
                   ) : (
-                    availableTables.map((table) => (
-                      <SelectItem key={table} value={table}>
-                        {table}
+                    <>
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">None</span>
                       </SelectItem>
-                    ))
+                      {availableDatasets.map((dataset) => (
+                        <SelectItem key={dataset.id} value={dataset.id}>
+                          {dataset.name}
+                        </SelectItem>
+                      ))}
+                    </>
                   )}
                 </SelectContent>
               </Select>

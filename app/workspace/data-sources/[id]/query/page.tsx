@@ -11,22 +11,33 @@ import {
   Play,
   Save,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SQLEditor, SQLResultViewer, TableNavigation } from "@/components/bi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
@@ -137,8 +148,24 @@ const getDefaultQuery = (type: string, tableName?: string): string => {
 export default function DataSourceQueryPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dataSourceId = params.id as string;
-  const { dataSources } = useWorkspaceStore();
+  const { dataSources, savedQueries, addSavedQuery, currentOrganization } =
+    useWorkspaceStore();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<"query" | "dataset">(
+    tabParam === "dataset" ? "dataset" : "query",
+  );
+
+  // Sync tab state with URL param
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "dataset") {
+      setActiveTab("dataset");
+    } else {
+      setActiveTab("query");
+    }
+  }, [searchParams]);
 
   const dataSource = dataSources.find((ds) => ds.id === dataSourceId);
 
@@ -154,6 +181,9 @@ export default function DataSourceQueryPage() {
   const [resultsFullScreen, setResultsFullScreen] = useState(false);
   const [editorSize, setEditorSize] = useState(60);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveAsNew, setSaveAsNew] = useState(false);
+  const [queryName, setQueryName] = useState("");
 
   const editorRef = useRef<{ setValue: (value: string) => void } | null>(null);
   const language = dataSource
@@ -261,6 +291,48 @@ export default function DataSourceQueryPage() {
     }
   };
 
+  const handleSaveQuery = () => {
+    if (!query.trim()) {
+      toast.error("Query is empty", "Please enter a query to save.");
+      return;
+    }
+    setSaveAsNew(false);
+    setQueryName(_queryTitle);
+    setShowSaveDialog(true);
+  };
+
+  const handleSaveAsNewQuery = () => {
+    if (!query.trim()) {
+      toast.error("Query is empty", "Please enter a query to save.");
+      return;
+    }
+    setSaveAsNew(true);
+    setQueryName("");
+    setShowSaveDialog(true);
+  };
+
+  const handleConfirmSave = () => {
+    if (!queryName.trim()) {
+      toast.error("Query name required", "Please enter a name for the query.");
+      return;
+    }
+
+    const savedQuery = {
+      id: `query_${Date.now()}`,
+      name: queryName,
+      query: query,
+      dataSourceId: dataSourceId,
+      organizationId: currentOrganization?.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    addSavedQuery(savedQuery);
+    toast.success("Query saved successfully", `"${queryName}" has been saved.`);
+    setShowSaveDialog(false);
+    setQueryName("");
+  };
+
   const handleDownload = (format: "csv" | "json" | "excel") => {
     if (!results) return;
 
@@ -314,10 +386,25 @@ export default function DataSourceQueryPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-lg font-semibold">{_queryTitle}</h1>
+            <div className="flex items-center gap-4">
+              <Tabs value={activeTab} onValueChange={(v) => {
+                const newTab = v as "query" | "dataset";
+                setActiveTab(newTab);
+                if (newTab === "dataset") {
+                  router.push(`/workspace/data-sources/${dataSourceId}/query?tab=dataset`);
+                } else {
+                  router.push(`/workspace/data-sources/${dataSourceId}/query`);
+                }
+              }}>
+                <TabsList>
+                  <TabsTrigger value="query">Query</TabsTrigger>
+                  <TabsTrigger value="dataset">Dataset</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {shouldShowSQLEditor && (
+            {shouldShowSQLEditor && activeTab === "query" && (
               <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -328,11 +415,11 @@ export default function DataSourceQueryPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSaveQuery}>
                       <Save className="h-4 w-4 mr-2" />
                       Save query
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSaveAsNewQuery}>
                       <Save className="h-4 w-4 mr-2" />
                       Save as new query
                     </DropdownMenuItem>
@@ -392,7 +479,9 @@ export default function DataSourceQueryPage() {
 
       {/* Main Content */}
       <div className="flex-1 min-h-0">
-        {shouldShowSQLEditor ? (
+        {activeTab === "query" ? (
+          <>
+            {shouldShowSQLEditor ? (
           <div className="flex h-full">
             {/* Tables Sidebar - Fixed width based on collapsed state */}
             <div
@@ -531,7 +620,76 @@ export default function DataSourceQueryPage() {
             </div>
           </div>
         )}
+          </>
+        ) : (
+          <div className="h-full overflow-auto">
+            <div className="p-6">
+              <div className="mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setActiveTab("query");
+                    router.push(`/workspace/data-sources/${dataSourceId}/query`);
+                  }}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Query
+                </Button>
+              </div>
+              <iframe
+                src={`/workspace/datasets/new?dataSourceId=${dataSourceId}&embedded=true`}
+                className="w-full h-[calc(100vh-200px)] border-0"
+                title="Dataset Configuration"
+              />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Save Query Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {saveAsNew ? "Save as New Query" : "Save Query"}
+            </DialogTitle>
+            <DialogDescription>
+              {saveAsNew
+                ? "Enter a name for your new query"
+                : "Update the name for this query"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="query-name">Query Name</Label>
+              <Input
+                id="query-name"
+                value={queryName}
+                onChange={(e) => setQueryName(e.target.value)}
+                placeholder="e.g., Sales by Region"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleConfirmSave();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSaveDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmSave}>
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

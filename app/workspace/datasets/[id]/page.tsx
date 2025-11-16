@@ -32,7 +32,7 @@ import {
   Type,
   X,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -222,10 +222,14 @@ function AvailableColumnItem({
 export default function DatasetConfigurationPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const datasetId = params.id as string;
+  const dataSourceIdFromQuery = searchParams.get("dataSourceId");
+  const isEmbedded = searchParams.get("embedded") === "true";
   const {
     dataSources,
     datasets,
+    savedQueries,
     currentDataset,
     setCurrentDataset,
     addDataset,
@@ -243,17 +247,37 @@ export default function DatasetConfigurationPage() {
     defaultValues: {
       name: "",
       description: "",
-      dataSourceId: "",
+      dataSourceId: dataSourceIdFromQuery || "",
       sourceType: "table",
       sourceName: "",
     },
   });
+
+  // Update form when dataSourceId from query changes
+  useEffect(() => {
+    if (dataSourceIdFromQuery && !datasetId) {
+      form.setValue("dataSourceId", dataSourceIdFromQuery);
+    }
+  }, [dataSourceIdFromQuery, form, datasetId]);
 
   const sourceType = form.watch("sourceType");
   const dataSourceId = form.watch("dataSourceId");
   const sourceName = form.watch("sourceName");
 
   const selectedDataSource = dataSources.find((ds) => ds.id === dataSourceId);
+  
+  // Get saved queries for the selected data source
+  const availableSavedQueries = savedQueries.filter(
+    (q) => q.dataSourceId === dataSourceId,
+  );
+
+  // Get datasets that use the current table/query
+  const datasetsUsingSource = datasets.filter(
+    (ds) =>
+      ds.dataSourceId === dataSourceId &&
+      ds.sourceType === sourceType &&
+      ds.sourceName === sourceName,
+  );
 
   // Load existing dataset if editing
   useEffect(() => {
@@ -282,7 +306,12 @@ export default function DatasetConfigurationPage() {
   useEffect(() => {
     if (dataSourceId && sourceName) {
       setFetchingColumns(true);
-      fetchColumns(dataSourceId, sourceType, sourceName)
+      // For custom queries, get the query text from saved queries
+      const actualSourceName = sourceType === "custom_query" 
+        ? savedQueries.find((q) => q.id === sourceName)?.query || sourceName
+        : sourceName;
+      
+      fetchColumns(dataSourceId, sourceType, actualSourceName)
         .then((cols) => {
           setColumns(cols);
           // Preserve selected columns if they exist
@@ -307,7 +336,7 @@ export default function DatasetConfigurationPage() {
           setFetchingColumns(false);
         });
     }
-  }, [dataSourceId, sourceType, sourceName, selectedColumns]);
+  }, [dataSourceId, sourceType, sourceName, selectedColumns, savedQueries]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -402,6 +431,11 @@ export default function DatasetConfigurationPage() {
 
     setLoading(true);
     try {
+      // For custom queries, store the query text
+      const queryText = data.sourceType === "custom_query"
+        ? savedQueries.find((q) => q.id === data.sourceName)?.query
+        : undefined;
+
       const dataset: Dataset = {
         id: datasetId === "new" ? `dataset_${Date.now()}` : datasetId,
         name: data.name,
@@ -409,6 +443,7 @@ export default function DatasetConfigurationPage() {
         dataSourceId: data.dataSourceId,
         sourceType: data.sourceType,
         sourceName: data.sourceName,
+        query: queryText,
         columns: columns.map((col) => ({
           ...col,
           order: selectedColumns.findIndex((sc) => sc.name === col.name),
@@ -426,7 +461,12 @@ export default function DatasetConfigurationPage() {
         toast.success("Dataset updated successfully");
       }
 
-      router.push("/workspace/data-sources");
+      // Redirect to query page if embedded or if dataSourceId is in query params
+      if (isEmbedded || dataSourceIdFromQuery) {
+        router.push(`/workspace/data-sources/${data.dataSourceId}/query?tab=dataset`);
+      } else {
+        router.push("/workspace/data-sources");
+      }
     } catch (error) {
       toast.error("Failed to save dataset");
       console.error(error);
@@ -441,22 +481,30 @@ export default function DatasetConfigurationPage() {
   );
 
   return (
-    <div className="space-y-6 p-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push("/workspace/data-sources")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Dataset Configuration</h1>
-          <p className="text-muted-foreground">
-            Configure which columns will be available for analytics
-          </p>
+    <div className={cn("space-y-6", isEmbedded ? "p-6" : "p-6 max-w-6xl mx-auto")}>
+      {!isEmbedded && (
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (dataSourceIdFromQuery) {
+                router.push(`/workspace/data-sources/${dataSourceIdFromQuery}/query`);
+              } else {
+                router.push("/workspace/data-sources");
+              }
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Dataset Configuration</h1>
+            <p className="text-muted-foreground">
+              Configure which columns will be available for analytics
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -607,10 +655,16 @@ export default function DatasetConfigurationPage() {
                               No tables available
                             </div>
                           )
-                        ) : (
+                        ) : availableSavedQueries.length === 0 ? (
                           <div className="p-4 text-center text-sm text-muted-foreground">
-                            Saved queries will appear here
+                            No saved queries available. Save a query from the Query tab first.
                           </div>
+                        ) : (
+                          availableSavedQueries.map((savedQuery) => (
+                            <SelectItem key={savedQuery.id} value={savedQuery.id}>
+                              {savedQuery.name}
+                            </SelectItem>
+                          ))
                         )}
                       </SelectContent>
                     </Select>
@@ -625,6 +679,81 @@ export default function DatasetConfigurationPage() {
               />
             </CardContent>
           </Card>
+
+          {/* Show datasets using this source */}
+          {sourceName && datasetsUsingSource.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Datasets Using This {sourceType === "table" ? "Table" : "Query"}</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {datasetsUsingSource.length} dataset{datasetsUsingSource.length !== 1 ? "s" : ""} configured
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {datasetsUsingSource.map((ds) => (
+                    <div
+                      key={ds.id}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/50"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{ds.name}</p>
+                        {ds.description && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {ds.description}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          router.push(`/workspace/datasets/${ds.id}?dataSourceId=${dataSourceId}`);
+                        }}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show current dataset info if editing */}
+          {datasetId && datasetId !== "new" && currentDataset && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Current Dataset</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm font-medium">Name</p>
+                    <p className="text-sm text-muted-foreground">{currentDataset.name}</p>
+                  </div>
+                  {currentDataset.description && (
+                    <div>
+                      <p className="text-sm font-medium">Description</p>
+                      <p className="text-sm text-muted-foreground">{currentDataset.description}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">Source</p>
+                    <p className="text-sm text-muted-foreground">
+                      {currentDataset.sourceType === "table" ? "Table" : "Custom Query"}: {currentDataset.sourceName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Columns</p>
+                    <p className="text-sm text-muted-foreground">
+                      {currentDataset.columns.filter((c) => c.selected).length} selected
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {fetchingColumns && (
             <Card>
@@ -737,7 +866,13 @@ export default function DatasetConfigurationPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/workspace/data-sources")}
+              onClick={() => {
+                if (dataSourceIdFromQuery) {
+                  router.push(`/workspace/data-sources/${dataSourceIdFromQuery}/query`);
+                } else {
+                  router.push("/workspace/data-sources");
+                }
+              }}
               disabled={loading}
             >
               Cancel
