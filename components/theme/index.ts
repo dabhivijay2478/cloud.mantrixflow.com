@@ -5,6 +5,5 @@
 
 export { ColorPicker } from "./color-picker";
 export { FontSelector } from "./font-selector";
-export { ThemePreview } from "./theme-preview";
 export { ThemeCustomizer } from "./theme-customizer";
-
+export { ThemePreview } from "./theme-preview";

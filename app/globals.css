@@ -25,7 +25,7 @@
   --border: #e4e4e7;
   --input: #e4e4e7;
   --ring: #00a859;
-  
+
   /* Color Palettes - Default values (will be overridden by theme system) */
   --primary-50: #f0fdf4;
   --primary-100: #dcfce7;
@@ -38,7 +38,7 @@
   --primary-800: #166534;
   --primary-900: #14532d;
   --primary-950: #052e16;
-  
+
   --secondary-50: #eff6ff;
   --secondary-100: #dbeafe;
   --secondary-200: #bfdbfe;
@@ -50,7 +50,7 @@
   --secondary-800: #1e40af;
   --secondary-900: #1e3a8a;
   --secondary-950: #172554;
-  
+
   --accent-50: #faf5ff;
   --accent-100: #f3e8ff;
   --accent-200: #e9d5ff;
@@ -62,7 +62,7 @@
   --accent-800: #6b21a8;
   --accent-900: #581c87;
   --accent-950: #3b0764;
-  
+
   --neutral-50: #fafafa;
   --neutral-100: #f4f4f5;
   --neutral-200: #e4e4e7;
@@ -74,7 +74,7 @@
   --neutral-800: #27272a;
   --neutral-900: #18181b;
   --neutral-950: #09090b;
-  
+
   --success-50: #f0fdf4;
   --success-100: #dcfce7;
   --success-200: #bbf7d0;
@@ -86,7 +86,7 @@
   --success-800: #166534;
   --success-900: #14532d;
   --success-950: #052e16;
-  
+
   --warning-50: #fffbeb;
   --warning-100: #fef3c7;
   --warning-200: #fde68a;
@@ -98,7 +98,7 @@
   --warning-800: #92400e;
   --warning-900: #78350f;
   --warning-950: #451a03;
-  
+
   --error-50: #fef2f2;
   --error-100: #fee2e2;
   --error-200: #fecaca;
@@ -110,14 +110,14 @@
   --error-800: #991b1b;
   --error-900: #7f1d1d;
   --error-950: #450a0a;
-  
+
   /* Chart Colors */
   --chart-1: #00a859;
   --chart-2: #007fff;
   --chart-3: #8a2be2;
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
-  
+
   /* Sidebar Colors */
   --sidebar: #f4f4f5;
   --sidebar-foreground: #3f3f46;
@@ -127,16 +127,16 @@
   --sidebar-accent-foreground: #09090b;
   --sidebar-border: #e4e4e7;
   --sidebar-ring: #00a859;
-  
+
   /* Typography */
   --font-sans: Poppins, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, monospace;
-  
+
   /* Spacing & Layout */
   --radius: 0.5rem;
   --spacing: 0.25rem;
-  
+
   /* Shadows */
   --shadow-x: 0px;
   --shadow-y: 2px;
@@ -157,7 +157,7 @@
   --shadow-xl:
     0px 2px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 2px 4px 0px hsl(0 0% 0% / 0.13);
-  
+
   /* Typography Spacing */
   --tracking-normal: 0rem;
 }
@@ -183,7 +183,7 @@
   --border: #27272a;
   --input: #27272a;
   --ring: #00a859;
-  
+
   /* Color Palettes - Dark Mode defaults (will be overridden by theme system) */
   --primary-50: #052e16;
   --primary-100: #14532d;
@@ -196,7 +196,7 @@
   --primary-800: #86efac;
   --primary-900: #bbf7d0;
   --primary-950: #dcfce7;
-  
+
   --secondary-50: #172554;
   --secondary-100: #1e3a8a;
   --secondary-200: #1e40af;
@@ -208,7 +208,7 @@
   --secondary-800: #93c5fd;
   --secondary-900: #bfdbfe;
   --secondary-950: #dbeafe;
-  
+
   --accent-50: #3b0764;
   --accent-100: #581c87;
   --accent-200: #6b21a8;
@@ -220,7 +220,7 @@
   --accent-800: #d8b4fe;
   --accent-900: #e9d5ff;
   --accent-950: #f3e8ff;
-  
+
   --neutral-50: #09090b;
   --neutral-100: #18181b;
   --neutral-200: #27272a;
@@ -232,7 +232,7 @@
   --neutral-800: #e4e4e7;
   --neutral-900: #f4f4f5;
   --neutral-950: #fafafa;
-  
+
   --success-50: #052e16;
   --success-100: #14532d;
   --success-200: #166534;
@@ -244,7 +244,7 @@
   --success-800: #bbf7d0;
   --success-900: #dcfce7;
   --success-950: #f0fdf4;
-  
+
   --warning-50: #451a03;
   --warning-100: #78350f;
   --warning-200: #92400e;
@@ -256,7 +256,7 @@
   --warning-800: #fde68a;
   --warning-900: #fef3c7;
   --warning-950: #fffbeb;
-  
+
   --error-50: #450a0a;
   --error-100: #7f1d1d;
   --error-200: #991b1b;
@@ -268,14 +268,14 @@
   --error-800: #fecaca;
   --error-900: #fee2e2;
   --error-950: #fef2f2;
-  
+
   /* Chart Colors */
   --chart-1: #00a859;
   --chart-2: #007fff;
   --chart-3: #8a2be2;
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
-  
+
   /* Sidebar Colors */
   --sidebar: #18181b;
   --sidebar-foreground: #a1a1aa;
@@ -285,16 +285,16 @@
   --sidebar-accent-foreground: #fafafa;
   --sidebar-border: #27272a;
   --sidebar-ring: #00a859;
-  
+
   /* Typography */
   --font-sans: Poppins, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, monospace;
-  
+
   /* Spacing & Layout */
   --radius: 0.5rem;
   --spacing: 0.25rem;
-  
+
   /* Shadows */
   --shadow-x: 0px;
   --shadow-y: 2px;
@@ -315,7 +315,7 @@
   --shadow-xl:
     0px 2px 4px 0px hsl(0 0% 0% / 0.1), 0px 8px 10px -1px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0px 2px 4px 0px hsl(0 0% 0% / 0.25);
-  
+
   /* Typography Spacing */
   --tracking-normal: 0rem;
 }

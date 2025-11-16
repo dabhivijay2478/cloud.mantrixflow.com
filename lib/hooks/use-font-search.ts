@@ -3,7 +3,7 @@
  * Hook for searching and filtering Google Fonts with pagination
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FilterFontCategory, FontInfo } from "@/lib/types/fonts";
 import { fetchGoogleFonts } from "@/lib/utils/google-fonts";
 
@@ -23,7 +23,7 @@ let globalFontPromise: Promise<FontInfo[]> | null = null;
 export function useFontSearch({
   query,
   category,
-  limit = 15,
+  limit: _limit = 15,
   enabled = true,
 }: UseFontSearchOptions) {
   const [fonts, setFonts] = useState<FontInfo[]>([]);
@@ -73,7 +73,7 @@ export function useFontSearch({
     if (query.trim()) {
       const searchLower = query.toLowerCase().trim();
       filtered = filtered.filter((font) =>
-        font.family.toLowerCase().includes(searchLower)
+        font.family.toLowerCase().includes(searchLower),
       );
     }
 
@@ -95,7 +95,7 @@ export function useFontSearch({
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [category, query]);
+  }, []);
 
   const fetchNextPage = useCallback(() => {
     if (hasMore && !loading) {

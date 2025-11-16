@@ -5,7 +5,6 @@ import {
   ChevronDown,
   Database,
   Download,
-  Link2,
   Loader2,
   Minimize2,
   Play,

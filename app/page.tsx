@@ -1,8 +1,8 @@
 "use client";
 
+import { getFonts } from "font-list";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getFonts } from 'font-list'
 
 export default function Home() {
   // const router = useRouter();
@@ -26,13 +26,13 @@ export default function Home() {
   // }
 
   getFonts()
-  .then(fonts => {
-    console.log(fonts)
-  })
-  .catch(err => {
-    console.error(err)
-  })
-  
+    .then((fonts) => {
+      console.log(fonts);
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
       <main className="flex flex-col items-center justify-center text-center space-y-8 p-8">

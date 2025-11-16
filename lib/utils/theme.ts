@@ -145,21 +145,23 @@ export function getDefaultTheme(): ThemeConfig {
  */
 export function isThemeCustomized(theme: ThemeConfig): boolean {
   const defaultTheme = getDefaultTheme();
-  
+
   // Check colors
   const colorsCustomized = Object.keys(theme.colors).some(
-    (key) => theme.colors[key as keyof typeof theme.colors] !== defaultTheme.colors[key as keyof typeof defaultTheme.colors]
+    (key) =>
+      theme.colors[key as keyof typeof theme.colors] !==
+      defaultTheme.colors[key as keyof typeof defaultTheme.colors],
   );
-  
+
   // Check fonts
-  const fontsCustomized = 
+  const fontsCustomized =
     theme.fonts.sans !== defaultTheme.fonts.sans ||
     theme.fonts.serif !== defaultTheme.fonts.serif ||
     theme.fonts.mono !== defaultTheme.fonts.mono;
-  
+
   // Check radius
   const radiusCustomized = theme.radius !== defaultTheme.radius;
-  
+
   return colorsCustomized || fontsCustomized || radiusCustomized;
 }
 
@@ -169,38 +171,72 @@ export function isThemeCustomized(theme: ThemeConfig): boolean {
 export function clearCustomTheme(): void {
   if (typeof window === "undefined") return;
   const root = document.documentElement;
-  
+
   // Remove all custom theme CSS variables
   // This allows the default values from globals.css to be used
-  
+
   // Remove color palette variables
-  const colorShades = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"];
-  const colorTypes = ["primary", "secondary", "accent", "neutral", "success", "warning", "error"];
-  
+  const colorShades = [
+    "50",
+    "100",
+    "200",
+    "300",
+    "400",
+    "500",
+    "600",
+    "700",
+    "800",
+    "900",
+    "950",
+  ];
+  const colorTypes = [
+    "primary",
+    "secondary",
+    "accent",
+    "neutral",
+    "success",
+    "warning",
+    "error",
+  ];
+
   colorTypes.forEach((type) => {
     colorShades.forEach((shade) => {
       root.style.removeProperty(`--${type}-${shade}`);
     });
   });
-  
+
   // Remove semantic color overrides (let globals.css handle them)
   const semanticColors = [
-    "background", "foreground", "card", "card-foreground",
-    "popover", "popover-foreground", "primary", "primary-foreground",
-    "secondary", "secondary-foreground", "muted", "muted-foreground",
-    "accent", "accent-foreground", "destructive", "destructive-foreground",
-    "border", "input", "ring"
+    "background",
+    "foreground",
+    "card",
+    "card-foreground",
+    "popover",
+    "popover-foreground",
+    "primary",
+    "primary-foreground",
+    "secondary",
+    "secondary-foreground",
+    "muted",
+    "muted-foreground",
+    "accent",
+    "accent-foreground",
+    "destructive",
+    "destructive-foreground",
+    "border",
+    "input",
+    "ring",
   ];
-  
+
   semanticColors.forEach((color) => {
     root.style.removeProperty(`--${color}`);
   });
-  
+
   // Remove font overrides
   root.style.removeProperty("--font-sans");
   root.style.removeProperty("--font-serif");
   root.style.removeProperty("--font-mono");
-  
+
   // Remove radius override
   root.style.removeProperty("--radius");
 }
@@ -211,7 +247,7 @@ export function clearCustomTheme(): void {
  */
 export function applyTheme(theme: ThemeConfig, isDark: boolean = false) {
   const root = document.documentElement;
-  
+
   // Check if theme is customized
   if (!isThemeCustomized(theme)) {
     // If not customized, clear any custom CSS variables and use defaults from globals.css
@@ -359,4 +395,3 @@ export function getContrastColor(backgroundColor: string): string {
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
   return brightness > 128 ? "#000000" : "#ffffff";
 }
-

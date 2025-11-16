@@ -5,19 +5,25 @@
 
 "use client";
 
+import { Loader2, RotateCcw, Save } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useThemeCustomization } from "@/hooks/use-theme-customization";
+import { toast } from "@/lib/utils/toast";
 import { ColorPicker } from "./color-picker";
 import { FontSelector } from "./font-selector";
 import { ThemePreview } from "./theme-preview";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, RotateCcw, Save } from "lucide-react";
-import { toast } from "@/lib/utils/toast";
 
 export function ThemeCustomizer() {
   const themeStore = useThemeCustomization();
@@ -43,10 +49,7 @@ export function ThemeCustomizer() {
 
   const handleReset = () => {
     themeStore.resetTheme();
-    toast.success(
-      "Theme reset",
-      "Theme has been reset to default values.",
-    );
+    toast.success("Theme reset", "Theme has been reset to default values.");
   };
 
   return (
@@ -167,7 +170,7 @@ export function ThemeCustomizer() {
                   <div className="flex items-center justify-between">
                     <Label>Border Radius</Label>
                   </div>
-                  
+
                   {/* Slider and Input */}
                   <div className="flex items-center gap-4">
                     <Slider
@@ -184,7 +187,7 @@ export function ThemeCustomizer() {
                         value={themeStore.theme.radius}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
-                          if (!isNaN(val) && val >= 0 && val <= 2) {
+                          if (!Number.isNaN(val) && val >= 0 && val <= 2) {
                             themeStore.setRadius(val);
                           }
                         }}
@@ -196,7 +199,7 @@ export function ThemeCustomizer() {
                       <span className="text-sm text-muted-foreground">rem</span>
                     </div>
                   </div>
-                  
+
                   {/* Preview */}
                   <div className="flex items-center gap-4 pt-4">
                     <div
@@ -256,4 +259,3 @@ export function ThemeCustomizer() {
     </div>
   );
 }
-

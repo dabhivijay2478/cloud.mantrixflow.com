@@ -16,6 +16,7 @@ import {
   User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ThemeCustomizer } from "@/components/theme/theme-customizer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +35,6 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import { ThemeCustomizer } from "@/components/theme/theme-customizer";
 
 export default function SettingsPage() {
   const { currentOrganization, updateOrganization } = useWorkspaceStore();
@@ -125,7 +125,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveAppearance = async () => {
+  const _handleSaveAppearance = async () => {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));

@@ -3,7 +3,7 @@
  * Functions for fetching and loading Google Fonts
  */
 
-import type { FontInfo } from "@/lib/types/fonts";
+import type { FontCategory, FontInfo } from "@/lib/types/fonts";
 
 // Global cache for Google Fonts
 let cachedFonts: FontInfo[] | null = null;
@@ -28,7 +28,7 @@ export async function fetchGoogleFonts(): Promise<FontInfo[]> {
   cachePromise = (async () => {
     try {
       const response = await fetch("/api/google-fonts");
-      
+
       if (!response.ok) {
         throw new Error(`Fonts API error: ${response.status}`);
       }
@@ -56,7 +56,10 @@ export async function fetchGoogleFonts(): Promise<FontInfo[]> {
 /**
  * Build Google Fonts CSS API URL
  */
-export function buildFontCssUrl(family: string, weights: string[] = ["400"]): string {
+export function buildFontCssUrl(
+  family: string,
+  weights: string[] = ["400"],
+): string {
   const encodedFamily = encodeURIComponent(family);
   const weightsParam = weights.join(";");
   return `https://fonts.googleapis.com/css2?family=${encodedFamily}:wght@${weightsParam}&display=swap`;
@@ -65,7 +68,10 @@ export function buildFontCssUrl(family: string, weights: string[] = ["400"]): st
 /**
  * Load Google Font using link tag
  */
-export function loadGoogleFont(family: string, weights: string[] = ["400", "700"]): void {
+export function loadGoogleFont(
+  family: string,
+  weights: string[] = ["400", "700"],
+): void {
   if (typeof document === "undefined") return;
 
   // Check if already loaded
@@ -82,15 +88,19 @@ export function loadGoogleFont(family: string, weights: string[] = ["400", "700"
 /**
  * Build font-family value for CSS
  */
-export function buildFontFamily(fontFamily: string, category: FontCategory): string {
+export function buildFontFamily(
+  fontFamily: string,
+  category: FontCategory,
+): string {
   const fallbacks: Record<FontCategory, string> = {
     "sans-serif": "ui-sans-serif, system-ui, sans-serif",
     serif: "ui-serif, Georgia, serif",
-    monospace: "ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, 'Courier New', monospace",
+    monospace:
+      "ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, 'Courier New', monospace",
     display: "ui-serif, Georgia, serif",
     handwriting: "cursive",
   };
-  
+
   return `${fontFamily}, ${fallbacks[category]}`;
 }
 
@@ -98,25 +108,39 @@ export function buildFontFamily(fontFamily: string, category: FontCategory): str
  * Get default weights for a font based on available variants
  */
 export function getDefaultWeights(variants: string[]): string[] {
-  const weightMap = ["100", "200", "300", "400", "500", "600", "700", "800", "900"];
-  const availableWeights = variants.filter((variant) => weightMap.includes(variant));
-  
+  const weightMap = [
+    "100",
+    "200",
+    "300",
+    "400",
+    "500",
+    "600",
+    "700",
+    "800",
+    "900",
+  ];
+  const availableWeights = variants.filter((variant) =>
+    weightMap.includes(variant),
+  );
+
   if (availableWeights.length === 0) return ["400"];
-  
+
   const preferredWeights = ["400", "500", "600", "700"];
-  const selectedWeights = preferredWeights.filter((weight) => availableWeights.includes(weight));
-  
+  const selectedWeights = preferredWeights.filter((weight) =>
+    availableWeights.includes(weight),
+  );
+
   if (selectedWeights.length === 0) {
     const fallbackWeights = availableWeights.slice(0, 2);
-    return fallbackWeights.sort((a, b) => parseInt(a) - parseInt(b));
+    return fallbackWeights.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
   }
-  
+
   const finalWeights = [
     ...selectedWeights,
     ...availableWeights.filter((w) => !selectedWeights.includes(w)),
   ].slice(0, 4);
-  
-  return finalWeights.sort((a, b) => parseInt(a) - parseInt(b));
+
+  return finalWeights.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 }
 
 /**
@@ -133,7 +157,7 @@ export function isFontLoaded(family: string, weight = "400"): boolean {
 export async function waitForFont(
   family: string,
   weight = "400",
-  timeout = 3000
+  timeout = 3000,
 ): Promise<boolean> {
   if (typeof document === "undefined" || !document.fonts) return false;
 
@@ -142,7 +166,9 @@ export async function waitForFont(
   try {
     await Promise.race([
       document.fonts.load(font),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), timeout)),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), timeout),
+      ),
     ]);
     return document.fonts.check(font);
   } catch {
@@ -156,17 +182,71 @@ export async function waitForFont(
  */
 export function getFallbackFonts(): FontInfo[] {
   return [
-    { family: "Inter", category: "sans-serif", variants: ["400", "600", "700"], variable: true },
-    { family: "Roboto", category: "sans-serif", variants: ["400", "600", "700"], variable: false },
-    { family: "Open Sans", category: "sans-serif", variants: ["400", "600", "700"], variable: true },
-    { family: "Poppins", category: "sans-serif", variants: ["400", "600", "700"], variable: false },
-    { family: "Montserrat", category: "sans-serif", variants: ["400", "600", "700"], variable: false },
-    { family: "Merriweather", category: "serif", variants: ["400", "600", "700"], variable: false },
-    { family: "Playfair Display", category: "serif", variants: ["400", "600", "700"], variable: true },
-    { family: "Lora", category: "serif", variants: ["400", "600", "700"], variable: true },
-    { family: "JetBrains Mono", category: "monospace", variants: ["400", "600", "700"], variable: true },
-    { family: "Fira Code", category: "monospace", variants: ["400", "600", "700"], variable: true },
-    { family: "Source Code Pro", category: "monospace", variants: ["400", "600", "700"], variable: false },
+    {
+      family: "Inter",
+      category: "sans-serif",
+      variants: ["400", "600", "700"],
+      variable: true,
+    },
+    {
+      family: "Roboto",
+      category: "sans-serif",
+      variants: ["400", "600", "700"],
+      variable: false,
+    },
+    {
+      family: "Open Sans",
+      category: "sans-serif",
+      variants: ["400", "600", "700"],
+      variable: true,
+    },
+    {
+      family: "Poppins",
+      category: "sans-serif",
+      variants: ["400", "600", "700"],
+      variable: false,
+    },
+    {
+      family: "Montserrat",
+      category: "sans-serif",
+      variants: ["400", "600", "700"],
+      variable: false,
+    },
+    {
+      family: "Merriweather",
+      category: "serif",
+      variants: ["400", "600", "700"],
+      variable: false,
+    },
+    {
+      family: "Playfair Display",
+      category: "serif",
+      variants: ["400", "600", "700"],
+      variable: true,
+    },
+    {
+      family: "Lora",
+      category: "serif",
+      variants: ["400", "600", "700"],
+      variable: true,
+    },
+    {
+      family: "JetBrains Mono",
+      category: "monospace",
+      variants: ["400", "600", "700"],
+      variable: true,
+    },
+    {
+      family: "Fira Code",
+      category: "monospace",
+      variants: ["400", "600", "700"],
+      variable: true,
+    },
+    {
+      family: "Source Code Pro",
+      category: "monospace",
+      variants: ["400", "600", "700"],
+      variable: false,
+    },
   ];
 }
-

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import type * as React from "react";
-import { useThemeStore, updateThemeDarkMode } from "@/lib/stores/theme-store";
+import { useEffect } from "react";
+import { updateThemeDarkMode, useThemeStore } from "@/lib/stores/theme-store";
 
 function ThemeSync({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTheme();
@@ -21,7 +21,7 @@ function ThemeSync({ children }: { children: React.ReactNode }) {
     // This ensures default theme from globals.css is used
     themeStore.applyCurrentTheme();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [themeStore.applyCurrentTheme]);
 
   return <>{children}</>;
 }

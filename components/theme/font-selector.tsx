@@ -5,19 +5,17 @@
 
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Label } from "@/components/ui/label";
+import { Check, ChevronDown, Loader2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Check, Loader2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
   Command,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -25,6 +23,7 @@ import {
 } from "@/components/ui/popover";
 import { useFontSearch } from "@/lib/hooks/use-font-search";
 import type { FilterFontCategory, FontInfo } from "@/lib/types/fonts";
+import { cn } from "@/lib/utils";
 import {
   buildFontFamily,
   getDefaultWeights,
@@ -49,14 +48,15 @@ export function FontSelector({
   description,
   className,
   category: externalCategory,
-  onCategoryChange,
+  onCategoryChange: _onCategoryChange,
 }: FontSelectorProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [internalCategory, setInternalCategory] = useState<FilterFontCategory>("all");
+  const [internalCategory, setInternalCategory] =
+    useState<FilterFontCategory>("all");
   const [loadingFont, setLoadingFont] = useState<string | null>(null);
-  
+
   // Use external category if provided, otherwise use internal
   const selectedCategory = externalCategory ?? internalCategory;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -65,7 +65,10 @@ export function FontSelector({
 
   // Determine category from label
   const defaultCategory: FilterFontCategory = useMemo(() => {
-    if (label.toLowerCase().includes("sans") || label.toLowerCase().includes("body")) {
+    if (
+      label.toLowerCase().includes("sans") ||
+      label.toLowerCase().includes("body")
+    ) {
       return "sans-serif";
     }
     if (label.toLowerCase().includes("serif")) {
@@ -104,7 +107,7 @@ export function FontSelector({
     if (!open) return;
     scrollRef.current?.scrollTo({ top: 0 });
     hasScrolledToSelectedFont.current = false;
-  }, [selectedCategory, searchQuery, open]);
+  }, [open]);
 
   // Scroll to selected font on open
   useEffect(() => {
@@ -135,7 +138,11 @@ export function FontSelector({
       const observer = new IntersectionObserver(
         (entries) => {
           const entry = entries[0];
-          if (entry.isIntersecting && fontQuery.hasNextPage && !fontQuery.isFetchingNextPage) {
+          if (
+            entry.isIntersecting &&
+            fontQuery.hasNextPage &&
+            !fontQuery.isFetchingNextPage
+          ) {
             fontQuery.fetchNextPage();
           }
         },
@@ -143,13 +150,17 @@ export function FontSelector({
           root: scrollRef.current,
           rootMargin: "100px",
           threshold: 0,
-        }
+        },
       );
 
       observer.observe(node);
       return () => observer.unobserve(node);
     },
-    [fontQuery.hasNextPage, fontQuery.isFetchingNextPage, fontQuery.fetchNextPage]
+    [
+      fontQuery.hasNextPage,
+      fontQuery.isFetchingNextPage,
+      fontQuery.fetchNextPage,
+    ],
   );
 
   const handleFontSelect = useCallback(
@@ -163,13 +174,13 @@ export function FontSelector({
         console.warn(`Failed to load font ${font.family}:`, error);
       }
       setLoadingFont(null);
-      
+
       const fontFamily = buildFontFamily(font.family, font.category);
       onChange(fontFamily);
       setOpen(false);
       setInputValue("");
     },
-    [onChange]
+    [onChange],
   );
 
   // Get current font info for display
@@ -178,9 +189,11 @@ export function FontSelector({
 
     // Extract font name from value (e.g., "Poppins, sans-serif" -> "Poppins")
     const extractedFontName = value.split(",")[0].trim().replace(/['"]/g, "");
-    
+
     // Try to find in search results
-    const foundFont = allFonts.find((font: FontInfo) => font.family === extractedFontName);
+    const foundFont = allFonts.find(
+      (font: FontInfo) => font.family === extractedFontName,
+    );
     if (foundFont) return foundFont;
 
     // Return fallback
@@ -212,7 +225,10 @@ export function FontSelector({
               {currentFont ? (
                 <span
                   style={{
-                    fontFamily: buildFontFamily(currentFont.family, currentFont.category),
+                    fontFamily: buildFontFamily(
+                      currentFont.family,
+                      currentFont.category,
+                    ),
                   }}
                 >
                   {currentFont.family}
@@ -250,16 +266,22 @@ export function FontSelector({
             {fontQuery.isLoading ? (
               <div className="flex h-full items-center justify-center gap-2 p-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm text-muted-foreground">Loading fonts...</span>
+                <span className="text-sm text-muted-foreground">
+                  Loading fonts...
+                </span>
               </div>
             ) : allFonts.length === 0 ? (
               <CommandEmpty>No fonts found.</CommandEmpty>
             ) : (
               <CommandList className="max-h-[300px] p-1" ref={scrollRef}>
                 {allFonts.map((font: FontInfo) => {
-                  const isSelected = font.family === (currentFont?.family || "");
+                  const isSelected =
+                    font.family === (currentFont?.family || "");
                   const isLoading = loadingFont === font.family;
-                  const fontFamily = buildFontFamily(font.family, font.category);
+                  const fontFamily = buildFontFamily(
+                    font.family,
+                    font.category,
+                  );
 
                   const handlePreloadOnHover = () => {
                     loadGoogleFont(font.family, ["400"]);
@@ -280,7 +302,9 @@ export function FontSelector({
                           style={{ fontFamily }}
                         >
                           {font.family}
-                          {isLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                          {isLoading && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
                         </span>
                         <div className="flex items-center gap-1 text-xs font-normal opacity-70">
                           <span>{font.category}</span>
@@ -292,7 +316,9 @@ export function FontSelector({
                           )}
                         </div>
                       </div>
-                      {isSelected && <Check className="h-4 w-4 shrink-0 opacity-70" />}
+                      {isSelected && (
+                        <Check className="h-4 w-4 shrink-0 opacity-70" />
+                      )}
                     </CommandItem>
                   );
                 })}
@@ -304,7 +330,9 @@ export function FontSelector({
                 {fontQuery.isFetchingNextPage && (
                   <div className="flex items-center justify-center gap-2 p-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Loading more fonts...</span>
+                    <span className="text-sm text-muted-foreground">
+                      Loading more fonts...
+                    </span>
                   </div>
                 )}
               </CommandList>

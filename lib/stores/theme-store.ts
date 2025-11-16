@@ -6,12 +6,12 @@
 import { create } from "zustand";
 import type { ThemeConfig, ThemeMode } from "@/lib/utils/theme";
 import {
-  getDefaultTheme,
   applyTheme,
+  clearCustomTheme,
+  getDefaultTheme,
+  isThemeCustomized,
   loadThemeFromStorage,
   saveThemeToStorage,
-  isThemeCustomized,
-  clearCustomTheme,
 } from "@/lib/utils/theme";
 
 interface ThemeStore {
@@ -146,4 +146,3 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
 export const updateThemeDarkMode = (isDark: boolean) => {
   useThemeStore.getState().updateIsDark(isDark);
 };
-
