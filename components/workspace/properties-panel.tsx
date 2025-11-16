@@ -1,11 +1,6 @@
 "use client";
 
 import {
-  Database,
-  Eye,
-  EyeOff,
-  Grid3x3,
-  Palette,
   Settings,
   Type,
   X,
@@ -32,10 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import type { DashboardComponent, Dataset, DatasetColumn } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { cn } from "@/lib/utils";
 
 // Mock function to fetch columns from a table
 const fetchTableColumns = async (
@@ -66,14 +59,6 @@ interface PropertiesPanelProps {
   onClose?: () => void;
 }
 
-const colorSchemes = [
-  { name: "Default", value: "default" },
-  { name: "Blue", value: "blue" },
-  { name: "Green", value: "green" },
-  { name: "Purple", value: "purple" },
-  { name: "Orange", value: "orange" },
-  { name: "Red", value: "red" },
-];
 
 export function PropertiesPanel({
   component,
@@ -86,7 +71,6 @@ export function PropertiesPanel({
     currentDashboard,
     dataSources,
   } = useWorkspaceStore();
-  const [activeTab, setActiveTab] = useState<"data" | "appearance">("data");
   const [tableColumns, setTableColumns] = useState<DatasetColumn[]>([]);
   const [loadingColumns, setLoadingColumns] = useState(false);
 
@@ -122,9 +106,6 @@ export function PropertiesPanel({
       xAxis: "",
       yAxis: "",
       grouping: "",
-      colorScheme: "default",
-      showLegend: true,
-      showGrid: true,
       ...(component?.config || {}),
     },
   });
@@ -136,9 +117,6 @@ export function PropertiesPanel({
         xAxis: (component.config?.xAxis as string) || "",
         yAxis: (component.config?.yAxis as string) || "",
         grouping: (component.config?.grouping as string) || "",
-        colorScheme: (component.config?.colorScheme as string) || "default",
-        showLegend: (component.config?.showLegend as boolean) ?? true,
-        showGrid: (component.config?.showGrid as boolean) ?? true,
       });
     }
   }, [component, form]);
@@ -156,7 +134,6 @@ export function PropertiesPanel({
 
   // Use table columns if available, otherwise fall back to dataset columns
   const availableColumns = tableColumns.length > 0 ? tableColumns : (dataset?.columns || []);
-  const selectedColumns = availableColumns.filter((c) => c.selected);
   const stringColumns = availableColumns.filter((c) => c.type === "string");
   const numberColumns = availableColumns.filter((c) => c.type === "number");
   const dateColumns = availableColumns.filter((c) => c.type === "date");
@@ -232,34 +209,6 @@ export function PropertiesPanel({
         </Button>
       </div>
 
-      <div className="flex border-b shrink-0">
-        <button
-          type="button"
-          onClick={() => setActiveTab("data")}
-          className={cn(
-            "flex-1 px-4 py-2 text-sm font-medium transition-colors",
-            activeTab === "data"
-              ? "bg-background border-b-2 border-primary text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Database className="h-4 w-4 inline mr-2" />
-          Data
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("appearance")}
-          className={cn(
-            "flex-1 px-4 py-2 text-sm font-medium transition-colors",
-            activeTab === "appearance"
-              ? "bg-background border-b-2 border-primary text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Palette className="h-4 w-4 inline mr-2" />
-          Appearance
-        </button>
-      </div>
 
       <ScrollArea className="flex-1 min-h-0">
         <Form {...form}>
@@ -267,293 +216,189 @@ export function PropertiesPanel({
             onSubmit={form.handleSubmit(handleUpdate)}
             className="p-4 space-y-6"
           >
-            {activeTab === "data" && (
-              <>
-                {!connectedDataSource && (
-                  <Card className="border-yellow-500/50 bg-yellow-500/10">
-                    <CardContent className="p-4">
-                      <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                        No data source connected. Please connect a data source first.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {connectedDataSource && !selectedTable && (
-                  <Card className="border-yellow-500/50 bg-yellow-500/10">
-                    <CardContent className="p-4">
-                      <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                        No table selected. Please select a table from the topbar.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {connectedDataSource && selectedTable && (
-                  <>
-                    {loadingColumns ? (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-muted-foreground">Loading columns...</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground uppercase">
-                            Table
-                          </p>
-                          <p className="text-sm font-medium">{selectedTable}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {connectedDataSource.name} • {availableColumns.length} columns available
-                          </p>
-                        </div>
-
-                    <Separator />
-
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Type className="h-4 w-4" />
-                            Title
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Component title"
-                              onChange={(e) => {
-                                field.onChange(e);
-                                handleUpdate({ title: e.target.value });
-                              }}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Display title for this component
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="xAxis"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>X-Axis</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              handleUpdate({ xAxis: value });
-                            }}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select X-axis column" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {getAvailableXAxisColumns().map((col) => (
-                                <SelectItem key={col.name} value={col.name}>
-                                  {col.name} ({col.type})
-                                </SelectItem>
-                              ))}
-                              {getAvailableXAxisColumns().length === 0 && (
-                                <div className="p-2 text-sm text-muted-foreground">
-                                  No available columns
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Column to use for the X-axis
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="yAxis"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Y-Axis</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              handleUpdate({ yAxis: value });
-                            }}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select Y-axis column" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {getAvailableYAxisColumns().map((col) => (
-                                <SelectItem key={col.name} value={col.name}>
-                                  {col.name} ({col.type})
-                                </SelectItem>
-                              ))}
-                              {getAvailableYAxisColumns().length === 0 && (
-                                <div className="p-2 text-sm text-muted-foreground">
-                                  No numeric columns available
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Column to use for the Y-axis (must be numeric)
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="grouping"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Grouping (Optional)</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              const finalValue = value === "__none__" ? "" : value;
-                              field.onChange(finalValue);
-                              handleUpdate({ grouping: finalValue });
-                            }}
-                            value={field.value || "__none__"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select grouping column" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="__none__">None</SelectItem>
-                              {getAvailableGroupingColumns().map((col) => (
-                                <SelectItem key={col.name} value={col.name}>
-                                  {col.name} ({col.type})
-                                </SelectItem>
-                              ))}
-                              {getAvailableGroupingColumns().length === 0 && (
-                                <div className="p-2 text-sm text-muted-foreground">
-                                  No grouping columns available
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Optional column to group data by (creates series)
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                      </>
-                    )}
-                  </>
-                )}
-              </>
+            {!connectedDataSource && (
+              <Card className="border-yellow-500/50 bg-yellow-500/10">
+                <CardContent className="p-4">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                    No data source connected. Please connect a data source first.
+                  </p>
+                </CardContent>
+              </Card>
             )}
 
-            {activeTab === "appearance" && (
+            {connectedDataSource && !selectedTable && (
+              <Card className="border-yellow-500/50 bg-yellow-500/10">
+                <CardContent className="p-4">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                    No table selected. Please select a table from the topbar.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {connectedDataSource && selectedTable && (
               <>
-                <FormField
-                  control={form.control}
-                  name="colorScheme"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Palette className="h-4 w-4" />
-                        Color Scheme
-                      </FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          handleUpdate({ colorScheme: value });
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {colorSchemes.map((scheme) => (
-                            <SelectItem key={scheme.value} value={scheme.value}>
-                              {scheme.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Choose a color palette for the chart
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
+                {loadingColumns ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">Loading columns...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Table
+                      </p>
+                      <p className="text-sm font-medium">{selectedTable}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {connectedDataSource.name} • {availableColumns.length} columns available
+                      </p>
+                    </div>
 
                 <Separator />
 
                 <FormField
                   control={form.control}
-                  name="showLegend"
+                  name="title"
                   render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="flex items-center gap-2">
-                          {field.value ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                          Show Legend
-                        </FormLabel>
-                        <FormDescription>
-                          Display the chart legend
-                        </FormDescription>
-                      </div>
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Type className="h-4 w-4" />
+                        Title
+                      </FormLabel>
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={(checked) => {
-                            field.onChange(checked);
-                            handleUpdate({ showLegend: checked });
+                        <Input
+                          {...field}
+                          placeholder="Component title"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleUpdate({ title: e.target.value });
                           }}
                         />
                       </FormControl>
+                      <FormDescription>
+                        Display title for this component
+                      </FormDescription>
                     </FormItem>
                   )}
                 />
 
                 <FormField
                   control={form.control}
-                  name="showGrid"
+                  name="xAxis"
                   render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="flex items-center gap-2">
-                          <Grid3x3 className="h-4 w-4" />
-                          Show Grid
-                        </FormLabel>
-                        <FormDescription>
-                          Display grid lines on the chart
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={(checked) => {
-                            field.onChange(checked);
-                            handleUpdate({ showGrid: checked });
-                          }}
-                        />
-                      </FormControl>
+                    <FormItem>
+                      <FormLabel>X-Axis</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleUpdate({ xAxis: value });
+                        }}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select X-axis column" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {getAvailableXAxisColumns().map((col) => (
+                            <SelectItem key={col.name} value={col.name}>
+                              {col.name} ({col.type})
+                            </SelectItem>
+                          ))}
+                          {getAvailableXAxisColumns().length === 0 && (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No available columns
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Column to use for the X-axis
+                      </FormDescription>
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="yAxis"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Y-Axis</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleUpdate({ yAxis: value });
+                        }}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Y-axis column" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {getAvailableYAxisColumns().map((col) => (
+                            <SelectItem key={col.name} value={col.name}>
+                              {col.name} ({col.type})
+                            </SelectItem>
+                          ))}
+                          {getAvailableYAxisColumns().length === 0 && (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No numeric columns available
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Column to use for the Y-axis (must be numeric)
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="grouping"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Grouping (Optional)</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          const finalValue = value === "__none__" ? "" : value;
+                          field.onChange(finalValue);
+                          handleUpdate({ grouping: finalValue });
+                        }}
+                        value={field.value || "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select grouping column" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {getAvailableGroupingColumns().map((col) => (
+                            <SelectItem key={col.name} value={col.name}>
+                              {col.name} ({col.type})
+                            </SelectItem>
+                          ))}
+                          {getAvailableGroupingColumns().length === 0 && (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No grouping columns available
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Optional column to group data by (creates series)
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+                  </>
+                )}
               </>
             )}
           </form>
