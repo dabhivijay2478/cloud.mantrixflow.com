@@ -236,13 +236,16 @@ export function DashboardItem({
     };
 
     return (
-      <button
+      <div
         key={handle}
-        type="button"
+        role="button"
+        tabIndex={0}
+        aria-label={`Resize ${handle} handle`}
         className={cn(
           "absolute z-[100] pointer-events-auto touch-none select-none",
           "bg-primary/30 border border-primary/60 rounded-sm",
           "hover:bg-primary/50 hover:border-primary transition-colors",
+          "cursor-resize",
           isHovered || isSelected ? "opacity-100" : "opacity-0",
           handleClasses[handle],
         )}
