@@ -1,5 +1,6 @@
 "use client";
 
+import { getFonts } from "font-list";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 
@@ -23,6 +24,14 @@ export default function Home() {
   //     </div>
   //   );
   // }
+
+  getFonts()
+    .then((fonts) => {
+      console.log(fonts);
+    })
+    .catch((err) => {
+      console.error(err);
+    });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">

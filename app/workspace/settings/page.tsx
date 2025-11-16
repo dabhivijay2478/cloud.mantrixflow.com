@@ -16,6 +16,7 @@ import {
   User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ThemeCustomizer } from "@/components/theme/theme-customizer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -124,7 +125,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveAppearance = async () => {
+  const _handleSaveAppearance = async () => {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -562,11 +563,12 @@ export default function SettingsPage() {
 
         {/* Appearance */}
         <TabsContent value="appearance" className="space-y-6">
+          {/* Theme Mode Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Appearance Settings</CardTitle>
+              <CardTitle>Theme Mode</CardTitle>
               <CardDescription>
-                Customize the look and feel of your workspace
+                Choose your preferred color scheme
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -605,36 +607,11 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
-
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setTheme("system")}
-                  disabled={loading}
-                  className="w-full sm:w-auto"
-                >
-                  Reset
-                </Button>
-                <Button
-                  onClick={handleSaveAppearance}
-                  disabled={loading}
-                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Appearance
-                    </>
-                  )}
-                </Button>
-              </div>
             </CardContent>
           </Card>
+
+          {/* Theme Customization */}
+          <ThemeCustomizer />
         </TabsContent>
 
         {/* Security */}
