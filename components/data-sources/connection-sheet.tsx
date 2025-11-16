@@ -241,16 +241,16 @@ export function ConnectionSheet({
         side="right"
         className="w-full sm:max-w-2xl flex flex-col p-0 h-full overflow-hidden"
       >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b bg-muted/30 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="bg-background p-2 rounded-lg border flex items-center justify-center">
-              {getIconComponent(dataSource.iconType, 32)}
+        <SheetHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 border">
+              {getIconComponent(dataSource.iconType, 24)}
             </div>
-            <div className="flex-1">
-              <SheetTitle className="text-xl font-semibold">
+            <div className="flex-1 min-w-0">
+              <SheetTitle className="text-xl font-semibold tracking-tight">
                 Connect {dataSource.name}
               </SheetTitle>
-              <SheetDescription className="mt-1.5 text-sm">
+              <SheetDescription className="mt-1.5 text-sm text-muted-foreground">
                 Enter your connection details to connect this data source
               </SheetDescription>
             </div>
@@ -309,7 +309,10 @@ export function ConnectionSheet({
               <div className="grid gap-4">
                 {schema.fields.map((field) => (
                   <div key={field.name} className="space-y-2">
-                    <Label htmlFor={field.name} className="text-sm font-medium">
+                    <Label
+                      htmlFor={field.name}
+                      className="text-sm font-medium text-foreground"
+                    >
                       {field.label}
                       {field.required && (
                         <span className="text-destructive ml-1">*</span>
@@ -334,16 +337,19 @@ export function ConnectionSheet({
                         type={field.type}
                         placeholder={field.placeholder}
                         {...form.register(field.name)}
-                        className={field.type === "password" ? "font-mono" : ""}
+                        className={cn(
+                          "h-10",
+                          field.type === "password" && "font-mono",
+                        )}
                       />
                     )}
                     {field.description && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {field.description}
                       </p>
                     )}
                     {form.formState.errors[field.name] && (
-                      <p className="text-xs text-destructive">
+                      <p className="text-xs text-destructive mt-1">
                         {form.formState.errors[field.name]?.message}
                       </p>
                     )}
@@ -356,37 +362,39 @@ export function ConnectionSheet({
                   className={cn(
                     "p-4 rounded-lg border",
                     connectionTestResult.success
-                      ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-                      : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800",
+                      ? "bg-[hsl(var(--success))]/10 border-[hsl(var(--success))]/30"
+                      : "bg-destructive/10 border-destructive/30",
                   )}
                 >
-                  <div className="flex items-start gap-2">
-                    {connectionTestResult.success ? (
-                      <Check className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-                    ) : (
-                      <X className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
-                    )}
-                    <div className="flex-1">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                        connectionTestResult.success
+                          ? "bg-[hsl(var(--success))]/20"
+                          : "bg-destructive/20",
+                      )}
+                    >
+                      {connectionTestResult.success ? (
+                        <Check className="h-4 w-4 text-[hsl(var(--success))]" />
+                      ) : (
+                        <X className="h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <p
                         className={cn(
-                          "text-sm font-medium",
+                          "text-sm font-semibold",
                           connectionTestResult.success
-                            ? "text-green-800 dark:text-green-200"
-                            : "text-red-800 dark:text-red-200",
+                            ? "text-[hsl(var(--success))]"
+                            : "text-destructive",
                         )}
                       >
                         {connectionTestResult.success
                           ? "Connection Successful"
                           : "Connection Failed"}
                       </p>
-                      <p
-                        className={cn(
-                          "text-xs mt-1",
-                          connectionTestResult.success
-                            ? "text-green-700 dark:text-green-300"
-                            : "text-red-700 dark:text-red-300",
-                        )}
-                      >
+                      <p className="text-xs text-muted-foreground mt-1">
                         {connectionTestResult.message}
                       </p>
                     </div>
@@ -397,7 +405,7 @@ export function ConnectionSheet({
           </div>
         </div>
 
-        <SheetFooter className="border-t bg-muted/30 px-6 py-4 gap-2 flex-col sm:flex-row shrink-0">
+        <SheetFooter className="border-t px-6 py-4 gap-3 flex-col sm:flex-row shrink-0">
           <div className="flex gap-2 w-full sm:w-auto order-2 sm:order-1">
             <Button
               type="button"
@@ -434,6 +442,7 @@ export function ConnectionSheet({
             onClick={form.handleSubmit(handleConnect)}
             disabled={loading || testingConnection}
             className="w-full sm:w-auto order-1 sm:order-2"
+            size="lg"
           >
             {loading ? (
               <>

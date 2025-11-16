@@ -60,36 +60,41 @@ export function KPICard({
   const isNegative = trendDirection === "down";
 
   return (
-    <Card className={cn("h-full overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{label}</CardTitle>
+    <Card className={cn("h-full overflow-hidden border transition-all hover:shadow-md", className)}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {label}
+        </CardTitle>
         {Icon && (
-          <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+            <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
+          </div>
         )}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">
+        <div className="text-3xl font-bold tracking-tight">
           {prefix}
           {value}
           {suffix}
         </div>
         {change !== undefined && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+          <div className="flex items-center gap-1.5 text-sm mt-2">
             {isPositive && (
-              <ArrowUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+              <ArrowUp className="h-4 w-4 text-[hsl(var(--success))]" />
             )}
             {isNegative && (
-              <ArrowDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+              <ArrowDown className="h-4 w-4 text-destructive" />
             )}
             <span
-              className={cn({
-                "text-green-600 dark:text-green-400": isPositive,
-                "text-red-600 dark:text-red-400": isNegative,
+              className={cn("font-medium", {
+                "text-[hsl(var(--success))]": isPositive,
+                "text-destructive": isNegative,
+                "text-muted-foreground": trendDirection === "neutral",
               })}
             >
               {Math.abs(change)}%
             </span>
-            <span>{changeLabel}</span>
+            <span className="text-xs text-muted-foreground">{changeLabel}</span>
           </div>
         )}
       </CardContent>

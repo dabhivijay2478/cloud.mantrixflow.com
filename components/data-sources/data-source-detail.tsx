@@ -38,16 +38,18 @@ export function DataSourceDetail({
   const connectionType = getConnectionFields(dataSource.type);
 
   return (
-    <Card>
+    <Card className="border">
       <CardContent className="p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center justify-center">
-            {getIconComponent(dataSource.iconType, 32)}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 border">
+            {getIconComponent(dataSource.iconType, 24)}
           </div>
-          <div>
-            <h3 className="font-semibold text-lg">{dataSource.name}</h3>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-lg tracking-tight">
+              {dataSource.name}
+            </h3>
             {dataSource.enterprise && (
-              <Badge className="mt-1 bg-black text-white text-xs">
+              <Badge className="mt-2 bg-foreground text-background text-xs font-semibold">
                 ENTERPRISE
               </Badge>
             )}
@@ -55,19 +57,21 @@ export function DataSourceDetail({
         </div>
         {connectedDataSource ? (
           <div className="space-y-4">
-            <div>
-              <Badge className="bg-green-500 text-white">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-0 font-medium">
                 <Check className="h-3 w-3 mr-1" />
                 Connected
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">
               Connected on{" "}
-              {new Date(
-                connectedDataSource.connectedAt || "",
-              ).toLocaleDateString()}
+              <span className="font-medium">
+                {new Date(
+                  connectedDataSource.connectedAt || "",
+                ).toLocaleDateString()}
+              </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2 border-t">
               <Button
                 variant="default"
                 size="sm"
@@ -80,7 +84,7 @@ export function DataSourceDetail({
                 View Tables & Query
               </Button>
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
                 onClick={onDisconnect}
                 className="w-full"
@@ -99,6 +103,7 @@ export function DataSourceDetail({
                 onClick={onOAuthConnect}
                 className="w-full"
                 disabled={loading}
+                size="lg"
               >
                 {loading ? (
                   <>
@@ -123,11 +128,11 @@ export function DataSourceDetail({
                       onFileUpload(file);
                     }
                   }}
-                  className="w-full text-sm"
+                  className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                 />
               </div>
             ) : (
-              <Button onClick={onConnect} className="w-full">
+              <Button onClick={onConnect} className="w-full" size="lg">
                 <Plus className="mr-2 h-4 w-4" />
                 Connect {dataSource.name}
               </Button>

@@ -93,43 +93,46 @@ export default function WorkspacePage() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filteredDashboards.map((dashboard) => (
           <Card
             key={dashboard.id}
-            className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden group relative"
+            className="group relative cursor-pointer overflow-hidden border transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
             onClick={() => handleOpenDashboard(dashboard.id)}
           >
             {/* External Link Icon - Top Right Corner */}
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-2 right-2 z-10 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-2 right-2 z-10 h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 handleOpenDashboard(dashboard.id);
               }}
+              aria-label="Open dashboard"
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
 
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 pr-8">
-                <FileText className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 pr-8 text-lg font-semibold">
+                <FileText className="h-5 w-5 text-primary" />
                 {dashboard.name}
               </CardTitle>
-              <CardDescription className="line-clamp-2">
-                {dashboard.description || "No description"}
-              </CardDescription>
+              {dashboard.description && (
+                <CardDescription className="line-clamp-2 mt-1">
+                  {dashboard.description}
+                </CardDescription>
+              )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center justify-between">
-                  <span>Created:</span>
+                  <span className="font-medium">Created:</span>
                   <Timestamp date={dashboard.createdAt || ""} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Updated:</span>
+                  <span className="font-medium">Updated:</span>
                   <Timestamp date={dashboard.updatedAt || ""} />
                 </div>
               </div>

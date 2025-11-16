@@ -527,13 +527,14 @@ export default function SettingsPage() {
                       type="button"
                       onClick={() => setTheme(themeOption)}
                       className={cn(
-                        "p-4 rounded-lg border-2 text-left transition-all",
+                        "p-4 rounded-lg border-2 text-left transition-all hover:shadow-sm",
                         theme === themeOption
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50",
+                          ? "border-primary bg-primary/10 shadow-sm"
+                          : "border-border hover:border-primary/50 hover:bg-muted/50",
                       )}
+                      aria-pressed={theme === themeOption}
                     >
-                      <div className="font-medium capitalize mb-1">
+                      <div className="font-semibold capitalize mb-1.5">
                         {themeOption}
                       </div>
                       <div className="text-xs text-muted-foreground">

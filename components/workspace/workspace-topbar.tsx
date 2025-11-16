@@ -13,6 +13,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -124,8 +125,8 @@ export function WorkspaceTopbar() {
   // Dashboard edit mode header
   if (isDashboardEditMode && currentDashboard) {
     return (
-      <header className="border-b shrink-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-        <div className="flex items-center justify-between px-6 py-3">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
+        <div className="flex h-14 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-4 min-w-0 flex-1">
             <SidebarTrigger />
             <Button
@@ -196,6 +197,7 @@ export function WorkspaceTopbar() {
               Save
             </Button>
             <div className="flex items-center gap-2 ml-2 pl-2 border-l">
+              <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -250,23 +252,25 @@ export function WorkspaceTopbar() {
 
   // Default header for other pages
   return (
-    <header className="flex h-14 items-center gap-4 border-b px-4">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
+      <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
       <SidebarTrigger />
-      <div className="flex-1 flex items-center justify-center">
-        <div className="relative w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={searchInputRef}
             type="search"
             placeholder="Search dashboards, data sources..."
-            className="pl-9 pr-20"
+            className="pl-9 pr-20 h-9"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <Kbd className="h-5">{isMac ? "⌘" : "Ctrl"}K</Kbd>
+            <Kbd className="h-5 text-xs">{isMac ? "⌘" : "Ctrl"}K</Kbd>
           </div>
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -309,6 +313,7 @@ export function WorkspaceTopbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
       </div>
     </header>
   );

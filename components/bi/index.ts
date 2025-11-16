@@ -23,6 +23,8 @@ export type { DonutChartProps } from "./charts/donut-chart";
 export { DonutChart } from "./charts/donut-chart";
 export type { LineChartProps } from "./charts/line-chart";
 export { LineChart } from "./charts/line-chart";
+export type { ChartSkeletonProps } from "./charts/chart-skeleton";
+export { ChartSkeleton } from "./charts/chart-skeleton";
 export type { LineStackedColumnChartProps } from "./charts/line-stacked-column-chart";
 export { LineStackedColumnChart } from "./charts/line-stacked-column-chart";
 export type { PieChartProps } from "./charts/pie-chart";

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,14 +94,10 @@ export default function DashboardsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Create Dashboard</h1>
-          <p className="text-muted-foreground">
-            Create a new dashboard for your data
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Create Dashboard"
+        description="Create a new dashboard to visualize and analyze your data"
+      />
 
       <div className="max-w-2xl mx-auto">
         <Form {...form}>
@@ -269,7 +266,7 @@ export default function DashboardsPage() {
             />
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -281,6 +278,7 @@ export default function DashboardsPage() {
               <Button
                 type="submit"
                 disabled={loading || !hasConnectedDataSources}
+                size="lg"
               >
                 {loading ? (
                   <>

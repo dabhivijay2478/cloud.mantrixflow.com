@@ -188,73 +188,74 @@ export function DataSourceTable({
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="border">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold text-primary"
-                    onClick={() => onSort("name")}
-                  >
-                    NAME
-                    {getSortIcon("name")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("connector")}
-                  >
-                    CONNECTOR
-                    {getSortIcon("connector")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("connections")}
-                  >
-                    CONNECTIONS
-                    {getSortIcon("connections")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("last-sync")}
-                  >
-                    LAST SYNC
-                    {getSortIcon("last-sync")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("status")}
-                  >
-                    STATUS
-                    {getSortIcon("status")}
-                  </Button>
-                </TableHead>
-                <TableHead className="w-[50px]">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {getFilteredAndSortedDataSources().map((dataSource) => {
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-b">
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("name")}
+                    >
+                      Name
+                      {getSortIcon("name")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("connector")}
+                    >
+                      Connector
+                      {getSortIcon("connector")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("connections")}
+                    >
+                      Connections
+                      {getSortIcon("connections")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("last-sync")}
+                    >
+                      Last Sync
+                      {getSortIcon("last-sync")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("status")}
+                    >
+                      Status
+                      {getSortIcon("status")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="w-[50px] h-12">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {getFilteredAndSortedDataSources().map((dataSource) => {
                 const connected = isConnected(dataSource.id);
                 const connectedData = getConnectedDataSource(dataSource.id);
                 const selectedTables =
@@ -264,53 +265,57 @@ export function DataSourceTable({
                     : []);
 
                 return (
-                  <TableRow key={dataSource.id} className="hover:bg-muted/50">
-                    <TableCell
-                      className="font-medium cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      {dataSource.name}
-                    </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="shrink-0 w-5 h-5 flex items-center justify-center">
-                          {getIconComponent(dataSource.iconType, 20)}
+                  <TableRow
+                    key={dataSource.id}
+                    className="hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => onDataSourceClick(dataSource.id)}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                          {getIconComponent(dataSource.iconType, 16)}
                         </div>
-                        <span className="capitalize">{dataSource.type}</span>
+                        <span className="font-semibold">{dataSource.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      {connected && selectedTables.length > 0
-                        ? `${selectedTables.length} ${selectedTables.length === 1 ? "connection" : "connections"}`
-                        : "-"}
+                    <TableCell>
+                      <span className="capitalize text-sm text-muted-foreground">
+                        {dataSource.type}
+                      </span>
                     </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      {connectedData?.connectedAt
-                        ? new Date(
+                    <TableCell>
+                      {connected && selectedTables.length > 0 ? (
+                        <span className="text-sm font-medium">
+                          {selectedTables.length}{" "}
+                          {selectedTables.length === 1 ? "table" : "tables"}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {connectedData?.connectedAt ? (
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(
                             connectedData.connectedAt,
-                          ).toLocaleDateString()
-                        : "-"}
+                          ).toLocaleDateString()}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
+                    <TableCell>
                       {connected ? (
-                        <Badge className="bg-green-500 text-white border-0">
+                        <Badge
+                          className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-0 font-medium"
+                        >
                           <Check className="h-3 w-3 mr-1" />
                           Connected
                         </Badge>
                       ) : (
-                        "-"
+                        <span className="text-muted-foreground text-sm">
+                          Not connected
+                        </span>
                       )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -370,10 +375,25 @@ export function DataSourceTable({
                   </TableRow>
                 );
               })}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+      {getFilteredAndSortedDataSources().length === 0 && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              No data sources found
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {searchQuery
+                ? "Try adjusting your search or filters"
+                : "Get started by connecting a data source"}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

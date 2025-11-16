@@ -357,8 +357,10 @@ export default function WorkspaceLayout({
                   key={`main-${componentsPanelOpen}-${propertiesPanelOpen}-${agentPanelOpen}-${isMobile}`}
                 >
                   <main
+                    id="main-content"
                     className="h-full overflow-visible p-3 md:p-6"
                     style={{ overflow: "visible" }}
+                    tabIndex={-1}
                   >
                     {children}
                   </main>
@@ -399,7 +401,13 @@ export default function WorkspaceLayout({
             </DashboardDndProvider>
           ) : (
             // Other pages: No panels, just main content
-            <main className="h-full overflow-auto p-3 md:p-6">{children}</main>
+            <main
+              id="main-content"
+              className="h-full overflow-auto p-3 md:p-6"
+              tabIndex={-1}
+            >
+              {children}
+            </main>
           )}
         </SidebarInset>
       </div>

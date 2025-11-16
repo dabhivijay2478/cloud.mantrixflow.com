@@ -1,33 +1,37 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 /**
  * LoadingState
- * @description Standardized loading spinner and message component.
- * Used across pages and components for consistent loading experience.
+ * @description Standardized loading skeleton component.
+ * Uses skeleton loaders instead of spinners for a more professional loading experience.
  * @param {LoadingStateProps} props - Component properties
  * @param {string} [props.message] - Loading message text
- * @param {"sm" | "md" | "lg"} [props.size] - Spinner size (default: "md")
+ * @param {"sm" | "md" | "lg"} [props.size] - Skeleton size (default: "md")
  * @param {boolean} [props.fullScreen] - Full screen overlay (default: false)
  * @param {string} [props.className] - Additional CSS classes
+ * @param {React.ReactNode} [props.children] - Custom skeleton content
  * @returns {JSX.Element} LoadingState component
  * @example
  * <LoadingState message="Loading dashboard..." />
- * <LoadingState fullScreen message="Please wait..." />
+ * <LoadingState fullScreen>
+ *   <Skeleton className="h-20 w-full" />
+ * </LoadingState>
  */
 export interface LoadingStateProps {
   message?: string;
   size?: "sm" | "md" | "lg";
   fullScreen?: boolean;
   className?: string;
+  children?: React.ReactNode;
 }
 
 const sizeClasses = {
-  sm: "h-4 w-4",
-  md: "h-8 w-8",
-  lg: "h-12 w-12",
+  sm: "h-4 w-16",
+  md: "h-6 w-24",
+  lg: "h-8 w-32",
 };
 
 export function LoadingState({
@@ -35,14 +39,14 @@ export function LoadingState({
   size = "md",
   fullScreen = false,
   className,
+  children,
 }: LoadingStateProps) {
-  const content = (
-    <div className="flex flex-col items-center justify-center">
-      <Loader2
-        className={cn("animate-spin text-primary mb-4", sizeClasses[size])}
-        aria-hidden="true"
-      />
-      <p className="text-sm text-muted-foreground">{message}</p>
+  const content = children || (
+    <div className="flex flex-col items-center justify-center gap-3">
+      <Skeleton className={cn(sizeClasses[size], "rounded-full")} />
+      {message && (
+        <Skeleton className="h-4 w-32" />
+      )}
     </div>
   );
 

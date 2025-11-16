@@ -1,14 +1,14 @@
 "use client";
 
 import { AlertCircle, RefreshCw } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
  * ErrorState
  * @description Standardized error display component with optional retry functionality.
- * Used for displaying errors consistently across the application.
+ * Modern card-based design with better visual hierarchy.
  * @param {ErrorStateProps} props - Component properties
  * @param {Error | string} props.error - Error object or error message string
  * @param {string} [props.title] - Error title (default: "Something went wrong")
@@ -47,19 +47,32 @@ export function ErrorState({
       : error?.message || "An unexpected error occurred";
 
   const content = (
-    <Alert variant="destructive" className={cn(className)}>
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="mt-2">{errorMessage}</AlertDescription>
-      {onRetry && (
-        <div className="mt-4">
-          <Button variant="outline" size="sm" onClick={onRetry}>
+    <Card className={cn("border-destructive/50 bg-destructive/5", className)}>
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+            <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">{errorMessage}</p>
+        {onRetry && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            className="w-full sm:w-auto"
+          >
             <RefreshCw className="mr-2 h-4 w-4" />
             {retryLabel}
           </Button>
-        </div>
-      )}
-    </Alert>
+        )}
+      </CardContent>
+    </Card>
   );
 
   if (centered) {

@@ -83,13 +83,20 @@ export function PieChart({
             cx="50%"
             cy="50%"
             innerRadius={innerRadius}
-            outerRadius={120}
-            paddingAngle={2}
+            outerRadius={innerRadius > 0 ? 100 : 120}
+            paddingAngle={innerRadius > 0 ? 1 : 2}
+            animationDuration={800}
+            animationBegin={0}
           >
-            {data.map((entry) => {
+            {data.map((entry, index) => {
               const name = entry[nameKey] as string;
               return (
-                <Cell key={`cell-${name}`} fill={`var(--color-${name})`} />
+                <Cell
+                  key={`cell-${name}`}
+                  fill={`var(--color-${name})`}
+                  stroke="hsl(var(--background))"
+                  strokeWidth={2}
+                />
               );
             })}
           </Pie>

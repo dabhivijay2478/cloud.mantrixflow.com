@@ -77,17 +77,32 @@ export function LineChart({
         <RechartsLineChart
           accessibilityLayer
           data={data}
-          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
         >
-          {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+          {showGrid && (
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="3 3"
+              stroke="hsl(var(--border))"
+              opacity={0.3}
+            />
+          )}
           <XAxis
             dataKey={xKey}
             tickLine={false}
-            tickMargin={10}
+            tickMargin={12}
             axisLine={false}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
           />
-          <YAxis tickLine={false} axisLine={false} />
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+          />
+          <ChartTooltip
+            content={<ChartTooltipContent />}
+            cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }}
+          />
           {showLegend && <ChartLegend content={<ChartLegendContent />} />}
           {yKeys.map((key) => (
             <Line
@@ -95,9 +110,11 @@ export function LineChart({
               type="monotone"
               dataKey={key}
               stroke={`var(--color-${key})`}
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
-              activeDot={{ r: 6 }}
+              activeDot={{ r: 6, fill: `var(--color-${key})` }}
+              animationDuration={800}
+              animationBegin={0}
             />
           ))}
         </RechartsLineChart>
