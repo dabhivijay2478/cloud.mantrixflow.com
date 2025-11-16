@@ -407,8 +407,8 @@ export function DashboardCanvas({
     <>
       <CanvasDropZone
         onDropNewComponent={(componentType: string, dropX: number, dropY: number) => {
-          const defaultWidth = 6;
-          const defaultHeight = 4;
+          const defaultWidth = 10;
+          const defaultHeight = 6;
 
           const actualCanvasWidth = canvasSize.width || GRID_COLS * GRID_SIZE;
           const placementCanvasHeight = Math.max(canvasSize.height || 800, 10000);
@@ -562,8 +562,8 @@ export function DashboardCanvas({
           {(() => {
             const activeData = active.data.current;
             if (activeData?.type === "palette" && activeData?.componentType) {
-              const defaultWidth = 6 * GRID_SIZE;
-              const defaultHeight = 4 * GRID_SIZE;
+              const defaultWidth = 10 * GRID_SIZE;
+              const defaultHeight = 6 * GRID_SIZE;
 
               return (
                 <div
