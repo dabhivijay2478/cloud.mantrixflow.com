@@ -3,6 +3,7 @@
 import {
   Bell,
   Building2,
+  Check,
   Copy,
   Key,
   Loader2,
@@ -13,18 +14,22 @@ import {
   Shield,
   Trash2,
   User,
-  Check,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
@@ -170,7 +175,9 @@ export default function SettingsPage() {
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
       {/* Header */}
       <div className="mb-8 space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          Settings
+        </h1>
         <p className="text-base sm:text-lg text-muted-foreground">
           Manage your workspace, preferences, and account settings
         </p>
@@ -184,15 +191,15 @@ export default function SettingsPage() {
         {/* Improved TabsList */}
         <div className="border-b">
           <TabsList className="inline-flex h-auto w-full sm:w-auto bg-transparent p-0 space-x-1 sm:space-x-2">
-            <TabsTrigger 
-              value="organization" 
+            <TabsTrigger
+              value="organization"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Organization</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="preferences" 
+            <TabsTrigger
+              value="preferences"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
               <User className="h-4 w-4" />
@@ -205,15 +212,15 @@ export default function SettingsPage() {
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">Notifications</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="appearance" 
+            <TabsTrigger
+              value="appearance"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="security" 
+            <TabsTrigger
+              value="security"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
               <Shield className="h-4 w-4" />
@@ -402,8 +409,8 @@ export default function SettingsPage() {
                 >
                   Reset to Defaults
                 </Button>
-                <Button 
-                  onClick={handleSavePreferences} 
+                <Button
+                  onClick={handleSavePreferences}
                   disabled={loading}
                   className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
                 >
@@ -531,8 +538,8 @@ export default function SettingsPage() {
                 >
                   Reset to Defaults
                 </Button>
-                <Button 
-                  onClick={handleSavePreferences} 
+                <Button
+                  onClick={handleSavePreferences}
                   disabled={loading}
                   className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
                 >
@@ -608,8 +615,8 @@ export default function SettingsPage() {
                 >
                   Reset
                 </Button>
-                <Button 
-                  onClick={handleSaveAppearance} 
+                <Button
+                  onClick={handleSaveAppearance}
                   disabled={loading}
                   className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
                 >
@@ -650,19 +657,27 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {apiKeys.map((apiKey) => (
-                <div 
-                  key={apiKey.id} 
+                <div
+                  key={apiKey.id}
                   className="group border-2 rounded-xl p-4 sm:p-5 hover:border-primary/50 hover:shadow-md transition-all duration-300"
                 >
                   <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div className="flex-1 space-y-3 w-full">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <span className="font-semibold text-base">{apiKey.name}</span>
-                        <Badge 
-                          variant={apiKey.key.includes("live") ? "default" : "secondary"}
+                        <span className="font-semibold text-base">
+                          {apiKey.name}
+                        </span>
+                        <Badge
+                          variant={
+                            apiKey.key.includes("live")
+                              ? "default"
+                              : "secondary"
+                          }
                           className="text-xs w-fit"
                         >
-                          {apiKey.key.includes("live") ? "Production" : "Development"}
+                          {apiKey.key.includes("live")
+                            ? "Production"
+                            : "Development"}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
@@ -681,10 +696,12 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
                         <span>
-                          Created: {new Date(apiKey.created).toLocaleDateString()}
+                          Created:{" "}
+                          {new Date(apiKey.created).toLocaleDateString()}
                         </span>
                         <span>
-                          Last used: {new Date(apiKey.lastUsed).toLocaleDateString()}
+                          Last used:{" "}
+                          {new Date(apiKey.lastUsed).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -710,7 +727,8 @@ export default function SettingsPage() {
                     No API keys created yet
                   </p>
                   <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                    Create an API key to get started with programmatic access to your workspace
+                    Create an API key to get started with programmatic access to
+                    your workspace
                   </p>
                   <Button className="shadow-sm">
                     <Plus className="mr-2 h-4 w-4" />
@@ -743,7 +761,10 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-500/10 text-green-700 border-green-500/20"
+                  >
                     <Check className="h-3 w-3 mr-1" />
                     Verified
                   </Badge>

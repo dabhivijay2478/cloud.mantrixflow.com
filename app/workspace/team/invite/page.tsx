@@ -1,11 +1,29 @@
 "use client";
 
-import { AlertCircle, Bot, Check, Loader2, Mail, Sparkles, ArrowLeft, Shield } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Bot,
+  Check,
+  Loader2,
+  Mail,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -16,16 +34,20 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
 
 const roleConfig: Record<
   TeamMemberRole,
-  { label: string; icon: typeof Shield; color: string; bgColor: string; description: string; permissions: string[] }
+  {
+    label: string;
+    icon: typeof Shield;
+    color: string;
+    bgColor: string;
+    description: string;
+    permissions: string[];
+  }
 > = {
   owner: {
     label: "Owner",
@@ -33,7 +55,11 @@ const roleConfig: Record<
     color: "text-purple-600",
     bgColor: "bg-purple-500",
     description: "Full access to all features and settings",
-    permissions: ["Manage billing", "Delete organization", "All admin permissions"],
+    permissions: [
+      "Manage billing",
+      "Delete organization",
+      "All admin permissions",
+    ],
   },
   admin: {
     label: "Admin",
@@ -70,11 +96,36 @@ const roleConfig: Record<
 };
 
 const availableModels = [
-  { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI", description: "Most capable model" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", description: "Fast and efficient" },
-  { id: "claude-opus-4-20250514", name: "Claude 4 Opus", provider: "Anthropic", description: "Best for complex tasks" },
-  { id: "claude-sonnet-4-20250514", name: "Claude 4 Sonnet", provider: "Anthropic", description: "Balanced performance" },
-  { id: "gemini-2.0-flash-exp", name: "Gemini 2.0 Flash", provider: "Google", description: "Lightning fast" },
+  {
+    id: "gpt-4o",
+    name: "GPT-4o",
+    provider: "OpenAI",
+    description: "Most capable model",
+  },
+  {
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    provider: "OpenAI",
+    description: "Fast and efficient",
+  },
+  {
+    id: "claude-opus-4-20250514",
+    name: "Claude 4 Opus",
+    provider: "Anthropic",
+    description: "Best for complex tasks",
+  },
+  {
+    id: "claude-sonnet-4-20250514",
+    name: "Claude 4 Sonnet",
+    provider: "Anthropic",
+    description: "Balanced performance",
+  },
+  {
+    id: "gemini-2.0-flash-exp",
+    name: "Gemini 2.0 Flash",
+    provider: "Google",
+    description: "Lightning fast",
+  },
 ];
 
 export default function InviteTeamMemberPage() {
@@ -100,7 +151,9 @@ export default function InviteTeamMemberPage() {
     }
 
     if (agentPanelAccess && allowedModels.length === 0) {
-      toast.error("Please select at least one model if agent panel access is enabled");
+      toast.error(
+        "Please select at least one model if agent panel access is enabled",
+      );
       return;
     }
 
@@ -181,13 +234,18 @@ export default function InviteTeamMemberPage() {
 
             {/* Role Selection */}
             <div className="space-y-3">
-              <Label htmlFor="invite-role" className="text-sm font-medium flex items-center gap-2">
+              <Label
+                htmlFor="invite-role"
+                className="text-sm font-medium flex items-center gap-2"
+              >
                 Role
                 <span className="text-destructive text-xs">*</span>
               </Label>
               <Select
                 value={selectedRole}
-                onValueChange={(value) => setSelectedRole(value as TeamMemberRole)}
+                onValueChange={(value) =>
+                  setSelectedRole(value as TeamMemberRole)
+                }
                 disabled={loading}
               >
                 <SelectTrigger id="invite-role" className="h-12 border-2">
@@ -198,7 +256,11 @@ export default function InviteTeamMemberPage() {
                     {Object.entries(roleConfig).map(([key, config]) => {
                       const RoleIcon = config.icon;
                       return (
-                        <SelectItem key={key} value={key} className="py-3 cursor-pointer">
+                        <SelectItem
+                          key={key}
+                          value={key}
+                          className="py-3 cursor-pointer"
+                        >
                           <div className="flex items-start gap-3 w-full">
                             <div
                               className={cn(
@@ -210,7 +272,9 @@ export default function InviteTeamMemberPage() {
                               <RoleIcon className="h-5 w-5" />
                             </div>
                             <div className="flex flex-col flex-1 min-w-0">
-                              <span className="font-semibold">{config.label}</span>
+                              <span className="font-semibold">
+                                {config.label}
+                              </span>
                               <span className="text-xs text-muted-foreground mt-0.5">
                                 {config.description}
                               </span>
@@ -236,7 +300,9 @@ export default function InviteTeamMemberPage() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-semibold text-base">{selectedRoleConfig.label}</div>
+                    <div className="font-semibold text-base">
+                      {selectedRoleConfig.label}
+                    </div>
                     <div className="text-sm text-muted-foreground mt-0.5">
                       {selectedRoleConfig.description}
                     </div>
@@ -248,8 +314,12 @@ export default function InviteTeamMemberPage() {
                     Permissions
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {selectedRoleConfig.permissions.map((permission, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                    {selectedRoleConfig.permissions.map((permission) => (
+                      <Badge
+                        key={permission}
+                        variant="secondary"
+                        className="text-xs"
+                      >
                         <Check className="h-3 w-3 mr-1" />
                         {permission}
                       </Badge>
@@ -269,7 +339,9 @@ export default function InviteTeamMemberPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-primary" />
                   Agent Panel Access
-                  <Badge variant="outline" className="ml-2">Optional</Badge>
+                  <Badge variant="outline" className="ml-2">
+                    Optional
+                  </Badge>
                 </CardTitle>
                 <CardDescription>
                   Grant access to AI-powered dashboard generation tools
@@ -292,7 +364,8 @@ export default function InviteTeamMemberPage() {
                   <div>
                     <p className="text-sm font-medium mb-1">Select AI Models</p>
                     <p className="text-xs text-muted-foreground">
-                      Choose which AI models this member can use for generating dashboards and insights
+                      Choose which AI models this member can use for generating
+                      dashboards and insights
                     </p>
                   </div>
                 </div>
@@ -328,7 +401,9 @@ export default function InviteTeamMemberPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-semibold">{model.name}</p>
+                            <p className="text-sm font-semibold">
+                              {model.name}
+                            </p>
                             <Badge variant="outline" className="text-xs">
                               {model.provider}
                             </Badge>
@@ -352,7 +427,8 @@ export default function InviteTeamMemberPage() {
                         No models selected
                       </p>
                       <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80">
-                        Please select at least one model to enable agent panel access
+                        Please select at least one model to enable agent panel
+                        access
                       </p>
                     </div>
                   </div>
@@ -365,7 +441,8 @@ export default function InviteTeamMemberPage() {
                     <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
-                        {allowedModels.length} model{allowedModels.length !== 1 ? 's' : ''} selected
+                        {allowedModels.length} model
+                        {allowedModels.length !== 1 ? "s" : ""} selected
                       </p>
                       <p className="text-xs text-green-600/80 dark:text-green-400/80">
                         Member will have access to the selected AI models
@@ -419,8 +496,8 @@ export default function InviteTeamMemberPage() {
         {/* Help Text */}
         <div className="p-4 rounded-lg bg-muted/50 border">
           <p className="text-xs text-muted-foreground text-center">
-            The invited member will receive an email with instructions to join your organization.
-            They can accept the invitation within 7 days.
+            The invited member will receive an email with instructions to join
+            your organization. They can accept the invitation within 7 days.
           </p>
         </div>
       </div>

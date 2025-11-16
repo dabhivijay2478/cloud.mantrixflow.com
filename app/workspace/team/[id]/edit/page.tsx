@@ -2,17 +2,17 @@
 
 import {
   AlertCircle,
+  ArrowLeft,
   Bot,
+  Calendar,
   Check,
   Crown,
   Loader2,
   Mail,
   Shield,
   Sparkles,
-  User,
-  ArrowLeft,
-  Calendar,
   Trash2,
+  User,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -20,7 +20,13 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,7 +45,14 @@ type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
 
 const roleConfig: Record<
   TeamMemberRole,
-  { label: string; icon: typeof Shield; color: string; bgColor: string; description: string; permissions: string[] }
+  {
+    label: string;
+    icon: typeof Shield;
+    color: string;
+    bgColor: string;
+    description: string;
+    permissions: string[];
+  }
 > = {
   owner: {
     label: "Owner",
@@ -47,7 +60,11 @@ const roleConfig: Record<
     color: "text-purple-600",
     bgColor: "bg-purple-500",
     description: "Full access to all features and settings",
-    permissions: ["Manage billing", "Delete organization", "All admin permissions"],
+    permissions: [
+      "Manage billing",
+      "Delete organization",
+      "All admin permissions",
+    ],
   },
   admin: {
     label: "Admin",
@@ -84,11 +101,36 @@ const roleConfig: Record<
 };
 
 const availableModels = [
-  { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI", description: "Most capable model" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", description: "Fast and efficient" },
-  { id: "claude-opus-4-20250514", name: "Claude 4 Opus", provider: "Anthropic", description: "Best for complex tasks" },
-  { id: "claude-sonnet-4-20250514", name: "Claude 4 Sonnet", provider: "Anthropic", description: "Balanced performance" },
-  { id: "gemini-2.0-flash-exp", name: "Gemini 2.0 Flash", provider: "Google", description: "Lightning fast" },
+  {
+    id: "gpt-4o",
+    name: "GPT-4o",
+    provider: "OpenAI",
+    description: "Most capable model",
+  },
+  {
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    provider: "OpenAI",
+    description: "Fast and efficient",
+  },
+  {
+    id: "claude-opus-4-20250514",
+    name: "Claude 4 Opus",
+    provider: "Anthropic",
+    description: "Best for complex tasks",
+  },
+  {
+    id: "claude-sonnet-4-20250514",
+    name: "Claude 4 Sonnet",
+    provider: "Anthropic",
+    description: "Balanced performance",
+  },
+  {
+    id: "gemini-2.0-flash-exp",
+    name: "Gemini 2.0 Flash",
+    provider: "Google",
+    description: "Lightning fast",
+  },
 ];
 
 interface TeamMember {
@@ -211,12 +253,14 @@ export default function EditTeamMemberPage() {
             "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
         )}
       >
-        <span className={cn(
-          "w-1.5 h-1.5 rounded-full mr-1.5 inline-block",
-          status === "active" && "bg-green-500",
-          status === "pending" && "bg-yellow-500",
-          status === "inactive" && "bg-gray-500"
-        )} />
+        <span
+          className={cn(
+            "w-1.5 h-1.5 rounded-full mr-1.5 inline-block",
+            status === "active" && "bg-green-500",
+            status === "pending" && "bg-yellow-500",
+            status === "inactive" && "bg-gray-500",
+          )}
+        />
         {status === "active" && "Active"}
         {status === "pending" && "Pending"}
         {status === "inactive" && "Inactive"}
@@ -231,7 +275,9 @@ export default function EditTeamMemberPage() {
     }
 
     if (editAgentPanelAccess && editAllowedModels.length === 0) {
-      toast.error("Please select at least one model if agent panel access is enabled");
+      toast.error(
+        "Please select at least one model if agent panel access is enabled",
+      );
       return;
     }
 
@@ -248,7 +294,11 @@ export default function EditTeamMemberPage() {
   };
 
   const handleRemoveMember = async () => {
-    if (confirm("Are you sure you want to remove this team member? This action cannot be undone.")) {
+    if (
+      confirm(
+        "Are you sure you want to remove this team member? This action cannot be undone.",
+      )
+    ) {
       setLoading(true);
       try {
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -330,10 +380,11 @@ export default function EditTeamMemberPage() {
                   {member.joinedAt && (
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
+                      Joined{" "}
+                      {new Date(member.joinedAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
                       })}
                     </div>
                   )}
@@ -356,7 +407,10 @@ export default function EditTeamMemberPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <Label htmlFor="edit-name" className="text-sm font-medium flex items-center gap-2">
+              <Label
+                htmlFor="edit-name"
+                className="text-sm font-medium flex items-center gap-2"
+              >
                 Full Name
                 <span className="text-destructive text-xs">*</span>
               </Label>
@@ -372,7 +426,10 @@ export default function EditTeamMemberPage() {
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="edit-email" className="text-sm font-medium flex items-center gap-2">
+              <Label
+                htmlFor="edit-email"
+                className="text-sm font-medium flex items-center gap-2"
+              >
                 Email Address
                 <span className="text-destructive text-xs">*</span>
               </Label>
@@ -402,7 +459,10 @@ export default function EditTeamMemberPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <Label htmlFor="edit-role-select" className="text-sm font-medium flex items-center gap-2">
+              <Label
+                htmlFor="edit-role-select"
+                className="text-sm font-medium flex items-center gap-2"
+              >
                 Member Role
                 <span className="text-destructive text-xs">*</span>
               </Label>
@@ -419,7 +479,11 @@ export default function EditTeamMemberPage() {
                     {Object.entries(roleConfig).map(([key, config]) => {
                       const Icon = config.icon;
                       return (
-                        <SelectItem key={key} value={key} className="py-3 cursor-pointer">
+                        <SelectItem
+                          key={key}
+                          value={key}
+                          className="py-3 cursor-pointer"
+                        >
                           <div className="flex items-start gap-3 w-full">
                             <div
                               className={cn(
@@ -431,7 +495,9 @@ export default function EditTeamMemberPage() {
                               <Icon className="h-5 w-5" />
                             </div>
                             <div className="flex flex-col flex-1 min-w-0">
-                              <span className="font-semibold">{config.label}</span>
+                              <span className="font-semibold">
+                                {config.label}
+                              </span>
                               <span className="text-xs text-muted-foreground mt-0.5">
                                 {config.description}
                               </span>
@@ -457,7 +523,9 @@ export default function EditTeamMemberPage() {
                     <RoleIcon className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-semibold text-base">{selectedRoleConfig.label}</div>
+                    <div className="font-semibold text-base">
+                      {selectedRoleConfig.label}
+                    </div>
                     <div className="text-sm text-muted-foreground mt-0.5">
                       {selectedRoleConfig.description}
                     </div>
@@ -469,8 +537,12 @@ export default function EditTeamMemberPage() {
                     Permissions
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {selectedRoleConfig.permissions.map((permission, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                    {selectedRoleConfig.permissions.map((permission) => (
+                      <Badge
+                        key={permission}
+                        variant="secondary"
+                        className="text-xs"
+                      >
                         <Check className="h-3 w-3 mr-1" />
                         {permission}
                       </Badge>
@@ -490,7 +562,9 @@ export default function EditTeamMemberPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-primary" />
                   Agent Panel Access
-                  <Badge variant="outline" className="ml-2">Optional</Badge>
+                  <Badge variant="outline" className="ml-2">
+                    Optional
+                  </Badge>
                 </CardTitle>
                 <CardDescription>
                   Grant access to AI-powered dashboard generation tools
@@ -513,7 +587,8 @@ export default function EditTeamMemberPage() {
                   <div>
                     <p className="text-sm font-medium mb-1">Select AI Models</p>
                     <p className="text-xs text-muted-foreground">
-                      Choose which AI models this member can use for generating dashboards
+                      Choose which AI models this member can use for generating
+                      dashboards
                     </p>
                   </div>
                 </div>
@@ -549,7 +624,9 @@ export default function EditTeamMemberPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-semibold">{model.name}</p>
+                            <p className="text-sm font-semibold">
+                              {model.name}
+                            </p>
                             <Badge variant="outline" className="text-xs">
                               {model.provider}
                             </Badge>
@@ -573,7 +650,8 @@ export default function EditTeamMemberPage() {
                         No models selected
                       </p>
                       <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80">
-                        Please select at least one model to enable agent panel access
+                        Please select at least one model to enable agent panel
+                        access
                       </p>
                     </div>
                   </div>
@@ -586,7 +664,8 @@ export default function EditTeamMemberPage() {
                     <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
-                        {editAllowedModels.length} model{editAllowedModels.length !== 1 ? 's' : ''} selected
+                        {editAllowedModels.length} model
+                        {editAllowedModels.length !== 1 ? "s" : ""} selected
                       </p>
                       <p className="text-xs text-green-600/80 dark:text-green-400/80">
                         Member will have access to the selected AI models
@@ -607,7 +686,7 @@ export default function EditTeamMemberPage() {
                 <Button
                   variant="destructive"
                   onClick={handleRemoveMember}
-                  disabled={loading || member.role === 'owner'}
+                  disabled={loading || member.role === "owner"}
                   className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -647,9 +726,10 @@ export default function EditTeamMemberPage() {
                   </Button>
                 </div>
               </div>
-              {member.role === 'owner' && (
+              {member.role === "owner" && (
                 <p className="text-xs text-muted-foreground text-center sm:text-right">
-                  Organization owners cannot be removed. Transfer ownership first.
+                  Organization owners cannot be removed. Transfer ownership
+                  first.
                 </p>
               )}
             </div>
