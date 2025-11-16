@@ -1,23 +1,29 @@
 /**
  * Font Selector Component
- * Component for selecting and customizing fonts
+ * Component for selecting fonts with system font list, search, and infinite scroll
  */
 
 "use client";
 
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Upload, X } from "lucide-react";
-import { useState } from "react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useFonts } from "@/lib/hooks/use-fonts";
 
 interface FontSelectorProps {
   label: string;
@@ -27,35 +33,7 @@ interface FontSelectorProps {
   className?: string;
 }
 
-const presetFonts = {
-  sans: [
-    { label: "Poppins", value: "Poppins, sans-serif" },
-    { label: "Inter", value: "Inter, sans-serif" },
-    { label: "Roboto", value: "Roboto, sans-serif" },
-    { label: "Open Sans", value: '"Open Sans", sans-serif' },
-    { label: "Lato", value: "Lato, sans-serif" },
-    { label: "Montserrat", value: "Montserrat, sans-serif" },
-    { label: "Raleway", value: "Raleway, sans-serif" },
-    { label: "Nunito", value: "Nunito, sans-serif" },
-    { label: "System", value: "system-ui, -apple-system, sans-serif" },
-  ],
-  serif: [
-    { label: "Georgia", value: "Georgia, serif" },
-    { label: "Times New Roman", value: '"Times New Roman", serif' },
-    { label: "Merriweather", value: "Merriweather, serif" },
-    { label: "Playfair Display", value: '"Playfair Display", serif' },
-    { label: "Lora", value: "Lora, serif" },
-    { label: "System", value: "system-ui, serif" },
-  ],
-  mono: [
-    { label: "JetBrains Mono", value: '"JetBrains Mono", monospace' },
-    { label: "Fira Code", value: '"Fira Code", monospace' },
-    { label: "Source Code Pro", value: '"Source Code Pro", monospace' },
-    { label: "Courier New", value: '"Courier New", monospace' },
-    { label: "Monaco", value: "Monaco, monospace" },
-    { label: "System", value: "monospace" },
-  ],
-};
+const ITEMS_PER_PAGE = 50;
 
 export function FontSelector({
   label,
@@ -64,14 +42,10 @@ export function FontSelector({
   description,
   className,
 }: FontSelectorProps) {
-  const [isCustom, setIsCustom] = useState(
-    !Object.values(presetFonts)
-      .flat()
-      .some((font) => font.value === value),
-  );
-  const [customFont, setCustomFont] = useState(
-    isCustom ? value : "Poppins, sans-serif",
-  );
+  const { fonts, loading } = useFonts();
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
   const fontType =
     label.toLowerCase().includes("sans") || label.toLowerCase().includes("body")
@@ -80,29 +54,128 @@ export function FontSelector({
         ? "serif"
         : "mono";
 
-  const fonts = presetFonts[fontType];
+  // Filter fonts based on type
+  const filteredFonts = useMemo(() => {
+    let filtered = fonts;
 
-  const handlePresetChange = (newValue: string) => {
-    onChange(newValue);
-    setIsCustom(false);
-  };
-
-  const handleCustomChange = (newValue: string) => {
-    setCustomFont(newValue);
-    onChange(newValue);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith("font/")) {
-      // Handle font file upload
-      // This would typically involve creating a @font-face rule
-      const fontName = file.name.replace(/\.[^/.]+$/, "");
-      const fontFamily = `"${fontName}", ${fontType === "mono" ? "monospace" : fontType === "serif" ? "serif" : "sans-serif"}`;
-      handleCustomChange(fontFamily);
-      setIsCustom(true);
+    // Filter by font type
+    if (fontType === "mono") {
+      // Filter monospace fonts - check the monospace property
+      filtered = filtered.filter((font) => font.monospace === true);
+    } else if (fontType === "serif") {
+      // Filter serif fonts (heuristic: common serif font names)
+      const serifKeywords = [
+        "serif",
+        "times",
+        "georgia",
+        "garamond",
+        "baskerville",
+        "caslon",
+        "didot",
+        "minion",
+        "palatino",
+        "bookman",
+        "century",
+        "courier",
+      ];
+      filtered = filtered.filter(
+        (font) =>
+          serifKeywords.some((keyword) =>
+            font.name.toLowerCase().includes(keyword),
+          ) || font.name.toLowerCase().includes("serif"),
+      );
+    } else {
+      // Filter sans-serif (exclude serif and mono)
+      const serifKeywords = [
+        "serif",
+        "times",
+        "georgia",
+        "garamond",
+        "baskerville",
+        "caslon",
+        "didot",
+        "minion",
+        "palatino",
+        "bookman",
+        "century",
+      ];
+      filtered = filtered.filter(
+        (font) =>
+          font.monospace !== true &&
+          !serifKeywords.some((keyword) =>
+            font.name.toLowerCase().includes(keyword),
+          ) &&
+          !font.name.toLowerCase().includes("serif"),
+      );
     }
-  };
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        (font) =>
+          font.name.toLowerCase().includes(query) ||
+          font.familyName.toLowerCase().includes(query) ||
+          font.postScriptName.toLowerCase().includes(query),
+      );
+    }
+
+    // Sort alphabetically and remove duplicates by name
+    const uniqueFonts = Array.from(
+      new Map(filtered.map((font) => [font.name.toLowerCase(), font])).values(),
+    ).sort((a, b) => a.name.localeCompare(b.name));
+
+    return uniqueFonts;
+  }, [fonts, fontType, searchQuery]);
+
+  // Reset visible count when search changes
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [searchQuery]);
+
+  // Get visible fonts for rendering
+  const visibleFonts = useMemo(
+    () => filteredFonts.slice(0, visibleCount),
+    [filteredFonts, visibleCount],
+  );
+
+  // Handle scroll for infinite loading
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const target = e.currentTarget;
+      const scrollBottom =
+        target.scrollHeight - target.scrollTop - target.clientHeight;
+
+      // Load more when near bottom (within 100px)
+      if (scrollBottom < 100 && visibleCount < filteredFonts.length) {
+        setVisibleCount((prev) => Math.min(prev + ITEMS_PER_PAGE, filteredFonts.length));
+      }
+    },
+    [visibleCount, filteredFonts.length],
+  );
+
+  // Get current font name from value
+  const currentFontName = useMemo(() => {
+    if (!value) return "";
+    // Extract font name from value (e.g., "Poppins, sans-serif" -> "Poppins")
+    const match = value.match(/^["']?([^,"']+)["']?/);
+    return match ? match[1] : value.split(",")[0].trim();
+  }, [value]);
+
+  const handleFontSelect = useCallback(
+    (fontName: string) => {
+      const font = filteredFonts.find((f) => f.name === fontName);
+      if (font) {
+        const fontFamily = `"${font.name}", ${fontType === "mono" ? "monospace" : fontType === "serif" ? "serif" : "sans-serif"}`;
+        onChange(fontFamily);
+        setOpen(false);
+        setSearchQuery("");
+        setVisibleCount(ITEMS_PER_PAGE);
+      }
+    },
+    [filteredFonts, fontType, onChange],
+  );
+
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -112,63 +185,85 @@ export function FontSelector({
           <span className="text-xs text-muted-foreground">{description}</span>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <Select
-          value={isCustom ? "custom" : value}
-          onValueChange={(val) => {
-            if (val === "custom") {
-              setIsCustom(true);
-            } else {
-              handlePresetChange(val);
-            }
-          }}
-        >
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Select font" />
-          </SelectTrigger>
-          <SelectContent>
-            {fonts.map((font) => (
-              <SelectItem key={font.value} value={font.value}>
-                <span style={{ fontFamily: font.value }}>{font.label}</span>
-              </SelectItem>
-            ))}
-            <SelectItem value="custom">Custom Font</SelectItem>
-          </SelectContent>
-        </Select>
-        {isCustom && (
-          <>
-            <Input
-              type="text"
-              value={customFont}
-              onChange={(e) => handleCustomChange(e.target.value)}
-              placeholder="Font name, sans-serif"
-              className="flex-1"
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            <span className="truncate" style={{ fontFamily: value }}>
+              {currentFontName || "Select font..."}
+            </span>
+            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command
+            filter={(value, search) => {
+              // Use our custom filtered fonts, so always return 1
+              // The filtering is done in useMemo above
+              return 1;
+            }}
+            shouldFilter={false}
+          >
+            <CommandInput
+              placeholder="Search fonts..."
+              value={searchQuery}
+              onValueChange={setSearchQuery}
             />
-            <div className="relative">
-              <Input
-                type="file"
-                accept=".woff,.woff2,.ttf,.otf"
-                onChange={handleFileUpload}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="pointer-events-none"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-      {isCustom && (
+            <CommandList
+              onScroll={handleScroll}
+              className="max-h-[300px]"
+            >
+              {loading ? (
+                <CommandEmpty>Loading fonts...</CommandEmpty>
+              ) : filteredFonts.length === 0 ? (
+                <CommandEmpty>
+                  {searchQuery
+                    ? `No fonts found matching "${searchQuery}"`
+                    : "No fonts found."}
+                </CommandEmpty>
+              ) : (
+                <CommandGroup>
+                  {visibleFonts.map((font) => (
+                    <CommandItem
+                      key={`${font.postScriptName}-${font.name}`}
+                      value={`${font.name} ${font.familyName} ${font.postScriptName}`}
+                      onSelect={() => handleFontSelect(font.name)}
+                      className="cursor-pointer"
+                    >
+                      <span
+                        style={{ fontFamily: `"${font.name}"` }}
+                        className="mr-2"
+                      >
+                        {font.name}
+                      </span>
+                      {font.monospace && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          Mono
+                        </span>
+                      )}
+                    </CommandItem>
+                  ))}
+                  {visibleCount < filteredFonts.length && (
+                    <div className="px-2 py-1.5 text-xs text-center text-muted-foreground">
+                      Showing {visibleCount} of {filteredFonts.length} fonts
+                      {searchQuery && ` matching "${searchQuery}"`}...
+                    </div>
+                  )}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {value && (
         <p className="text-xs text-muted-foreground">
-          Enter font family name (e.g., "Custom Font, sans-serif")
+          Current: <span style={{ fontFamily: value }}>{value}</span>
         </p>
       )}
     </div>
   );
 }
-

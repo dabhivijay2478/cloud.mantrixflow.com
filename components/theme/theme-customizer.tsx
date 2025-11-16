@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, RotateCcw, Save } from "lucide-react";
 import { toast } from "@/lib/utils/toast";
@@ -159,21 +160,41 @@ export function ThemeCustomizer() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label>Border Radius</Label>
-                    <span className="text-sm text-muted-foreground">
-                      {themeStore.theme.radius}rem
-                    </span>
                   </div>
-                  <Slider
-                    value={[themeStore.theme.radius]}
-                    onValueChange={([value]) => themeStore.setRadius(value)}
-                    min={0}
-                    max={2}
-                    step={0.1}
-                    className="w-full"
-                  />
+                  
+                  {/* Slider and Input */}
+                  <div className="flex items-center gap-4">
+                    <Slider
+                      value={[themeStore.theme.radius]}
+                      onValueChange={([value]) => themeStore.setRadius(value)}
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      className="flex-1"
+                    />
+                    <div className="flex items-center gap-2 w-32">
+                      <Input
+                        type="number"
+                        value={themeStore.theme.radius}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 0 && val <= 2) {
+                            themeStore.setRadius(val);
+                          }
+                        }}
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        className="w-20"
+                      />
+                      <span className="text-sm text-muted-foreground">rem</span>
+                    </div>
+                  </div>
+                  
+                  {/* Preview */}
                   <div className="flex items-center gap-4 pt-4">
                     <div
                       className="w-16 h-16 bg-primary rounded"
