@@ -1,8 +1,8 @@
 "use client";
 
-import { type Column } from "@tanstack/react-table";
+import type { Column } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown, EyeOff } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -86,4 +86,3 @@ export function DataTableColumnHeader<TData, TValue>({
     </div>
   );
 }
-

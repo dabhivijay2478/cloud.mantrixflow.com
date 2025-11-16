@@ -63,13 +63,14 @@ export async function createOrganizationAction(
       };
     }
 
-    const { name, slug } = validation.data;
+    // Validation passed - variables will be used when implementing actual logic
+    void validation.data;
 
     // TODO: Implement actual organization creation logic
     // For now, simulate success
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const organizationId = `org_${Date.now()}`;
+    const _organizationId = `org_${Date.now()}`;
 
     revalidatePath("/onboarding");
     redirect("/onboarding/data-source");
@@ -131,7 +132,7 @@ export async function connectDataSourceAction(
     // For now, simulate success
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const dataSourceId = `ds_${Date.now()}`;
+    const _dataSourceId = `ds_${Date.now()}`;
 
     revalidatePath("/onboarding");
     redirect(`/onboarding/connect/${connector}/select`);
@@ -145,4 +146,3 @@ export async function connectDataSourceAction(
     };
   }
 }
-

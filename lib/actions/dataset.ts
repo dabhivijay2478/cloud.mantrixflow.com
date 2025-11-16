@@ -35,7 +35,9 @@ export async function saveDatasetAction(
       dataSourceId: formData.get("dataSourceId")?.toString() ?? "",
       sourceType: formData.get("sourceType")?.toString() ?? "table",
       sourceName: formData.get("sourceName")?.toString() ?? "",
-      selectedColumns: formData.getAll("selectedColumns").map((v) => v.toString()),
+      selectedColumns: formData
+        .getAll("selectedColumns")
+        .map((v) => v.toString()),
     };
 
     const validation = datasetSchema.safeParse(rawData);
@@ -57,8 +59,8 @@ export async function saveDatasetAction(
       };
     }
 
-    const { name, description, dataSourceId, sourceType, sourceName } =
-      validation.data;
+    // Validation passed - variables will be used when implementing actual logic
+    void validation.data;
 
     // TODO: Implement actual dataset creation/update logic
     // For now, simulate success
@@ -78,4 +80,3 @@ export async function saveDatasetAction(
     };
   }
 }
-

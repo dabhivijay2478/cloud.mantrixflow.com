@@ -20,7 +20,10 @@ const inviteTeamMemberSchema = z.object({
 
 const updateTeamMemberSchema = z.object({
   memberId: z.string().min(1, "Member ID is required"),
-  name: z.string().min(1, "Name is required").min(2, "Name must be at least 2 characters"),
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .min(2, "Name must be at least 2 characters"),
   email: z
     .string()
     .min(1, "Email is required")
@@ -64,13 +67,14 @@ export async function inviteTeamMemberAction(
       };
     }
 
-    const { email, role, agentPanelAccess, allowedModels } = validation.data;
+    const { agentPanelAccess, allowedModels } = validation.data;
 
     // Validate agent panel access
     if (agentPanelAccess && allowedModels.length === 0) {
       return {
         success: false,
-        error: "Please select at least one model if agent panel access is enabled.",
+        error:
+          "Please select at least one model if agent panel access is enabled.",
         fieldErrors: {
           allowedModels: ["At least one model must be selected"],
         },
@@ -130,14 +134,14 @@ export async function updateTeamMemberAction(
       };
     }
 
-    const { memberId, name, email, role, agentPanelAccess, allowedModels } =
-      validation.data;
+    const { agentPanelAccess, allowedModels } = validation.data;
 
     // Validate agent panel access
     if (agentPanelAccess && allowedModels.length === 0) {
       return {
         success: false,
-        error: "Please select at least one model if agent panel access is enabled.",
+        error:
+          "Please select at least one model if agent panel access is enabled.",
         fieldErrors: {
           allowedModels: ["At least one model must be selected"],
         },
@@ -194,4 +198,3 @@ export async function removeTeamMemberAction(
     };
   }
 }
-

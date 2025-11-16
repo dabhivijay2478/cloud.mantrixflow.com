@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-table";
 import {
   ArrowUpDown,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -20,19 +21,16 @@ import {
   Loader2,
   Maximize2,
   Minimize2,
-  ChevronDown,
-  EyeOff,
 } from "lucide-react";
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -52,7 +50,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { exportToCSV, exportToJSON, exportToExcel } from "@/lib/utils/data-export";
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToJSON,
+} from "@/lib/utils/data-export";
 
 export interface SQLResultViewerProps {
   columns: string[];
@@ -97,7 +99,8 @@ export function SQLResultViewer({
   onDownload,
 }: SQLResultViewerProps) {
   const [globalFilter, setGlobalFilter] = React.useState("");
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const debouncedGlobalFilter = useDebounce(globalFilter, 300);
 
   // Create column definitions from column names
@@ -174,7 +177,9 @@ export function SQLResultViewer({
         });
 
         // Get filtered data
-        const exportData = table.getFilteredRowModel().rows.map((row) => row.original);
+        const exportData = table
+          .getFilteredRowModel()
+          .rows.map((row) => row.original);
 
         if (format === "csv") {
           exportToCSV(exportData, visibleColumns, "query-results.csv");
@@ -185,7 +190,7 @@ export function SQLResultViewer({
         }
       }
     },
-    [columns, rows, onDownload, table],
+    [columns, onDownload, table],
   );
 
   if (loading) {
@@ -277,7 +282,12 @@ export function SQLResultViewer({
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8" aria-label="Download results">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                aria-label="Download results"
+              >
                 <Download className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -324,7 +334,10 @@ export function SQLResultViewer({
                               key={header.id}
                               className="whitespace-nowrap sticky top-0 bg-background z-10"
                               style={{
-                                width: header.getSize() !== 150 ? `${header.getSize()}px` : undefined,
+                                width:
+                                  header.getSize() !== 150
+                                    ? `${header.getSize()}px`
+                                    : undefined,
                               }}
                             >
                               {header.isPlaceholder
@@ -350,9 +363,10 @@ export function SQLResultViewer({
                               key={cell.id}
                               className="whitespace-nowrap"
                               style={{
-                                width: cell.column.getSize() !== 150
-                                  ? `${cell.column.getSize()}px`
-                                  : undefined,
+                                width:
+                                  cell.column.getSize() !== 150
+                                    ? `${cell.column.getSize()}px`
+                                    : undefined,
                               }}
                             >
                               {flexRender(

@@ -8,10 +8,6 @@ import {
   loginSchema,
   resetPasswordSchema,
   signupSchema,
-  type ForgotPasswordInput,
-  type LoginInput,
-  type ResetPasswordInput,
-  type SignupInput,
 } from "@/lib/validations/auth";
 
 export type AuthActionResult<T = void> =
@@ -209,8 +205,7 @@ export async function forgotPasswordAction(
     const { email } = validation.data;
     const supabase = await createClient();
 
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${siteUrl}/auth/reset-password`,
     });
@@ -313,4 +308,3 @@ export async function resetPasswordAction(
     };
   }
 }
-

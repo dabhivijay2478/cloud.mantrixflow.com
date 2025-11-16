@@ -11,12 +11,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  inviteTeamMemberAction,
-  type TeamActionResult,
-} from "@/lib/actions/team";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +34,10 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import {
+  inviteTeamMemberAction,
+  type TeamActionResult,
+} from "@/lib/actions/team";
 import { cn } from "@/lib/utils";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
@@ -147,7 +147,10 @@ export default function InviteTeamMemberPage() {
   // Handle form state changes
   useEffect(() => {
     if (state?.success) {
-      toast.success("Invitation sent!", state.message || `Invitation sent to ${email}`);
+      toast.success(
+        "Invitation sent!",
+        state.message || `Invitation sent to ${email}`,
+      );
     } else if (state && !state.success) {
       toast.error("Failed to send invitation", state.error);
     }

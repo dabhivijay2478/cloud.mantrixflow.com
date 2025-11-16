@@ -50,7 +50,8 @@ export async function createDashboardAction(
       };
     }
 
-    const { name, description, dataSourceId } = validation.data;
+    // Validation passed - variables will be used when implementing actual logic
+    void validation.data;
 
     // TODO: Implement actual dashboard creation logic
     // For now, simulate success
@@ -70,4 +71,3 @@ export async function createDashboardAction(
     };
   }
 }
-

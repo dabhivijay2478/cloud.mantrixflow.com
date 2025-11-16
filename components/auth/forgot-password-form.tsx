@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -16,13 +16,13 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  type AuthActionResult,
+  forgotPasswordAction,
+} from "@/lib/actions/auth";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import {
-  forgotPasswordAction,
-  type AuthActionResult,
-} from "@/lib/actions/auth";
 
 export function ForgotPasswordForm({
   className,
@@ -63,9 +63,7 @@ export function ForgotPasswordForm({
           description="Enter your email address and we'll send you a link to reset your password"
         />
 
-        {state && !state.success && (
-          <AuthErrorDisplay error={state.error} />
-        )}
+        {state && !state.success && <AuthErrorDisplay error={state.error} />}
 
         {state?.success && (
           <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">

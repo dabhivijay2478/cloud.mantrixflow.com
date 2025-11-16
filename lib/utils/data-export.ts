@@ -25,7 +25,11 @@ export function exportToCSV<T extends Record<string, unknown>>(
       .map((header) => {
         // Escape quotes and wrap in quotes if contains comma, newline, or quote
         const value = String(header);
-        if (value.includes(",") || value.includes("\n") || value.includes('"')) {
+        if (
+          value.includes(",") ||
+          value.includes("\n") ||
+          value.includes('"')
+        ) {
           return `"${value.replace(/"/g, '""')}"`;
         }
         return value;
@@ -39,12 +43,15 @@ export function exportToCSV<T extends Record<string, unknown>>(
           if (value === null || value === undefined) {
             return "";
           }
-          const stringValue = typeof value === "object" 
-            ? JSON.stringify(value) 
-            : String(value);
-          
+          const stringValue =
+            typeof value === "object" ? JSON.stringify(value) : String(value);
+
           // Escape quotes and wrap in quotes if contains comma, newline, or quote
-          if (stringValue.includes(",") || stringValue.includes("\n") || stringValue.includes('"')) {
+          if (
+            stringValue.includes(",") ||
+            stringValue.includes("\n") ||
+            stringValue.includes('"')
+          ) {
             return `"${stringValue.replace(/"/g, '""')}"`;
           }
           return stringValue;
@@ -120,4 +127,3 @@ export function formatDataForExport<T extends Record<string, unknown>>(
     return formattedRow;
   });
 }
-

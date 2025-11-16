@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -19,13 +19,10 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { type AuthActionResult, signupAction } from "@/lib/actions/auth";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import {
-  signupAction,
-  type AuthActionResult,
-} from "@/lib/actions/auth";
 
 export function SignupForm({
   className,
@@ -92,9 +89,7 @@ export function SignupForm({
           description="Fill in the form below to create your account"
         />
 
-        {state && !state.success && (
-          <AuthErrorDisplay error={state.error} />
-        )}
+        {state && !state.success && <AuthErrorDisplay error={state.error} />}
 
         {/* Two column grid for name fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -237,14 +232,12 @@ export function SignupForm({
                   : undefined
               }
             />
-            {state &&
-              !state.success &&
-              state.fieldErrors?.confirmPassword && (
-                <FieldError
-                  id="confirm-password-error"
-                  errors={state.fieldErrors.confirmPassword}
-                />
-              )}
+            {state && !state.success && state.fieldErrors?.confirmPassword && (
+              <FieldError
+                id="confirm-password-error"
+                errors={state.fieldErrors.confirmPassword}
+              />
+            )}
           </Field>
         </div>
 

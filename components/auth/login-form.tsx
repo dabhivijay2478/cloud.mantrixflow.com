@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useActionState } from "react";
+import { Suspense, useActionState, useEffect } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -19,10 +19,10 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { type AuthActionResult, loginAction } from "@/lib/actions/auth";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import { loginAction, type AuthActionResult } from "@/lib/actions/auth";
 
 function LoginFormContent({
   className,
@@ -103,9 +103,7 @@ function LoginFormContent({
           description="Enter your email below to login to your account"
         />
 
-        {state && !state.success && (
-          <AuthErrorDisplay error={state.error} />
-        )}
+        {state && !state.success && <AuthErrorDisplay error={state.error} />}
 
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -128,10 +126,7 @@ function LoginFormContent({
             }
           />
           {state && !state.success && state.fieldErrors?.email && (
-            <FieldError
-              id="email-error"
-              errors={state.fieldErrors.email}
-            />
+            <FieldError id="email-error" errors={state.fieldErrors.email} />
           )}
         </Field>
 

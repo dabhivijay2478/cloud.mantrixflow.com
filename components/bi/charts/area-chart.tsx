@@ -17,9 +17,9 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import {
-  ChartLoadingState,
-  ChartErrorState,
   ChartEmptyState,
+  ChartErrorState,
+  ChartLoadingState,
 } from "./chart-states";
 
 /**
@@ -84,7 +84,11 @@ export function AreaChart({
 
   if (loading) {
     return (
-      <ChartWrapper title={title} description={description} className={className}>
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
         <ChartLoadingState />
       </ChartWrapper>
     );
@@ -92,7 +96,11 @@ export function AreaChart({
 
   if (error) {
     return (
-      <ChartWrapper title={title} description={description} className={className}>
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
         <ChartErrorState error={error} />
       </ChartWrapper>
     );
@@ -100,7 +108,11 @@ export function AreaChart({
 
   if (!data || data.length === 0) {
     return (
-      <ChartWrapper title={title} description={description} className={className}>
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
         <ChartEmptyState message={emptyMessage} />
       </ChartWrapper>
     );

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useActionState, useState } from "react";
+import { Suspense, useActionState, useEffect, useState } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -16,13 +16,10 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
+import { type AuthActionResult, resetPasswordAction } from "@/lib/actions/auth";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import {
-  resetPasswordAction,
-  type AuthActionResult,
-} from "@/lib/actions/auth";
 
 function ResetPasswordFormContent({
   className,
@@ -66,7 +63,7 @@ function ResetPasswordFormContent({
           }
 
           setIsValidToken(true);
-        } catch (error) {
+        } catch (_error) {
           toast.error(
             "Invalid reset link",
             "This password reset link is invalid or has expired.",
@@ -137,9 +134,7 @@ function ResetPasswordFormContent({
           description="Enter your new password below"
         />
 
-        {state && !state.success && (
-          <AuthErrorDisplay error={state.error} />
-        )}
+        {state && !state.success && <AuthErrorDisplay error={state.error} />}
 
         <Field>
           <FieldLabel htmlFor="password">New Password</FieldLabel>
@@ -187,14 +182,12 @@ function ResetPasswordFormContent({
                 : undefined
             }
           />
-          {state &&
-            !state.success &&
-            state.fieldErrors?.confirmPassword && (
-              <FieldError
-                id="confirm-password-error"
-                errors={state.fieldErrors.confirmPassword}
-              />
-            )}
+          {state && !state.success && state.fieldErrors?.confirmPassword && (
+            <FieldError
+              id="confirm-password-error"
+              errors={state.fieldErrors.confirmPassword}
+            />
+          )}
         </Field>
 
         <Field>

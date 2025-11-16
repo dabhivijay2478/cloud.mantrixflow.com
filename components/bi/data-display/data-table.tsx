@@ -9,33 +9,40 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type RowSelectionState,
   type SortingState,
   useReactTable,
   type VisibilityState,
-  type RowSelectionState,
 } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   ChevronDown,
-  Download,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
 } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -44,17 +51,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { DataTableColumnHeader } from "./data-table-column-header";
-import { exportToCSV, exportToJSON, exportToExcel } from "@/lib/utils/data-export";
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToJSON,
+} from "@/lib/utils/data-export";
 
 /**
  * DataTable
@@ -164,7 +166,7 @@ export function DataTable<TData extends Record<string, unknown>>({
   sortable = true,
   filterable = true,
   filterPlaceholder = "Filter...",
-  filterColumn,
+  filterColumn: _filterColumn,
   globalFilter: externalGlobalFilter,
   onGlobalFilterChange,
   pagination = true,
@@ -194,7 +196,7 @@ export function DataTable<TData extends Record<string, unknown>>({
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [internalGlobalFilter, setInternalGlobalFilter] = React.useState("");
-  
+
   const globalFilter = externalGlobalFilter ?? internalGlobalFilter;
   const setGlobalFilter = onGlobalFilterChange ?? setInternalGlobalFilter;
   const debouncedGlobalFilter = useDebounce(globalFilter, 300);
@@ -202,7 +204,8 @@ export function DataTable<TData extends Record<string, unknown>>({
   // Handle sorting changes
   const handleSortingChange = React.useCallback(
     (updater: SortingState | ((old: SortingState) => SortingState)) => {
-      const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+      const newSorting =
+        typeof updater === "function" ? updater(sorting) : updater;
       setSorting(newSorting);
       if (onSortingChange) {
         onSortingChange(newSorting);
@@ -213,8 +216,13 @@ export function DataTable<TData extends Record<string, unknown>>({
 
   // Handle column filter changes
   const handleColumnFiltersChange = React.useCallback(
-    (updater: ColumnFiltersState | ((old: ColumnFiltersState) => ColumnFiltersState)) => {
-      const newFilters = typeof updater === "function" ? updater(columnFilters) : updater;
+    (
+      updater:
+        | ColumnFiltersState
+        | ((old: ColumnFiltersState) => ColumnFiltersState),
+    ) => {
+      const newFilters =
+        typeof updater === "function" ? updater(columnFilters) : updater;
       setColumnFilters(newFilters);
       if (onColumnFiltersChange) {
         onColumnFiltersChange(newFilters);
@@ -232,14 +240,12 @@ export function DataTable<TData extends Record<string, unknown>>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: pagination && !serverSidePagination 
-      ? getPaginationRowModel() 
-      : undefined,
-    getSortedRowModel: sortable && !serverSideSorting 
-      ? getSortedRowModel() 
-      : undefined,
-    getFilteredRowModel: !serverSideFiltering 
-      ? getFilteredRowModel() 
+    getPaginationRowModel:
+      pagination && !serverSidePagination ? getPaginationRowModel() : undefined,
+    getSortedRowModel:
+      sortable && !serverSideSorting ? getSortedRowModel() : undefined,
+    getFilteredRowModel: !serverSideFiltering
+      ? getFilteredRowModel()
       : undefined,
     manualPagination: serverSidePagination,
     manualSorting: serverSideSorting,
@@ -266,33 +272,37 @@ export function DataTable<TData extends Record<string, unknown>>({
         pageSize,
       },
     },
-    pageCount: serverSidePagination && totalCount 
-      ? Math.ceil(totalCount / pageSize) 
-      : undefined,
+    pageCount:
+      serverSidePagination && totalCount
+        ? Math.ceil(totalCount / pageSize)
+        : undefined,
   });
 
   // Handle pagination changes for server-side
   React.useEffect(() => {
     if (serverSidePagination && onPaginationChange) {
-      const { pageIndex, pageSize: currentPageSize } = table.getState().pagination;
+      const { pageIndex, pageSize: currentPageSize } = paginationState;
       onPaginationChange(pageIndex, currentPageSize);
     }
-  }, [table.getState().pagination, serverSidePagination, onPaginationChange]);
+  }, [paginationState, serverSidePagination, onPaginationChange]);
 
   // Export handlers
   const handleExport = React.useCallback(
     (format: "csv" | "json" | "excel") => {
-      const exportData = enableRowSelection && Object.keys(rowSelection).length > 0
-        ? table.getFilteredSelectedRowModel().rows.map((row) => row.original)
-        : data;
+      const exportData =
+        enableRowSelection && Object.keys(rowSelection).length > 0
+          ? table.getFilteredSelectedRowModel().rows.map((row) => row.original)
+          : data;
 
       const columnKeys = columns
         .filter((col) => {
-          const accessorKey = "accessorKey" in col ? col.accessorKey : undefined;
+          const accessorKey =
+            "accessorKey" in col ? col.accessorKey : undefined;
           return accessorKey && typeof accessorKey === "string";
         })
         .map((col) => {
-          const accessorKey = "accessorKey" in col ? col.accessorKey : undefined;
+          const accessorKey =
+            "accessorKey" in col ? col.accessorKey : undefined;
           return typeof accessorKey === "string" ? accessorKey : "";
         })
         .filter(Boolean);
@@ -309,9 +319,10 @@ export function DataTable<TData extends Record<string, unknown>>({
   );
 
   const selectedRowCount = Object.keys(rowSelection).length;
-  const filteredRowCount = serverSidePagination && totalCount 
-    ? totalCount 
-    : table.getFilteredRowModel().rows.length;
+  const filteredRowCount =
+    serverSidePagination && totalCount
+      ? totalCount
+      : table.getFilteredRowModel().rows.length;
 
   return (
     <Card className={cn("h-full flex flex-col", className)}>
@@ -321,7 +332,9 @@ export function DataTable<TData extends Record<string, unknown>>({
             <div className="flex-1">
               {title && <CardTitle>{title}</CardTitle>}
               {description && (
-                <p className="text-sm text-muted-foreground mt-1">{description}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {description}
+                </p>
               )}
             </div>
             {enableExport && (
@@ -429,9 +442,10 @@ export function DataTable<TData extends Record<string, unknown>>({
                         <TableHead
                           key={header.id}
                           style={{
-                            width: enableColumnResizing && header.getSize() !== 150
-                              ? `${header.getSize()}px`
-                              : undefined,
+                            width:
+                              enableColumnResizing && header.getSize() !== 150
+                                ? `${header.getSize()}px`
+                                : undefined,
                           }}
                         >
                           {header.isPlaceholder
@@ -465,9 +479,7 @@ export function DataTable<TData extends Record<string, unknown>>({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className={cn(
-                        row.getIsSelected() && "bg-muted/50",
-                      )}
+                      className={cn(row.getIsSelected() && "bg-muted/50")}
                     >
                       {enableRowSelection && (
                         <TableCell>
@@ -484,10 +496,11 @@ export function DataTable<TData extends Record<string, unknown>>({
                         <TableCell
                           key={cell.id}
                           style={{
-                            width: enableColumnResizing &&
+                            width:
+                              enableColumnResizing &&
                               cell.column.getSize() !== 150
-                              ? `${cell.column.getSize()}px`
-                              : undefined,
+                                ? `${cell.column.getSize()}px`
+                                : undefined,
                           }}
                         >
                           {flexRender(
