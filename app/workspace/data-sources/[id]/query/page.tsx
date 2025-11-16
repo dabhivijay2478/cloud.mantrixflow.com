@@ -37,7 +37,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
@@ -151,7 +151,7 @@ export default function DataSourceQueryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dataSourceId = params.id as string;
-  const { dataSources, savedQueries, addSavedQuery, currentOrganization } =
+  const { dataSources, addSavedQuery, currentOrganization } =
     useWorkspaceStore();
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<"query" | "dataset">(
@@ -388,15 +388,22 @@ export default function DataSourceQueryPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-4">
-              <Tabs value={activeTab} onValueChange={(v) => {
-                const newTab = v as "query" | "dataset";
-                setActiveTab(newTab);
-                if (newTab === "dataset") {
-                  router.push(`/workspace/data-sources/${dataSourceId}/query?tab=dataset`);
-                } else {
-                  router.push(`/workspace/data-sources/${dataSourceId}/query`);
-                }
-              }}>
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => {
+                  const newTab = v as "query" | "dataset";
+                  setActiveTab(newTab);
+                  if (newTab === "dataset") {
+                    router.push(
+                      `/workspace/data-sources/${dataSourceId}/query?tab=dataset`,
+                    );
+                  } else {
+                    router.push(
+                      `/workspace/data-sources/${dataSourceId}/query`,
+                    );
+                  }
+                }}
+              >
                 <TabsList>
                   <TabsTrigger value="query">Query</TabsTrigger>
                   <TabsTrigger value="dataset">Dataset</TabsTrigger>
@@ -427,14 +434,6 @@ export default function DataSourceQueryPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  title="Copy link"
-                >
-                  <Link2 className="h-4 w-4" />
-                </Button>
-                <Button
                   onClick={handleExecuteQuery}
                   disabled={loading || !query.trim()}
                   size="sm"
@@ -460,7 +459,9 @@ export default function DataSourceQueryPage() {
                       className="h-8"
                       onClick={() => {
                         setActiveTab("dataset");
-                        router.push(`/workspace/data-sources/${dataSourceId}/query?tab=dataset`);
+                        router.push(
+                          `/workspace/data-sources/${dataSourceId}/query?tab=dataset`,
+                        );
                       }}
                     >
                       <Save className="h-4 w-4 mr-2" />
@@ -468,7 +469,11 @@ export default function DataSourceQueryPage() {
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
                           <Download className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -476,10 +481,14 @@ export default function DataSourceQueryPage() {
                         <DropdownMenuItem onClick={() => handleDownload("csv")}>
                           Download as CSV
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownload("json")}>
+                        <DropdownMenuItem
+                          onClick={() => handleDownload("json")}
+                        >
                           Download as JSON
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                        <DropdownMenuItem
+                          onClick={() => handleDownload("excel")}
+                        >
                           Download as Excel
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -495,147 +504,145 @@ export default function DataSourceQueryPage() {
       {/* Main Content */}
       <div className="flex-1 min-h-0">
         {activeTab === "query" ? (
-          <>
-            {shouldShowSQLEditor ? (
-          <div className="flex h-full">
-            {/* Tables Sidebar - Fixed width based on collapsed state */}
-            <div
-              className={cn(
-                "shrink-0 transition-all duration-200 border-r",
-                sidebarCollapsed ? "w-16" : "w-64",
-              )}
-            >
-              <TableNavigation
-                tables={dataSource.tables || []}
-                onTableSelect={handleTableSelect}
-                selectedTable={selectedTable}
-                defaultCollapsed={sidebarCollapsed}
-                onCollapsedChange={setSidebarCollapsed}
-              />
-            </div>
+          shouldShowSQLEditor ? (
+            <div className="flex h-full">
+              {/* Tables Sidebar - Fixed width based on collapsed state */}
+              <div
+                className={cn(
+                  "shrink-0 transition-all duration-200 border-r",
+                  sidebarCollapsed ? "w-16" : "w-64",
+                )}
+              >
+                <TableNavigation
+                  tables={dataSource.tables || []}
+                  onTableSelect={handleTableSelect}
+                  selectedTable={selectedTable}
+                  defaultCollapsed={sidebarCollapsed}
+                  onCollapsedChange={setSidebarCollapsed}
+                />
+              </div>
 
-            {/* Editor and Results */}
-            <div className="flex-1 min-w-0">
-              {resultsFullScreen && results ? (
-                // Full-screen results view
-                <div className="h-full flex flex-col bg-background">
-                  <div className="flex items-center justify-between p-4 border-b shrink-0">
-                    <h2 className="text-sm font-medium">Query Results</h2>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setResultsFullScreen(false)}
-                      className="h-8"
-                    >
-                      <Minimize2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex-1 min-h-0">
-                    <SQLResultViewer
-                      columns={results.columns}
-                      rows={results.rows}
-                      loading={loading}
-                      error={_error}
-                      fullScreen={resultsFullScreen}
-                      onFullScreen={setResultsFullScreen}
-                      onDownload={handleDownload}
-                    />
-                  </div>
-                </div>
-              ) : (
-                // Normal split view
-                <ResizablePanelGroup
-                  direction="vertical"
-                  className="h-full"
-                  key={results ? "with-results" : "no-results"}
-                >
-                  {/* Query Editor */}
-                  <ResizablePanel
-                    id="editor-panel"
-                    defaultSize={results ? editorSize : 100}
-                    minSize={20}
-                    maxSize={results ? 80 : 100}
-                    collapsible={!!results}
-                    onResize={(size) => {
-                      if (results) {
-                        setEditorSize(size);
-                      }
-                    }}
-                  >
-                    <div className="h-full flex flex-col border-b">
-                      <SQLEditor
-                        value={query}
-                        onChange={setQuery}
-                        language={language}
-                        onMount={(editor) => {
-                          editorRef.current = editor as {
-                            setValue: (value: string) => void;
-                          };
-                        }}
-                        className="h-full"
+              {/* Editor and Results */}
+              <div className="flex-1 min-w-0">
+                {resultsFullScreen && results ? (
+                  // Full-screen results view
+                  <div className="h-full flex flex-col bg-background">
+                    <div className="flex items-center justify-between p-4 border-b shrink-0">
+                      <h2 className="text-sm font-medium">Query Results</h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setResultsFullScreen(false)}
+                        className="h-8"
+                      >
+                        <Minimize2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                      <SQLResultViewer
+                        columns={results.columns}
+                        rows={results.rows}
+                        loading={loading}
+                        error={_error}
+                        fullScreen={resultsFullScreen}
+                        onFullScreen={setResultsFullScreen}
+                        onDownload={handleDownload}
                       />
                     </div>
-                  </ResizablePanel>
-
-                  {results && (
-                    <>
-                      <ResizableHandle withHandle className="bg-border" />
-                      {/* Results */}
-                      <ResizablePanel
-                        id="results-panel"
-                        defaultSize={Math.max(
-                          20,
-                          Math.min(80, 100 - editorSize),
-                        )}
-                        minSize={20}
-                        maxSize={80}
-                        collapsible
-                      >
-                        <SQLResultViewer
-                          columns={results.columns}
-                          rows={results.rows}
-                          loading={loading}
-                          error={_error}
-                          fullScreen={resultsFullScreen}
-                          onFullScreen={setResultsFullScreen}
-                          onDownload={handleDownload}
+                  </div>
+                ) : (
+                  // Normal split view
+                  <ResizablePanelGroup
+                    direction="vertical"
+                    className="h-full"
+                    key={results ? "with-results" : "no-results"}
+                  >
+                    {/* Query Editor */}
+                    <ResizablePanel
+                      id="editor-panel"
+                      defaultSize={results ? editorSize : 100}
+                      minSize={20}
+                      maxSize={results ? 80 : 100}
+                      collapsible={!!results}
+                      onResize={(size) => {
+                        if (results) {
+                          setEditorSize(size);
+                        }
+                      }}
+                    >
+                      <div className="h-full flex flex-col border-b">
+                        <SQLEditor
+                          value={query}
+                          onChange={setQuery}
+                          language={language}
+                          onMount={(editor) => {
+                            editorRef.current = editor as {
+                              setValue: (value: string) => void;
+                            };
+                          }}
+                          className="h-full"
                         />
-                      </ResizablePanel>
-                    </>
-                  )}
-                </ResizablePanelGroup>
-              )}
-            </div>
-          </div>
-        ) : (
-          // View for non-SQL data sources
-          <div className="flex-1 min-h-0 flex">
-            {/* Tables Sidebar - Fixed width based on collapsed state */}
-            <div
-              className={cn(
-                "shrink-0 transition-all duration-200 border-r",
-                sidebarCollapsed ? "w-16" : "w-64",
-              )}
-            >
-              <TableNavigation
-                tables={dataSource.tables || []}
-                onTableSelect={handleTableSelect}
-                selectedTable={selectedTable}
-                defaultCollapsed={sidebarCollapsed}
-                onCollapsedChange={setSidebarCollapsed}
-              />
-            </div>
-            <div className="flex-1 min-w-0 flex items-center justify-center">
-              <div className="text-center">
-                <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Select a table from the sidebar to view data
-                </p>
+                      </div>
+                    </ResizablePanel>
+
+                    {results && (
+                      <>
+                        <ResizableHandle withHandle className="bg-border" />
+                        {/* Results */}
+                        <ResizablePanel
+                          id="results-panel"
+                          defaultSize={Math.max(
+                            20,
+                            Math.min(80, 100 - editorSize),
+                          )}
+                          minSize={20}
+                          maxSize={80}
+                          collapsible
+                        >
+                          <SQLResultViewer
+                            columns={results.columns}
+                            rows={results.rows}
+                            loading={loading}
+                            error={_error}
+                            fullScreen={resultsFullScreen}
+                            onFullScreen={setResultsFullScreen}
+                            onDownload={handleDownload}
+                          />
+                        </ResizablePanel>
+                      </>
+                    )}
+                  </ResizablePanelGroup>
+                )}
               </div>
             </div>
-          </div>
-        )}
-          </>
+          ) : (
+            // View for non-SQL data sources
+            <div className="flex-1 min-h-0 flex">
+              {/* Tables Sidebar - Fixed width based on collapsed state */}
+              <div
+                className={cn(
+                  "shrink-0 transition-all duration-200 border-r",
+                  sidebarCollapsed ? "w-16" : "w-64",
+                )}
+              >
+                <TableNavigation
+                  tables={dataSource.tables || []}
+                  onTableSelect={handleTableSelect}
+                  selectedTable={selectedTable}
+                  defaultCollapsed={sidebarCollapsed}
+                  onCollapsedChange={setSidebarCollapsed}
+                />
+              </div>
+              <div className="flex-1 min-w-0 flex items-center justify-center">
+                <div className="text-center">
+                  <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    Select a table from the sidebar to view data
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
         ) : (
           <div className="h-full overflow-auto">
             <DatasetConfigurationEmbedded
@@ -679,10 +686,7 @@ export default function DataSourceQueryPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowSaveDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
               Cancel
             </Button>
             <Button onClick={handleConfirmSave}>

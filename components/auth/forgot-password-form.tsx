@@ -1,9 +1,8 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useActionState, useEffect } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -17,64 +16,45 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  type AuthActionResult,
+  forgotPasswordAction,
+} from "@/lib/actions/auth";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import {
-  type ForgotPasswordInput,
-  forgotPasswordSchema,
-} from "@/lib/validations/auth";
 
 export function ForgotPasswordForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { forgotPassword, error: authError, setError } = useAuthStore();
+  const { setError } = useAuthStore();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ForgotPasswordInput>({
-    resolver: zodResolver(forgotPasswordSchema),
-  });
+  const [state, formAction, isPending] = useActionState<
+    AuthActionResult | null,
+    FormData
+  >(forgotPasswordAction, null);
 
-  const onSubmit = async (data: ForgotPasswordInput) => {
-    setIsSubmitting(true);
-    setError(null);
-
-    const { error } = await forgotPassword(data.email);
-
-    if (error) {
-      setIsSubmitting(false);
-      toast.error(
-        "Failed to send reset email",
-        error.message ||
-          "Unable to send password reset email. Please try again.",
-      );
-      return;
+  // Handle form state changes
+  useEffect(() => {
+    if (state?.success) {
+      toast.success("Reset email sent!", state.message);
+      // Redirect back to login after a short delay
+      setTimeout(() => {
+        router.push("/auth/login");
+      }, 2000);
+    } else if (state && !state.success) {
+      setError(state.error);
+      toast.error("Failed to send reset email", state.error);
     }
-
-    // Show success toast
-    toast.success(
-      "Reset email sent!",
-      "Please check your email for password reset instructions.",
-    );
-
-    setIsSubmitting(false);
-
-    // Redirect back to login after a short delay
-    setTimeout(() => {
-      router.push("/auth/login");
-    }, 2000);
-  };
+  }, [state, router, setError]);
 
   return (
     <form
+      action={formAction}
       className={cn("flex flex-col gap-6", className)}
-      onSubmit={handleSubmit(onSubmit)}
+      noValidate
       {...props}
     >
       <FieldGroup>
@@ -83,33 +63,51 @@ export function ForgotPasswordForm({
           description="Enter your email address and we'll send you a link to reset your password"
         />
 
-        <AuthErrorDisplay error={authError} />
+        {state && !state.success && <AuthErrorDisplay error={state.error} />}
+
+        {state?.success && (
+          <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+            {state.message}
+          </div>
+        )}
 
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input
             id="email"
+            name="email"
             type="email"
             placeholder="m@example.com"
             autoComplete="email"
-            aria-invalid={errors.email ? "true" : "false"}
-            {...register("email")}
+            required
+            aria-invalid={
+              state && !state.success && state.fieldErrors?.email
+                ? "true"
+                : "false"
+            }
+            aria-describedby={
+              state && !state.success && state.fieldErrors?.email
+                ? "email-error"
+                : undefined
+            }
           />
-          <FieldError errors={errors.email ? [errors.email] : undefined} />
+          {state && !state.success && state.fieldErrors?.email && (
+            <FieldError id="email-error" errors={state.fieldErrors.email} />
+          )}
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Sending..." : "Send reset email"}
+          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+            {isPending ? "Sending..." : "Send reset email"}
           </Button>
         </Field>
 
         <Field>
           <FieldDescription className="text-center">
             Remember your password?{" "}
-            <a href="/auth/login" className="underline underline-offset-4">
+            <Link href="/auth/login" className="underline underline-offset-4">
               Back to login
-            </a>
+            </Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

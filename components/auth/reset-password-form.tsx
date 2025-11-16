@@ -1,9 +1,8 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Suspense, useActionState, useEffect, useState } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -17,13 +16,10 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
+import { type AuthActionResult, resetPasswordAction } from "@/lib/actions/auth";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import {
-  type ResetPasswordInput,
-  resetPasswordSchema,
-} from "@/lib/validations/auth";
 
 function ResetPasswordFormContent({
   className,
@@ -31,76 +27,82 @@ function ResetPasswordFormContent({
 }: React.ComponentProps<"form">) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidToken, setIsValidToken] = useState(false);
-  const { resetPassword, error: authError, setError } = useAuthStore();
+  const [isCheckingToken, setIsCheckingToken] = useState(true);
+  const { setError } = useAuthStore();
 
-  // Check for access token in URL
+  const [state, formAction, isPending] = useActionState<
+    AuthActionResult | null,
+    FormData
+  >(resetPasswordAction, null);
+
+  // Check for access token in URL and set session
   useEffect(() => {
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
+    const checkToken = async () => {
+      const accessToken = searchParams.get("access_token");
+      const refreshToken = searchParams.get("refresh_token");
 
-    if (accessToken && refreshToken) {
-      setIsValidToken(true);
-      // Set the session with the tokens from URL
-      const { supabase } = require("@/lib/supabase/client");
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-    } else {
-      toast.error(
-        "Invalid reset link",
-        "This password reset link is invalid or has expired.",
-      );
-      setTimeout(() => {
-        router.push("/auth/forgot-password");
-      }, 3000);
-    }
+      if (accessToken && refreshToken) {
+        try {
+          const { supabase } = await import("@/lib/supabase/client");
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (error) {
+            toast.error(
+              "Invalid reset link",
+              "This password reset link is invalid or has expired.",
+            );
+            setTimeout(() => {
+              router.push("/auth/forgot-password");
+            }, 3000);
+            setIsCheckingToken(false);
+            return;
+          }
+
+          setIsValidToken(true);
+        } catch (_error) {
+          toast.error(
+            "Invalid reset link",
+            "This password reset link is invalid or has expired.",
+          );
+          setTimeout(() => {
+            router.push("/auth/forgot-password");
+          }, 3000);
+        }
+      } else {
+        toast.error(
+          "Invalid reset link",
+          "This password reset link is invalid or has expired.",
+        );
+        setTimeout(() => {
+          router.push("/auth/forgot-password");
+        }, 3000);
+      }
+      setIsCheckingToken(false);
+    };
+
+    checkToken();
   }, [searchParams, router]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ResetPasswordInput>({
-    resolver: zodResolver(resetPasswordSchema),
-  });
-
-  const onSubmit = async (data: ResetPasswordInput) => {
-    if (!isValidToken) {
-      toast.error(
-        "Invalid session",
-        "Please request a new password reset link.",
-      );
-      return;
+  // Handle form state changes
+  useEffect(() => {
+    if (state?.success) {
+      toast.success("Password updated!", state.message);
+      // Redirect handled by Server Action
+    } else if (state && !state.success) {
+      setError(state.error);
+      toast.error("Password update failed", state.error);
     }
+  }, [state, setError]);
 
-    setIsSubmitting(true);
-    setError(null);
-
-    const { error } = await resetPassword(data.password);
-
-    if (error) {
-      setIsSubmitting(false);
-      toast.error(
-        "Password update failed",
-        error.message || "Failed to update password. Please try again.",
-      );
-      return;
-    }
-
-    // Show success toast
-    toast.success(
-      "Password updated!",
-      "Your password has been successfully updated. You can now login with your new password.",
+  if (isCheckingToken) {
+    return (
+      <div className="flex items-center justify-center p-4">Loading...</div>
     );
-
-    // Redirect to login
-    setTimeout(() => {
-      router.push("/auth/login");
-    }, 2000);
-  };
+  }
 
   if (!isValidToken) {
     return (
@@ -121,8 +123,9 @@ function ResetPasswordFormContent({
 
   return (
     <form
+      action={formAction}
       className={cn("flex flex-col gap-6", className)}
-      onSubmit={handleSubmit(onSubmit)}
+      noValidate
       {...props}
     >
       <FieldGroup>
@@ -131,19 +134,32 @@ function ResetPasswordFormContent({
           description="Enter your new password below"
         />
 
-        <AuthErrorDisplay error={authError} />
+        {state && !state.success && <AuthErrorDisplay error={state.error} />}
 
         <Field>
           <FieldLabel htmlFor="password">New Password</FieldLabel>
           <PasswordInput
             id="password"
+            name="password"
             autoComplete="new-password"
-            aria-invalid={errors.password ? "true" : "false"}
-            {...register("password")}
+            required
+            aria-invalid={
+              state && !state.success && state.fieldErrors?.password
+                ? "true"
+                : "false"
+            }
+            aria-describedby={
+              state && !state.success && state.fieldErrors?.password
+                ? "password-error"
+                : undefined
+            }
           />
-          <FieldError
-            errors={errors.password ? [errors.password] : undefined}
-          />
+          {state && !state.success && state.fieldErrors?.password && (
+            <FieldError
+              id="password-error"
+              errors={state.fieldErrors.password}
+            />
+          )}
         </Field>
 
         <Field>
@@ -152,29 +168,40 @@ function ResetPasswordFormContent({
           </FieldLabel>
           <PasswordInput
             id="confirm-password"
+            name="confirmPassword"
             autoComplete="new-password"
-            aria-invalid={errors.confirmPassword ? "true" : "false"}
-            {...register("confirmPassword")}
-          />
-          <FieldError
-            errors={
-              errors.confirmPassword ? [errors.confirmPassword] : undefined
+            required
+            aria-invalid={
+              state && !state.success && state.fieldErrors?.confirmPassword
+                ? "true"
+                : "false"
+            }
+            aria-describedby={
+              state && !state.success && state.fieldErrors?.confirmPassword
+                ? "confirm-password-error"
+                : undefined
             }
           />
+          {state && !state.success && state.fieldErrors?.confirmPassword && (
+            <FieldError
+              id="confirm-password-error"
+              errors={state.fieldErrors.confirmPassword}
+            />
+          )}
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Updating password..." : "Update password"}
+          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+            {isPending ? "Updating password..." : "Update password"}
           </Button>
         </Field>
 
         <Field>
           <FieldDescription className="text-center">
             Remember your password?{" "}
-            <a href="/auth/login" className="underline underline-offset-4">
+            <Link href="/auth/login" className="underline underline-offset-4">
               Back to login
-            </a>
+            </Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

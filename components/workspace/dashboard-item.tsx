@@ -1,7 +1,6 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, MoreVertical, MoveDown, MoveUp, X } from "lucide-react";
 import type * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -66,28 +65,33 @@ export function DashboardItem({
   const resizeRef = useRef<HTMLDivElement>(null);
   const prevDeltaRef = useRef({ x: 0, y: 0 });
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: component.id,
-    data: {
-      type: "dashboard-item",
-      componentId: component.id,
-    },
-    disabled: isResizing,
-  });
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: component.id,
+      data: {
+        type: "dashboard-item",
+        componentId: component.id,
+      },
+      disabled: isResizing,
+    });
 
   // Handle position updates during drag (like BasicSetup example)
   useEffect(() => {
     if (isDragging && transform && onPositionUpdate) {
       const deltaX = transform.x - prevDeltaRef.current.x;
       const deltaY = transform.y - prevDeltaRef.current.y;
-      
+
       if (deltaX !== 0 || deltaY !== 0) {
         onPositionUpdate(component.id, { x: deltaX, y: deltaY });
         prevDeltaRef.current = { x: transform.x, y: transform.y };
       }
     }
 
-    if (!isDragging && prevDeltaRef.current.x !== 0 && prevDeltaRef.current.y !== 0) {
+    if (
+      !isDragging &&
+      prevDeltaRef.current.x !== 0 &&
+      prevDeltaRef.current.y !== 0
+    ) {
       // Drag ended
       prevDeltaRef.current = { x: 0, y: 0 };
       if (onDragEnd) {
@@ -97,9 +101,13 @@ export function DashboardItem({
   }, [isDragging, transform, onPositionUpdate, onDragEnd, component.id]);
 
   // Calculate position: use currentPosition from parent during drag, otherwise use component.position
-  const left = currentPosition ? currentPosition.x : component.position.x * gridSize;
-  const top = currentPosition ? currentPosition.y : component.position.y * gridSize;
-  
+  const left = currentPosition
+    ? currentPosition.x
+    : component.position.x * gridSize;
+  const top = currentPosition
+    ? currentPosition.y
+    : component.position.y * gridSize;
+
   const width = component.position.w * gridSize;
   const height = component.position.h * gridSize;
 
@@ -140,21 +148,33 @@ export function DashboardItem({
       let newYPixels = component.position.y * gridSize;
 
       if (resizeHandle.includes("e")) {
-        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStart.width + deltaX));
+        newWidth = Math.max(
+          minWidth,
+          Math.min(maxWidth, resizeStart.width + deltaX),
+        );
       }
       if (resizeHandle.includes("s")) {
-        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeStart.height + deltaY));
+        newHeight = Math.max(
+          minHeight,
+          Math.min(maxHeight, resizeStart.height + deltaY),
+        );
       }
 
       if (resizeHandle.includes("w")) {
-        const newW = Math.max(minWidth, Math.min(maxWidth, resizeStart.width - deltaX));
+        const newW = Math.max(
+          minWidth,
+          Math.min(maxWidth, resizeStart.width - deltaX),
+        );
         const deltaW = resizeStart.width - newW;
         const currentXPixels = component.position.x * gridSize;
         newXPixels = currentXPixels + deltaW;
         newWidth = newW;
       }
       if (resizeHandle.includes("n")) {
-        const newH = Math.max(minHeight, Math.min(maxHeight, resizeStart.height - deltaY));
+        const newH = Math.max(
+          minHeight,
+          Math.min(maxHeight, resizeStart.height - deltaY),
+        );
         const deltaH = resizeStart.height - newH;
         const currentYPixels = component.position.y * gridSize;
         newYPixels = currentYPixels + deltaH;
@@ -222,9 +242,9 @@ export function DashboardItem({
     };
 
     return (
-      <div
+      <button
         key={handle}
-        role="button"
+        type="button"
         tabIndex={0}
         aria-label={`Resize ${handle} handle`}
         className={cn(
@@ -263,10 +283,14 @@ export function DashboardItem({
         top: `${top}px`,
         width: `${width}px`,
         height: `${height}px`,
-        zIndex: isDragging || isResizing ? (component.zIndex || 1) + 1000 : component.zIndex || 1,
+        zIndex:
+          isDragging || isResizing
+            ? (component.zIndex || 1) + 1000
+            : component.zIndex || 1,
         overflow: "visible",
       }}
     >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: Role is set conditionally when interactive handlers are present */}
       <div
         ref={(node) => {
           setNodeRef(node);
@@ -277,26 +301,47 @@ export function DashboardItem({
         className={cn(
           "relative w-full h-full bg-transparent border-2 rounded-lg shadow-sm",
           "transition-all duration-200 ease-out",
-          isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent",
+          isSelected
+            ? "border-primary ring-2 ring-primary/20"
+            : "border-transparent",
           isDragging && "opacity-70 cursor-grabbing border-primary/50",
           isHovered && !isResizing && !isDragging && "border-border",
           isResizing && "border-primary/50 cursor-default",
           !isResizing && !isDragging && "cursor-move",
-          hasCollision && "border-destructive ring-2 ring-destructive/30 animate-pulse",
+          hasCollision &&
+            "border-destructive ring-2 ring-destructive/30 animate-pulse",
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onClick={(e) => {
-          if (!isResizing && onSelect) {
-            e.stopPropagation();
-            onSelect(component.id);
-          }
-        }}
+        onClick={
+          onSelect
+            ? (e) => {
+                if (!isResizing) {
+                  e.stopPropagation();
+                  onSelect(component.id);
+                }
+              }
+            : undefined
+        }
+        onKeyDown={
+          onSelect
+            ? (e) => {
+                if (!isResizing && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onSelect(component.id);
+                }
+              }
+            : undefined
+        }
+        role={onSelect ? "button" : undefined}
+        tabIndex={onSelect ? 0 : undefined}
+        {...(onSelect && { "aria-label": "Select component" })}
       >
         {/* Drag Handle */}
         {!isResizing && (
-          <div
-            role="button"
+          <button
+            type="button"
             tabIndex={-1}
             aria-label="Drag handle"
             className={cn(
@@ -312,11 +357,14 @@ export function DashboardItem({
                 isDragging ? "text-primary" : "text-muted-foreground",
               )}
             />
-          </div>
+          </button>
         )}
 
         {/* Component Content */}
-        <div className="h-full w-full overflow-hidden" style={{ minWidth: 0, minHeight: 0 }}>
+        <div
+          className="h-full w-full overflow-hidden"
+          style={{ minWidth: 0, minHeight: 0 }}
+        >
           {children}
         </div>
 
@@ -365,17 +413,27 @@ export function DashboardItem({
                 <MoreVertical className="w-3.5 h-3.5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => onLayerChange(component.id, "front")}>
+            <DropdownMenuContent
+              align="end"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DropdownMenuItem
+                onClick={() => onLayerChange(component.id, "front")}
+              >
                 <MoveUp className="w-4 h-4 mr-2" />
                 Bring to Front
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onLayerChange(component.id, "back")}>
+              <DropdownMenuItem
+                onClick={() => onLayerChange(component.id, "back")}
+              >
                 <MoveDown className="w-4 h-4 mr-2" />
                 Send to Back
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onDelete(component.id)} className="text-destructive">
+              <DropdownMenuItem
+                onClick={() => onDelete(component.id)}
+                className="text-destructive"
+              >
                 <X className="w-4 h-4 mr-2" />
                 Delete
               </DropdownMenuItem>

@@ -8,11 +8,15 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import {
   ArrowUpDown,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Download,
   Loader2,
   Maximize2,
@@ -23,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -45,6 +50,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToJSON,
+} from "@/lib/utils/data-export";
 
 export interface SQLResultViewerProps {
   columns: string[];
@@ -61,6 +71,23 @@ export interface SQLResultViewerProps {
  * SQL Result Viewer Component
  * @description A reusable component to display SQL query results in a data table
  */
+// Debounce hook for search input
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function SQLResultViewer({
   columns,
   rows,
@@ -72,6 +99,9 @@ export function SQLResultViewer({
   onDownload,
 }: SQLResultViewerProps) {
   const [globalFilter, setGlobalFilter] = React.useState("");
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const debouncedGlobalFilter = useDebounce(globalFilter, 300);
 
   // Create column definitions from column names
   const tableColumns: ColumnDef<Record<string, unknown>>[] = React.useMemo(
@@ -86,9 +116,10 @@ export function SQLResultViewer({
                 column.toggleSorting(column.getIsSorted() === "asc")
               }
               className="h-8 px-2"
+              aria-label={`Sort by ${col}`}
             >
               {col}
-              <ArrowUpDown className="ml-2 h-3 w-3" />
+              <ArrowUpDown className="ml-2 h-3 w-3" aria-hidden="true" />
             </Button>
           );
         },
@@ -106,6 +137,7 @@ export function SQLResultViewer({
           }
           return <span className="font-mono text-sm">{String(value)}</span>;
         },
+        enableHiding: true,
       })),
     [columns],
   );
@@ -123,51 +155,43 @@ export function SQLResultViewer({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: "includesString",
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
-      globalFilter,
+      globalFilter: debouncedGlobalFilter,
       pagination,
+      columnVisibility,
     },
     onPaginationChange: setPagination,
     manualPagination: false,
   });
 
-  const handleDownload = (format: "csv" | "json" | "excel") => {
-    if (onDownload) {
-      onDownload(format);
-    } else {
-      // Default download implementation
-      if (format === "csv") {
-        const headers = columns.join(",");
-        const csvRows = rows.map((row) =>
-          columns
-            .map((col) => {
-              const val = row[col];
-              if (val === null || val === undefined) return "";
-              if (typeof val === "object") return JSON.stringify(val);
-              return String(val).replace(/"/g, '""');
-            })
-            .join(","),
-        );
-        const csv = [headers, ...csvRows].join("\n");
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "query-results.csv";
-        a.click();
-        URL.revokeObjectURL(url);
-      } else if (format === "json") {
-        const json = JSON.stringify(rows, null, 2);
-        const blob = new Blob([json], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "query-results.json";
-        a.click();
-        URL.revokeObjectURL(url);
+  const handleDownload = React.useCallback(
+    (format: "csv" | "json" | "excel") => {
+      if (onDownload) {
+        onDownload(format);
+      } else {
+        // Use visible columns only
+        const visibleColumns = columns.filter((col) => {
+          const column = table.getColumn(col);
+          return column ? column.getIsVisible() : true;
+        });
+
+        // Get filtered data
+        const exportData = table
+          .getFilteredRowModel()
+          .rows.map((row) => row.original);
+
+        if (format === "csv") {
+          exportToCSV(exportData, visibleColumns, "query-results.csv");
+        } else if (format === "json") {
+          exportToJSON(exportData, "query-results.json");
+        } else if (format === "excel") {
+          exportToExcel(exportData, visibleColumns, "query-results.xlsx");
+        }
       }
-    }
-  };
+    },
+    [columns, onDownload, table],
+  );
 
   if (loading) {
     return (
@@ -206,18 +230,48 @@ export function SQLResultViewer({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b shrink-0">
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">{rows.length} rows</Badge>
+          <Badge variant="secondary" aria-label="Total rows">
+            {table.getFilteredRowModel().rows.length} rows
+          </Badge>
           {columns.length > 0 && (
-            <Badge variant="outline">{columns.length} columns</Badge>
+            <Badge variant="outline" aria-label="Total columns">
+              {columns.length} columns
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8">
+                Columns <ChevronDown className="ml-2 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {onFullScreen && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onFullScreen(!fullScreen)}
               className="h-8"
+              aria-label={fullScreen ? "Exit full screen" : "Enter full screen"}
             >
               {fullScreen ? (
                 <Minimize2 className="h-4 w-4" />
@@ -226,26 +280,29 @@ export function SQLResultViewer({
               )}
             </Button>
           )}
-          {onDownload && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDownload("csv")}>
-                  Download as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownload("json")}>
-                  Download as JSON
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownload("excel")}>
-                  Download as Excel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                aria-label="Download results"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleDownload("csv")}>
+                Download as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownload("json")}>
+                Download as JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                Download as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -256,6 +313,7 @@ export function SQLResultViewer({
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="max-w-sm"
+          aria-label="Search table results"
         />
       </div>
 
@@ -269,19 +327,27 @@ export function SQLResultViewer({
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead
-                            key={header.id}
-                            className="whitespace-nowrap sticky top-0 bg-background z-10"
-                          >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext(),
-                                )}
-                          </TableHead>
-                        ))}
+                        {headerGroup.headers
+                          .filter((header) => header.column.getIsVisible())
+                          .map((header) => (
+                            <TableHead
+                              key={header.id}
+                              className="whitespace-nowrap sticky top-0 bg-background z-10"
+                              style={{
+                                width:
+                                  header.getSize() !== 150
+                                    ? `${header.getSize()}px`
+                                    : undefined,
+                              }}
+                            >
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext(),
+                                  )}
+                            </TableHead>
+                          ))}
                       </TableRow>
                     ))}
                   </TableHeader>
@@ -296,6 +362,12 @@ export function SQLResultViewer({
                             <TableCell
                               key={cell.id}
                               className="whitespace-nowrap"
+                              style={{
+                                width:
+                                  cell.column.getSize() !== 150
+                                    ? `${cell.column.getSize()}px`
+                                    : undefined,
+                              }}
                             >
                               {flexRender(
                                 cell.column.columnDef.cell,
@@ -308,10 +380,10 @@ export function SQLResultViewer({
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={columns.length}
+                          colSpan={table.getVisibleLeafColumns().length}
                           className="h-24 text-center"
                         >
-                          No results found.
+                          {loading ? "Loading..." : "No results found."}
                         </TableCell>
                       </TableRow>
                     )}
@@ -378,10 +450,9 @@ export function SQLResultViewer({
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
               className="h-8 w-8 p-0"
+              aria-label="Go to first page"
             >
-              <span className="sr-only">Go to first page</span>
-              <ChevronLeft className="h-4 w-4" />
-              <ChevronLeft className="h-4 w-4 -ml-2" />
+              <ChevronsLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
@@ -389,8 +460,8 @@ export function SQLResultViewer({
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
               className="h-8 w-8 p-0"
+              aria-label="Go to previous page"
             >
-              <span className="sr-only">Go to previous page</span>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
@@ -399,8 +470,8 @@ export function SQLResultViewer({
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
               className="h-8 w-8 p-0"
+              aria-label="Go to next page"
             >
-              <span className="sr-only">Go to next page</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
@@ -409,10 +480,9 @@ export function SQLResultViewer({
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
               className="h-8 w-8 p-0"
+              aria-label="Go to last page"
             >
-              <span className="sr-only">Go to last page</span>
-              <ChevronRight className="h-4 w-4" />
-              <ChevronRight className="h-4 w-4 -ml-2" />
+              <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

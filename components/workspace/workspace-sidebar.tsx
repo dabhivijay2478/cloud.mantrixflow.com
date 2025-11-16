@@ -11,6 +11,7 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 import {
@@ -36,7 +37,10 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import {
+  type Organization,
+  useWorkspaceStore,
+} from "@/lib/stores/workspace-store";
 
 function OrganizationSwitcher({
   organizations,
@@ -44,20 +48,12 @@ function OrganizationSwitcher({
   onOrganizationChange,
   onCreateOrganization,
 }: {
-  organizations: Array<{ id: string; name: string; slug: string }>;
-  currentOrganization: { id: string; name: string; slug: string } | null;
-  onOrganizationChange: (org: {
-    id: string;
-    name: string;
-    slug: string;
-  }) => void;
+  organizations: Organization[];
+  currentOrganization: Organization | null;
+  onOrganizationChange: (org: Organization | null) => void;
   onCreateOrganization: () => void;
 }) {
   const { isMobile } = useSidebar();
-
-  if (!currentOrganization) {
-    return null;
-  }
 
   return (
     <SidebarMenu>
@@ -73,7 +69,7 @@ function OrganizationSwitcher({
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {currentOrganization.name}
+                  {currentOrganization?.name || "Select Organization"}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
                   Organization
@@ -91,19 +87,28 @@ function OrganizationSwitcher({
             <DropdownMenuLabel className="text-muted-foreground text-xs">
               Organizations
             </DropdownMenuLabel>
-            {organizations.map((org, index) => (
-              <DropdownMenuItem
-                key={org.id}
-                onClick={() => onOrganizationChange(org)}
-                className="gap-2 p-2"
-              >
+            {organizations.length > 0 ? (
+              organizations.map((org, index) => (
+                <DropdownMenuItem
+                  key={org.id}
+                  onClick={() => onOrganizationChange(org)}
+                  className="gap-2 p-2"
+                >
+                  <div className="flex size-6 items-center justify-center rounded-md border">
+                    <Building2 className="size-3.5 shrink-0" />
+                  </div>
+                  {org.name}
+                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled className="gap-2 p-2">
                 <div className="flex size-6 items-center justify-center rounded-md border">
                   <Building2 className="size-3.5 shrink-0" />
                 </div>
-                {org.name}
-                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                No organizations
               </DropdownMenuItem>
-            ))}
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="gap-2 p-2"
@@ -170,10 +175,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname === "/workspace"}
                   tooltip="Dashboard"
                 >
-                  <a href="/workspace">
+                  <Link href="/workspace">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -182,7 +187,7 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/dashboards")}
                   tooltip="Dashboards"
                 >
-                  <a href="/workspace/dashboards">
+                  <Link href="/workspace/dashboards">
                     <FileText className="h-4 w-4" />
                     <span>Dashboards</span>
                     {filteredDashboards.length > 0 && (
@@ -190,7 +195,7 @@ export function WorkspaceSidebar() {
                         {filteredDashboards.length}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -199,7 +204,7 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/data-sources")}
                   tooltip="Data Sources"
                 >
-                  <a href="/workspace/data-sources">
+                  <Link href="/workspace/data-sources">
                     <Database className="h-4 w-4" />
                     <span>Data Sources</span>
                     {filteredDataSources.length > 0 && (
@@ -207,7 +212,7 @@ export function WorkspaceSidebar() {
                         {filteredDataSources.length}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -216,10 +221,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/data-pipelines")}
                   tooltip="Data Pipelines"
                 >
-                  <a href="/workspace/data-pipelines">
+                  <Link href="/workspace/data-pipelines">
                     <GitBranch className="h-4 w-4" />
                     <span>Data Pipelines</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -236,10 +241,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/settings")}
                   tooltip="Settings"
                 >
-                  <a href="/workspace/settings">
+                  <Link href="/workspace/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -248,10 +253,10 @@ export function WorkspaceSidebar() {
                   isActive={pathname?.startsWith("/workspace/team")}
                   tooltip="Team"
                 >
-                  <a href="/workspace/team">
+                  <Link href="/workspace/team">
                     <Users className="h-4 w-4" />
                     <span>Team</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

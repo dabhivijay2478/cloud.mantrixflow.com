@@ -188,192 +188,216 @@ export function DataSourceTable({
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="border">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold text-primary"
-                    onClick={() => onSort("name")}
-                  >
-                    NAME
-                    {getSortIcon("name")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("connector")}
-                  >
-                    CONNECTOR
-                    {getSortIcon("connector")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("connections")}
-                  >
-                    CONNECTIONS
-                    {getSortIcon("connections")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("last-sync")}
-                  >
-                    LAST SYNC
-                    {getSortIcon("last-sync")}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 font-semibold"
-                    onClick={() => onSort("status")}
-                  >
-                    STATUS
-                    {getSortIcon("status")}
-                  </Button>
-                </TableHead>
-                <TableHead className="w-[50px]">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {getFilteredAndSortedDataSources().map((dataSource) => {
-                const connected = isConnected(dataSource.id);
-                const connectedData = getConnectedDataSource(dataSource.id);
-                const selectedTables =
-                  connectedData?.selectedTables ||
-                  (connectedData?.selectedTable
-                    ? [connectedData.selectedTable]
-                    : []);
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-b">
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("name")}
+                    >
+                      Name
+                      {getSortIcon("name")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("connector")}
+                    >
+                      Connector
+                      {getSortIcon("connector")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("connections")}
+                    >
+                      Connections
+                      {getSortIcon("connections")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("last-sync")}
+                    >
+                      Last Sync
+                      {getSortIcon("last-sync")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="h-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={() => onSort("status")}
+                    >
+                      Status
+                      {getSortIcon("status")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="w-[50px] h-12">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {getFilteredAndSortedDataSources().map((dataSource) => {
+                  const connected = isConnected(dataSource.id);
+                  const connectedData = getConnectedDataSource(dataSource.id);
+                  const selectedTables =
+                    connectedData?.selectedTables ||
+                    (connectedData?.selectedTable
+                      ? [connectedData.selectedTable]
+                      : []);
 
-                return (
-                  <TableRow key={dataSource.id} className="hover:bg-muted/50">
-                    <TableCell
-                      className="font-medium cursor-pointer"
+                  return (
+                    <TableRow
+                      key={dataSource.id}
+                      className="hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => onDataSourceClick(dataSource.id)}
                     >
-                      {dataSource.name}
-                    </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="shrink-0 w-5 h-5 flex items-center justify-center">
-                          {getIconComponent(dataSource.iconType, 20)}
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                            {getIconComponent(dataSource.iconType, 16)}
+                          </div>
+                          <span className="font-semibold">
+                            {dataSource.name}
+                          </span>
                         </div>
-                        <span className="capitalize">{dataSource.type}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      {connected && selectedTables.length > 0
-                        ? `${selectedTables.length} ${selectedTables.length === 1 ? "connection" : "connections"}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      {connectedData?.connectedAt
-                        ? new Date(
-                            connectedData.connectedAt,
-                          ).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell
-                      className="cursor-pointer"
-                      onClick={() => onDataSourceClick(dataSource.id)}
-                    >
-                      {connected ? (
-                        <Badge className="bg-green-500 text-white border-0">
-                          <Check className="h-3 w-3 mr-1" />
-                          Connected
-                        </Badge>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {connected && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  router.push(
-                                    `/workspace/data-sources/${dataSource.id}/query`,
-                                  );
-                                }}
-                              >
-                                <TableIcon className="mr-2 h-4 w-4" />
-                                View table navigation
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  if (onDisconnect) {
-                                    onDisconnect(dataSource.id);
-                                  }
-                                }}
-                                className="text-orange-600 focus:text-orange-600"
-                              >
-                                <Unlink className="mr-2 h-4 w-4" />
-                                Disconnect
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (onDelete) {
-                                onDelete(dataSource.id);
-                              }
-                            }}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                      <TableCell>
+                        <span className="capitalize text-sm text-muted-foreground">
+                          {dataSource.type}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {connected && selectedTables.length > 0 ? (
+                          <span className="text-sm font-medium">
+                            {selectedTables.length}{" "}
+                            {selectedTables.length === 1 ? "table" : "tables"}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {connectedData?.connectedAt ? (
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(
+                              connectedData.connectedAt,
+                            ).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {connected ? (
+                          <Badge className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-0 font-medium">
+                            <Check className="h-3 w-3 mr-1" />
+                            Connected
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            Not connected
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {connected && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    router.push(
+                                      `/workspace/data-sources/${dataSource.id}/query`,
+                                    );
+                                  }}
+                                >
+                                  <TableIcon className="mr-2 h-4 w-4" />
+                                  View table navigation
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    if (onDisconnect) {
+                                      onDisconnect(dataSource.id);
+                                    }
+                                  }}
+                                  className="text-orange-600 focus:text-orange-600"
+                                >
+                                  <Unlink className="mr-2 h-4 w-4" />
+                                  Disconnect
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (onDelete) {
+                                  onDelete(dataSource.id);
+                                }
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+      {getFilteredAndSortedDataSources().length === 0 && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              No data sources found
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {searchQuery
+                ? "Try adjusting your search or filters"
+                : "Get started by connecting a data source"}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

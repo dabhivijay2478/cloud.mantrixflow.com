@@ -1,7 +1,6 @@
 "use client";
 
-import { Database, Plus, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import {
   allDataSources,
@@ -10,15 +9,14 @@ import {
   DataSourceTable,
   mockTables,
 } from "@/components/data-sources";
+import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
-  const router = useRouter();
   const {
     dataSources,
     addDataSource,
@@ -219,28 +217,26 @@ export default function DataSourcesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Sources</h1>
-          <p className="text-muted-foreground">
-            Connect and manage your data sources
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {hasConnectedDataSources && !showGridView && (
-            <Button variant="outline" onClick={() => setShowGridView(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New source
-            </Button>
-          )}
-          {showGridView && (
-            <Button variant="outline" onClick={() => setShowGridView(false)}>
-              <X className="mr-2 h-4 w-4" />
-              Back to list
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Data Sources"
+        description="Connect and manage your data sources to power your dashboards"
+        action={
+          <>
+            {hasConnectedDataSources && !showGridView && (
+              <Button onClick={() => setShowGridView(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Source
+              </Button>
+            )}
+            {showGridView && (
+              <Button variant="outline" onClick={() => setShowGridView(false)}>
+                <X className="mr-2 h-4 w-4" />
+                Back to List
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {!hasConnectedDataSources || showGridView ? (
         // Show grid view when no data sources are connected or when "New source" is clicked

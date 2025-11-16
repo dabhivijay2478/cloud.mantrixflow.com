@@ -19,6 +19,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  ChartEmptyState,
+  ChartErrorState,
+  ChartLoadingState,
+} from "./chart-states";
 
 /**
  * StackedColumnChart
@@ -56,6 +61,9 @@ export interface StackedColumnChartProps {
   showLegend?: boolean;
   colors?: string[];
   className?: string;
+  loading?: boolean;
+  error?: string | null;
+  emptyMessage?: string;
 }
 
 export function StackedColumnChart({
@@ -68,16 +76,61 @@ export function StackedColumnChart({
   showLegend = true,
   colors = CHART_COLORS,
   className,
+  loading = false,
+  error = null,
+  emptyMessage = "No data available",
 }: StackedColumnChartProps) {
   const chartConfig = createChartConfig(yKeys, undefined, colors);
 
+  if (loading) {
+    return (
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
+        <ChartLoadingState />
+      </ChartWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
+        <ChartErrorState error={error} />
+      </ChartWrapper>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
+        <ChartEmptyState message={emptyMessage} />
+      </ChartWrapper>
+    );
+  }
+
   return (
     <ChartWrapper title={title} description={description} className={className}>
-      <ChartContainer config={chartConfig} className="h-full w-full">
+      <ChartContainer
+        config={chartConfig}
+        className="h-full w-full"
+        aria-label={title || "Stacked column chart"}
+      >
         <RechartsBarChart
           accessibilityLayer
           data={data}
           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          role="img"
+          aria-label={title ? `${title} chart` : "Stacked column chart"}
         >
           {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
           <XAxis

@@ -16,6 +16,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  ChartEmptyState,
+  ChartErrorState,
+  ChartLoadingState,
+} from "./chart-states";
 
 /**
  * BarChart
@@ -58,6 +63,9 @@ export interface BarChartProps {
   showGrid?: boolean;
   showLegend?: boolean;
   className?: string;
+  loading?: boolean;
+  error?: string | null;
+  emptyMessage?: string;
 }
 
 export function BarChart({
@@ -71,27 +79,85 @@ export function BarChart({
   showGrid = true,
   showLegend = true,
   className,
+  loading = false,
+  error = null,
+  emptyMessage = "No data available",
 }: BarChartProps) {
   const chartConfig = createChartConfig(yKeys);
 
+  if (loading) {
+    return (
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
+        <ChartLoadingState />
+      </ChartWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
+        <ChartErrorState error={error} />
+      </ChartWrapper>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <ChartWrapper
+        title={title}
+        description={description}
+        className={className}
+      >
+        <ChartEmptyState message={emptyMessage} />
+      </ChartWrapper>
+    );
+  }
+
   return (
     <ChartWrapper title={title} description={description} className={className}>
-      <ChartContainer config={chartConfig} className="h-full w-full">
+      <ChartContainer
+        config={chartConfig}
+        className="h-full w-full"
+        aria-label={title || "Bar chart"}
+      >
         <RechartsBarChart
           accessibilityLayer
           data={data}
           layout={horizontal ? "vertical" : "horizontal"}
-          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+          role="img"
+          aria-label={title ? `${title} chart` : "Bar chart"}
         >
-          {showGrid && <CartesianGrid vertical={false} strokeDasharray="3 3" />}
+          {showGrid && (
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="3 3"
+              stroke="hsl(var(--border))"
+              opacity={0.3}
+            />
+          )}
           {horizontal ? (
             <>
-              <XAxis type="number" tickLine={false} axisLine={false} />
+              <XAxis
+                type="number"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              />
               <YAxis
                 type="category"
                 dataKey={xKey}
                 tickLine={false}
                 axisLine={false}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               />
             </>
           ) : (
@@ -99,13 +165,21 @@ export function BarChart({
               <XAxis
                 dataKey={xKey}
                 tickLine={false}
-                tickMargin={10}
+                tickMargin={12}
                 axisLine={false}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               />
-              <YAxis tickLine={false} axisLine={false} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              />
             </>
           )}
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartTooltip
+            content={<ChartTooltipContent />}
+            cursor={{ fill: "hsl(var(--muted))", opacity: 0.2 }}
+          />
           {showLegend && <ChartLegend content={<ChartLegendContent />} />}
           {yKeys.map((key) => (
             <Bar
@@ -113,7 +187,9 @@ export function BarChart({
               dataKey={key}
               fill={`var(--color-${key})`}
               stackId={stacked ? "stack" : undefined}
-              radius={[4, 4, 0, 0]}
+              radius={[6, 6, 0, 0]}
+              animationDuration={800}
+              animationBegin={0}
             />
           ))}
         </RechartsBarChart>

@@ -15,6 +15,8 @@ export type { AreaChartProps } from "./charts/area-chart";
 export { AreaChart } from "./charts/area-chart";
 export type { BarChartProps } from "./charts/bar-chart";
 export { BarChart } from "./charts/bar-chart";
+export type { ChartSkeletonProps } from "./charts/chart-skeleton";
+export { ChartSkeleton } from "./charts/chart-skeleton";
 export type { ClusteredBarChartProps } from "./charts/clustered-bar-chart";
 export { ClusteredBarChart } from "./charts/clustered-bar-chart";
 export type { ClusteredColumnChartProps } from "./charts/clustered-column-chart";

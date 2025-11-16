@@ -60,39 +60,47 @@ export function EmptyState({
   centered = true,
 }: EmptyStateProps) {
   const content = (
-    <Card className={cn("w-full max-w-2xl", className)}>
-      <CardHeader className={cn(centered && "text-center")}>
+    <Card className={cn("w-full max-w-2xl border shadow-sm", className)}>
+      <CardHeader className={cn("pb-6", centered && "text-center")}>
         {Icon && (
           <div
             className={cn(
-              "mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center",
+              "mx-auto mb-6 h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center transition-colors",
               !centered && "mx-0",
             )}
           >
-            <Icon className="h-8 w-8 text-primary" />
+            <Icon className="h-10 w-10 text-primary" aria-hidden="true" />
           </div>
         )}
         <CardTitle
-          className={cn("text-2xl", !Icon && !centered && "text-left")}
+          className={cn(
+            "text-2xl font-semibold tracking-tight",
+            !Icon && !centered && "text-left",
+          )}
         >
           {title}
         </CardTitle>
         {description && (
           <CardDescription
-            className={cn("text-base mt-2", !centered && "text-left")}
+            className={cn(
+              "text-base mt-3 text-muted-foreground",
+              !centered && "text-left",
+            )}
           >
             {description}
           </CardDescription>
         )}
       </CardHeader>
       {(action || (actionLabel && onAction) || children) && (
-        <CardContent className={cn("space-y-4", centered && "text-center")}>
+        <CardContent
+          className={cn("space-y-4 pt-0", centered && "text-center")}
+        >
           {action ||
             (actionLabel && onAction && (
               <Button
                 onClick={onAction}
                 size="lg"
-                className={centered ? "w-full" : ""}
+                className={cn("font-medium", centered && "w-full sm:w-auto")}
               >
                 {actionLabel}
               </Button>

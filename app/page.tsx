@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Logo } from "@/components/logo";
 
 export default function Home() {
@@ -54,12 +55,12 @@ export default function Home() {
         <div className="text-sm text-muted-foreground">
           <p>
             New to MantrixFlow?{" "}
-            <a
+            <Link
               href="/auth/signup"
               className="underline underline-offset-4 hover:text-foreground"
             >
               Create your free account
-            </a>
+            </Link>
           </p>
         </div>
       </main>

@@ -22,7 +22,6 @@ import {
   ArrowLeft,
   Calendar,
   CheckSquare,
-  Database,
   Edit,
   GripVertical,
   Hash,
@@ -204,8 +203,9 @@ function AvailableColumnItem({
   };
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="sm"
       className={cn(
         "flex items-center gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors w-full text-left",
         isSelected && "border-primary bg-primary/5",
@@ -224,7 +224,7 @@ function AvailableColumnItem({
           {column.type}
         </p>
       </div>
-    </button>
+    </Button>
   );
 }
 
@@ -409,7 +409,8 @@ export function DatasetConfigurationEmbedded({
         name: data.name,
         description: data.description,
         dataSourceId: dataSourceId,
-        sourceType: data.sourceType === "saved_query" ? "custom_query" : "table",
+        sourceType:
+          data.sourceType === "saved_query" ? "custom_query" : "table",
         sourceName: data.sourceName,
         query: queryText,
         columns: columns.map((col) => ({
@@ -496,7 +497,9 @@ export function DatasetConfigurationEmbedded({
               </TableHeader>
               <TableBody>
                 {dataSourceDatasets.map((dataset) => {
-                  const selectedCols = dataset.columns.filter((c) => c.selected);
+                  const selectedCols = dataset.columns.filter(
+                    (c) => c.selected,
+                  );
                   return (
                     <TableRow key={dataset.id}>
                       <TableCell className="font-medium">
@@ -557,13 +560,17 @@ export function DatasetConfigurationEmbedded({
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => {
-            if (dataSourceDatasets.length > 0) {
-              setShowForm(false);
-            } else {
-              onBack();
-            }
-          }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (dataSourceDatasets.length > 0) {
+                setShowForm(false);
+              } else {
+                onBack();
+              }
+            }}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -690,7 +697,10 @@ export function DatasetConfigurationEmbedded({
                             </div>
                           ) : (
                             availableSavedQueries.map((savedQuery) => (
-                              <SelectItem key={savedQuery.id} value={savedQuery.id}>
+                              <SelectItem
+                                key={savedQuery.id}
+                                value={savedQuery.id}
+                              >
                                 {savedQuery.name}
                               </SelectItem>
                             ))
@@ -816,7 +826,12 @@ export function DatasetConfigurationEmbedded({
           )}
 
           <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onBack} disabled={loading}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onBack}
+              disabled={loading}
+            >
               Cancel
             </Button>
             <Button
@@ -841,4 +856,3 @@ export function DatasetConfigurationEmbedded({
     </div>
   );
 }
-
