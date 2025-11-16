@@ -23,12 +23,15 @@ import {
   Calendar,
   CheckSquare,
   Database,
+  Edit,
   GripVertical,
   Hash,
   Loader2,
+  Plus,
   Save,
   Square,
   ToggleRight,
+  Trash2,
   Type,
   X,
 } from "lucide-react";
@@ -37,6 +40,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,6 +62,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import type { Dataset, DatasetColumn } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -231,6 +243,7 @@ export function DatasetConfigurationEmbedded({
     datasets,
     savedQueries,
     addDataset,
+    removeDataset,
     currentOrganization,
   } = useWorkspaceStore();
 
@@ -240,6 +253,21 @@ export function DatasetConfigurationEmbedded({
   const [fetchingColumns, setFetchingColumns] = useState(false);
 
   const dataSource = dataSources.find((ds) => ds.id === dataSourceId);
+
+  // Get datasets for this data source
+  const dataSourceDatasets = datasets.filter(
+    (ds) => ds.dataSourceId === dataSourceId,
+  );
+
+  // Show form by default if no datasets exist, otherwise show table
+  const [showForm, setShowForm] = useState(false);
+
+  // Update showForm when datasets change
+  useEffect(() => {
+    if (dataSourceDatasets.length === 0) {
+      setShowForm(true);
+    }
+  }, [dataSourceDatasets.length]);
 
   const form = useForm<DatasetFormValues>({
     resolver: zodResolver(datasetSchema),
@@ -395,12 +423,22 @@ export function DatasetConfigurationEmbedded({
 
       addDataset(dataset);
       toast.success("Dataset created successfully");
-      router.push(`/workspace/data-sources/${dataSourceId}/query?tab=dataset`);
+      setShowForm(false);
+      form.reset();
+      setColumns([]);
+      setSelectedColumns([]);
     } catch (error) {
       toast.error("Failed to save dataset");
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteDataset = (datasetId: string, datasetName: string) => {
+    if (confirm(`Are you sure you want to delete "${datasetName}"?`)) {
+      removeDataset(datasetId);
+      toast.success("Dataset deleted successfully");
     }
   };
 
@@ -418,18 +456,128 @@ export function DatasetConfigurationEmbedded({
     );
   }
 
+  // Show table view if datasets exist and form is not shown
+  if (dataSourceDatasets.length > 0 && !showForm) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Datasets</h1>
+              <p className="text-muted-foreground">
+                Manage datasets for this data source
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Dataset
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Existing Datasets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Source Type</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Columns</TableHead>
+                  <TableHead>Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dataSourceDatasets.map((dataset) => {
+                  const selectedCols = dataset.columns.filter((c) => c.selected);
+                  return (
+                    <TableRow key={dataset.id}>
+                      <TableCell className="font-medium">
+                        {dataset.name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {dataset.sourceType === "table" ? "Table" : "Query"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {dataset.sourceName}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {selectedCols.length} selected
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(dataset.updatedAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              // Navigate to edit page
+                              router.push(
+                                `/workspace/datasets/${dataset.id}?dataSourceId=${dataSourceId}`,
+                              );
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteDataset(dataset.id, dataset.name)
+                            }
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show form for creating new dataset
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Create Dataset</h1>
-          <p className="text-muted-foreground">
-            Select a table or saved query result to create a dataset
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => {
+            if (dataSourceDatasets.length > 0) {
+              setShowForm(false);
+            } else {
+              onBack();
+            }
+          }}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Create Dataset</h1>
+            <p className="text-muted-foreground">
+              Select a table or saved query result to create a dataset
+            </p>
+          </div>
         </div>
+        {dataSourceDatasets.length > 0 && (
+          <Button variant="outline" onClick={() => setShowForm(false)}>
+            View Datasets
+          </Button>
+        )}
       </div>
 
       <Form {...form}>
