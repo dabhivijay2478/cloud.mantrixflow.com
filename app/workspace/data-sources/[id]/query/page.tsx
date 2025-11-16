@@ -41,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
+import { DatasetConfigurationEmbedded } from "./dataset-config";
 
 // Mock query execution - replace with actual API call
 const executeQuery = async (
@@ -452,24 +453,38 @@ export default function DataSourceQueryPage() {
                   )}
                 </Button>
                 {results && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleDownload("csv")}>
-                        Download as CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDownload("json")}>
-                        Download as JSON
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDownload("excel")}>
-                        Download as Excel
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => {
+                        setActiveTab("dataset");
+                        router.push(`/workspace/data-sources/${dataSourceId}/query?tab=dataset`);
+                      }}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save as Dataset
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDownload("csv")}>
+                          Download as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload("json")}>
+                          Download as JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                          Download as Excel
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
                 )}
               </>
             )}
@@ -623,26 +638,13 @@ export default function DataSourceQueryPage() {
           </>
         ) : (
           <div className="h-full overflow-auto">
-            <div className="p-6">
-              <div className="mb-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setActiveTab("query");
-                    router.push(`/workspace/data-sources/${dataSourceId}/query`);
-                  }}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Query
-                </Button>
-              </div>
-              <iframe
-                src={`/workspace/datasets/new?dataSourceId=${dataSourceId}&embedded=true`}
-                className="w-full h-[calc(100vh-200px)] border-0"
-                title="Dataset Configuration"
-              />
-            </div>
+            <DatasetConfigurationEmbedded
+              dataSourceId={dataSourceId}
+              onBack={() => {
+                setActiveTab("query");
+                router.push(`/workspace/data-sources/${dataSourceId}/query`);
+              }}
+            />
           </div>
         )}
       </div>
