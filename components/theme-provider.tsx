@@ -15,8 +15,10 @@ function ThemeSync({ children }: { children: React.ReactNode }) {
     updateThemeDarkMode(isDark);
   }, [resolvedTheme]);
 
-  // Apply theme on mount
+  // Apply theme on mount - only if customized
   useEffect(() => {
+    // Check if theme is customized, if not, clear any custom CSS variables
+    // This ensures default theme from globals.css is used
     themeStore.applyCurrentTheme();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

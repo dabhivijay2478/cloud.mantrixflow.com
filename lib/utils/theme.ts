@@ -116,11 +116,108 @@ export function generateColorPalette(baseColor: string): ColorPalette {
 }
 
 /**
+ * Get default theme configuration
+ */
+export function getDefaultTheme(): ThemeConfig {
+  return {
+    name: "Default",
+    mode: "system",
+    colors: {
+      primary: "#00a859",
+      secondary: "#007fff",
+      accent: "#8a2be2",
+      neutral: "#71717a",
+      success: "#22c55e",
+      warning: "#f59e0b",
+      error: "#ef4444",
+    },
+    fonts: {
+      sans: "Poppins, sans-serif",
+      serif: "Georgia, serif",
+      mono: "JetBrains Mono, monospace",
+    },
+    radius: 0.5,
+  };
+}
+
+/**
+ * Check if theme is customized (different from default)
+ */
+export function isThemeCustomized(theme: ThemeConfig): boolean {
+  const defaultTheme = getDefaultTheme();
+  
+  // Check colors
+  const colorsCustomized = Object.keys(theme.colors).some(
+    (key) => theme.colors[key as keyof typeof theme.colors] !== defaultTheme.colors[key as keyof typeof defaultTheme.colors]
+  );
+  
+  // Check fonts
+  const fontsCustomized = 
+    theme.fonts.sans !== defaultTheme.fonts.sans ||
+    theme.fonts.serif !== defaultTheme.fonts.serif ||
+    theme.fonts.mono !== defaultTheme.fonts.mono;
+  
+  // Check radius
+  const radiusCustomized = theme.radius !== defaultTheme.radius;
+  
+  return colorsCustomized || fontsCustomized || radiusCustomized;
+}
+
+/**
+ * Clear custom theme CSS variables (revert to default from globals.css)
+ */
+export function clearCustomTheme(): void {
+  if (typeof window === "undefined") return;
+  const root = document.documentElement;
+  
+  // Remove all custom theme CSS variables
+  // This allows the default values from globals.css to be used
+  
+  // Remove color palette variables
+  const colorShades = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"];
+  const colorTypes = ["primary", "secondary", "accent", "neutral", "success", "warning", "error"];
+  
+  colorTypes.forEach((type) => {
+    colorShades.forEach((shade) => {
+      root.style.removeProperty(`--${type}-${shade}`);
+    });
+  });
+  
+  // Remove semantic color overrides (let globals.css handle them)
+  const semanticColors = [
+    "background", "foreground", "card", "card-foreground",
+    "popover", "popover-foreground", "primary", "primary-foreground",
+    "secondary", "secondary-foreground", "muted", "muted-foreground",
+    "accent", "accent-foreground", "destructive", "destructive-foreground",
+    "border", "input", "ring"
+  ];
+  
+  semanticColors.forEach((color) => {
+    root.style.removeProperty(`--${color}`);
+  });
+  
+  // Remove font overrides
+  root.style.removeProperty("--font-sans");
+  root.style.removeProperty("--font-serif");
+  root.style.removeProperty("--font-mono");
+  
+  // Remove radius override
+  root.style.removeProperty("--radius");
+}
+
+/**
  * Apply theme to CSS variables
+ * Only applies if theme is customized, otherwise uses default from globals.css
  */
 export function applyTheme(theme: ThemeConfig, isDark: boolean = false) {
   const root = document.documentElement;
-  const prefix = isDark ? ".dark" : ":root";
+  
+  // Check if theme is customized
+  if (!isThemeCustomized(theme)) {
+    // If not customized, clear any custom CSS variables and use defaults from globals.css
+    clearCustomTheme();
+    return;
+  }
 
   // Generate color palettes
   const primaryPalette = generateColorPalette(theme.colors.primary);
@@ -207,31 +304,6 @@ export function applyTheme(theme: ThemeConfig, isDark: boolean = false) {
 }
 
 /**
- * Get default theme configuration
- */
-export function getDefaultTheme(): ThemeConfig {
-  return {
-    name: "Default",
-    mode: "system",
-    colors: {
-      primary: "#00a859",
-      secondary: "#007fff",
-      accent: "#8a2be2",
-      neutral: "#71717a",
-      success: "#22c55e",
-      warning: "#f59e0b",
-      error: "#ef4444",
-    },
-    fonts: {
-      sans: "Poppins, sans-serif",
-      serif: "Georgia, serif",
-      mono: "JetBrains Mono, monospace",
-    },
-    radius: 0.5,
-  };
-}
-
-/**
  * Load theme from localStorage
  */
 export function loadThemeFromStorage(): ThemeConfig | null {
@@ -265,9 +337,7 @@ export function saveThemeToStorage(theme: ThemeConfig): void {
 export function resetTheme(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem("custom-theme");
-  const defaultTheme = getDefaultTheme();
-  applyTheme(defaultTheme, false);
-  applyTheme(defaultTheme, true);
+  clearCustomTheme();
 }
 
 /**

@@ -10,6 +10,8 @@ import {
   applyTheme,
   loadThemeFromStorage,
   saveThemeToStorage,
+  isThemeCustomized,
+  clearCustomTheme,
 } from "@/lib/utils/theme";
 
 interface ThemeStore {
@@ -28,7 +30,15 @@ interface ThemeStore {
 // Initialize theme from storage or use default
 const initializeTheme = (): ThemeConfig => {
   if (typeof window !== "undefined") {
-    return loadThemeFromStorage() || getDefaultTheme();
+    const storedTheme = loadThemeFromStorage();
+    // Only use stored theme if it exists and is customized
+    if (storedTheme && isThemeCustomized(storedTheme)) {
+      return storedTheme;
+    }
+    // Clear any invalid custom theme
+    if (storedTheme && !isThemeCustomized(storedTheme)) {
+      localStorage.removeItem("custom-theme");
+    }
   }
   return getDefaultTheme();
 };
@@ -41,7 +51,12 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     const updatedTheme = { ...get().theme, ...newTheme };
     set({ theme: updatedTheme });
     if (typeof window !== "undefined") {
-      saveThemeToStorage(updatedTheme);
+      // Only save if customized
+      if (isThemeCustomized(updatedTheme)) {
+        saveThemeToStorage(updatedTheme);
+      } else {
+        localStorage.removeItem("custom-theme");
+      }
     }
     get().applyCurrentTheme();
   },
@@ -64,7 +79,11 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     };
     set({ theme: updatedTheme });
     if (typeof window !== "undefined") {
-      saveThemeToStorage(updatedTheme);
+      if (isThemeCustomized(updatedTheme)) {
+        saveThemeToStorage(updatedTheme);
+      } else {
+        localStorage.removeItem("custom-theme");
+      }
     }
     get().applyCurrentTheme();
   },
@@ -79,7 +98,11 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     };
     set({ theme: updatedTheme });
     if (typeof window !== "undefined") {
-      saveThemeToStorage(updatedTheme);
+      if (isThemeCustomized(updatedTheme)) {
+        saveThemeToStorage(updatedTheme);
+      } else {
+        localStorage.removeItem("custom-theme");
+      }
     }
     get().applyCurrentTheme();
   },
@@ -88,7 +111,11 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     const updatedTheme = { ...get().theme, radius };
     set({ theme: updatedTheme });
     if (typeof window !== "undefined") {
-      saveThemeToStorage(updatedTheme);
+      if (isThemeCustomized(updatedTheme)) {
+        saveThemeToStorage(updatedTheme);
+      } else {
+        localStorage.removeItem("custom-theme");
+      }
     }
     get().applyCurrentTheme();
   },
@@ -97,9 +124,9 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     const defaultTheme = getDefaultTheme();
     set({ theme: defaultTheme });
     if (typeof window !== "undefined") {
-      saveThemeToStorage(defaultTheme);
+      localStorage.removeItem("custom-theme");
+      clearCustomTheme();
     }
-    get().applyCurrentTheme();
   },
 
   applyCurrentTheme: () => {
