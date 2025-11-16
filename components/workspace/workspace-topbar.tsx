@@ -26,14 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { DataDialog } from "@/components/workspace/data-dialog";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast as toastUtil } from "@/lib/utils/toast";
@@ -44,13 +38,11 @@ export function WorkspaceTopbar() {
   const { user, signOut } = useAuthStore();
   const {
     currentDashboard,
-    datasets,
-    selectedDatasetId,
-    setSelectedDatasetId,
     updateDashboard,
   } = useWorkspaceStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMac, setIsMac] = useState(false);
+  const [dataDialogOpen, setDataDialogOpen] = useState(false);
 
   // Check if we're in dashboard edit mode (dashboard/[id] but not /view)
   const isDashboardEditMode =
@@ -103,26 +95,11 @@ export function WorkspaceTopbar() {
     }
   };
 
-  const handleDatasetChange = (value: string) => {
-    if (value && value !== "__none__") {
-      setSelectedDatasetId(value);
-    } else {
-      setSelectedDatasetId(null);
-    }
-  };
-
-  // Get available datasets for the current dashboard's data source
-  const dashboardDataSourceId = currentDashboard?.dataSourceId;
-  const availableDatasets = dashboardDataSourceId
-    ? datasets.filter((ds) => ds.dataSourceId === dashboardDataSourceId)
-    : datasets;
-  const _selectedDataset = selectedDatasetId
-    ? datasets.find((ds) => ds.id === selectedDatasetId)
-    : null;
 
   // Dashboard edit mode header
   if (isDashboardEditMode && currentDashboard) {
     return (
+      <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
         <div className="flex h-14 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-4 min-w-0 flex-1">
@@ -147,36 +124,14 @@ export function WorkspaceTopbar() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4 text-muted-foreground" />
-              <Select
-                value={selectedDatasetId || "__none__"}
-                onValueChange={handleDatasetChange}
-                disabled={availableDatasets.length === 0}
-              >
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="Select dataset" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDatasets.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      No datasets available
-                    </div>
-                  ) : (
-                    <>
-                      <SelectItem value="__none__">
-                        <span className="text-muted-foreground">None</span>
-                      </SelectItem>
-                      {availableDatasets.map((dataset) => (
-                        <SelectItem key={dataset.id} value={dataset.id}>
-                          {dataset.name}
-                        </SelectItem>
-                      ))}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setDataDialogOpen(true)}
+              title="Open data source & datasets"
+            >
+              <Database className="h-4 w-4" />
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -245,6 +200,8 @@ export function WorkspaceTopbar() {
           </div>
         </div>
       </header>
+      <DataDialog open={dataDialogOpen} onOpenChange={setDataDialogOpen} />
+    </>
     );
   }
 
