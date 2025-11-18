@@ -176,12 +176,6 @@ export function WorkspaceTopbar() {
                     <DropdownMenuItem
                       onClick={() => router.push("/workspace/settings")}
                     >
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Account Settings</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => router.push("/workspace/settings")}
-                    >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </DropdownMenuItem>
@@ -245,12 +239,6 @@ export function WorkspaceTopbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => router.push("/workspace/settings")}
-              >
-                <User className="mr-2 h-4 w-4" />
-                <span>Account Settings</span>
-              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push("/workspace/settings")}
               >
