@@ -27,6 +27,7 @@ import {
   Hash,
   Loader2,
   Plus,
+  RefreshCw,
   Save,
   Square,
   ToggleRight,
@@ -242,8 +243,10 @@ export function DatasetConfigurationEmbedded({
     dataSources,
     datasets,
     savedQueries,
+    dashboards,
     addDataset,
     removeDataset,
+    updateDataset,
     currentOrganization,
   } = useWorkspaceStore();
 
@@ -251,6 +254,28 @@ export function DatasetConfigurationEmbedded({
   const [selectedColumns, setSelectedColumns] = useState<DatasetColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingColumns, setFetchingColumns] = useState(false);
+  const [selectedDatasets, setSelectedDatasets] = useState<Set<string>>(
+    new Set(),
+  );
+  const [savingDatasets, setSavingDatasets] = useState(false);
+  
+  // Mock sync status - in real app, this would come from the dataset or a separate sync status store
+  const getSyncStatus = (dataset: Dataset) => {
+    // Mock: randomly determine if synced (in real app, this would be from dataset.lastSyncAt)
+    const lastSync = dataset.updatedAt; // Using updatedAt as proxy for lastSync
+    const syncTime = new Date(lastSync);
+    const now = new Date();
+    const hoursSinceSync = (now.getTime() - syncTime.getTime()) / (1000 * 60 * 60);
+    
+    // Consider synced if updated within last 24 hours
+    const isSynced = hoursSinceSync < 24;
+    
+    return {
+      isSynced,
+      lastSyncAt: lastSync,
+      hoursSinceSync: Math.floor(hoursSinceSync),
+    };
+  };
 
   const dataSource = dataSources.find((ds) => ds.id === dataSourceId);
 
@@ -302,7 +327,10 @@ export function DatasetConfigurationEmbedded({
           setSelectedColumns([]);
         })
         .catch((error) => {
-          toast.error("Failed to fetch columns", error.message);
+          toast.error("Failed to fetch columns", {
+            description: error.message || "Unable to load columns from the selected source.",
+            className: "bg-red-50 border-red-200 text-red-900",
+          });
         })
         .finally(() => {
           setFetchingColumns(false);
@@ -393,7 +421,10 @@ export function DatasetConfigurationEmbedded({
 
   const onSubmit = async (data: DatasetFormValues) => {
     if (selectedColumns.length === 0) {
-      toast.error("Please select at least one column");
+      toast.error("Please select at least one column", {
+        description: "You need to select at least one column to create a dataset.",
+        className: "bg-red-50 border-red-200 text-red-900",
+      });
       return;
     }
 
@@ -423,13 +454,19 @@ export function DatasetConfigurationEmbedded({
       };
 
       addDataset(dataset);
-      toast.success("Dataset created successfully");
+      toast.success("Dataset created successfully", {
+        description: `"${data.name}" has been added to your datasets.`,
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
       setShowForm(false);
       form.reset();
       setColumns([]);
       setSelectedColumns([]);
     } catch (error) {
-      toast.error("Failed to save dataset");
+      toast.error("Failed to save dataset", {
+        description: "An error occurred while creating the dataset. Please try again.",
+        className: "bg-red-50 border-red-200 text-red-900",
+      });
       console.error(error);
     } finally {
       setLoading(false);
@@ -439,7 +476,97 @@ export function DatasetConfigurationEmbedded({
   const handleDeleteDataset = (datasetId: string, datasetName: string) => {
     if (confirm(`Are you sure you want to delete "${datasetName}"?`)) {
       removeDataset(datasetId);
-      toast.success("Dataset deleted successfully");
+      setSelectedDatasets((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(datasetId);
+        return newSet;
+      });
+      toast.success("Dataset deleted successfully", {
+        description: `"${datasetName}" has been removed from your datasets.`,
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+    }
+  };
+
+  // Check if a dataset is used in any dashboard
+  const isDatasetUsedInDashboard = (datasetId: string): boolean => {
+    return dashboards.some(
+      (dashboard) =>
+        dashboard.dataSourceId === dataSourceId &&
+        dashboard.components.some(
+          (component) =>
+            component.config &&
+            typeof component.config === "object" &&
+            "datasetId" in component.config &&
+            component.config.datasetId === datasetId,
+        ),
+    );
+  };
+
+  const handleToggleDatasetSelection = (datasetId: string) => {
+    setSelectedDatasets((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(datasetId)) {
+        newSet.delete(datasetId);
+      } else {
+        newSet.add(datasetId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllDatasets = () => {
+    const allDatasetIds = new Set(dataSourceDatasets.map((ds) => ds.id));
+    setSelectedDatasets(allDatasetIds);
+    toast.info("All datasets selected", {
+      description: `${allDatasetIds.size} dataset(s) are now selected.`,
+      className: "bg-blue-50 border-blue-200 text-blue-900",
+    });
+  };
+
+  const handleDeselectAllDatasets = () => {
+    setSelectedDatasets(new Set());
+    toast.info("All datasets deselected", {
+      description: "No datasets are currently selected.",
+      className: "bg-blue-50 border-blue-200 text-blue-900",
+    });
+  };
+
+  const handleSaveSelectedDatasets = async () => {
+    if (selectedDatasets.size === 0) {
+      toast.warning("No datasets selected", {
+        description: "Please select at least one dataset to save.",
+        className: "bg-yellow-50 border-yellow-200 text-yellow-900",
+      });
+      return;
+    }
+
+    setSavingDatasets(true);
+    try {
+      // Simulate saving process
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Update datasets with current timestamp
+      selectedDatasets.forEach((datasetId) => {
+        updateDataset(datasetId, {
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      toast.success("Datasets saved successfully", {
+        description: `${selectedDatasets.size} dataset(s) have been saved.`,
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+
+      setSelectedDatasets(new Set());
+    } catch (error) {
+      toast.error("Failed to save datasets", {
+        description: "An error occurred while saving the datasets.",
+        className: "bg-red-50 border-red-200 text-red-900",
+      });
+      console.error(error);
+    } finally {
+      setSavingDatasets(false);
     }
   };
 
@@ -463,9 +590,6 @@ export function DatasetConfigurationEmbedded({
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
             <div>
               <h1 className="text-2xl font-bold">Datasets</h1>
               <p className="text-muted-foreground">
@@ -473,24 +597,84 @@ export function DatasetConfigurationEmbedded({
               </p>
             </div>
           </div>
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Dataset
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedDatasets.size > 0 && (
+              <Button
+                onClick={handleSaveSelectedDatasets}
+                disabled={savingDatasets}
+                variant="default"
+              >
+                {savingDatasets ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Dataset{selectedDatasets.size > 1 ? "s" : ""} (
+                    {selectedDatasets.size})
+                  </>
+                )}
+              </Button>
+            )}
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Dataset
+            </Button>
+          </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Existing Datasets</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Existing Datasets</CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllDatasets}
+                >
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  Select All
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeselectAllDatasets}
+                >
+                  <Square className="h-4 w-4 mr-1" />
+                  Deselect All
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={
+                        dataSourceDatasets.length > 0 &&
+                        selectedDatasets.size === dataSourceDatasets.length
+                      }
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          handleSelectAllDatasets();
+                        } else {
+                          handleDeselectAllDatasets();
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Source Type</TableHead>
-                  <TableHead>Source</TableHead>
                   <TableHead>Columns</TableHead>
+                  <TableHead>Used in Dashboard</TableHead>
+                  <TableHead>Sync Status</TableHead>
                   <TableHead>Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -500,21 +684,106 @@ export function DatasetConfigurationEmbedded({
                   const selectedCols = dataset.columns.filter(
                     (c) => c.selected,
                   );
+                  const isUsed = isDatasetUsedInDashboard(dataset.id);
+                  const isSelected = selectedDatasets.has(dataset.id);
+                  const syncStatus = getSyncStatus(dataset);
+                  const isCustomQuery = dataset.sourceType === "custom_query";
+                  const isTableSource = dataset.sourceType === "table";
+                  
+                  // Get the specific table(s) used by this dataset
+                  const datasetTables = isTableSource ? [dataset.sourceName] : [];
+                  
                   return (
-                    <TableRow key={dataset.id}>
+                    <TableRow
+                      key={dataset.id}
+                      className={cn(
+                        isSelected && "bg-primary/5 border-primary/20",
+                      )}
+                    >
+                      <TableCell>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() =>
+                            handleToggleDatasetSelection(dataset.id)
+                          }
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         {dataset.name}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {dataset.sourceType === "table" ? "Table" : "Query"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {dataset.sourceName}
+                        <div className="flex flex-col gap-1.5">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs w-fit",
+                              isTableSource 
+                                ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                : "bg-purple-50 text-purple-700 border-purple-200"
+                            )}
+                          >
+                            {isTableSource ? "Table" : "Custom Query"}
+                          </Badge>
+                          {isTableSource ? (
+                            <div className="text-sm text-muted-foreground">
+                              {datasetTables.join(", ")}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground italic">
+                              {dataset.sourceName}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {selectedCols.length} selected
+                      </TableCell>
+                      <TableCell>
+                        {isUsed ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-green-100 text-green-800 border-green-200"
+                          >
+                            Yes
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            No
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <RefreshCw
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                syncStatus.isSynced
+                                  ? "text-green-600"
+                                  : "text-yellow-600"
+                              )}
+                            />
+                            <Badge
+                              variant={syncStatus.isSynced ? "secondary" : "outline"}
+                              className={cn(
+                                "text-xs",
+                                syncStatus.isSynced
+                                  ? "bg-green-100 text-green-800 border-green-200"
+                                  : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                              )}
+                            >
+                              {syncStatus.isSynced ? "Synced" : "Not Synced"}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground pl-5">
+                            Last sync:{" "}
+                            {syncStatus.hoursSinceSync < 1
+                              ? "Just now"
+                              : syncStatus.hoursSinceSync < 24
+                                ? `${syncStatus.hoursSinceSync}h ago`
+                                : `${Math.floor(syncStatus.hoursSinceSync / 24)}d ago`}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(dataset.updatedAt).toLocaleDateString()}
@@ -551,6 +820,7 @@ export function DatasetConfigurationEmbedded({
             </Table>
           </CardContent>
         </Card>
+
       </div>
     );
   }
@@ -805,7 +1075,6 @@ export function DatasetConfigurationEmbedded({
                             <SortableColumnItem
                               key={column.name}
                               column={column}
-                              onToggle={handleToggleColumn}
                               onRemove={handleRemoveColumn}
                               isSelected={true}
                             />
