@@ -228,14 +228,14 @@ export default function WorkspaceLayout({
                         ? 15
                         : 3
                   }
-                  minSize={isMobile ? 0 : 3}
+                  minSize={isMobile ? 0 : componentsPanelOpen ? 15 : 3}
                   maxSize={
                     isMobile
                       ? componentsPanelOpen
                         ? 40
                         : 0
                       : componentsPanelOpen
-                        ? 25
+                        ? 15
                         : 3
                   }
                   collapsible={true}
@@ -245,8 +245,8 @@ export default function WorkspaceLayout({
                   {(!isMobile || componentsPanelOpen) && <ComponentsPanel />}
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={componentsPanelOpen && !isMobile}
-                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
+                  withHandle={false}
+                  className="pointer-events-none opacity-0"
                 />
                 <ResizablePanel
                   ref={propertiesPanelRef}
@@ -260,14 +260,14 @@ export default function WorkspaceLayout({
                         ? 20
                         : 3
                   }
-                  minSize={isMobile ? 0 : 3}
+                  minSize={isMobile ? 0 : propertiesPanelOpen ? 10 : 3}
                   maxSize={
                     isMobile
                       ? propertiesPanelOpen
                         ? 40
                         : 0
                       : propertiesPanelOpen
-                        ? 30
+                        ? 35
                         : 3
                   }
                   collapsible={true}
@@ -303,7 +303,8 @@ export default function WorkspaceLayout({
                 <ResizablePanel
                   id="main-panel"
                   defaultSize={mainPanelSize}
-                  minSize={isMobile ? 20 : 30}
+                  minSize={isMobile ? 20 : 40}
+                  maxSize={isMobile ? 100 : 85}
                   key={`main-${componentsPanelOpen}-${propertiesPanelOpen}-${agentPanelOpen}-${isMobile}`}
                 >
                   <main
@@ -331,14 +332,14 @@ export default function WorkspaceLayout({
                         ? 15
                         : 3
                   }
-                  minSize={isMobile ? 0 : 3}
+                  minSize={isMobile ? 0 : agentPanelOpen ? 10 : 3}
                   maxSize={
                     isMobile
                       ? agentPanelOpen
                         ? 40
                         : 0
                       : agentPanelOpen
-                        ? 25
+                        ? 40
                         : 3
                   }
                   collapsible={true}
