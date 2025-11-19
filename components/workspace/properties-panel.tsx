@@ -1,6 +1,6 @@
 "use client";
 
-import { Type, X } from "lucide-react";
+import { Database, Type, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import type {
   DatasetColumn,
 } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { DataDialog } from "./data-dialog";
 
 // Mock function to fetch columns from a table
 const fetchTableColumns = async (
@@ -69,9 +70,11 @@ export function PropertiesPanel({
     setPropertiesPanelOpen,
     currentDashboard,
     dataSources,
+    selectedDatasetId,
   } = useWorkspaceStore();
   const [tableColumns, setTableColumns] = useState<DatasetColumn[]>([]);
   const [loadingColumns, setLoadingColumns] = useState(false);
+  const [dataDialogOpen, setDataDialogOpen] = useState(false);
 
   // Get the connected data source and selected table
   const connectedDataSource = currentDashboard?.dataSourceId
@@ -231,18 +234,29 @@ export function PropertiesPanel({
               </Card>
             )}
 
-            {connectedDataSource && !selectedTable && (
+            {connectedDataSource && !selectedTable && !selectedDatasetId && (
               <Card className="border-yellow-500/50 bg-yellow-500/10">
-                <CardContent className="p-4">
+                <CardContent className="p-4 space-y-3">
                   <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                    No table selected. Please select a table from the topbar.
+                    No dataset selected. Please select a dataset to configure
+                    this component.
                   </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setDataDialogOpen(true)}
+                  >
+                    <Database className="h-4 w-4 mr-2" />
+                    Select Dataset
+                  </Button>
                 </CardContent>
               </Card>
             )}
 
             {connectedDataSource &&
-              selectedTable &&
+              (selectedTable || selectedDatasetId) &&
               (loadingColumns ? (
                 <div className="text-center py-4">
                   <p className="text-sm text-muted-foreground">
@@ -252,10 +266,24 @@ export function PropertiesPanel({
               ) : (
                 <>
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                      Table
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        {selectedTable ? "Table" : "Dataset"}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => setDataDialogOpen(true)}
+                      >
+                        <Database className="h-3 w-3 mr-1" />
+                        Change
+                      </Button>
+                    </div>
+                    <p className="text-sm font-medium">
+                      {selectedTable || dataset?.name || "No dataset selected"}
                     </p>
-                    <p className="text-sm font-medium">{selectedTable}</p>
                     <p className="text-xs text-muted-foreground">
                       {connectedDataSource.name} • {availableColumns.length}{" "}
                       columns available
@@ -411,6 +439,7 @@ export function PropertiesPanel({
           </form>
         </Form>
       </ScrollArea>
+      <DataDialog open={dataDialogOpen} onOpenChange={setDataDialogOpen} />
     </div>
   );
 }

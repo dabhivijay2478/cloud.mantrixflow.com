@@ -265,7 +265,12 @@ export default function WorkspaceLayout({
                   {(!isMobile || componentsPanelOpen) && <ComponentsPanel />}
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={componentsPanelOpen && !isMobile && componentsPanelSize > 3 && propertiesPanelSize > 3}
+                  withHandle={
+                    componentsPanelOpen &&
+                    !isMobile &&
+                    componentsPanelSize > 3 &&
+                    propertiesPanelSize > 3
+                  }
                   className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen || isMobile || componentsPanelSize <= 3 || propertiesPanelSize <= 3 ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel
@@ -317,7 +322,9 @@ export default function WorkspaceLayout({
                   )}
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={propertiesPanelOpen && !isMobile && propertiesPanelSize > 3}
+                  withHandle={
+                    propertiesPanelOpen && !isMobile && propertiesPanelSize > 3
+                  }
                   className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!propertiesPanelOpen || isMobile || propertiesPanelSize <= 3 ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel

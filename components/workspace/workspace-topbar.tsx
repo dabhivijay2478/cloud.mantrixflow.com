@@ -2,13 +2,11 @@
 
 import {
   ArrowLeft,
-  Database,
   ExternalLink,
   LogOut,
   Save,
   Search,
   Settings,
-  User,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -27,7 +25,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { DataDialog } from "@/components/workspace/data-dialog";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast as toastUtil } from "@/lib/utils/toast";
@@ -39,7 +36,6 @@ export function WorkspaceTopbar() {
   const { currentDashboard, updateDashboard } = useWorkspaceStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMac, setIsMac] = useState(false);
-  const [dataDialogOpen, setDataDialogOpen] = useState(false);
 
   // Check if we're in dashboard edit mode (dashboard/[id] but not /view)
   const isDashboardEditMode =
@@ -95,103 +91,92 @@ export function WorkspaceTopbar() {
   // Dashboard edit mode header
   if (isDashboardEditMode && currentDashboard) {
     return (
-      <>
-        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
-          <div className="flex h-14 items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-4 min-w-0 flex-1">
-              <SidebarTrigger />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push("/workspace")}
-                className="shrink-0"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg font-semibold truncate">
-                  {currentDashboard.name}
-                </h1>
-                {currentDashboard.description && (
-                  <p className="text-muted-foreground text-xs truncate">
-                    {currentDashboard.description}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setDataDialogOpen(true)}
-                title="Open data source & datasets"
-              >
-                <Database className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  window.open(
-                    `/workspace/dashboards/${currentDashboard.id}/view`,
-                    "_blank",
-                  )
-                }
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View
-              </Button>
-              <Button onClick={handleSave} size="sm">
-                <Save className="mr-2 h-4 w-4" />
-                Save
-              </Button>
-              <div className="flex items-center gap-2 ml-2 pl-2 border-l">
-                <ThemeToggle />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="relative h-8 w-8 rounded-full"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.user_metadata?.avatar_url} />
-                        <AvatarFallback>
-                          {user?.email?.charAt(0).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {user?.user_metadata?.full_name || "User"}
-                        </p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {user?.email}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => router.push("/workspace/settings")}
-                    >
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
+        <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <SidebarTrigger />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/workspace")}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-semibold truncate">
+                {currentDashboard.name}
+              </h1>
+              {currentDashboard.description && (
+                <p className="text-muted-foreground text-xs truncate">
+                  {currentDashboard.description}
+                </p>
+              )}
             </div>
           </div>
-        </header>
-        <DataDialog open={dataDialogOpen} onOpenChange={setDataDialogOpen} />
-      </>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                window.open(
+                  `/workspace/dashboards/${currentDashboard.id}/view`,
+                  "_blank",
+                )
+              }
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              View
+            </Button>
+            <Button onClick={handleSave} size="sm">
+              <Save className="mr-2 h-4 w-4" />
+              Save
+            </Button>
+            <div className="flex items-center gap-2 ml-2 pl-2 border-l">
+              <ThemeToggle />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.user_metadata?.avatar_url} />
+                      <AvatarFallback>
+                        {user?.email?.charAt(0).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user?.user_metadata?.full_name || "User"}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => router.push("/workspace/settings")}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </header>
     );
   }
 

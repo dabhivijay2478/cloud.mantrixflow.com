@@ -24,16 +24,22 @@ import {
 } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 
-function ColumnIcon({ type }: { type: DatasetColumn["type"] }) {
+function ColumnIcon({
+  type,
+  className,
+}: {
+  type: DatasetColumn["type"];
+  className?: string;
+}) {
   switch (type) {
     case "number":
-      return <Hash className="h-3.5 w-3.5" />;
+      return <Hash className={className || "h-3.5 w-3.5"} />;
     case "date":
-      return <Calendar className="h-3.5 w-3.5" />;
+      return <Calendar className={className || "h-3.5 w-3.5"} />;
     case "boolean":
-      return <ToggleLeft className="h-3.5 w-3.5" />;
+      return <ToggleLeft className={className || "h-3.5 w-3.5"} />;
     default:
-      return <Type className="h-3.5 w-3.5" />;
+      return <Type className={className || "h-3.5 w-3.5"} />;
   }
 }
 
@@ -101,7 +107,7 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-7xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
@@ -191,36 +197,38 @@ export function DataDialog({ open, onOpenChange }: DataDialogProps) {
                     <p className="text-xs font-medium text-muted-foreground uppercase">
                       Columns
                     </p>
-                    <div className="space-y-1">
-                      {columns.map((column) => (
-                        <div
-                          key={column.name}
-                          className={cn(
-                            "flex items-center justify-between p-2 rounded-md border bg-background hover:bg-accent transition-colors",
-                            column.selected && "ring-2 ring-primary",
-                          )}
-                        >
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <ColumnIcon
-                              type={column.type}
-                              className="shrink-0 text-muted-foreground"
-                            />
-                            <span className="text-sm font-medium truncate">
-                              {column.name}
-                            </span>
-                          </div>
-                          <Badge
-                            variant="outline"
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-1">
+                        {columns.map((column) => (
+                          <div
+                            key={column.name}
                             className={cn(
-                              "text-xs shrink-0",
-                              getTypeColor(column.type),
+                              "flex items-center justify-between p-2 rounded-md border bg-background hover:bg-accent transition-colors",
+                              column.selected && "ring-2 ring-primary",
                             )}
                           >
-                            {column.type}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <ColumnIcon
+                                type={column.type}
+                                className="shrink-0 text-muted-foreground"
+                              />
+                              <span className="text-sm font-medium truncate">
+                                {column.name}
+                              </span>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs shrink-0",
+                                getTypeColor(column.type),
+                              )}
+                            >
+                              {column.type}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </>
               )}
