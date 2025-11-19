@@ -51,6 +51,9 @@ export default function WorkspaceLayout({
     useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const agentPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const [mainPanelSize, setMainPanelSize] = useState(64);
+  const [componentsPanelSize, setComponentsPanelSize] = useState(15);
+  const [propertiesPanelSize, setPropertiesPanelSize] = useState(20);
+  const [agentPanelSize, setAgentPanelSize] = useState(15);
 
   // Get selected component and dataset for Properties Panel
   const selectedComponent =
@@ -125,20 +128,28 @@ export default function WorkspaceLayout({
       // On mobile, panels should be smaller or hidden
       if (!componentsPanelOpen && componentsPanelRef.current) {
         componentsPanelRef.current.resize(0);
+        setComponentsPanelSize(0);
       }
       if (!agentPanelOpen && agentPanelRef.current) {
         agentPanelRef.current.resize(0);
+        setAgentPanelSize(0);
       }
     } else {
-      // On desktop, use normal sizes
+      // On desktop, collapse to size 3 when closed
       if (!componentsPanelOpen && componentsPanelRef.current) {
-        componentsPanelRef.current.resize(3);
+        componentsPanelRef.current.collapse();
+        setComponentsPanelSize(3);
+      }
+      if (!propertiesPanelOpen && propertiesPanelRef.current) {
+        propertiesPanelRef.current.collapse();
+        setPropertiesPanelSize(3);
       }
       if (!agentPanelOpen && agentPanelRef.current) {
-        agentPanelRef.current.resize(3);
+        agentPanelRef.current.collapse();
+        setAgentPanelSize(3);
       }
     }
-  }, [componentsPanelOpen, agentPanelOpen, isMobile]);
+  }, [componentsPanelOpen, agentPanelOpen, propertiesPanelOpen, isMobile]);
 
   // Calculate main panel size based on open panels
   useEffect(() => {
@@ -208,8 +219,17 @@ export default function WorkspaceLayout({
                 direction="horizontal"
                 className="flex-1"
                 onLayout={(sizes) => {
-                  // Update main panel size when layout changes
-                  if (sizes.length >= 4) {
+                  // Track all panel sizes to determine if they're collapsed
+                  if (sizes.length >= 5) {
+                    // All 4 panels: components, properties, main, agent
+                    setComponentsPanelSize(sizes[0] || 15);
+                    setPropertiesPanelSize(sizes[1] || 20);
+                    setMainPanelSize(sizes[2] || 50);
+                    setAgentPanelSize(sizes[3] || 15);
+                  } else if (sizes.length >= 4) {
+                    // 3 panels scenario
+                    setComponentsPanelSize(sizes[0] || 15);
+                    setPropertiesPanelSize(sizes[1] || 20);
                     setMainPanelSize(sizes[2] || 50);
                   } else if (sizes.length >= 3) {
                     setMainPanelSize(sizes[1] || 64);
@@ -228,14 +248,14 @@ export default function WorkspaceLayout({
                         ? 15
                         : 3
                   }
-                  minSize={isMobile ? 0 : componentsPanelOpen ? 15 : 3}
+                  minSize={isMobile ? 0 : componentsPanelOpen ? 10 : 3}
                   maxSize={
                     isMobile
                       ? componentsPanelOpen
                         ? 40
                         : 0
                       : componentsPanelOpen
-                        ? 15
+                        ? 30
                         : 3
                   }
                   collapsible={true}
@@ -245,8 +265,8 @@ export default function WorkspaceLayout({
                   {(!isMobile || componentsPanelOpen) && <ComponentsPanel />}
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={false}
-                  className="pointer-events-none opacity-0"
+                  withHandle={componentsPanelOpen && !isMobile && componentsPanelSize > 3 && propertiesPanelSize > 3}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!componentsPanelOpen || isMobile || componentsPanelSize <= 3 || propertiesPanelSize <= 3 ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel
                   ref={propertiesPanelRef}
@@ -267,7 +287,7 @@ export default function WorkspaceLayout({
                         ? 40
                         : 0
                       : propertiesPanelOpen
-                        ? 35
+                        ? 40
                         : 3
                   }
                   collapsible={true}
@@ -297,14 +317,14 @@ export default function WorkspaceLayout({
                   )}
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={propertiesPanelOpen && !isMobile}
-                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!propertiesPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
+                  withHandle={propertiesPanelOpen && !isMobile && propertiesPanelSize > 3}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!propertiesPanelOpen || isMobile || propertiesPanelSize <= 3 ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel
                   id="main-panel"
                   defaultSize={mainPanelSize}
-                  minSize={isMobile ? 20 : 40}
-                  maxSize={isMobile ? 100 : 85}
+                  minSize={isMobile ? 20 : 30}
+                  maxSize={isMobile ? 100 : 90}
                   key={`main-${componentsPanelOpen}-${propertiesPanelOpen}-${agentPanelOpen}-${isMobile}`}
                 >
                   <main
@@ -317,8 +337,8 @@ export default function WorkspaceLayout({
                   </main>
                 </ResizablePanel>
                 <ResizableHandle
-                  withHandle={agentPanelOpen && !isMobile}
-                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!agentPanelOpen || isMobile ? "pointer-events-none opacity-0" : ""}`}
+                  withHandle={agentPanelOpen && !isMobile && agentPanelSize > 3}
+                  className={`data-[resize-handle-state=hover]:bg-accent transition-colors ${!agentPanelOpen || isMobile || agentPanelSize <= 3 ? "pointer-events-none opacity-0" : ""}`}
                 />
                 <ResizablePanel
                   ref={agentPanelRef}
