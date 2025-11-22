@@ -770,16 +770,25 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "share-button":
         return (
           <BIComponents.ShareButton
+            url={getStringValue(mergedConfig.url, "")}
             {...(mergedConfig as Record<string, unknown>)}
           />
         );
       case "qr-code":
         return (
-          <BIComponents.QRCode {...(mergedConfig as Record<string, unknown>)} />
+          <BIComponents.QRCode
+            url={getStringValue(mergedConfig.url, "")}
+            {...(mergedConfig as Record<string, unknown>)}
+          />
         );
       case "export-pdf":
         return (
           <BIComponents.ExportPDF
+            onExport={
+              typeof mergedConfig.onExport === "function"
+                ? (mergedConfig.onExport as () => void | Promise<void>)
+                : () => {}
+            }
             {...(mergedConfig as Record<string, unknown>)}
           />
         );
@@ -794,6 +803,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "regenerate-button":
         return (
           <BIComponents.RegenerateButton
+            onRegenerate={
+              typeof mergedConfig.onRegenerate === "function"
+                ? (mergedConfig.onRegenerate as () => void | Promise<void>)
+                : () => {}
+            }
             {...(mergedConfig as Record<string, unknown>)}
           />
         );
@@ -806,6 +820,14 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "edit-prompt":
         return (
           <BIComponents.EditPrompt
+            originalPrompt={getStringValue(mergedConfig.originalPrompt, "")}
+            onSubmit={
+              typeof mergedConfig.onSubmit === "function"
+                ? (mergedConfig.onSubmit as (
+                    newPrompt: string,
+                  ) => void | Promise<void>)
+                : () => {}
+            }
             {...(mergedConfig as Record<string, unknown>)}
           />
         );

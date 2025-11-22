@@ -188,12 +188,21 @@ export function WaterfallChart({
                       props.payload?.type === "start" ||
                       props.payload?.type === "total"
                     ) {
-                      return [value, "Total"];
+                      return [
+                        typeof value === "number" || typeof value === "string"
+                          ? String(value)
+                          : "",
+                        "Total",
+                      ];
                     }
                     return [
-                      typeof value === "number" && value > 0
-                        ? `+${value}`
-                        : value,
+                      typeof value === "number"
+                        ? value > 0
+                          ? `+${value}`
+                          : String(value)
+                        : typeof value === "string"
+                          ? value
+                          : "",
                       "Change",
                     ];
                   }}

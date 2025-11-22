@@ -34,16 +34,22 @@ const fetchTableColumns = async (
   return mockColumns;
 };
 
-function ColumnIcon({ type }: { type: DatasetColumn["type"] }) {
+function ColumnIcon({
+  type,
+  className,
+}: {
+  type: DatasetColumn["type"];
+  className?: string;
+}) {
   switch (type) {
     case "number":
-      return <Hash className="h-3.5 w-3.5" />;
+      return <Hash className={className || "h-3.5 w-3.5"} />;
     case "date":
-      return <Calendar className="h-3.5 w-3.5" />;
+      return <Calendar className={className || "h-3.5 w-3.5"} />;
     case "boolean":
-      return <ToggleLeft className="h-3.5 w-3.5" />;
+      return <ToggleLeft className={className || "h-3.5 w-3.5"} />;
     default:
-      return <Type className="h-3.5 w-3.5" />;
+      return <Type className={className || "h-3.5 w-3.5"} />;
   }
 }
 

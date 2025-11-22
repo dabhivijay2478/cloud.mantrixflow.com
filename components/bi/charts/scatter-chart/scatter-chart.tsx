@@ -117,7 +117,12 @@ export function ScatterChart({
                       "",
                     ];
                   }
-                  return [value, name === xKey ? "X" : "Y"];
+                  return [
+                    typeof value === "number" || typeof value === "string"
+                      ? String(value)
+                      : "",
+                    name === xKey ? "X" : "Y",
+                  ];
                 }}
               />
             }
