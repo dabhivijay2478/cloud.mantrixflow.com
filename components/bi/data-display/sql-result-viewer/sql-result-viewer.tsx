@@ -359,9 +359,9 @@ export function SQLResultViewer({
                               {header.isPlaceholder
                                 ? null
                                 : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext(),
-                                )}
+                                    header.column.columnDef.header,
+                                    header.getContext(),
+                                  )}
                             </TableHead>
                           ))}
                       </TableRow>
@@ -419,12 +419,12 @@ export function SQLResultViewer({
             {table.getFilteredRowModel().rows.length === 0
               ? 0
               : table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}{" "}
+                  table.getState().pagination.pageSize +
+                1}{" "}
             to{" "}
             {Math.min(
               (table.getState().pagination.pageIndex + 1) *
-              table.getState().pagination.pageSize,
+                table.getState().pagination.pageSize,
               table.getFilteredRowModel().rows.length,
             )}{" "}
             of {table.getFilteredRowModel().rows.length} results

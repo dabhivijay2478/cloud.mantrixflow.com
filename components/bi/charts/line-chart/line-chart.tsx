@@ -7,6 +7,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  ChartEmptyState,
+  ChartErrorState,
+  ChartLoadingState,
+} from "@/components/bi/charts/chart-states/chart-states";
 import { createChartConfig } from "@/components/features/bi/charts/chart-config";
 import { ChartWrapper } from "@/components/features/bi/charts/chart-wrapper";
 import {
@@ -16,11 +21,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-  ChartEmptyState,
-  ChartErrorState,
-  ChartLoadingState,
-} from "@/components/bi/charts/chart-states/chart-states";
 
 /**
  * LineChart

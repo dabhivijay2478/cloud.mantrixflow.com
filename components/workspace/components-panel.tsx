@@ -16,6 +16,7 @@ import {
   Grid3x3,
   LayoutGrid,
   LineChart as LineChartIcon,
+  type LucideIcon,
   Map as MapIcon,
   MapPin,
   MessageSquare,
@@ -23,8 +24,11 @@ import {
   Table,
   TrendingUp,
   X,
-  LucideIcon,
 } from "lucide-react";
+import {
+  getAllCategories,
+  getComponentsByCategory,
+} from "@/components/bi/component-schemas";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -35,7 +39,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import { getAllCategories, getComponentsByCategory } from "@/components/bi/component-schemas";
 
 // Icon mapping for component types
 const iconMap: Record<string, LucideIcon> = {
@@ -114,8 +117,8 @@ function DraggableComponentButton({
 
   const style = transform
     ? {
-      transform: CSS.Translate.toString(transform),
-    }
+        transform: CSS.Translate.toString(transform),
+      }
     : undefined;
 
   const Icon = component.icon;
@@ -148,13 +151,16 @@ export function ComponentsPanel() {
   const allComponents = getAllComponentsFromSchemas();
 
   // Group components by category
-  const componentsByCategory = allComponents.reduce((acc, component) => {
-    if (!acc[component.category]) {
-      acc[component.category] = [];
-    }
-    acc[component.category].push(component);
-    return acc;
-  }, {} as Record<string, typeof allComponents>);
+  const componentsByCategory = allComponents.reduce(
+    (acc, component) => {
+      if (!acc[component.category]) {
+        acc[component.category] = [];
+      }
+      acc[component.category].push(component);
+      return acc;
+    },
+    {} as Record<string, typeof allComponents>,
+  );
 
   if (!componentsPanelOpen) {
     return (
@@ -210,30 +216,32 @@ export function ComponentsPanel() {
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-4 space-y-6">
           <TooltipProvider delayDuration={200}>
-            {Object.entries(componentsByCategory).map(([category, components]) => (
-              <div key={category} className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {category}
-                </h3>
-                <div className="grid grid-cols-4 gap-2">
-                  {components.map((component) => (
-                    <Tooltip key={component.id}>
-                      <TooltipTrigger asChild>
-                        <DraggableComponentButton component={component} />
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-[200px]">
-                        <div>
-                          <p className="font-semibold">{component.name}</p>
-                          <p className="text-xs opacity-90">
-                            {component.description}
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
+            {Object.entries(componentsByCategory).map(
+              ([category, components]) => (
+                <div key={category} className="space-y-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {category}
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {components.map((component) => (
+                      <Tooltip key={component.id}>
+                        <TooltipTrigger asChild>
+                          <DraggableComponentButton component={component} />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[200px]">
+                          <div>
+                            <p className="font-semibold">{component.name}</p>
+                            <p className="text-xs opacity-90">
+                              {component.description}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </TooltipProvider>
         </div>
       </ScrollArea>

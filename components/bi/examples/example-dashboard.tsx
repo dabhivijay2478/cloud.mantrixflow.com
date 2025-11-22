@@ -45,7 +45,7 @@ const categoryData = [
   { category: "Books", sales: 18000, growth: 8 },
 ];
 
-interface Payment {
+interface Payment extends Record<string, unknown> {
   id: string;
   amount: number;
   status: string;
@@ -161,7 +161,7 @@ export function ExampleDashboard() {
 
         {/* Data Table */}
         <div className="mt-8">
-          <DataTable
+          <DataTable<Payment>
             columns={columns}
             data={payments}
             title="Recent Transactions"

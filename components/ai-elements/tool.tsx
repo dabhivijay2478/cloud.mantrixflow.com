@@ -29,7 +29,11 @@ export const Tool = ({ className, ...props }: ToolProps) => (
   />
 );
 
-type ToolState = ToolUIPart["state"] | "approval-requested" | "approval-responded" | "output-denied";
+type ToolState =
+  | ToolUIPart["state"]
+  | "approval-requested"
+  | "approval-responded"
+  | "output-denied";
 
 export type ToolHeaderProps = {
   title?: string;

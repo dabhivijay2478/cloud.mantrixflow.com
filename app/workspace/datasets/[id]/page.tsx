@@ -868,7 +868,6 @@ export default function DatasetConfigurationPage() {
                             <SortableColumnItem
                               key={column.name}
                               column={column}
-
                               onRemove={handleRemoveColumn}
                               isSelected={true}
                             />

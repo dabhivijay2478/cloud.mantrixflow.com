@@ -14,7 +14,7 @@ const loadLeaflet = async () => {
 
   try {
     const leafletModule = await import("leaflet");
-    // @ts-ignore
+    // @ts-expect-error
     await import("leaflet/dist/leaflet.css");
 
     L = leafletModule.default || leafletModule;
@@ -919,8 +919,8 @@ export function LeafletMapBubbles({
         const size =
           value > 0
             ? minBubbleSize +
-            ((value - minValue) / (maxValue - minValue)) *
-            (maxBubbleSize - minBubbleSize)
+              ((value - minValue) / (maxValue - minValue)) *
+                (maxBubbleSize - minBubbleSize)
             : minBubbleSize;
 
         const bubble = Leaflet.circleMarker([marker.lat, marker.lng], {

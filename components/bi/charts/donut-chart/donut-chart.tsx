@@ -1,6 +1,9 @@
 "use client";
 
-import { PieChart, type PieChartProps } from "@/components/bi/charts/pie-chart/pie-chart";
+import {
+  PieChart,
+  type PieChartProps,
+} from "@/components/bi/charts/pie-chart/pie-chart";
 
 /**
  * DonutChart

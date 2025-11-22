@@ -253,7 +253,7 @@ export function DashboardItem({
           "hover:bg-primary/50 hover:border-primary transition-colors",
           "cursor-resize",
           isHovered || isSelected ? "opacity-100" : "opacity-0",
-          handleClasses[handle],
+          handle && handleClasses[handle],
         )}
         onMouseDown={(e) => handleResizeStart(e, handle)}
         onKeyDown={(e) => {

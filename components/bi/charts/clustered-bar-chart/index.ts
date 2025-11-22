@@ -3,5 +3,5 @@
  * Exports the ClusteredBarChart component and its schema
  */
 
-export { ClusteredBarChart } from './clustered-bar-chart';
-export { clusteredbarchartSchema } from './schema';
+export { ClusteredBarChart } from "./clustered-bar-chart";
+export { clusteredbarchartSchema } from "./schema";

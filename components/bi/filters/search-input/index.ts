@@ -3,5 +3,5 @@
  * Exports the SearchInput component and its schema
  */
 
-export { SearchInput } from './search-input';
-export { searchInputSchema } from './schema';
+export { searchInputSchema } from "./schema";
+export { SearchInput } from "./search-input";

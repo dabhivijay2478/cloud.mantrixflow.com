@@ -3,5 +3,5 @@
  * Exports the BarChart component and its schema
  */
 
-export { BarChart } from './bar-chart';
-export { barchartSchema } from './schema';
+export { BarChart } from "./bar-chart";
+export { barchartSchema } from "./schema";

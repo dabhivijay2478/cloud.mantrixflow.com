@@ -180,9 +180,9 @@ export function WaterfallChart({
               content={
                 <ChartTooltipContent
                   formatter={(
-                    value: any,
-                    _name: any,
-                    props: any,
+                    value: unknown,
+                    _name: unknown,
+                    props: { payload?: { type?: string } },
                   ) => {
                     if (
                       props.payload?.type === "start" ||
@@ -190,7 +190,12 @@ export function WaterfallChart({
                     ) {
                       return [value, "Total"];
                     }
-                    return [value > 0 ? `+${value}` : value, "Change"];
+                    return [
+                      typeof value === "number" && value > 0
+                        ? `+${value}`
+                        : value,
+                      "Change",
+                    ];
                   }}
                 />
               }

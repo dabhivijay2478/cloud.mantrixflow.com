@@ -1,27 +1,17 @@
 "use client";
 
-import { Database, Type, X } from "lucide-react";
+import { Database, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import {
+  getComponentProperties,
+  type ValidationError,
+  validateComponentProps,
+} from "@/components/bi/component-schemas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import type {
   DashboardComponent,
@@ -31,11 +21,6 @@ import type {
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { DataDialog } from "./data-dialog";
 import { PropertyControl } from "./property-control";
-import {
-  getComponentProperties,
-  validateComponentProps,
-  type ValidationError,
-} from "@/components/bi/component-schemas";
 
 // Mock function to fetch columns from a table
 const fetchTableColumns = async (
@@ -83,11 +68,17 @@ export function PropertiesPanel({
   const [dataDialogOpen, setDataDialogOpen] = useState(false);
 
   // Schema-based properties
-  const [propertyValues, setPropertyValues] = useState<Record<string, unknown>>({});
-  const [validationErrors, setValidationErrors] = useState<Map<string, string>>(new Map());
+  const [propertyValues, setPropertyValues] = useState<Record<string, unknown>>(
+    {},
+  );
+  const [validationErrors, setValidationErrors] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   // Get schema properties for the selected component
-  const schemaProperties = component ? getComponentProperties(component.type) : [];
+  const schemaProperties = component
+    ? getComponentProperties(component.type)
+    : [];
 
   // Get the connected data source and selected table
   const connectedDataSource = currentDashboard?.dataSourceId
@@ -187,19 +178,19 @@ export function PropertiesPanel({
   const dateColumns = availableColumns.filter((c) => c.type === "date");
 
   // Determine available columns based on component type
-  const getAvailableXAxisColumns = () => {
+  const _getAvailableXAxisColumns = () => {
     if (!component) return [];
     // For most charts, X-axis can be string or date
     return [...stringColumns, ...dateColumns];
   };
 
-  const getAvailableYAxisColumns = () => {
+  const _getAvailableYAxisColumns = () => {
     if (!component) return [];
     // Y-axis should be numeric
     return numberColumns;
   };
 
-  const getAvailableGroupingColumns = () => {
+  const _getAvailableGroupingColumns = () => {
     if (!component) return [];
     // Grouping is typically string columns
     return stringColumns;
@@ -373,8 +364,8 @@ export function PropertiesPanel({
                         </p>
                         <ul className="text-xs text-destructive/90 space-y-1">
                           {Array.from(validationErrors.values()).map(
-                            (error, idx) => (
-                              <li key={idx}>• {error}</li>
+                            (error) => (
+                              <li key={error}>• {error}</li>
                             ),
                           )}
                         </ul>

@@ -655,9 +655,16 @@ function CanvasDropZone({
       const lastOver = windowWithData.__lastOver;
 
       if (
-        lastOver?.id === "canvas-drop-zone" &&
-        lastActiveData?.type === "palette" &&
-        lastActiveData?.componentType
+        lastOver &&
+        typeof lastOver === "object" &&
+        "id" in lastOver &&
+        lastOver.id === "canvas-drop-zone" &&
+        lastActiveData &&
+        typeof lastActiveData === "object" &&
+        "type" in lastActiveData &&
+        lastActiveData.type === "palette" &&
+        "componentType" in lastActiveData &&
+        lastActiveData.componentType
       ) {
         const canvasElement = document.getElementById("canvas-drop-zone");
         if (canvasElement) {
@@ -666,7 +673,11 @@ function CanvasDropZone({
           const dropX = windowWithData.__lastDropX || canvasRect.width / 2;
           const dropY = windowWithData.__lastDropY || canvasRect.height / 2;
 
-          onDropNewComponent(lastActiveData.componentType, dropX, dropY);
+          onDropNewComponent(
+            lastActiveData.componentType as string,
+            dropX,
+            dropY,
+          );
         }
 
         const windowWithData = window as WindowWithDragData;

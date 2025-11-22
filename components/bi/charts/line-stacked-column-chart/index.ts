@@ -3,5 +3,5 @@
  * Exports the LineStackedColumnChart component and its schema
  */
 
-export { LineStackedColumnChart } from './line-stacked-column-chart';
-export { linestackedcolumnchartSchema } from './schema';
+export { LineStackedColumnChart } from "./line-stacked-column-chart";
+export { linestackedcolumnchartSchema } from "./schema";

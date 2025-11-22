@@ -1,2 +1,2 @@
-export { WaterfallChart } from './waterfall-chart';
-export { waterfallChartSchema } from './schema';
+export { waterfallChartSchema } from "./schema";
+export { WaterfallChart } from "./waterfall-chart";

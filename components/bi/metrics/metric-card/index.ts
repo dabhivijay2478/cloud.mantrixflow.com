@@ -3,5 +3,5 @@
  * Exports the MetricCard component and its schema
  */
 
-export { MetricCard } from './metric-card';
-export { metricCardSchema } from './schema';
+export { MetricCard } from "./metric-card";
+export { metricCardSchema } from "./schema";

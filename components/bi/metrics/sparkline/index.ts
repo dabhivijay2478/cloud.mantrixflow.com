@@ -3,5 +3,5 @@
  * Exports the Sparkline component and its schema
  */
 
-export { Sparkline } from './sparkline';
-export { sparklineSchema } from './schema';
+export { sparklineSchema } from "./schema";
+export { Sparkline } from "./sparkline";

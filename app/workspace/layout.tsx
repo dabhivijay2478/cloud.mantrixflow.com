@@ -51,7 +51,7 @@ export default function WorkspaceLayout({
     useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const agentPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const [mainPanelSize, setMainPanelSize] = useState(64);
-  const [componentsPanelSize, setComponentsPanelSize] = useState(15);
+  const [_componentsPanelSize, setComponentsPanelSize] = useState(15);
   const [propertiesPanelSize, setPropertiesPanelSize] = useState(20);
   const [agentPanelSize, setAgentPanelSize] = useState(15);
 

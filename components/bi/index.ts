@@ -9,37 +9,7 @@
 // ============================================================================
 // Core BI Components - Charts
 // ============================================================================
-export { AreaChart } from "./charts/area-chart";
-export { BarChart } from "./charts/bar-chart";
-export { ChartSkeleton } from "./charts/chart-skeleton";
-export { ClusteredBarChart } from "./charts/clustered-bar-chart";
-export { ClusteredColumnChart } from "./charts/clustered-column-chart";
-export { DonutChart } from "./charts/donut-chart";
-export { WaterfallChart } from "./charts/waterfall-chart";
-export { LineChart } from "./charts/line-chart";
-export { LineStackedColumnChart } from "./charts/line-stacked-column-chart";
-export { PieChart } from "./charts/pie-chart";
-export { RibbonChart } from "./charts/ribbon-chart";
-export { ScatterChart } from "./charts/scatter-chart";
-export { StackedAreaChart } from "./charts/stacked-area-chart";
-export { StackedBarChart } from "./charts/stacked-bar-chart";
-export { StackedColumnChart } from "./charts/stacked-column-chart";
-// export { WaterfallChart } from "./charts/waterfall-chart";
-// ============================================================================
-// Core BI Components - Metrics
-// ============================================================================
-export { KPICard } from "./metrics/kpi-card";
-export { MetricCard } from "./metrics/metric-card";
-export { MultiRowCard } from "./metrics/multi-row-card";
-export { ProgressBar } from "./metrics/progress-bar";
-export { Sparkline } from "./metrics/sparkline";
-// ============================================================================
-// Core BI Components - Data Display
-// ============================================================================
-export { createSortableHeader, DataTable } from "./data-display/data-table";
-export { SQLEditor } from "./data-display/sql-editor";
-export { SQLResultViewer } from "./data-display/sql-result-viewer";
-export { TableNavigation } from "./data-display/table-navigation";
+
 // ============================================================================
 // Layout & Container Components
 // ============================================================================
@@ -68,17 +38,6 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-export {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-// Re-export commonly used Shadcn components for BI layouts
-export { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-export { GridItem, GridLayout } from "./layout/grid-layout";
 // ============================================================================
 // Input & Filter Components
 // ============================================================================
@@ -90,12 +49,18 @@ export {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+export {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 export { Slider } from "@/components/ui/slider";
 export { Switch } from "@/components/ui/switch";
-export { DateRangePicker, dateRangePresets } from "./filters/date-range-picker";
-export { MultiSelect } from "./filters/multi-select";
-export { SearchInput } from "./filters/search-input";
-export { Slicer } from "./filters/slicer";
+// Re-export commonly used Shadcn components for BI layouts
+export { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // ============================================================================
 // Advanced Analytics Components
 // ============================================================================
@@ -104,7 +69,6 @@ export { BulletChart } from "./advanced/bullet-chart";
 export { FilledMap } from "./advanced/filled-map";
 export { ForecastLine } from "./advanced/forecast-line";
 export { FunnelChart } from "./advanced/funnel-chart";
-export { Gauge } from "./metrics/gauge";
 export { Heatmap } from "./advanced/heatmap";
 // Leaflet Map Components
 // TODO: Fix leaflet-map folder structure
@@ -126,20 +90,6 @@ export { Matrix } from "./advanced/matrix";
 export { SankeyDiagram } from "./advanced/sankey-diagram";
 export { TreeMap } from "./advanced/treemap";
 // ============================================================================
-// Text & Insight Components
-// ============================================================================
-export { AICommentary } from "./insights/ai-commentary";
-export { InsightText } from "./insights/insight-text";
-export { StatChange } from "./insights/stat-change";
-export { TrendLabel } from "./insights/trend-label";
-// ============================================================================
-// Embed & Share Components
-// ============================================================================
-export { EmbedCode } from "./share/embed-code";
-export { ExportPDF } from "./share/export-pdf";
-export { QRCode } from "./share/qr-code";
-export { ShareButton } from "./share/share-button";
-// ============================================================================
 // AI Prompt & Feedback Components
 // ============================================================================
 export { EditPrompt } from "./ai/edit-prompt";
@@ -148,7 +98,58 @@ export { PaginatedReport } from "./ai/paginated-report";
 export { PromptInput } from "./ai/prompt-input";
 export { QA } from "./ai/qa";
 export { RegenerateButton } from "./ai/regenerate-button";
+export { AreaChart } from "./charts/area-chart";
+export { BarChart } from "./charts/bar-chart";
+export { ChartSkeleton } from "./charts/chart-skeleton";
+export { ClusteredBarChart } from "./charts/clustered-bar-chart";
+export { ClusteredColumnChart } from "./charts/clustered-column-chart";
+export { DonutChart } from "./charts/donut-chart";
+export { LineChart } from "./charts/line-chart";
+export { LineStackedColumnChart } from "./charts/line-stacked-column-chart";
+export { PieChart } from "./charts/pie-chart";
+export { RibbonChart } from "./charts/ribbon-chart";
+export { ScatterChart } from "./charts/scatter-chart";
+export { StackedAreaChart } from "./charts/stacked-area-chart";
+export { StackedBarChart } from "./charts/stacked-bar-chart";
+export { StackedColumnChart } from "./charts/stacked-column-chart";
+export { WaterfallChart } from "./charts/waterfall-chart";
+// ============================================================================
+// Core BI Components - Data Display
+// ============================================================================
+export { createSortableHeader, DataTable } from "./data-display/data-table";
+export { SQLEditor } from "./data-display/sql-editor";
+export { SQLResultViewer } from "./data-display/sql-result-viewer";
+export { TableNavigation } from "./data-display/table-navigation";
 // ============================================================================
 // Example & Demo Components
 // ============================================================================
 export { ExampleDashboard } from "./examples/example-dashboard";
+export { DateRangePicker, dateRangePresets } from "./filters/date-range-picker";
+export { MultiSelect } from "./filters/multi-select";
+export { SearchInput } from "./filters/search-input";
+export { Slicer } from "./filters/slicer";
+// ============================================================================
+// Text & Insight Components
+// ============================================================================
+export { AICommentary } from "./insights/ai-commentary";
+export { InsightText } from "./insights/insight-text";
+export { StatChange } from "./insights/stat-change";
+export { TrendLabel } from "./insights/trend-label";
+export { GridItem, GridLayout } from "./layout/grid-layout";
+export { Gauge } from "./metrics/gauge";
+// export { WaterfallChart } from "./charts/waterfall-chart";
+// ============================================================================
+// Core BI Components - Metrics
+// ============================================================================
+export { KPICard } from "./metrics/kpi-card";
+export { MetricCard } from "./metrics/metric-card";
+export { MultiRowCard } from "./metrics/multi-row-card";
+export { ProgressBar } from "./metrics/progress-bar";
+export { Sparkline } from "./metrics/sparkline";
+// ============================================================================
+// Embed & Share Components
+// ============================================================================
+export { EmbedCode } from "./share/embed-code";
+export { ExportPDF } from "./share/export-pdf";
+export { QRCode } from "./share/qr-code";
+export { ShareButton } from "./share/share-button";

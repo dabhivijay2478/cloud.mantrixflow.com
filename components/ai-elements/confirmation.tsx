@@ -13,33 +13,37 @@ import { cn } from "@/lib/utils";
 
 type ToolUIPartApproval =
   | {
-    id: string;
-    approved?: never;
-    reason?: never;
-  }
+      id: string;
+      approved?: never;
+      reason?: never;
+    }
   | {
-    id: string;
-    approved: boolean;
-    reason?: string;
-  }
+      id: string;
+      approved: boolean;
+      reason?: string;
+    }
   | {
-    id: string;
-    approved: true;
-    reason?: string;
-  }
+      id: string;
+      approved: true;
+      reason?: string;
+    }
   | {
-    id: string;
-    approved: true;
-    reason?: string;
-  }
+      id: string;
+      approved: true;
+      reason?: string;
+    }
   | {
-    id: string;
-    approved: false;
-    reason?: string;
-  }
+      id: string;
+      approved: false;
+      reason?: string;
+    }
   | undefined;
 
-type ToolState = ToolUIPart["state"] | "approval-requested" | "approval-responded" | "output-denied";
+type ToolState =
+  | ToolUIPart["state"]
+  | "approval-requested"
+  | "approval-responded"
+  | "output-denied";
 
 type ConfirmationContextValue = {
   approval: ToolUIPartApproval;
