@@ -30,6 +30,12 @@ import type {
 } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { DataDialog } from "./data-dialog";
+import { PropertyControl } from "./property-control";
+import {
+  getComponentProperties,
+  validateComponentProps,
+  type ValidationError,
+} from "@/components/bi/schemas";
 
 // Mock function to fetch columns from a table
 const fetchTableColumns = async (
@@ -76,11 +82,25 @@ export function PropertiesPanel({
   const [loadingColumns, setLoadingColumns] = useState(false);
   const [dataDialogOpen, setDataDialogOpen] = useState(false);
 
+  // Schema-based properties
+  const [propertyValues, setPropertyValues] = useState<Record<string, unknown>>({});
+  const [validationErrors, setValidationErrors] = useState<Map<string, string>>(new Map());
+
+  // Get schema properties for the selected component
+  const schemaProperties = component ? getComponentProperties(component.type) : [];
+
   // Get the connected data source and selected table
   const connectedDataSource = currentDashboard?.dataSourceId
     ? dataSources.find((ds) => ds.id === currentDashboard.dataSourceId)
     : null;
   const selectedTable = connectedDataSource?.selectedTable || "";
+
+  // Initialize property values from component config
+  useEffect(() => {
+    if (component?.config) {
+      setPropertyValues(component.config as Record<string, unknown>);
+    }
+  }, [component]);
 
   // Fetch columns when table changes
   useEffect(() => {
@@ -101,6 +121,31 @@ export function PropertiesPanel({
       setTableColumns([]);
     }
   }, [connectedDataSource?.id, selectedTable]);
+
+  // Handle property change with schema validation
+  const handlePropertyChange = (key: string, value: unknown) => {
+    const newValues = { ...propertyValues, [key]: value };
+    setPropertyValues(newValues);
+
+    // Validate in real-time
+    if (component) {
+      const validation = validateComponentProps(component.type, newValues);
+      if (validation.errors) {
+        const errorMap = new Map<string, string>();
+        validation.errors.forEach((error: ValidationError) => {
+          errorMap.set(error.property, error.message);
+        });
+        setValidationErrors(errorMap);
+      } else {
+        setValidationErrors(new Map());
+      }
+    }
+
+    // Update component immediately for live preview
+    onUpdate({
+      config: newValues,
+    });
+  };
 
   const form = useForm({
     defaultValues: {
@@ -292,148 +337,50 @@ export function PropertiesPanel({
 
                   <Separator />
 
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Type className="h-4 w-4" />
-                          Title
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Component title"
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handleUpdate({ title: e.target.value });
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Display title for this component
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
+                  {/* Schema-based dynamic property controls */}
+                  {schemaProperties.length > 0 ? (
+                    <div className="space-y-4">
+                      {schemaProperties.map((property) => (
+                        <PropertyControl
+                          key={property.key}
+                          property={property}
+                          value={propertyValues[property.key]}
+                          onChange={(value) =>
+                            handlePropertyChange(property.key, value)
+                          }
+                          error={validationErrors.get(property.key)}
+                          availableColumns={availableColumns}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-muted-foreground">
+                        No schema properties available for this component type
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Component type: {component.type}
+                      </p>
+                    </div>
+                  )}
 
-                  <FormField
-                    control={form.control}
-                    name="xAxis"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>X-Axis</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleUpdate({ xAxis: value });
-                          }}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select X-axis column" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {getAvailableXAxisColumns().map((col) => (
-                              <SelectItem key={col.name} value={col.name}>
-                                {col.name} ({col.type})
-                              </SelectItem>
-                            ))}
-                            {getAvailableXAxisColumns().length === 0 && (
-                              <div className="p-2 text-sm text-muted-foreground">
-                                No available columns
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Column to use for the X-axis
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="yAxis"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Y-Axis</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleUpdate({ yAxis: value });
-                          }}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select Y-axis column" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {getAvailableYAxisColumns().map((col) => (
-                              <SelectItem key={col.name} value={col.name}>
-                                {col.name} ({col.type})
-                              </SelectItem>
-                            ))}
-                            {getAvailableYAxisColumns().length === 0 && (
-                              <div className="p-2 text-sm text-muted-foreground">
-                                No numeric columns available
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Column to use for the Y-axis (must be numeric)
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="grouping"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Grouping (Optional)</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            const finalValue =
-                              value === "__none__" ? "" : value;
-                            field.onChange(finalValue);
-                            handleUpdate({ grouping: finalValue });
-                          }}
-                          value={field.value || "__none__"}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select grouping column" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="__none__">None</SelectItem>
-                            {getAvailableGroupingColumns().map((col) => (
-                              <SelectItem key={col.name} value={col.name}>
-                                {col.name} ({col.type})
-                              </SelectItem>
-                            ))}
-                            {getAvailableGroupingColumns().length === 0 && (
-                              <div className="p-2 text-sm text-muted-foreground">
-                                No grouping columns available
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Optional column to group data by (creates series)
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
+                  {/* Validation error summary */}
+                  {validationErrors.size > 0 && (
+                    <Card className="border-destructive/50 bg-destructive/10">
+                      <CardContent className="p-4">
+                        <p className="text-sm font-medium text-destructive mb-2">
+                          Validation Errors ({validationErrors.size})
+                        </p>
+                        <ul className="text-xs text-destructive/90 space-y-1">
+                          {Array.from(validationErrors.values()).map(
+                            (error, idx) => (
+                              <li key={idx}>• {error}</li>
+                            ),
+                          )}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
               ))}
           </form>

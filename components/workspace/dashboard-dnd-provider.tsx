@@ -28,13 +28,13 @@ export function DashboardDndProvider({
   // Use MouseSensor and TouchSensor for better responsiveness
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
-      distance: 8, // Require 8px movement before drag starts
+      distance: 3, // Require only 3px movement before drag starts (reduced from 8)
     },
   });
 
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: {
-      delay: 200, // 200ms delay for touch to distinguish from scroll
+      delay: 150, // 150ms delay for touch to distinguish from scroll
       tolerance: 5, // 5px tolerance for touch
     },
   });

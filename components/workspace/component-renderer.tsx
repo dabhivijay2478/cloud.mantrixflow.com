@@ -54,82 +54,126 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
   try {
     switch (type) {
       // Charts
-      case "line-chart":
+      case "line-chart": {
+        // Generate sample data if not provided, using the actual field names from config
+        const chartData = mergedConfig.data || generateSampleData(
+          mergedConfig.xKey || "month",
+          mergedConfig.yKeys || ["desktop", "mobile"]
+        );
+
         return (
           <BIComponents.LineChart
-            data={mergedConfig.data || sampleLineData}
+            data={chartData}
             xKey={mergedConfig.xKey || "month"}
             yKeys={mergedConfig.yKeys || ["desktop", "mobile"]}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
-      case "bar-chart":
+      case "bar-chart": {
+        const chartData = mergedConfig.data || generateSampleData(
+          mergedConfig.xKey || "month",
+          mergedConfig.yKeys || ["value"]
+        );
+
         return (
           <BIComponents.BarChart
-            data={mergedConfig.data || sampleBarData}
+            data={chartData}
             xKey={mergedConfig.xKey || "month"}
             yKeys={mergedConfig.yKeys || ["value"]}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
-      case "area-chart":
+      case "area-chart": {
+        const chartData = mergedConfig.data || generateSampleData(
+          mergedConfig.xKey || "month",
+          mergedConfig.yKeys || ["desktop", "mobile"]
+        );
+
         return (
           <BIComponents.AreaChart
-            data={mergedConfig.data || sampleAreaData}
+            data={chartData}
             xKey={mergedConfig.xKey || "month"}
             yKeys={mergedConfig.yKeys || ["desktop", "mobile"]}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
-      case "pie-chart":
+      case "pie-chart": {
+        // For pie charts, generate with name/value pairs
+        const pieData = mergedConfig.data || [...Array(6)].map((_, i) => ({
+          [mergedConfig.nameKey || "name"]: `Category ${String.fromCharCode(65 + i)}`,
+          [mergedConfig.valueKey || "value"]: Math.floor(Math.random() * 300) + 100,
+        }));
+
         return (
           <BIComponents.PieChart
-            data={mergedConfig.data || samplePieData}
+            data={pieData}
             nameKey={mergedConfig.nameKey || "name"}
             valueKey={mergedConfig.valueKey || "value"}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
-      case "donut-chart":
+      case "donut-chart": {
+        const donutData = mergedConfig.data || [...Array(6)].map((_, i) => ({
+          [mergedConfig.nameKey || "name"]: `Category ${String.fromCharCode(65 + i)}`,
+          [mergedConfig.valueKey || "value"]: Math.floor(Math.random() * 300) + 100,
+        }));
+
         return (
           <BIComponents.DonutChart
-            data={mergedConfig.data || samplePieData}
+            data={donutData}
             nameKey={mergedConfig.nameKey || "name"}
             valueKey={mergedConfig.valueKey || "value"}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
-      case "stacked-bar-chart":
+      case "stacked-bar-chart": {
+        const chartData = mergedConfig.data || generateSampleData(
+          mergedConfig.xKey || "month",
+          mergedConfig.yKeys || ["value"]
+        );
+
         return (
           <BIComponents.StackedBarChart
-            data={mergedConfig.data || sampleBarData}
+            data={chartData}
             xKey={mergedConfig.xKey || "month"}
             yKeys={mergedConfig.yKeys || ["value"]}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
+        );
+      }
+
+      case "stacked-column-chart": {
+        const chartData = mergedConfig.data || generateSampleData(
+          mergedConfig.xKey || "month",
+          mergedConfig.yKeys || ["value"]
         );
 
-      case "stacked-column-chart":
         return (
           <BIComponents.StackedColumnChart
-            data={mergedConfig.data || sampleBarData}
+            data={chartData}
             xKey={mergedConfig.xKey || "month"}
             yKeys={mergedConfig.yKeys || ["value"]}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
       case "clustered-bar-chart":
         return (
@@ -153,16 +197,22 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
           />
         );
 
-      case "stacked-area-chart":
+      case "stacked-area-chart": {
+        const chartData = mergedConfig.data || generateSampleData(
+          mergedConfig.xKey || "month",
+          mergedConfig.yKeys || ["desktop", "mobile"]
+        );
+
         return (
           <BIComponents.StackedAreaChart
-            data={mergedConfig.data || sampleAreaData}
+            data={chartData}
             xKey={mergedConfig.xKey || "month"}
             yKeys={mergedConfig.yKeys || ["desktop", "mobile"]}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
       case "line-stacked-column-chart":
         return (
@@ -205,22 +255,22 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
           />
         );
 
-      case "scatter-chart":
+      case "scatter-chart": {
+        const chartData = mergedConfig.data || generateSampleData(
+          mergedConfig.xKey || "x",
+          [mergedConfig.yKey || "y"]
+        );
+
         return (
           <BIComponents.ScatterChart
-            data={
-              mergedConfig.data || [
-                { x: 10, y: 20 },
-                { x: 15, y: 30 },
-                { x: 20, y: 25 },
-              ]
-            }
+            data={chartData}
             xKey={mergedConfig.xKey || "x"}
             yKey={mergedConfig.yKey || "y"}
             title={mergedConfig.title}
             description={mergedConfig.description}
           />
         );
+      }
 
       case "radar-chart":
         return (
@@ -602,6 +652,37 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       </div>
     );
   }
+}
+
+// Helper function to generate sample data based on field names
+function generateSampleData(xKey: string, yKeys: string[]): Array<Record<string, any>> {
+  const sampleCategories = ["A", "B", "C", "D", "E", "F"];
+  const sampleMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const sampleDates = ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"];
+
+  // Determine x-axis values based on key name
+  let xValues: any[];
+  if (xKey.toLowerCase().includes("month")) {
+    xValues = sampleMonths;
+  } else if (xKey.toLowerCase().includes("date") || xKey.toLowerCase().includes("time")) {
+    xValues = sampleDates;
+  } else if (xKey.toLowerCase().includes("category") || xKey.toLowerCase().includes("name")) {
+    xValues = sampleCategories;
+  } else {
+    xValues = sampleCategories; // default
+  }
+
+  // Generate data points
+  return xValues.map((xValue) => {
+    const dataPoint: Record<string, any> = { [xKey]: xValue };
+
+    // Add each y-axis field with sample numeric data
+    yKeys.forEach((yKey) => {
+      dataPoint[yKey] = Math.floor(Math.random() * 200) + 50;
+    });
+
+    return dataPoint;
+  });
 }
 
 function getDefaultConfig(_type: string): Record<string, unknown> {

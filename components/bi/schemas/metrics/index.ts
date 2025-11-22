@@ -1,0 +1,313 @@
+/**
+ * Metrics Component Schemas
+ * Property definitions for all metric/KPI components
+ */
+
+import type { ComponentSchema } from "../types";
+
+export const metricSchemas: ComponentSchema[] = [
+    {
+        componentType: "kpi-card",
+        displayName: "KPI Card",
+        icon: "TrendingUp",
+        category: "Metrics",
+        description: "Key performance indicator with trend",
+        properties: [
+            {
+                key: "title",
+                type: "string",
+                label: "Title",
+                defaultValue: "",
+                controlType: "input",
+            },
+            {
+                key: "value",
+                type: "string",
+                label: "Value",
+                description: "Primary metric value",
+                defaultValue: "",
+                controlType: "input",
+                
+            },
+            {
+                key: "label",
+                type: "string",
+                label: "Label",
+                description: "Metric label/description",
+                defaultValue: "",
+                controlType: "input",
+                
+            },
+            {
+                key: "change",
+                type: "number",
+                label: "Change (%)",
+                description: "Percentage change",
+                defaultValue: 0,
+                controlType: "number",
+            },
+            {
+                key: "changeLabel",
+                type: "string",
+                label: "Change Label",
+                description: "Label for change period",
+                defaultValue: "vs last period",
+                controlType: "input",
+            },
+            {
+                key: "prefix",
+                type: "string",
+                label: "Value Prefix",
+                description: "Prefix (e.g., $, €)",
+                defaultValue: "",
+                controlType: "input",
+                placeholder: "$",
+            },
+            {
+                key: "suffix",
+                type: "string",
+                label: "Value Suffix",
+                description: "Suffix (e.g., %, K, M)",
+                defaultValue: "",
+                controlType: "input",
+                placeholder: "%",
+            },
+            {
+                key: "trend",
+                type: "enum",
+                label: "Trend Direction",
+                description: "Manual trend override",
+                defaultValue: "neutral",
+                controlType: "select",
+                options: [
+                    { value: "up", label: "Up" },
+                    { value: "down", label: "Down" },
+                    { value: "neutral", label: "Neutral" },
+                ],
+            },
+        ],
+    },
+
+    {
+        componentType: "gauge",
+        displayName: "Gauge",
+        icon: "Gauge",
+        category: "Metrics",
+        description: "Semi-circular gauge chart",
+        properties: [
+            {
+                key: "title",
+                type: "string",
+                label: "Title",
+                defaultValue: "",
+                controlType: "input",
+            },
+            {
+                key: "value",
+                type: "number",
+                label: "Value",
+                defaultValue: 0,
+                controlType: "number",
+                
+            },
+            {
+                key: "max",
+                type: "number",
+                label: "Maximum Value",
+                defaultValue: 100,
+                controlType: "number",
+                validation: { min: 1 },
+            },
+            {
+                key: "label",
+                type: "string",
+                label: "Label",
+                defaultValue: "",
+                controlType: "input",
+            },
+            {
+                key: "unit",
+                type: "string",
+                label: "Unit",
+                description: "Unit suffix (%, pts, etc.)",
+                defaultValue: "",
+                controlType: "input",
+                placeholder: "%",
+            },
+        ],
+    },
+
+    {
+        componentType: "progress-bar",
+        displayName: "Progress Bar",
+        icon: "Activity",
+        category: "Metrics",
+        description: "Progress toward a goal",
+        properties: [
+            {
+                key: "title",
+                type: "string",
+                label: "Title",
+                defaultValue: "",
+                controlType: "input",
+            },
+            {
+                key: "value",
+                type: "number",
+                label: "Value",
+                description: "Current progress value",
+                defaultValue: 0,
+                controlType: "number",
+                validation: { required: true, min: 0 },
+            },
+            {
+                key: "max",
+                type: "number",
+                label: "Maximum Value",
+                description: "Target/max value",
+                defaultValue: 100,
+                controlType: "number",
+                validation: { min: 1 },
+            },
+            {
+                key: "label",
+                type: "string",
+                label: "Label",
+                defaultValue: "",
+                controlType: "input",
+            },
+            {
+                key: "showValue",
+                type: "boolean",
+                label: "Show Value",
+                defaultValue: true,
+                controlType: "toggle",
+            },
+            {
+                key: "showPercentage",
+                type: "boolean",
+                label: "Show Percentage",
+                defaultValue: true,
+                controlType: "toggle",
+            },
+            {
+                key: "variant",
+                type: "enum",
+                label: "Color Variant",
+                defaultValue: "default",
+                controlType: "select",
+                options: [
+                    { value: "default", label: "Default" },
+                    { value: "success", label: "Success" },
+                    { value: "warning", label: "Warning" },
+                    { value: "danger", label: "Danger" },
+                ],
+            },
+        ],
+    },
+
+    {
+        componentType: "sparkline",
+        displayName: "Sparkline",
+        icon: "LineChart",
+        category: "Metrics",
+        description: "Inline mini-chart for trends",
+        properties: [
+            {
+                key: "data",
+        hidden: true,
+                type: "array",
+                label: "Data",
+                description: "Array of numbers or objects",
+                defaultValue: [],
+                controlType: "array-builder",
+                validation: { required: true, minItems: 2 },
+            },
+            {
+                key: "dataKey",
+                type: "string",
+                label: "Data Key",
+                description: "Key for values (if data is objects)",
+                defaultValue: "value",
+                controlType: "input",
+            },
+            {
+                key: "type",
+                type: "enum",
+                label: "Chart Type",
+                defaultValue: "line",
+                controlType: "select",
+                options: [
+                    { value: "line", label: "Line" },
+                    { value: "area", label: "Area" },
+                ],
+            },
+            {
+                key: "color",
+                type: "color",
+                label: "Color",
+                defaultValue: "#8884d8",
+                controlType: "color-picker",
+            },
+            {
+                key: "height",
+                type: "number",
+                label: "Height",
+                defaultValue: 40,
+                controlType: "number",
+                validation: { min: 20, max: 200 },
+            },
+        ],
+    },
+
+    {
+        componentType: "metric-card",
+        displayName: "Metric Card",
+        icon: "Activity",
+        category: "Metrics",
+        description: "Big number display card",
+        properties: [
+            {
+                key: "title",
+                type: "string",
+                label: "Title",
+                defaultValue: "",
+                controlType: "input",
+            },
+            {
+                key: "value",
+                type: "string",
+                label: "Value",
+                defaultValue: "",
+                controlType: "input",
+                
+            },
+            {
+                key: "label",
+                type: "string",
+                label: "Label",
+                defaultValue: "",
+                controlType: "input",
+            },
+            {
+                key: "description",
+                type: "string",
+                label: "Description",
+                defaultValue: "",
+                controlType: "textarea",
+            },
+            {
+                key: "format",
+                type: "enum",
+                label: "Format",
+                defaultValue: "number",
+                controlType: "select",
+                options: [
+                    { value: "number", label: "Number" },
+                    { value: "currency", label: "Currency" },
+                    { value: "percentage", label: "Percentage" },
+                ],
+            },
+        ],
+    },
+];

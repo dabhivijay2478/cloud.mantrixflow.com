@@ -80,8 +80,8 @@ const DEFAULT_LINE_COLORS = [
 export function LineStackedColumnChart({
   data,
   xKey,
-  columnKeys,
-  lineKeys,
+  columnKeys = [],
+  lineKeys = [],
   title,
   description,
   showGrid = true,
@@ -91,12 +91,12 @@ export function LineStackedColumnChart({
   className,
 }: LineStackedColumnChartProps) {
   const chartConfig = [
-    ...columnKeys.map((key, index) => ({
+    ...(columnKeys || []).map((key, index) => ({
       key,
       label: key,
       color: columnColors[index % columnColors.length],
     })),
-    ...lineKeys.map((key, index) => ({
+    ...(lineKeys || []).map((key, index) => ({
       key,
       label: key,
       color: lineColors[index % lineColors.length],
@@ -144,7 +144,7 @@ export function LineStackedColumnChart({
             />
             <ChartTooltip content={<ChartTooltipContent />} />
             {showLegend && <ChartLegend content={<ChartLegendContent />} />}
-            {columnKeys.map((key) => (
+            {(columnKeys || []).map((key) => (
               <Bar
                 key={key}
                 yAxisId="left"
@@ -154,7 +154,7 @@ export function LineStackedColumnChart({
                 radius={[4, 4, 0, 0]}
               />
             ))}
-            {lineKeys.map((key) => (
+            {(lineKeys || []).map((key) => (
               <Line
                 key={key}
                 yAxisId="right"
