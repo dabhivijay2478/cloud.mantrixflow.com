@@ -3,7 +3,7 @@
  * Property definitions for the Stacked Bar Chart component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const stackedbarchartSchema: ComponentSchema = {
         componentType: "stacked-bar-chart",

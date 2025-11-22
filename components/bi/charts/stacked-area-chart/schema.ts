@@ -3,7 +3,7 @@
  * Property definitions for the Stacked Area Chart component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const stackedareachartSchema: ComponentSchema = {
         componentType: "stacked-area-chart",

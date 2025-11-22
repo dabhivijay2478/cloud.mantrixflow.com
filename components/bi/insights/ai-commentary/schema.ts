@@ -3,7 +3,7 @@
  * Property definitions for the AiCommentary component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const aiCommentarySchema: ComponentSchema = {
         componentType: "ai-commentary",

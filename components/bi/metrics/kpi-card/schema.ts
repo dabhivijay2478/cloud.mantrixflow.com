@@ -3,7 +3,7 @@
  * Property definitions for the KpiCard component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const kpiCardSchema: ComponentSchema = {
         componentType: "kpi-card",

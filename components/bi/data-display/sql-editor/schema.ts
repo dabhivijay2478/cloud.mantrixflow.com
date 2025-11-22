@@ -3,7 +3,7 @@
  * Property definitions for the SqlEditor component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const sqlEditorSchema: ComponentSchema = {
         componentType: "sql-editor",

@@ -3,7 +3,7 @@
  * Property definitions for the Clustered Bar Chart component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const clusteredbarchartSchema: ComponentSchema = {
         componentType: "clustered-bar-chart",

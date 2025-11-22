@@ -3,7 +3,7 @@
  * Property definitions for the FilledMap component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const filledMapSchema: ComponentSchema = {
         componentType: "filled-map",

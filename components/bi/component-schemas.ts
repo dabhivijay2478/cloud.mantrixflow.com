@@ -6,86 +6,87 @@
 // ============================================================================
 //  CHART SCHEMAS - Import from component folders
 // ============================================================================
-import { linechartSchema } from "./charts/line-chart/schema";
-import { barchartSchema } from "./charts/bar-chart/schema";
-import { areachartSchema } from "./charts/area-chart/schema";
-import { piechartSchema } from "./charts/pie-chart/schema";
-import { donutchartSchema } from "./charts/donut-chart/schema";
-import { scatterchartSchema } from "./charts/scatter-chart/schema";
-import { stackedbarchartSchema } from "./charts/stacked-bar-chart/schema";
-import { stackedcolumnchartSchema } from "./charts/stacked-column-chart/schema";
-import { stackedareachartSchema } from "./charts/stacked-area-chart/schema";
-import { clusteredbarchartSchema } from "./charts/clustered-bar-chart/schema";
-import { clusteredcolumnchartSchema } from "./charts/clustered-column-chart/schema";
-import { linestackedcolumnchartSchema } from "./charts/line-stacked-column-chart/schema";
-import { ribbonchartSchema } from "./charts/ribbon-chart/schema";
+import { linechartSchema } from "@/components/bi/charts/line-chart/schema";
+import { barchartSchema } from "@/components/bi/charts/bar-chart/schema";
+import { areachartSchema } from "@/components/bi/charts/area-chart/schema";
+import { piechartSchema } from "@/components/bi/charts/pie-chart/schema";
+import { donutchartSchema } from "@/components/bi/charts/donut-chart/schema";
+import { scatterchartSchema } from "@/components/bi/charts/scatter-chart/schema";
+import { stackedbarchartSchema } from "@/components/bi/charts/stacked-bar-chart/schema";
+import { stackedcolumnchartSchema } from "@/components/bi/charts/stacked-column-chart/schema";
+import { stackedareachartSchema } from "@/components/bi/charts/stacked-area-chart/schema";
+import { clusteredbarchartSchema } from "@/components/bi/charts/clustered-bar-chart/schema";
+import { clusteredcolumnchartSchema } from "@/components/bi/charts/clustered-column-chart/schema";
+import { linestackedcolumnchartSchema } from "@/components/bi/charts/line-stacked-column-chart/schema";
+import { ribbonchartSchema } from "@/components/bi/charts/ribbon-chart/schema";
 
 // ============================================================================
 //  METRIC SCHEMAS - Import from component folders
 // ============================================================================
-import { kpicardSchema } from "./metrics/kpi-card/schema";
-import { progressbarSchema } from "./metrics/progress-bar/schema";
-import { sparklineSchema } from "./metrics/sparkline/schema";
-import { metriccardSchema } from "./metrics/metric-card/schema";
+import { kpiCardSchema } from "@/components/bi/metrics/kpi-card/schema";
+import { progressBarSchema } from "@/components/bi/metrics/progress-bar/schema";
+import { sparklineSchema } from "@/components/bi/metrics/sparkline/schema";
+import { metricCardSchema } from "@/components/bi/metrics/metric-card/schema";
 
 // ============================================================================
 //  ADVANCED SCHEMAS - Import from component folders
 // ============================================================================
-import { heatmapSchema } from "./advanced/heatmap/schema";
-import { treemapSchema } from "./advanced/treemap/schema";
-import { funnelchartSchema } from "./advanced/funnel-chart/schema";
-import { bulletchartSchema } from "./advanced/bullet-chart/schema";
-import { sankeydiagramSchema } from "./advanced/sankey-diagram/schema";
-import { matrixSchema } from "./advanced/matrix/schema";
-import { forecastlineSchema } from "./advanced/forecast-line/schema";
-import { anomalybadgeSchema } from "./advanced/anomaly-badge/schema";
-import { mapSchema } from "./advanced/map/schema";
-import { filledmapSchema } from "./advanced/filled-map/schema";
-import { gaugeSchema } from "./metrics/gauge/schema";
-import { radarchartSchema } from "./advanced/radar-chart/schema";
-import { leafletmapSchema } from "./advanced/leaflet-map/schema";
+import { heatmapSchema } from "@/components/bi/advanced/heatmap/schema";
+import { treemapSchema } from "@/components/bi/advanced/treemap/schema";
+import { funnelChartSchema } from "@/components/bi/advanced/funnel-chart/schema";
+import { bulletChartSchema } from "@/components/bi/advanced/bullet-chart/schema";
+import { sankeyDiagramSchema } from "@/components/bi/advanced/sankey-diagram/schema";
+import { matrixSchema } from "@/components/bi/advanced/matrix/schema";
+import { forecastLineSchema } from "@/components/bi/advanced/forecast-line/schema";
+import { anomalyBadgeSchema } from "@/components/bi/advanced/anomaly-badge/schema";
+import { mapSchema } from "@/components/bi/advanced/map/schema";
+import { filledMapSchema } from "@/components/bi/advanced/filled-map/schema";
+import { gaugeSchema } from "@/components/bi/metrics/gauge/schema";
+// TODO: Add these when schema files are created:
+// import { radarchartSchema } from "@/components/bi/advanced/radar-chart/schema";
+// import { leafletmapSchema } from "@/components/bi/advanced/leaflet-map/schema";
 
 // ============================================================================
 //  FILTER SCHEMAS - Import from component folders
 // ============================================================================
-import { slicerSchema } from "./filters/slicer/schema";
-import { daterangepickerSchema } from "./filters/date-range-picker/schema";
-import { multiselectSchema } from "./filters/multi-select/schema";
-import { searchinputSchema } from "./filters/search-input/schema";
+import { slicerSchema } from "@/components/bi/filters/slicer/schema";
+import { dateRangePickerSchema } from "@/components/bi/filters/date-range-picker/schema";
+import { multiSelectSchema } from "@/components/bi/filters/multi-select/schema";
+import { searchInputSchema } from "@/components/bi/filters/search-input/schema";
 
 // ============================================================================
 //  INSIGHT SCHEMAS - Import from component folders
 // ============================================================================
-import { trendlabelSchema } from "./insights/trend-label/schema";
-import { insighttextSchema } from "./insights/insight-text/schema";
-import { aicommentarySchema } from "./insights/ai-commentary/schema";
-import { statchangeSchema } from "./insights/stat-change/schema";
+import { trendLabelSchema } from "@/components/bi/insights/trend-label/schema";
+import { insightTextSchema } from "@/components/bi/insights/insight-text/schema";
+import { aiCommentarySchema } from "@/components/bi/insights/ai-commentary/schema";
+import { statChangeSchema } from "@/components/bi/insights/stat-change/schema";
 
 // ============================================================================
 //  AI SCHEMAS - Import from component folders
 // ============================================================================
-import { promptinputSchema } from "./ai/prompt-input/schema";
-import { regeneratebuttonSchema } from "./ai/regenerate-button/schema";
-import { feedbackthumbsSchema } from "./ai/feedback-thumbs/schema";
-import { editpromptSchema } from "./ai/edit-prompt/schema";
-import { qaSchema } from "./ai/qa/schema";
-import { paginatedreportSchema } from "./ai/paginated-report/schema";
+import { promptInputSchema } from "@/components/bi/ai/prompt-input/schema";
+import { regenerateButtonSchema } from "@/components/bi/ai/regenerate-button/schema";
+import { feedbackThumbsSchema } from "@/components/bi/ai/feedback-thumbs/schema";
+import { editPromptSchema } from "@/components/bi/ai/edit-prompt/schema";
+import { qaSchema } from "@/components/bi/ai/qa/schema";
+import { paginatedReportSchema } from "@/components/bi/ai/paginated-report/schema";
 
 // ============================================================================
 //  SHARE SCHEMAS - Import from component folders
 // ============================================================================
-import { embedcodeSchema } from "./share/embed-code/schema";
-import { sharebuttonSchema } from "./share/share-button/schema";
-import { qrcodeSchema } from "./share/qr-code/schema";
-import { exportpdfSchema } from "./share/export-pdf/schema";
+import { embedCodeSchema } from "@/components/bi/share/embed-code/schema";
+import { shareButtonSchema } from "@/components/bi/share/share-button/schema";
+import { qrCodeSchema } from "@/components/bi/share/qr-code/schema";
+import { exportPdfSchema } from "@/components/bi/share/export-pdf/schema";
 
 // ============================================================================
 //  DATA DISPLAY SCHEMAS - Import from component folders
 // ============================================================================
-import { datatableSchema } from "./data-display/data-table/schema";
-import { sqleditorSchema } from "./data-display/sql-editor/schema";
-import { sqlresultviewerSchema } from "./data-display/sql-result-viewer/schema";
-import { tablenavigationSchema } from "./data-display/table-navigation/schema";
+import { dataTableSchema } from "@/components/bi/data-display/data-table/schema";
+import { sqlEditorSchema } from "@/components/bi/data-display/sql-editor/schema";
+import { sqlResultViewerSchema } from "@/components/bi/data-display/sql-result-viewer/schema";
+import { tableNavigationSchema } from "@/components/bi/data-display/table-navigation/schema";
 
 import type {
     ComponentSchema,
@@ -93,7 +94,7 @@ import type {
     ValidationResult,
     ValidationError,
     ComponentCategory,
-} from "./schema-types";
+} from "@/components/bi/schema-types";
 
 // ============================================================================
 //  COLLECT ALL SCHEMAS BY CATEGORY
@@ -116,63 +117,64 @@ const chartSchemas = [
 ];
 
 const metricSchemas = [
-    kpicardSchema,
-    progressbarSchema,
+    kpiCardSchema,
+    progressBarSchema,
     sparklineSchema,
-    metriccardSchema,
+    metricCardSchema,
 ];
 
 const advancedSchemas = [
     heatmapSchema,
     treemapSchema,
-    funnelchartSchema,
-    bulletchartSchema,
-    sankeydiagramSchema,
+    funnelChartSchema,
+    bulletChartSchema,
+    sankeyDiagramSchema,
     matrixSchema,
-    forecastlineSchema,
-    anomalybadgeSchema,
+    forecastLineSchema,
+    anomalyBadgeSchema,
     mapSchema,
-    filledmapSchema,
+    filledMapSchema,
     gaugeSchema,
-    radarchartSchema,
-    leafletmapSchema,
+    // TODO: Add when schema files are created:
+    // radarchartSchema,
+    // leafletmapSchema,
 ];
 
 const filterSchemas = [
     slicerSchema,
-    daterangepickerSchema,
-    multiselectSchema,
-    searchinputSchema,
+    dateRangePickerSchema,
+    multiSelectSchema,
+    searchInputSchema,
 ];
 
 const insightSchemas = [
-    trendlabelSchema,
-    insighttextSchema,
-    aicommentarySchema,
-    statchangeSchema,
+    trendLabelSchema,
+    insightTextSchema,
+    aiCommentarySchema,
+    statChangeSchema,
 ];
 
 const aiSchemas = [
-    promptinputSchema,
-    regeneratebuttonSchema,
-    feedbackthumbsSchema,
-    editpromptSchema,
+    promptInputSchema,
+    regenerateButtonSchema,
+    feedbackThumbsSchema,
+    editPromptSchema,
     qaSchema,
-    paginatedreportSchema,
+    paginatedReportSchema,
 ];
 
 const shareSchemas = [
-    embedcodeSchema,
-    sharebuttonSchema,
-    qrcodeSchema,
-    exportpdfSchema,
+    embedCodeSchema,
+    shareButtonSchema,
+    qrCodeSchema,
+    exportPdfSchema,
 ];
 
 const tableSchemas = [
-    datatableSchema,
-    sqleditorSchema,
-    sqlresultviewerSchema,
-    tablenavigationSchema,
+    dataTableSchema,
+    sqlEditorSchema,
+    sqlResultViewerSchema,
+    tableNavigationSchema,
 ];
 
 // Combine all schemas
@@ -493,4 +495,4 @@ export type {
     ComponentCategory,
     PropertyType,
     ControlType,
-} from "./schema-types";
+} from "@/components/bi/schema-types";

@@ -3,7 +3,7 @@
  * Property definitions for the EmbedCode component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const embedCodeSchema: ComponentSchema = {
         componentType: "embed-code",

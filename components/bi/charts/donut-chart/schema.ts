@@ -3,7 +3,7 @@
  * Property definitions for the Donut Chart component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const donutchartSchema: ComponentSchema = {
         componentType: "donut-chart",

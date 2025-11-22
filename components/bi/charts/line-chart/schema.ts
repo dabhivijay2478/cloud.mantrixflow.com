@@ -3,7 +3,7 @@
  * Property definitions for the Line Chart component
  */
 
-import type { ComponentSchema } from "../../schema-types";
+import type { ComponentSchema } from "@/components/bi/schema-types";
 
 export const linechartSchema: ComponentSchema = {
         componentType: "line-chart",
