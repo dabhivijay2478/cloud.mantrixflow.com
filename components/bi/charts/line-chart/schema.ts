@@ -1,0 +1,98 @@
+/**
+ * Line Chart Schema
+ * Property definitions for the Line Chart component
+ */
+
+import type { ComponentSchema } from "../../schema-types";
+
+export const linechartSchema: ComponentSchema = {
+        componentType: "line-chart",
+        displayName: "Line Chart",
+        icon: "LineChart",
+        category: "Charts",
+        description: "Time series visualization for displaying trends over time",
+        properties: [
+            {
+                key: "title",
+                type: "string",
+                label: "Title",
+                defaultValue: "",
+                controlType: "input",
+                placeholder: "Chart title",
+            },
+            {
+                key: "description",
+                type: "string",
+                label: "Description",
+                defaultValue: "",
+                controlType: "textarea",
+                placeholder: "Chart description",
+            },
+            {
+                key: "data",
+                hidden: true,
+                type: "array",
+                label: "Data",
+                description: "Array of data points",
+                defaultValue: [],
+                controlType: "array-builder",
+            },
+            {
+                key: "xKey",
+                type: "string",
+                label: "X-Axis Field",
+                description: "Field name for X-axis values",
+                defaultValue: "",
+                controlType: "input",
+
+                placeholder: "e.g., month, date, category",
+            },
+            {
+                key: "yKeys",
+                type: "array",
+                label: "Y-Axis Fields",
+                description: "Field names for Y-axis values (supports multiple lines)",
+                defaultValue: [],
+                controlType: "array-builder",
+                validation: { minItems: 1 },
+            },
+            {
+                key: "color",
+                type: "color",
+                label: "Line Color",
+                description: "Primary line color",
+                defaultValue: "#8884d8",
+                controlType: "color-picker",
+            },
+            {
+                key: "showGrid",
+                type: "boolean",
+                label: "Show Grid",
+                description: "Display grid lines",
+                defaultValue: true,
+                controlType: "toggle",
+            },
+            {
+                key: "showLegend",
+                type: "boolean",
+                label: "Show Legend",
+                description: "Display chart legend",
+                defaultValue: true,
+                controlType: "toggle",
+            },
+            {
+                key: "curve",
+                type: "enum",
+                label: "Line Curve",
+                description: "Line interpolation style",
+                defaultValue: "monotone",
+                controlType: "select",
+                options: [
+                    { value: "monotone", label: "Smooth (Monotone)" },
+                    { value: "linear", label: "Linear" },
+                    { value: "step", label: "Step" },
+                    { value: "basis", label: "Basis" },
+                ],
+            },
+        ],
+    };

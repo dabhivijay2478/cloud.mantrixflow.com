@@ -15,7 +15,7 @@ import {
     getComponentProperties,
     validateComponentProps,
     type ValidationError,
-} from "@/components/bi/schemas";
+} from "@/components/bi/component-schemas";
 import type {
     DashboardComponent,
     Dataset,

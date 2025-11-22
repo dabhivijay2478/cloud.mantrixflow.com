@@ -35,7 +35,7 @@ import {
   getComponentProperties,
   validateComponentProps,
   type ValidationError,
-} from "@/components/bi/schemas";
+} from "@/components/bi/component-schemas";
 
 // Mock function to fetch columns from a table
 const fetchTableColumns = async (

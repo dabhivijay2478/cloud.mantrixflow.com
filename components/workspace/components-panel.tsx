@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import { getAllCategories, getComponentsByCategory } from "@/components/bi/schemas";
+import { getAllCategories, getComponentsByCategory } from "@/components/bi/component-schemas";
 
 // Icon mapping for component types
 const iconMap: Record<string, LucideIcon> = {
