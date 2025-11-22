@@ -239,11 +239,12 @@ export default function WorkspaceLayout({
                 <ResizablePanel
                   ref={componentsPanelRef}
                   id="components-panel"
-                  defaultSize={isMobile ? 25 : 15}
-                  minSize={isMobile ? 25 : 15}
-                  maxSize={isMobile ? 25 : 15}
-                  collapsible={false}
-                  key={`components-${isMobile}`}
+                  defaultSize={componentsPanelOpen ? 15 : 3}
+                  minSize={componentsPanelOpen ? 15 : 3}
+                  maxSize={componentsPanelOpen ? 15 : 3}
+                  collapsible={true}
+                  collapsedSize={3}
+                  key={`components-${componentsPanelOpen}-${isMobile}`}
                 >
                   <ComponentsPanel />
                 </ResizablePanel>
@@ -260,17 +261,17 @@ export default function WorkspaceLayout({
                         ? 25
                         : 0
                       : propertiesPanelOpen
-                        ? 20
+                        ? 15
                         : 3
                   }
-                  minSize={isMobile ? 0 : propertiesPanelOpen ? 10 : 3}
+                  minSize={isMobile ? 0 : propertiesPanelOpen ? 12 : 3}
                   maxSize={
                     isMobile
                       ? propertiesPanelOpen
                         ? 40
                         : 0
                       : propertiesPanelOpen
-                        ? 40
+                        ? 25
                         : 3
                   }
                   collapsible={true}
