@@ -1,7 +1,7 @@
 /**
- * KpiCard Component
- * Exports the KpiCard component and its schema
+ * KPICard Component
+ * Exports the KPICard component and its schema
  */
 
-export { KpiCard } from './kpi-card';
+export { KPICard } from './kpi-card';
 export { kpiCardSchema } from './schema';

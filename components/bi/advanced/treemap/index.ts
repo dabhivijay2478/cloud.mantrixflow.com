@@ -1,7 +1,7 @@
 /**
- * Treemap Component
- * Exports the Treemap component and its schema
+ * TreeMap Component
+ * Exports the TreeMap component and its schema
  */
 
-export { Treemap } from './treemap';
+export { TreeMap } from './treemap';
 export { treemapSchema } from './schema';

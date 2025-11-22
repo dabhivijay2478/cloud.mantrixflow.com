@@ -3,5 +3,5 @@
  * Exports the Map component and its schema
  */
 
-export { Map } from './map';
+export { MapComponent as Map } from './map';
 export { mapSchema } from './schema';

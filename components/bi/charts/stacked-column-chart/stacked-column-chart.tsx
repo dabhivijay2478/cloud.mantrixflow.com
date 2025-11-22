@@ -23,7 +23,7 @@ import {
   ChartEmptyState,
   ChartErrorState,
   ChartLoadingState,
-} from "./chart-states";
+} from "@/components/bi/charts/chart-states/chart-states";
 
 /**
  * StackedColumnChart

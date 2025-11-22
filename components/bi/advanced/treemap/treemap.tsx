@@ -62,9 +62,26 @@ interface CustomContentProps {
 }
 
 const CustomContent = (props: CustomContentProps) => {
-  const { x, y, width, height, name, size, depth, colors } = props;
+  const {
+    x,
+    y,
+    width,
+    height,
+    name,
+    size,
+    depth = 0,
+    colors = DEFAULT_COLORS,
+  } = props;
 
-  if (!width || !height || width < 40 || height < 40) return null;
+  if (
+    !width ||
+    !height ||
+    width < 40 ||
+    height < 40 ||
+    x === undefined ||
+    y === undefined
+  )
+    return null;
 
   // Ensure size is a valid number
   const displaySize =
@@ -135,7 +152,6 @@ export function TreeMap({
       <CardContent>
         <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
           <RechartsTreemap
-            accessibilityLayer
             data={data}
             dataKey="size"
             aspectRatio={4 / 3}

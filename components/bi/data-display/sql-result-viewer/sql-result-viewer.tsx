@@ -20,6 +20,8 @@ import {
   Download,
   ExternalLink,
   Loader2,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +66,8 @@ export interface SQLResultViewerProps {
   onDownload?: (format: "csv" | "json" | "excel") => void;
   onOpenInNewTab?: () => void;
   hideExternalTabButton?: boolean;
+  fullScreen?: boolean;
+  onFullScreen?: (fullScreen: boolean) => void;
 }
 
 /**
@@ -96,6 +100,8 @@ export function SQLResultViewer({
   onDownload,
   onOpenInNewTab,
   hideExternalTabButton = false,
+  fullScreen = false,
+  onFullScreen,
 }: SQLResultViewerProps) {
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [columnVisibility, setColumnVisibility] =
@@ -298,6 +304,21 @@ export function SQLResultViewer({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {onFullScreen && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onFullScreen(!fullScreen)}
+              className="h-8"
+              aria-label={fullScreen ? "Exit full screen" : "Enter full screen"}
+            >
+              {fullScreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -338,9 +359,9 @@ export function SQLResultViewer({
                               {header.isPlaceholder
                                 ? null
                                 : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext(),
-                                  )}
+                                  header.column.columnDef.header,
+                                  header.getContext(),
+                                )}
                             </TableHead>
                           ))}
                       </TableRow>
@@ -398,12 +419,12 @@ export function SQLResultViewer({
             {table.getFilteredRowModel().rows.length === 0
               ? 0
               : table.getState().pagination.pageIndex *
-                  table.getState().pagination.pageSize +
-                1}{" "}
+              table.getState().pagination.pageSize +
+              1}{" "}
             to{" "}
             {Math.min(
               (table.getState().pagination.pageIndex + 1) *
-                table.getState().pagination.pageSize,
+              table.getState().pagination.pageSize,
               table.getFilteredRowModel().rows.length,
             )}{" "}
             of {table.getFilteredRowModel().rows.length} results

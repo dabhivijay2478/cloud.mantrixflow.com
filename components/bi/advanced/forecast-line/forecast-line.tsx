@@ -132,7 +132,7 @@ export function ForecastLine({
             <ChartLegend content={<ChartLegendContent />} />
             {safeHistoricalData.length > 0 && (
               <ReferenceLine
-                x={safeHistoricalData[safeHistoricalData.length - 1]?.[xKey]}
+                x={safeHistoricalData[safeHistoricalData.length - 1]?.[xKey] as string | number}
                 stroke="hsl(var(--muted-foreground))"
                 strokeDasharray="3 3"
               />

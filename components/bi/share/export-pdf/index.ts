@@ -1,7 +1,7 @@
 /**
- * ExportPdf Component
- * Exports the ExportPdf component and its schema
+ * ExportPDF Component
+ * Exports the ExportPDF component and its schema
  */
 
-export { ExportPdf } from './export-pdf';
+export { ExportPDF } from './export-pdf';
 export { exportPdfSchema } from './schema';

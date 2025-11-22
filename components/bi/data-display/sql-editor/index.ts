@@ -1,7 +1,7 @@
 /**
- * SqlEditor Component
- * Exports the SqlEditor component and its schema
+ * SQLEditor Component
+ * Exports the SQLEditor component and its schema
  */
 
-export { SqlEditor } from './sql-editor';
+export { SQLEditor } from './sql-editor';
 export { sqlEditorSchema } from './schema';

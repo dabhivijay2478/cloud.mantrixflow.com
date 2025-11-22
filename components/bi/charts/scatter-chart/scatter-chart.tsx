@@ -107,9 +107,9 @@ export function ScatterChart({
             content={
               <ChartTooltipContent
                 formatter={(
-                  value: number,
-                  name: string,
-                  props: Record<string, unknown>,
+                  value: any,
+                  name: any,
+                  props: any,
                 ) => {
                   if (nameKey && props.payload?.[nameKey]) {
                     return [

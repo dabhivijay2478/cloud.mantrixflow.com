@@ -180,9 +180,9 @@ export function WaterfallChart({
               content={
                 <ChartTooltipContent
                   formatter={(
-                    value: number,
-                    _name: string,
-                    props: Record<string, unknown>,
+                    value: any,
+                    _name: any,
+                    props: any,
                   ) => {
                     if (
                       props.payload?.type === "start" ||

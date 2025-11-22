@@ -1,7 +1,7 @@
 /**
- * AiCommentary Component
- * Exports the AiCommentary component and its schema
+ * AICommentary Component
+ * Exports the AICommentary component and its schema
  */
 
-export { AiCommentary } from './ai-commentary';
+export { AICommentary } from './ai-commentary';
 export { aiCommentarySchema } from './schema';

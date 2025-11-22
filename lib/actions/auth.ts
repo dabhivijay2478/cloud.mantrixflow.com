@@ -89,7 +89,7 @@ export async function loginAction(
  * Validates input, creates user account, and handles email confirmation
  */
 export async function signupAction(
-  _prevState: AuthActionResult | null,
+  _prevState: AuthActionResult<{ requiresEmailConfirmation: boolean }> | null,
   formData: FormData,
 ): Promise<AuthActionResult<{ requiresEmailConfirmation: boolean }>> {
   try {

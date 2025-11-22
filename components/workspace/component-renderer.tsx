@@ -273,21 +273,7 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       }
 
       case "radar-chart":
-        return (
-          <BIComponents.RadarChart
-            data={
-              mergedConfig.data || [
-                { category: "A", value: 80 },
-                { category: "B", value: 90 },
-                { category: "C", value: 70 },
-              ]
-            }
-            categoryKey={mergedConfig.categoryKey || "category"}
-            valueKeys={mergedConfig.valueKeys || ["value"]}
-            title={mergedConfig.title}
-            description={mergedConfig.description}
-          />
-        );
+        return <div className="p-4 border border-dashed">Radar Chart (Coming Soon)</div>;
 
       case "funnel-chart":
         return (
@@ -522,19 +508,13 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
         );
 
       case "basic-leaflet-map":
-        return <BIComponents.BasicLeafletMap {...mergedConfig} />;
       case "leaflet-map-with-pin":
-        return <BIComponents.LeafletMapWithPin {...mergedConfig} />;
       case "leaflet-map-grayscale":
-        return <BIComponents.LeafletMapGrayscale {...mergedConfig} />;
       case "leaflet-map-custom-pin":
-        return <BIComponents.LeafletMapCustomPin {...mergedConfig} />;
-      case "leaflet-map-custom-popover":
-        return <BIComponents.LeafletMapCustomPopover {...mergedConfig} />;
-      case "leaflet-map-change-city":
-        return <BIComponents.LeafletMapChangeCity {...mergedConfig} />;
       case "leaflet-map-bubbles":
-        return <BIComponents.LeafletMapBubbles {...mergedConfig} />;
+      case "leaflet-map-change-city":
+      case "leaflet-map-custom-popover":
+        return <div className="p-4 border border-dashed">Leaflet Map (Coming Soon)</div>;
 
       // Layout & Container
       case "grid-layout":

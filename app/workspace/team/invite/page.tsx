@@ -147,12 +147,11 @@ export default function InviteTeamMemberPage() {
   // Handle form state changes
   useEffect(() => {
     if (state?.success) {
-      toast.success(
-        "Invitation sent!",
-        state.message || `Invitation sent to ${email}`,
-      );
+      toast.success("Invitation sent!", {
+        description: state.message || `Invitation sent to ${email}`,
+      });
     } else if (state && !state.success) {
-      toast.error("Failed to send invitation", state.error);
+      toast.error("Failed to send invitation", { description: state.error });
     }
   }, [state, email]);
 

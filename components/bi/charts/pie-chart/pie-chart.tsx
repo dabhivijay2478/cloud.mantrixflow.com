@@ -15,7 +15,7 @@ import {
   ChartEmptyState,
   ChartErrorState,
   ChartLoadingState,
-} from "./chart-states";
+} from "@/components/bi/charts/chart-states/chart-states";
 
 /**
  * PieChart
@@ -110,14 +110,14 @@ export function PieChart({
     );
   }
 
-  const chartConfig = data.reduce((config, entry, index) => {
+  const chartConfig = data.reduce<ChartConfig>((config, entry, index) => {
     const name = entry[nameKey] as string;
     config[name] = {
       label: name,
       color: colors[index % colors.length],
     };
     return config;
-  }, {} as ChartConfig);
+  }, {});
 
   return (
     <ChartWrapper title={title} description={description} className={className}>
