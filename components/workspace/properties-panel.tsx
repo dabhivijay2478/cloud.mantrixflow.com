@@ -21,6 +21,7 @@ import type {
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { DataDialog } from "./data-dialog";
 import { PropertyControl } from "./property-control";
+import { generateChartData } from "@/lib/utils/mock-data-service";
 
 // Mock function to fetch columns from a table
 const fetchTableColumns = async (
@@ -86,6 +87,13 @@ export function PropertiesPanel({
     : null;
   const selectedTable = connectedDataSource?.selectedTable || "";
 
+  // Use table columns if available, otherwise fall back to dataset columns
+  const availableColumns =
+    tableColumns.length > 0 ? tableColumns : dataset?.columns || [];
+  const stringColumns = availableColumns.filter((c) => c.type === "string");
+  const numberColumns = availableColumns.filter((c) => c.type === "number");
+  const dateColumns = availableColumns.filter((c) => c.type === "date");
+
   // Initialize property values from component config
   useEffect(() => {
     if (component?.config) {
@@ -113,10 +121,116 @@ export function PropertiesPanel({
     }
   }, [connectedDataSource?.id, selectedTable]);
 
+  // Generate data when columns become available and component has field mappings
+  useEffect(() => {
+    if (
+      component &&
+      availableColumns.length > 0 &&
+      (!component.config?.data ||
+        !Array.isArray(component.config.data) ||
+        component.config.data.length === 0)
+    ) {
+      const xKey = (component.config?.xKey ||
+        component.config?.xAxis) as string | undefined;
+      const yKeysValue = component.config?.yKeys || component.config?.yAxis;
+      const yKeys = Array.isArray(yKeysValue)
+        ? (yKeysValue as string[])
+        : yKeysValue
+          ? [yKeysValue as string]
+          : undefined;
+      const nameKey = component.config?.nameKey as string | undefined;
+      const valueKey = component.config?.valueKey as string | undefined;
+
+      if (xKey || (yKeys && yKeys.length > 0) || (nameKey && valueKey)) {
+        try {
+          const chartData = generateChartData(availableColumns, xKey, yKeys, {
+            rowCount: 20,
+            seed: component.id.charCodeAt(0),
+          });
+
+          // Update component with generated data
+          if (chartData.length > 0) {
+            onUpdate({
+              config: {
+                ...component.config,
+                data: chartData,
+              },
+            });
+          }
+        } catch (error) {
+          console.error("Failed to generate initial chart data:", error);
+        }
+      }
+    }
+  }, [component, availableColumns, onUpdate]);
+
   // Handle property change with schema validation
   const handlePropertyChange = (key: string, value: unknown) => {
     const newValues = { ...propertyValues, [key]: value };
     setPropertyValues(newValues);
+
+    // Generate data when data-related fields change
+    if (
+      component &&
+      availableColumns.length > 0 &&
+      (key === "xKey" ||
+        key === "xAxis" ||
+        key === "yKeys" ||
+        key === "yAxis" ||
+        key === "nameKey" ||
+        key === "valueKey")
+    ) {
+      // Extract field keys based on component type
+      let xKey: string | undefined;
+      let yKeys: string[] | undefined;
+      let nameKey: string | undefined;
+      let valueKey: string | undefined;
+
+      // Handle different property name conventions
+      if (key === "xKey" || key === "xAxis") {
+        xKey = value as string;
+      } else {
+        xKey = (newValues.xKey || newValues.xAxis) as string | undefined;
+      }
+
+      if (key === "yKeys" || key === "yAxis") {
+        yKeys = Array.isArray(value) ? (value as string[]) : [value as string];
+      } else {
+        const yKeysValue = newValues.yKeys || newValues.yAxis;
+        yKeys = Array.isArray(yKeysValue)
+          ? (yKeysValue as string[])
+          : yKeysValue
+            ? [yKeysValue as string]
+            : undefined;
+      }
+
+      if (key === "nameKey") {
+        nameKey = value as string;
+      } else {
+        nameKey = newValues.nameKey as string | undefined;
+      }
+
+      if (key === "valueKey") {
+        valueKey = value as string;
+      } else {
+        valueKey = newValues.valueKey as string | undefined;
+      }
+
+      // Generate chart data if we have the necessary fields
+      if (xKey || yKeys?.length || (nameKey && valueKey)) {
+        try {
+          const chartData = generateChartData(availableColumns, xKey, yKeys, {
+            rowCount: 20,
+            seed: component.id.charCodeAt(0), // Use component ID as seed for consistency
+          });
+
+          // Store generated data
+          newValues.data = chartData;
+        } catch (error) {
+          console.error("Failed to generate chart data:", error);
+        }
+      }
+    }
 
     // Validate in real-time
     if (component) {
@@ -169,13 +283,6 @@ export function PropertiesPanel({
       });
     }
   };
-
-  // Use table columns if available, otherwise fall back to dataset columns
-  const availableColumns =
-    tableColumns.length > 0 ? tableColumns : dataset?.columns || [];
-  const stringColumns = availableColumns.filter((c) => c.type === "string");
-  const numberColumns = availableColumns.filter((c) => c.type === "number");
-  const dateColumns = availableColumns.filter((c) => c.type === "date");
 
   // Determine available columns based on component type
   const _getAvailableXAxisColumns = () => {
@@ -328,22 +435,74 @@ export function PropertiesPanel({
 
                   <Separator />
 
-                  {/* Schema-based dynamic property controls */}
+                  {/* Schema-based dynamic property controls grouped by category */}
                   {schemaProperties.length > 0 ? (
-                    <div className="space-y-4">
-                      {schemaProperties.map((property) => (
-                        <PropertyControl
-                          key={property.key}
-                          property={property}
-                          value={propertyValues[property.key]}
-                          onChange={(value) =>
-                            handlePropertyChange(property.key, value)
+                    (() => {
+                      // Group properties by category
+                      const groupedProperties = schemaProperties.reduce(
+                        (acc, property) => {
+                          const category = property.category || "Other";
+                          if (!acc[category]) {
+                            acc[category] = [];
                           }
-                          error={validationErrors.get(property.key)}
-                          availableColumns={availableColumns}
-                        />
-                      ))}
-                    </div>
+                          acc[category].push(property);
+                          return acc;
+                        },
+                        {} as Record<string, typeof schemaProperties>,
+                      );
+
+                      // Define category order
+                      const categoryOrder = [
+                        "General",
+                        "Data",
+                        "Appearance",
+                        "Layout",
+                        "Styling",
+                        "Advanced",
+                        "Other",
+                      ];
+
+                      // Sort categories
+                      const sortedCategories = Object.keys(groupedProperties).sort(
+                        (a, b) => {
+                          const indexA = categoryOrder.indexOf(a);
+                          const indexB = categoryOrder.indexOf(b);
+                          if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+                          if (indexA === -1) return 1;
+                          if (indexB === -1) return -1;
+                          return indexA - indexB;
+                        },
+                      );
+
+                      return (
+                        <div className="space-y-6">
+                          {sortedCategories.map((category) => (
+                            <div key={category} className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                  {category}
+                                </h3>
+                                <div className="flex-1 h-px bg-border" />
+                              </div>
+                              <div className="space-y-4 pl-2">
+                                {groupedProperties[category].map((property) => (
+                                  <PropertyControl
+                                    key={property.key}
+                                    property={property}
+                                    value={propertyValues[property.key]}
+                                    onChange={(value) =>
+                                      handlePropertyChange(property.key, value)
+                                    }
+                                    error={validationErrors.get(property.key)}
+                                    availableColumns={availableColumns}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-sm text-muted-foreground">

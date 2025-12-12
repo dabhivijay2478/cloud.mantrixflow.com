@@ -48,16 +48,31 @@ export function PropertyControl({
 
   // Check if this property should use dataset columns
   const isDataFieldProperty =
-    property.key.toLowerCase().includes("key") ||
-    property.key.toLowerCase().includes("field") ||
-    property.key.toLowerCase().includes("column");
+    property.isDataField !== undefined
+      ? property.isDataField
+      : property.key.toLowerCase().includes("key") ||
+        property.key.toLowerCase().includes("field") ||
+        property.key.toLowerCase().includes("column") ||
+        property.key.toLowerCase().includes("axis");
+  
+  // Filter available columns by allowed types if specified
+  const getFilteredColumns = () => {
+    if (!isDataFieldProperty || !property.allowedColumnTypes || property.allowedColumnTypes.length === 0) {
+      return availableColumns;
+    }
+    return availableColumns.filter((col) => 
+      property.allowedColumnTypes?.includes(col.type as "string" | "number" | "date" | "boolean")
+    );
+  };
+  
+  const filteredColumns = getFilteredColumns();
 
   const renderControl = () => {
     // Multi-select for array data field properties (e.g., yKeys)
     if (
       property.type === "array" &&
       isDataFieldProperty &&
-      availableColumns.length > 0
+      filteredColumns.length > 0
     ) {
       const selectedValues = (value as string[]) || [];
 
@@ -112,7 +127,7 @@ export function PropertyControl({
               />
             </SelectTrigger>
             <SelectContent>
-              {availableColumns.map((col) => {
+              {filteredColumns.map((col) => {
                 const isSelected = selectedValues.includes(col.name);
                 return (
                   <SelectItem key={col.name} value={col.name}>
@@ -137,7 +152,7 @@ export function PropertyControl({
     // Single-select for string data field properties (e.g., xKey)
     if (
       isDataFieldProperty &&
-      availableColumns.length > 0 &&
+      filteredColumns.length > 0 &&
       property.type === "string"
     ) {
       return (
@@ -152,7 +167,7 @@ export function PropertyControl({
             />
           </SelectTrigger>
           <SelectContent>
-            {availableColumns.map((col) => (
+            {filteredColumns.map((col) => (
               <SelectItem key={col.name} value={col.name}>
                 {col.name}{" "}
                 <span className="text-xs text-muted-foreground">

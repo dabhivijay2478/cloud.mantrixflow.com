@@ -56,16 +56,17 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
     switch (type) {
       // Charts
       case "line-chart": {
-        // Generate sample data if not provided, using the actual field names from config
+        // Use provided data if available, otherwise generate sample data
         const xKey = getStringValue(mergedConfig.xKey, "month");
         const yKeys = getStringArrayValue(mergedConfig.yKeys, [
           "desktop",
           "mobile",
         ]);
-        const chartData = getArrayValue(
-          mergedConfig.data,
-          generateSampleData(xKey, yKeys),
-        );
+        
+        // Prefer actual data from config, fall back to generated sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : generateSampleData(xKey, yKeys);
 
         return (
           <BIComponents.LineChart
@@ -81,10 +82,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "bar-chart": {
         const xKey = getStringValue(mergedConfig.xKey, "month");
         const yKeys = getStringArrayValue(mergedConfig.yKeys, ["value"]);
-        const chartData = getArrayValue(
-          mergedConfig.data,
-          generateSampleData(xKey, yKeys),
-        );
+        
+        // Prefer actual data from config, fall back to generated sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : generateSampleData(xKey, yKeys);
 
         return (
           <BIComponents.BarChart
@@ -103,10 +105,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
           "desktop",
           "mobile",
         ]);
-        const chartData = getArrayValue(
-          mergedConfig.data,
-          generateSampleData(xKey, yKeys),
-        );
+        
+        // Prefer actual data from config, fall back to generated sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : generateSampleData(xKey, yKeys);
 
         return (
           <BIComponents.AreaChart
@@ -123,11 +126,15 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
         // For pie charts, generate with name/value pairs
         const nameKey = getStringValue(mergedConfig.nameKey, "name");
         const valueKey = getStringValue(mergedConfig.valueKey, "value");
+        
+        // Prefer actual data from config, fall back to generated sample
         const defaultPieData = [...Array(6)].map((_, i) => ({
           [nameKey]: `Category ${String.fromCharCode(65 + i)}`,
           [valueKey]: Math.floor(Math.random() * 300) + 100,
         }));
-        const pieData = getArrayValue(mergedConfig.data, defaultPieData);
+        const pieData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : defaultPieData;
 
         return (
           <BIComponents.PieChart
@@ -143,11 +150,15 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "donut-chart": {
         const nameKey = getStringValue(mergedConfig.nameKey, "name");
         const valueKey = getStringValue(mergedConfig.valueKey, "value");
+        
+        // Prefer actual data from config, fall back to generated sample
         const defaultDonutData = [...Array(6)].map((_, i) => ({
           [nameKey]: `Category ${String.fromCharCode(65 + i)}`,
           [valueKey]: Math.floor(Math.random() * 300) + 100,
         }));
-        const donutData = getArrayValue(mergedConfig.data, defaultDonutData);
+        const donutData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : defaultDonutData;
 
         return (
           <BIComponents.DonutChart
@@ -163,10 +174,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "stacked-bar-chart": {
         const xKey = getStringValue(mergedConfig.xKey, "month");
         const yKeys = getStringArrayValue(mergedConfig.yKeys, ["value"]);
-        const chartData = getArrayValue(
-          mergedConfig.data,
-          generateSampleData(xKey, yKeys),
-        );
+        
+        // Prefer actual data from config, fall back to generated sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : generateSampleData(xKey, yKeys);
 
         return (
           <BIComponents.StackedBarChart
@@ -182,10 +194,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "stacked-column-chart": {
         const xKey = getStringValue(mergedConfig.xKey, "month");
         const yKeys = getStringArrayValue(mergedConfig.yKeys, ["value"]);
-        const chartData = getArrayValue(
-          mergedConfig.data,
-          generateSampleData(xKey, yKeys),
-        );
+        
+        // Prefer actual data from config, fall back to generated sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : generateSampleData(xKey, yKeys);
 
         return (
           <BIComponents.StackedColumnChart
@@ -201,9 +214,15 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "clustered-bar-chart": {
         const xKey = getStringValue(mergedConfig.xKey, "month");
         const yKeys = getStringArrayValue(mergedConfig.yKeys, ["value"]);
+        
+        // Prefer actual data from config, fall back to sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : sampleBarData;
+        
         return (
           <BIComponents.ClusteredBarChart
-            data={getArrayValue(mergedConfig.data, sampleBarData)}
+            data={chartData}
             xKey={xKey}
             yKeys={yKeys}
             title={mergedConfig.title as string}
@@ -215,9 +234,15 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "clustered-column-chart": {
         const xKey = getStringValue(mergedConfig.xKey, "month");
         const yKeys = getStringArrayValue(mergedConfig.yKeys, ["value"]);
+        
+        // Prefer actual data from config, fall back to sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : sampleBarData;
+        
         return (
           <BIComponents.ClusteredColumnChart
-            data={getArrayValue(mergedConfig.data, sampleBarData)}
+            data={chartData}
             xKey={xKey}
             yKeys={yKeys}
             title={mergedConfig.title as string}
@@ -232,10 +257,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
           "desktop",
           "mobile",
         ]);
-        const chartData = getArrayValue(
-          mergedConfig.data,
-          generateSampleData(xKey, yKeys),
-        );
+        
+        // Prefer actual data from config, fall back to generated sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : generateSampleData(xKey, yKeys);
 
         return (
           <BIComponents.StackedAreaChart
@@ -252,9 +278,15 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
         const xKey = getStringValue(mergedConfig.xKey, "month");
         const columnKeys = getStringArrayValue(mergedConfig.yKeys, ["desktop"]);
         const lineKeys = getStringArrayValue(mergedConfig.lineKeys, ["mobile"]);
+        
+        // Prefer actual data from config, fall back to sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : sampleLineData;
+        
         return (
           <BIComponents.LineStackedColumnChart
-            data={getArrayValue(mergedConfig.data, sampleLineData)}
+            data={chartData}
             xKey={xKey}
             columnKeys={columnKeys}
             lineKeys={lineKeys}
@@ -270,9 +302,15 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
           "desktop",
           "mobile",
         ]);
+        
+        // Prefer actual data from config, fall back to sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : sampleAreaData;
+        
         return (
           <BIComponents.RibbonChart
-            data={getArrayValue(mergedConfig.data, sampleAreaData)}
+            data={chartData}
             xKey={xKey}
             yKeys={yKeys}
             title={mergedConfig.title as string}
@@ -300,10 +338,11 @@ export function ComponentRenderer({ component }: ComponentRendererProps) {
       case "scatter-chart": {
         const xKey = getStringValue(mergedConfig.xKey, "x");
         const yKey = getStringValue(mergedConfig.yKey, "y");
-        const chartData = getArrayValue(
-          mergedConfig.data,
-          generateSampleData(xKey, [yKey]),
-        );
+        
+        // Prefer actual data from config, fall back to generated sample
+        const chartData = Array.isArray(mergedConfig.data) && mergedConfig.data.length > 0
+          ? mergedConfig.data
+          : generateSampleData(xKey, [yKey]);
 
         return (
           <BIComponents.ScatterChart

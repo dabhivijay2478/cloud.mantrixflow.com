@@ -56,11 +56,15 @@ export interface PropertyDefinition {
   controlType: ControlType;
   nested?: PropertyDefinition[];
   options?: Array<{ value: string | number; label: string }>;
-  category?: string; // For grouping properties in UI (Layout, Styling, Advanced, etc.)
+  category?: string; // For grouping properties in UI (Data, Appearance, Layout, Advanced, etc.)
   placeholder?: string;
   helpText?: string;
   hidden?: boolean;
   disabled?: boolean;
+  // Data field configuration
+  isDataField?: boolean; // Explicitly mark as data field
+  dataFieldType?: "x-axis" | "y-axis" | "name" | "value" | "grouping" | "color"; // Type of data field
+  allowedColumnTypes?: Array<"string" | "number" | "date" | "boolean">; // Filter columns by type
 }
 
 export interface ComponentSchema {
