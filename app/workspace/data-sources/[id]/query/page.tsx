@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { SQLEditor, SQLResultViewer, TableNavigation } from "@/components/bi";
+import { SQLEditor } from "@/components/data-sources/sql-editor";
+import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
+import { TableNavigation } from "@/components/data-sources/table-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {

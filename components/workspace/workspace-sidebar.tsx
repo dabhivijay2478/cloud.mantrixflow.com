@@ -4,7 +4,6 @@ import {
   Building2,
   ChevronsUpDown,
   Database,
-  FileText,
   GitBranch,
   LayoutDashboard,
   Plus,
@@ -134,17 +133,9 @@ export function WorkspaceSidebar() {
   const {
     currentOrganization,
     organizations,
-    dashboards,
     dataSources,
     setCurrentOrganization,
   } = useWorkspaceStore();
-
-  // Filter dashboards by current organization
-  const filteredDashboards = currentOrganization
-    ? dashboards.filter(
-        (dashboard) => dashboard.organizationId === currentOrganization.id,
-      )
-    : [];
 
   // Filter data sources by current organization
   const filteredDataSources = currentOrganization
@@ -178,23 +169,6 @@ export function WorkspaceSidebar() {
                   <Link href="/workspace">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname?.startsWith("/workspace/dashboards")}
-                  tooltip="Dashboards"
-                >
-                  <Link href="/workspace/dashboards">
-                    <FileText className="h-4 w-4" />
-                    <span>Dashboards</span>
-                    {filteredDashboards.length > 0 && (
-                      <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                        {filteredDashboards.length}
-                      </span>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

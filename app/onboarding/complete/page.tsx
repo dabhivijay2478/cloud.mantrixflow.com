@@ -19,7 +19,6 @@ export default function CompletePage() {
     completeOnboarding,
     currentOrganization,
     currentDataSource,
-    dashboards,
   } = useWorkspaceStore();
 
   useEffect(() => {
@@ -67,19 +66,6 @@ export default function CompletePage() {
                   </p>
                 </div>
               </div>
-              {dashboards.length > 0 && (
-                <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Dashboard Created</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {dashboards[0]?.name || "Your first dashboard"}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
             <Button onClick={handleGoToWorkspace} className="w-full" size="lg">
               Go to Workspace

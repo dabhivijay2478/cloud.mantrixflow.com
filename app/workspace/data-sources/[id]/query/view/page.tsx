@@ -3,7 +3,8 @@
 import { ArrowLeft, Database, RefreshCw } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { SQLResultViewer, TableNavigation } from "@/components/bi";
+import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
+import { TableNavigation } from "@/components/data-sources/table-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";

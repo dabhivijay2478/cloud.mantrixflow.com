@@ -243,7 +243,6 @@ export function DatasetConfigurationEmbedded({
     dataSources,
     datasets,
     savedQueries,
-    dashboards,
     addDataset,
     removeDataset,
     updateDataset,
@@ -493,20 +492,6 @@ export function DatasetConfigurationEmbedded({
     }
   };
 
-  // Check if a dataset is used in any dashboard
-  const isDatasetUsedInDashboard = (datasetId: string): boolean => {
-    return dashboards.some(
-      (dashboard) =>
-        dashboard.dataSourceId === dataSourceId &&
-        dashboard.components.some(
-          (component) =>
-            component.config &&
-            typeof component.config === "object" &&
-            "datasetId" in component.config &&
-            component.config.datasetId === datasetId,
-        ),
-    );
-  };
 
   const handleToggleDatasetSelection = (datasetId: string) => {
     setSelectedDatasets((prev) => {
@@ -678,7 +663,6 @@ export function DatasetConfigurationEmbedded({
                   <TableHead>Name</TableHead>
                   <TableHead>Source Type</TableHead>
                   <TableHead>Columns</TableHead>
-                  <TableHead>Used in Dashboard</TableHead>
                   <TableHead>Sync Status</TableHead>
                   <TableHead>Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -689,7 +673,6 @@ export function DatasetConfigurationEmbedded({
                   const selectedCols = dataset.columns.filter(
                     (c) => c.selected,
                   );
-                  const isUsed = isDatasetUsedInDashboard(dataset.id);
                   const isSelected = selectedDatasets.has(dataset.id);
                   const syncStatus = getSyncStatus(dataset);
                   const isTableSource = dataset.sourceType === "table";
@@ -743,23 +726,6 @@ export function DatasetConfigurationEmbedded({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {selectedCols.length} selected
-                      </TableCell>
-                      <TableCell>
-                        {isUsed ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-800 border-green-200"
-                          >
-                            Yes
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="text-muted-foreground"
-                          >
-                            No
-                          </Badge>
-                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">

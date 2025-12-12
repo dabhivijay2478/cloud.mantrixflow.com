@@ -43,8 +43,8 @@ export default function ImportingPage() {
       } else {
         clearInterval(interval);
         setTimeout(() => {
-          setOnboardingStep("first-dashboard");
-          router.push("/onboarding/first-dashboard");
+          completeOnboarding();
+          router.push("/onboarding/complete");
         }, 1000);
       }
     }, 1500);
