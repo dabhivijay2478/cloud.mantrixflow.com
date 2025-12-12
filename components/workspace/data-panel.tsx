@@ -67,16 +67,14 @@ function getTypeColor(type: DatasetColumn["type"]) {
 }
 
 export function DataPanel() {
-  const { dataPanelOpen, setDataPanelOpen, currentDashboard, dataSources } =
+  const { dataPanelOpen, setDataPanelOpen, currentDataSource } =
     useWorkspaceStore();
 
   const [columns, setColumns] = useState<DatasetColumn[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Get the connected data source and selected table
-  const connectedDataSource = currentDashboard?.dataSourceId
-    ? dataSources.find((ds) => ds.id === currentDashboard.dataSourceId)
-    : null;
+  // Get the current data source and selected table
+  const connectedDataSource = currentDataSource || null;
   const selectedTable = connectedDataSource?.selectedTable || "";
 
   // Fetch columns when table changes

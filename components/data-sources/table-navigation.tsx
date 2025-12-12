@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { ChevronLeft, ChevronRight, Database, Search } from "lucide-react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -58,7 +58,12 @@ export function TableNavigation({
     <div className="h-full border-r bg-muted/30 flex flex-col">
       <div className="p-4 border-b flex items-center justify-between">
         <h3 className="font-semibold text-sm">Tables</h3>
-        <Button variant="ghost" size="icon" onClick={handleToggle} className="h-6 w-6">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleToggle}
+          className="h-6 w-6"
+        >
           <ChevronLeft className="h-4 w-4" />
         </Button>
       </div>
@@ -96,4 +101,3 @@ export function TableNavigation({
     </div>
   );
 }
-

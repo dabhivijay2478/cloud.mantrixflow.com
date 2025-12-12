@@ -1,13 +1,11 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LoadingState } from "@/components/shared";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AgentPanel } from "@/components/workspace/agent-panel";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
@@ -17,16 +15,8 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
-  const pathname = usePathname();
   const { user, loading } = useAuthStore();
-  const isMobile = useIsMobile();
-  const {
-    onboarding,
-    sidebarOpen,
-    setSidebarOpen,
-    agentPanelOpen,
-    setAgentPanelOpen,
-  } = useWorkspaceStore();
+  const { onboarding, sidebarOpen, setSidebarOpen } = useWorkspaceStore();
 
   useEffect(() => {
     if (!loading && !user) {

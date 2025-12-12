@@ -3,7 +3,6 @@
 import { Database, GitBranch } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { EmptyState, PageHeader } from "@/components/shared";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -88,7 +87,9 @@ export default function WorkspacePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold">{filteredDataSources.length}</div>
+            <div className="text-2xl font-bold">
+              {filteredDataSources.length}
+            </div>
             <p className="text-sm text-muted-foreground">Connected sources</p>
           </CardContent>
         </Card>

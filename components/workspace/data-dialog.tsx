@@ -62,29 +62,21 @@ interface DataDialogProps {
 }
 
 export function DataDialog({ open, onOpenChange }: DataDialogProps) {
-  const {
-    currentDashboard,
-    datasets,
-    selectedDatasetId,
-    setSelectedDatasetId,
-    dataSources,
-  } = useWorkspaceStore();
+  const { datasets, selectedDatasetId, setSelectedDatasetId, dataSources } =
+    useWorkspaceStore();
 
   const [columns, setColumns] = useState<DatasetColumn[]>([]);
 
-  // Get available datasets for the current dashboard's data source
-  const dashboardDataSourceId = currentDashboard?.dataSourceId;
-  const availableDatasets = dashboardDataSourceId
-    ? datasets.filter((ds) => ds.dataSourceId === dashboardDataSourceId)
-    : datasets;
+  // Get all available datasets
+  const availableDatasets = datasets;
 
   const selectedDataset = selectedDatasetId
     ? datasets.find((ds) => ds.id === selectedDatasetId)
     : null;
 
   // Get the connected data source for display purposes
-  const connectedDataSource = currentDashboard?.dataSourceId
-    ? dataSources.find((ds) => ds.id === currentDashboard.dataSourceId)
+  const connectedDataSource = selectedDataset?.dataSourceId
+    ? dataSources.find((ds) => ds.id === selectedDataset.dataSourceId)
     : null;
 
   const handleDatasetChange = (value: string) => {

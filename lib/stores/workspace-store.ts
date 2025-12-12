@@ -146,14 +146,10 @@ interface WorkspaceActions {
 
   // UI actions
   setSidebarOpen: (open: boolean) => void;
-  setComponentsPanelOpen: (open: boolean) => void;
   setAgentPanelOpen: (open: boolean) => void;
-  setPropertiesPanelOpen: (open: boolean) => void;
   setDataPanelOpen: (open: boolean) => void;
-  setSelectedComponentId: (id: string | null) => void;
   setSelectedDatasetId: (id: string | null) => void;
   toggleSidebar: () => void;
-  toggleComponentsPanel: () => void;
   toggleAgentPanel: () => void;
 }
 

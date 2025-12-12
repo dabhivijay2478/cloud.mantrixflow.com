@@ -77,6 +77,7 @@ MantrixFlow is an AI-powered Business Intelligence platform that transforms your
 - **Zod** - Schema validation
 
 ### Development Tools
+- **Bun** - Fast JavaScript runtime and package manager
 - **Biome** - Fast linter and formatter
 - **TypeScript** - Static type checking
 
@@ -91,8 +92,7 @@ MantrixFlow is an AI-powered Business Intelligence platform that transforms your
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** 18.x or higher
-- **npm**, **yarn**, **pnpm**, or **bun** package manager
+- **Bun** 1.0 or higher ([Install Bun](https://bun.sh))
 - **Git** for version control
 - **Supabase Account** (for authentication and database)
 
@@ -108,12 +108,6 @@ cd apps/app
 ### 2. Install Dependencies
 
 ```bash
-npm install
-# or
-yarn install
-# or
-pnpm install
-# or
 bun install
 ```
 
@@ -145,12 +139,6 @@ NEXTAUTH_URL=http://localhost:3000
 ### 5. Run Development Server
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
 bun dev
 ```
 
@@ -233,15 +221,15 @@ apps/app/
 
 ```bash
 # Development
-npm run dev          # Start development server on http://localhost:3000
+bun dev              # Start development server on http://localhost:3000
 
 # Production
-npm run build        # Build production bundle
-npm run start        # Start production server
+bun run build        # Build production bundle
+bun start            # Start production server
 
 # Code Quality
-npm run lint         # Run Biome linter
-npm run format       # Format code with Biome
+bun run lint         # Run Biome linter
+bun run format       # Format code with Biome
 ```
 
 ## 🎯 Key Features & Components
@@ -420,8 +408,8 @@ All components accept `className` prop for custom styling:
 ### Build for Production
 
 ```bash
-npm run build
-npm run start
+bun run build
+bun start
 ```
 
 ### Environment Variables for Production

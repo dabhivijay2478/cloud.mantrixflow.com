@@ -1,0 +1,19 @@
+# Bun configuration file
+# See https://bun.sh/docs/cli/bunfig for more information
+
+[install]
+# Automatically install peer dependencies
+auto = true
+
+# Use the lockfile
+lockfile = true
+
+# Production mode (don't install devDependencies)
+production = false
+
+# Optional: Configure registry
+# registry = "https://registry.npmjs.org/"
+
+# Optional: Configure cache directory
+# cache = ".bun/install/cache"
+

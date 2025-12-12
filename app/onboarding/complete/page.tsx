@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,8 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function CompletePage() {
   const router = useRouter();
-  const {
-    completeOnboarding,
-    currentOrganization,
-    currentDataSource,
-  } = useWorkspaceStore();
+  const { completeOnboarding, currentOrganization, currentDataSource } =
+    useWorkspaceStore();
 
   useEffect(() => {
     completeOnboarding();

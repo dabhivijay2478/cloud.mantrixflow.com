@@ -492,7 +492,6 @@ export function DatasetConfigurationEmbedded({
     }
   };
 
-
   const handleToggleDatasetSelection = (datasetId: string) => {
     setSelectedDatasets((prev) => {
       const newSet = new Set(prev);

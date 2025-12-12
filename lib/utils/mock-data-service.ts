@@ -62,7 +62,7 @@ export function generateMockData(
 function generateStringValue(
   columnName: string,
   index: number,
-  random: () => number,
+  _random: () => number,
 ): string {
   const name = columnName.toLowerCase();
 
@@ -115,14 +115,22 @@ function generateNumberValue(
 ): number {
   const name = columnName.toLowerCase();
 
-  if (name.includes("revenue") || name.includes("sales") || name.includes("amount")) {
+  if (
+    name.includes("revenue") ||
+    name.includes("sales") ||
+    name.includes("amount")
+  ) {
     // Revenue-like values: increasing trend with some variance
     const base = 1000 + index * 50;
     const variance = (random() - 0.5) * 200;
     return Math.round(base + variance);
   }
 
-  if (name.includes("quantity") || name.includes("count") || name.includes("qty")) {
+  if (
+    name.includes("quantity") ||
+    name.includes("count") ||
+    name.includes("qty")
+  ) {
     // Quantity values: moderate range
     return Math.round(10 + random() * 90);
   }
@@ -239,4 +247,3 @@ export function generateChartData(
   // Transform for chart
   return transformDataForChart(fullData, xKey, yKeys);
 }
-

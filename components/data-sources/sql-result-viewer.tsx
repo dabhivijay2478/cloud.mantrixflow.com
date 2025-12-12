@@ -55,24 +55,30 @@ export function SQLResultViewer({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
+              <td
+                colSpan={columns.length}
+                className="px-4 py-8 text-center text-muted-foreground"
+              >
                 No data available
               </td>
             </tr>
           ) : (
-            rows.map((row, idx) => (
-              <tr key={idx}>
-                {columns.map((col) => (
-                  <td key={col} className="px-4 py-2">
-                    {String(row[col] ?? "")}
-                  </td>
-                ))}
-              </tr>
-            ))
+            rows.map((row, idx) => {
+              // Create a unique key from row data or index
+              const rowKey = row.id ? String(row.id) : `row-${idx}`;
+              return (
+                <tr key={rowKey}>
+                  {columns.map((col) => (
+                    <td key={col} className="px-4 py-2">
+                      {String(row[col] ?? "")}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </Table>
     </div>
   );
 }
-

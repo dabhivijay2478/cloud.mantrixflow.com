@@ -1,8 +1,8 @@
 import { Table2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { SQLResultViewer } from "./sql-result-viewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SQLResultViewer } from "./sql-result-viewer";
 
 interface TableDataViewProps {
   dataSourceId: string;
