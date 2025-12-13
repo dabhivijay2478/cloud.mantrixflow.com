@@ -40,17 +40,17 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn("space-y-4 pb-6", className)}>
+    <div className={cn("space-y-3 pb-4", className)}>
       {breadcrumbs && <div className="flex items-center">{breadcrumbs}</div>}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4 min-w-0 flex-1">
           {backButton && <div className="shrink-0 mt-1">{backButton}</div>}
           <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
               {title}
             </h1>
             {description && (
-              <p className="mt-2 text-base text-muted-foreground sm:text-lg">
+              <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">
                 {description}
               </p>
             )}
