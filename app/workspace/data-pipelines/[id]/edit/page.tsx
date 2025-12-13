@@ -3,8 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { PageHeader, ProgressSteps } from "@/components/shared";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import type { CollectorConfig } from "../../new/collector-step";
@@ -134,19 +133,13 @@ export default function EditPipelinePage() {
         <PageHeader
           title={`Edit Pipeline: ${pipeline.name}`}
           description="Update your data pipeline configuration"
-          backButton={
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/workspace/data-pipelines")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          }
+          showBackIcon={true}
+          onBack={() => router.push("/workspace/data-pipelines")}
+          progressSteps={steps}
+          currentStepId={currentStep}
+          onStepClick={(stepId) => setCurrentStep(stepId as PipelineStep)}
         />
       </div>
-
-      <ProgressSteps steps={steps} currentStepId={currentStep} />
 
       {/* Main Content - Single Scroll Area */}
       <div className="flex-1 overflow-y-auto">
@@ -171,31 +164,6 @@ export default function EditPipelinePage() {
               onComplete={handleEmitterComplete}
             />
           )}
-        </div>
-      </div>
-
-      {/* Footer Actions */}
-      <div className="border-t bg-background px-6 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (currentStepIndex > 0) {
-                setCurrentStep(steps[currentStepIndex - 1].id);
-              } else {
-                router.push("/workspace/data-pipelines");
-              }
-            }}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {currentStepIndex > 0 ? "Previous" : "Cancel"}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">
-              Step {currentStepIndex + 1} of {steps.length}
-            </Badge>
-          </div>
         </div>
       </div>
     </div>

@@ -6,6 +6,8 @@ import {
   Edit,
   FileJson,
   Map as MapIcon,
+  Pause,
+  Play,
   Plus,
   Sparkles,
   Trash2,
@@ -62,6 +64,7 @@ export interface TransformConfig {
   collectorId?: string;
   fieldMappings?: Record<string, string>;
   jsonSchema?: string;
+  status?: "published" | "paused";
   emitters?: Array<{
     id: string;
     transformId: string;
@@ -214,6 +217,36 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     onComplete(updatedCollectors);
   };
 
+  const handlePublishTransform = (collectorId: string, transformId: string) => {
+    const updatedCollectors = collectors.map((collector) => {
+      if (collector.id === collectorId) {
+        return {
+          ...collector,
+          transformers: collector.transformers.map((t) =>
+            t.id === transformId ? { ...t, status: "published" as const } : t,
+          ),
+        };
+      }
+      return collector;
+    });
+    onComplete(updatedCollectors);
+  };
+
+  const handlePauseTransform = (collectorId: string, transformId: string) => {
+    const updatedCollectors = collectors.map((collector) => {
+      if (collector.id === collectorId) {
+        return {
+          ...collector,
+          transformers: collector.transformers.map((t) =>
+            t.id === transformId ? { ...t, status: "paused" as const } : t,
+          ),
+        };
+      }
+      return collector;
+    });
+    onComplete(updatedCollectors);
+  };
+
   const handleEditTransform = (transform: TransformConfig) => {
     setEditingTransform(transform.id);
     setSelectedCollectorId(transform.collectorId || "");
@@ -229,15 +262,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Transform - Field Mapping
-        </h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Create transformers to map source fields to destination schema
-        </p>
-      </div>
-
       {/* Add Transform Button */}
       <div className="flex justify-end">
         <Button
@@ -286,7 +310,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     <TableHead>Collector</TableHead>
                     <TableHead>Fields Mapped</TableHead>
                     <TableHead>Emitters</TableHead>
-                    <TableHead className="w-[100px] text-right">
+                    <TableHead className="w-[250px] text-right">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -325,6 +349,42 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {transform.status === "paused" ||
+                          !transform.status ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() =>
+                                handlePublishTransform(
+                                  transform.collectorId || "",
+                                  transform.id,
+                                )
+                              }
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              <span className="hidden sm:inline">
+                                Publish Transform
+                              </span>
+                              <span className="sm:hidden">Publish</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handlePauseTransform(
+                                  transform.collectorId || "",
+                                  transform.id,
+                                )
+                              }
+                            >
+                              <Pause className="h-4 w-4 mr-2" />
+                              <span className="hidden sm:inline">
+                                Pause Transform
+                              </span>
+                              <span className="sm:hidden">Pause</span>
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -494,20 +554,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
           <SheetFooter className="border-t pt-4 mt-auto">
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddDialog(false);
-                  setEditingTransform(null);
-                  setSelectedCollectorId("");
-                  setTransformName("");
-                  setFieldMappings({});
-                  setJsonSchema("");
-                }}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
               <Button
                 onClick={handleAddTransform}
                 disabled={!selectedCollectorId || !transformName}

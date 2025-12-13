@@ -145,15 +145,6 @@ export function CollectorStep({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Collector - Data Sources
-        </h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Configure one or more data sources and their tables
-        </p>
-      </div>
-
       {/* Add Collector Button */}
       <div className="flex justify-end">
         <Button
@@ -399,18 +390,6 @@ export function CollectorStep({
 
           <SheetFooter className="border-t pt-4 mt-auto">
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddDialog(false);
-                  setEditingCollector(null);
-                  setSelectedSourceId("");
-                  setSelectedTables([]);
-                }}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
               <Button
                 onClick={handleAddCollector}
                 disabled={!selectedSourceId || selectedTables.length === 0}

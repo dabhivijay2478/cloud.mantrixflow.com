@@ -302,15 +302,6 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Emitter - Destinations
-        </h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Configure destinations for each transformer to emit transformed data
-        </p>
-      </div>
-
       {/* Add Emitter Button */}
       <div className="flex justify-end">
         <Button
@@ -723,19 +714,6 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
           <SheetFooter className="border-t pt-4 mt-auto">
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddDialog(false);
-                  setEditingEmitter(null);
-                  setSelectedTransformId("");
-                  setSelectedDestinationId("");
-                  setConfigValues({});
-                }}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
               <Button
                 onClick={handleAddEmitter}
                 disabled={!isConfigValid()}

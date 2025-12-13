@@ -3,10 +3,10 @@
 import {
   ArrowRightLeft,
   Database,
-  Play,
   Plus,
   Settings,
   Sparkles,
+  Trash2,
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -20,14 +20,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Pipeline } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { toast } from "@/lib/utils/toast";
 
 type PipelineType = "bulk" | "stream" | "emit";
 
 export default function DataPipelinesPage() {
-  const { currentOrganization, dataSources, pipelines } = useWorkspaceStore();
+  const { currentOrganization, dataSources, pipelines, removePipeline } =
+    useWorkspaceStore();
   const router = useRouter();
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -82,6 +91,20 @@ export default function DataPipelinesPage() {
     }
   };
 
+  const handleDelete = (pipelineId: string, pipelineName: string) => {
+    if (
+      confirm(
+        `Are you sure you want to delete "${pipelineName}"? This action cannot be undone.`,
+      )
+    ) {
+      removePipeline(pipelineId);
+      toast.success(
+        "Pipeline deleted",
+        `${pipelineName} has been deleted successfully.`,
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -99,162 +122,97 @@ export default function DataPipelinesPage() {
         }
       />
 
-      {/* Pipeline Types Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-2 hover:border-blue-500/50 transition-colors">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Database className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-lg">Bulk Load</CardTitle>
-                <CardDescription className="text-xs">
-                  One-time imports
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              One-time bulk imports from any system. We detect schemas
-              automatically and start loading your data immediately.
-            </p>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Free</span>
-              <Badge variant="outline">2 pipelines</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2 hover:border-purple-500/50 transition-colors">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <Zap className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-lg">Stream & Transform</CardTitle>
-                <CardDescription className="text-xs">
-                  Real-time pipelines
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Real-time pipelines with rewind capability. Stream continuously,
-              transform on demand, replay from any point.
-            </p>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">$25 per GB/month</span>
-              <Badge variant="outline">Unlimited</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2 hover:border-green-500/50 transition-colors">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-lg">Emit Fearlessly</CardTitle>
-                <CardDescription className="text-xs">
-                  Multi-destination
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Fan out to any destination—Snowflake, Pinecone, Redshift,
-              wherever. No limits on endpoints.
-            </p>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Free</span>
-              <Badge variant="outline">Unlimited</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Existing Pipelines */}
       {pipelines.length > 0 ? (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Your Pipelines</h2>
-          <div className="grid grid-cols-1 gap-4">
-            {pipelines.map((pipeline) => {
-              const typeInfo = getPipelineTypeInfo(pipeline.type);
-              const Icon = typeInfo.icon;
-              const source = dataSources.find(
-                (ds) => ds.id === pipeline.sourceId,
-              );
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[200px]">Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Destinations</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="w-[200px] text-right">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pipelines.map((pipeline) => {
+                      const typeInfo = getPipelineTypeInfo(pipeline.type);
+                      const Icon = typeInfo.icon;
+                      const source = dataSources.find(
+                        (ds) => ds.id === pipeline.sourceId,
+                      );
 
-              return (
-                <Card
-                  key={pipeline.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div
-                          className={`h-12 w-12 rounded-lg ${typeInfo.bgColor} flex items-center justify-center shrink-0`}
-                        >
-                          <Icon className={`h-6 w-6 ${typeInfo.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CardTitle className="text-lg">
-                              {pipeline.name}
-                            </CardTitle>
-                            {getStatusBadge(pipeline.status)}
-                          </div>
-                          <CardDescription className="text-sm">
-                            {typeInfo.title} •{" "}
+                      return (
+                        <TableRow key={pipeline.id}>
+                          <TableCell className="font-medium">
+                            {pipeline.name}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`h-8 w-8 rounded-lg ${typeInfo.bgColor} flex items-center justify-center`}
+                              >
+                                <Icon className={`h-4 w-4 ${typeInfo.color}`} />
+                              </div>
+                              <span className="text-sm">{typeInfo.title}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
                             {source?.name || "Unknown source"}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            router.push(
-                              `/workspace/data-pipelines/${pipeline.id}/edit`,
-                            )
-                          }
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Configure
-                        </Button>
-                        <Button variant="default" size="sm">
-                          <Play className="h-4 w-4 mr-2" />
-                          Start
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>
-                        {pipeline.destinationIds.length} destination
-                        {pipeline.destinationIds.length !== 1 ? "s" : ""}
-                      </span>
-                      <Separator orientation="vertical" className="h-4" />
-                      <span>
-                        Created{" "}
-                        {new Date(pipeline.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(pipeline.status)}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {pipeline.destinationIds.length} destination
+                            {pipeline.destinationIds.length !== 1 ? "s" : ""}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(pipeline.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  router.push(
+                                    `/workspace/data-pipelines/${pipeline.id}/edit`,
+                                  )
+                                }
+                              >
+                                <Settings className="h-4 w-4 mr-2" />
+                                Configure
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() =>
+                                  handleDelete(pipeline.id, pipeline.name)
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       ) : (
         <Card className="border-dashed">

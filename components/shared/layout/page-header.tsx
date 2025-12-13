@@ -1,7 +1,12 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import type * as React from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import type { ProgressStep } from "../navigation/progress-steps";
+import { ProgressSteps } from "../navigation/progress-steps";
 
 /**
  * PageHeader
@@ -28,6 +33,11 @@ export interface PageHeaderProps {
   action?: React.ReactNode;
   breadcrumbs?: React.ReactNode;
   backButton?: React.ReactNode;
+  showBackIcon?: boolean;
+  onBack?: () => void;
+  progressSteps?: ProgressStep[];
+  currentStepId?: string;
+  onStepClick?: (stepId: string) => void;
   className?: string;
 }
 
@@ -37,27 +47,71 @@ export function PageHeader({
   action,
   breadcrumbs,
   backButton,
+  showBackIcon = false,
+  onBack,
+  progressSteps,
+  currentStepId,
+  onStepClick,
   className,
 }: PageHeaderProps) {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      router.back();
+    }
+  };
+
   return (
-    <div className={cn("space-y-3 pb-4", className)}>
+    <div className={cn("space-y-2 pb-3", className)}>
       {breadcrumbs && <div className="flex items-center">{breadcrumbs}</div>}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-4 min-w-0 flex-1">
-          {backButton && <div className="shrink-0 mt-1">{backButton}</div>}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            <h1 className="text-base font-semibold tracking-tight sm:text-lg">
               {title}
             </h1>
             {description && (
-              <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
                 {description}
               </p>
             )}
           </div>
+          {progressSteps && currentStepId && (
+            <div className="shrink-0 hidden sm:block">
+              <ProgressSteps
+                steps={progressSteps}
+                currentStepId={currentStepId}
+                onStepClick={onStepClick}
+              />
+            </div>
+          )}
+          {showBackIcon && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={handleBack}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-        {action && <div className="shrink-0 flex items-center">{action}</div>}
+        <div className="flex items-center gap-2 shrink-0">
+          {action && <div className="flex items-center">{action}</div>}
+        </div>
       </div>
+      {progressSteps && currentStepId && (
+        <div className="sm:hidden">
+          <ProgressSteps
+            steps={progressSteps}
+            currentStepId={currentStepId}
+            onStepClick={onStepClick}
+          />
+        </div>
+      )}
     </div>
   );
 }

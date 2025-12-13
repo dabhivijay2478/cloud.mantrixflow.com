@@ -2,6 +2,11 @@
 
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * ProgressSteps
@@ -32,74 +37,62 @@ export interface ProgressStep {
 export interface ProgressStepsProps {
   steps: ProgressStep[];
   currentStepId: string;
+  onStepClick?: (stepId: string) => void;
   className?: string;
 }
 
 export function ProgressSteps({
   steps,
   currentStepId,
+  onStepClick,
   className,
 }: ProgressStepsProps) {
   const currentStepIndex = steps.findIndex((s) => s.id === currentStepId);
 
   return (
-    <div
-      className={cn(
-        "border-b bg-muted/30 px-4 sm:px-6 py-2 sm:py-2",
-        className,
-      )}
-    >
-      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-        {steps.map((step, index) => (
-          <div key={step.id} className="flex flex-1 items-center min-w-0">
-            <div className="flex flex-col items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
+    <div className={cn("flex items-center gap-2 sm:gap-3", className)}>
+      {steps.map((step, index) => (
+        <Tooltip key={step.id}>
+          <TooltipTrigger asChild>
+            <div
+              className="flex flex-col items-center gap-0.5 sm:gap-1 cursor-pointer"
+              onClick={() => onStepClick?.(step.id)}
+            >
               <div
                 className={cn(
-                  "flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border-2 transition-all duration-300",
+                  "flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full border-2 transition-all duration-300",
                   index < currentStepIndex
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm scale-105"
+                    ? "border-primary bg-primary text-primary-foreground"
                     : index === currentStepIndex
-                      ? "border-primary bg-primary/10 text-primary shadow-sm scale-105"
+                      ? "border-primary bg-primary/10 text-primary"
                       : "border-muted bg-background text-muted-foreground",
                 )}
               >
                 {index < currentStepIndex ? (
-                  <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <CheckCircle2 className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                 ) : (
-                  <span className="text-[10px] sm:text-xs font-semibold">
-                    {index + 1}
-                  </span>
+                  <span className="text-xs font-semibold">{index + 1}</span>
                 )}
               </div>
-              <div className="text-center min-w-0 w-full">
-                <p
-                  className={cn(
-                    "text-[10px] sm:text-xs font-medium truncate",
-                    index === currentStepIndex
-                      ? "text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {step.label}
-                </p>
-                {step.description && (
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground hidden sm:block truncate">
-                    {step.description}
-                  </p>
-                )}
-              </div>
-            </div>
-            {index < steps.length - 1 && (
-              <div
+              <p
                 className={cn(
-                  "mx-1.5 sm:mx-2 h-0.5 flex-1 transition-colors duration-300 hidden sm:block",
-                  index < currentStepIndex ? "bg-primary" : "bg-muted",
+                  "text-xs font-medium truncate",
+                  index === currentStepIndex
+                    ? "text-foreground"
+                    : "text-muted-foreground",
                 )}
-              />
-            )}
-          </div>
-        ))}
-      </div>
+              >
+                {step.label}
+              </p>
+            </div>
+          </TooltipTrigger>
+          {step.description && (
+            <TooltipContent>
+              <p className="text-xs">{step.description}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
+      ))}
     </div>
   );
 }
