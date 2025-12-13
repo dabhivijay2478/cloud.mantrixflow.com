@@ -9,19 +9,15 @@ import {
   Pause,
   Play,
   Plus,
+  Search,
   Sparkles,
   Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -30,7 +26,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -41,14 +36,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table as TableComponent,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/shared";
 import { Textarea } from "@/components/ui/textarea";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import type { CollectorConfig } from "./collector-step";
@@ -85,20 +74,22 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     {},
   );
   const [jsonSchema, setJsonSchema] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Get all transforms from all collectors
-  const allTransforms: Array<TransformConfig & { collectorName: string }> =
-    collectors.flatMap((collector) => {
-      const source = dataSources.find((ds) => ds.id === collector.sourceId);
-      return (collector.transformers || []).map((t) => ({
-        ...t,
-        collectorId: collector.id,
-        collectorName: source?.name || "Unknown",
-        fieldMappings: (t as any).fieldMappings || {},
-        jsonSchema: (t as any).jsonSchema || "",
-        emitters: (t as any).emitters || [],
-      }));
-    });
+  const allTransforms: Array<
+    TransformConfig & { collectorName: string; collectorId: string }
+  > = collectors.flatMap((collector) => {
+    const source = dataSources.find((ds) => ds.id === collector.sourceId);
+    return (collector.transformers || []).map((t) => ({
+      ...t,
+      collectorId: collector.id,
+      collectorName: source?.name || "Unknown",
+      fieldMappings: (t as any).fieldMappings || {},
+      jsonSchema: (t as any).jsonSchema || "",
+      emitters: (t as any).emitters || [],
+    }));
+  });
 
   const selectedCollector = collectors.find(
     (c) => c.id === selectedCollectorId,
@@ -260,10 +251,140 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     onComplete(collectors);
   };
 
+  const filteredTransforms = allTransforms.filter((transform) => {
+    if (!searchQuery) return true;
+    return (
+      transform.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transform.collectorName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
+  type TransformTableRow = TransformConfig & {
+    collectorName: string;
+    collectorId: string;
+  };
+
+  const columns: ColumnDef<
+    TransformConfig & { collectorName: string; collectorId: string }
+  >[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+            <MapIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <span className="font-medium">{row.original.name}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "collectorName",
+      header: "Collector",
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.original.collectorName}</Badge>
+      ),
+    },
+    {
+      accessorKey: "fieldMappings",
+      header: "Fields Mapped",
+      cell: ({ row }) => (
+        <Badge variant="secondary">
+          {
+            Object.keys(row.original.fieldMappings || {}).filter(
+              (k) => row.original.fieldMappings?.[k],
+            ).length
+          }{" "}
+          fields
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "emitters",
+      header: "Emitters",
+      cell: ({ row }) => (
+        <Badge variant="outline">
+          {row.original.emitters?.length || 0} emitter
+          {(row.original.emitters?.length || 0) !== 1 ? "s" : ""}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => {
+        const transform = row.original;
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {transform.status === "paused" || !transform.status ? (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePublishTransform(transform.collectorId, transform.id);
+                }}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Publish Transform</span>
+                <span className="sm:hidden">Publish</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePauseTransform(transform.collectorId, transform.id);
+                }}
+              >
+                <Pause className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Pause Transform</span>
+                <span className="sm:hidden">Pause</span>
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditTransform(transform);
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteTransform(transform.collectorId, transform.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Add Transform Button */}
-      <div className="flex justify-end">
+    <div className="space-y-6">
+      {/* Search and Add Button */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search transformers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
@@ -294,125 +415,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         </Card>
       ) : (
         <Card>
-          <CardHeader>
-            <CardTitle>Configured Transformers</CardTitle>
-            <CardDescription>
-              {allTransforms.length} transformer
-              {allTransforms.length !== 1 ? "s" : ""} configured
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <TableComponent>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Collector</TableHead>
-                    <TableHead>Fields Mapped</TableHead>
-                    <TableHead>Emitters</TableHead>
-                    <TableHead className="w-[250px] text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allTransforms.map((transform) => (
-                    <TableRow key={transform.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                            <MapIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                          </div>
-                          <span className="font-medium">{transform.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {transform.collectorName}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {
-                            Object.keys(transform.fieldMappings || {}).filter(
-                              (k) => transform.fieldMappings?.[k],
-                            ).length
-                          }{" "}
-                          fields
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {transform.emitters?.length || 0} emitter
-                          {(transform.emitters?.length || 0) !== 1 ? "s" : ""}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {transform.status === "paused" ||
-                          !transform.status ? (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() =>
-                                handlePublishTransform(
-                                  transform.collectorId || "",
-                                  transform.id,
-                                )
-                              }
-                            >
-                              <Play className="h-4 w-4 mr-2" />
-                              <span className="hidden sm:inline">
-                                Publish Transform
-                              </span>
-                              <span className="sm:hidden">Publish</span>
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handlePauseTransform(
-                                  transform.collectorId || "",
-                                  transform.id,
-                                )
-                              }
-                            >
-                              <Pause className="h-4 w-4 mr-2" />
-                              <span className="hidden sm:inline">
-                                Pause Transform
-                              </span>
-                              <span className="sm:hidden">Pause</span>
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditTransform(transform)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() =>
-                              handleDeleteTransform(
-                                transform.collectorId || "",
-                                transform.id,
-                              )
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </TableComponent>
-            </div>
+          <CardContent className="p-6">
+            <DataTable columns={columns} data={filteredTransforms} />
           </CardContent>
         </Card>
       )}

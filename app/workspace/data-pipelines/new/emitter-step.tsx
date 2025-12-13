@@ -6,6 +6,7 @@ import {
   Edit,
   Map as MapIcon,
   Plus,
+  Search,
   Settings,
   Sparkles,
   Trash2,
@@ -13,13 +14,8 @@ import {
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -28,7 +24,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -38,14 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table as TableComponent,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/shared";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { CollectorConfig } from "./collector-step";
@@ -193,6 +182,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const [selectedDestinationId, setSelectedDestinationId] =
     useState<string>("");
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Get all transforms from all collectors
   const allTransforms: Array<TransformConfig & { collectorName: string }> =
@@ -300,10 +290,142 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     );
   };
 
+  type EmitterTableRow = EmitterConfig & { transformName: string };
+
+  const columns: ColumnDef<EmitterTableRow>[] = [
+    {
+      accessorKey: "transformName",
+      header: "Transformer",
+      cell: ({ row }) => (
+        <Badge variant="outline" className="font-normal">
+          {row.original.transformName}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "destinationName",
+      header: "Destination",
+      cell: ({ row }) => {
+        const destination = mockDestinations.find(
+          (d) => d.id === row.original.destinationId,
+        );
+        const Icon = destination?.icon || Database;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+              <Icon className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <span className="font-medium">{row.original.destinationName}</span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "destinationType",
+      header: "Type",
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="font-normal">
+          {row.original.destinationType}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "connectionConfig",
+      header: "Configuration",
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(row.original.connectionConfig)
+            .filter(
+              ([key]) =>
+                key !== "password" &&
+                key !== "secretAccessKey" &&
+                key !== "apiKey" &&
+                key !== "credentials",
+            )
+            .slice(0, 3)
+            .map(([key, value]) => (
+              <Badge
+                key={key}
+                variant="outline"
+                className="text-xs font-normal"
+              >
+                {key}: {value?.toString().slice(0, 10)}
+                {value && value.length > 10 ? "..." : ""}
+              </Badge>
+            ))}
+          {Object.keys(row.original.connectionConfig).filter(
+            (k) =>
+              k !== "password" &&
+              k !== "secretAccessKey" &&
+              k !== "apiKey" &&
+              k !== "credentials",
+          ).length > 3 && (
+            <Badge variant="outline" className="text-xs">
+              +{Object.keys(row.original.connectionConfig).length - 3}
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => {
+        const emitter = row.original;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditEmitter(emitter);
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteEmitter(emitter.transformId, emitter.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  const filteredEmitters = allEmitters.filter((emitter) => {
+    if (!searchQuery) return true;
+    return (
+      emitter.destinationName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      emitter.transformName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emitter.destinationType.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Add Emitter Button */}
-      <div className="flex justify-end">
+    <div className="space-y-6">
+      {/* Search and Add Button */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search emitters..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
@@ -317,160 +439,34 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
       {/* Emitters Table */}
       {allEmitters.length === 0 ? (
-        <Card className="border-dashed border-2">
-          <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
-            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-green-600 dark:text-green-400" />
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+              <Sparkles className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold mb-2">
+            <h3 className="text-lg font-semibold mb-2">
               No emitters configured
             </h3>
-            <p className="text-sm sm:text-base text-muted-foreground text-center mb-6 max-w-md px-4">
+            <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
               Add emitters to send transformed data to destinations
             </p>
-            <Button
-              onClick={() => setShowAddDialog(true)}
-              variant="outline"
-              size="sm"
-              className="sm:size-default"
-            >
+            <Button onClick={() => setShowAddDialog(true)} variant="outline">
               <Plus className="mr-2 h-4 w-4" />
               Add First Emitter
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card className="shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg sm:text-xl">
-                  Configured Emitters
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {allEmitters.length} emitter
-                  {allEmitters.length !== 1 ? "s" : ""} configured
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 sm:p-6">
+        <Card>
+          <CardContent className="p-6">
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <TableComponent>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>Transformer</TableHead>
-                    <TableHead>Destination</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Configuration</TableHead>
-                    <TableHead className="w-[120px] text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allEmitters.map((emitter) => {
-                    const destination = mockDestinations.find(
-                      (d) => d.id === emitter.destinationId,
-                    );
-                    const Icon = destination?.icon || Database;
-                    return (
-                      <TableRow
-                        key={emitter.id}
-                        className="hover:bg-muted/50 transition-colors"
-                      >
-                        <TableCell>
-                          <Badge variant="outline" className="font-normal">
-                            {emitter.transformName}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                              <Icon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                            </div>
-                            <span className="font-medium">
-                              {emitter.destinationName}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            {emitter.destinationType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1.5">
-                            {Object.entries(emitter.connectionConfig)
-                              .filter(
-                                ([key]) =>
-                                  key !== "password" &&
-                                  key !== "secretAccessKey" &&
-                                  key !== "apiKey" &&
-                                  key !== "credentials",
-                              )
-                              .slice(0, 3)
-                              .map(([key, value]) => (
-                                <Badge
-                                  key={key}
-                                  variant="outline"
-                                  className="text-xs font-normal"
-                                >
-                                  {key}: {value?.toString().slice(0, 10)}
-                                  {value && value.length > 10 ? "..." : ""}
-                                </Badge>
-                              ))}
-                            {Object.keys(emitter.connectionConfig).filter(
-                              (k) =>
-                                k !== "password" &&
-                                k !== "secretAccessKey" &&
-                                k !== "apiKey" &&
-                                k !== "credentials",
-                            ).length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +
-                                {Object.keys(emitter.connectionConfig).length -
-                                  3}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleEditEmitter(emitter)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleDeleteEmitter(
-                                  emitter.transformId,
-                                  emitter.id,
-                                )
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </TableComponent>
+            <div className="hidden md:block">
+              <DataTable columns={columns} data={filteredEmitters} />
             </div>
 
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3 p-4">
-              {allEmitters.map((emitter) => {
+              {filteredEmitters.map((emitter) => {
                 const destination = mockDestinations.find(
                   (d) => d.id === emitter.destinationId,
                 );

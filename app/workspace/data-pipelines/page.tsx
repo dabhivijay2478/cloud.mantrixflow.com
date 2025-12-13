@@ -10,24 +10,11 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { PageHeader } from "@/components/shared";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import type { Pipeline } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -105,6 +92,103 @@ export default function DataPipelinesPage() {
     }
   };
 
+  const columns: ColumnDef<Pipeline>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => {
+        const typeInfo = getPipelineTypeInfo(row.original.type);
+        const Icon = typeInfo.icon;
+        return (
+          <div className="flex items-center gap-2">
+            <div
+              className={`h-8 w-8 rounded-lg ${typeInfo.bgColor} flex items-center justify-center`}
+            >
+              <Icon className={`h-4 w-4 ${typeInfo.color}`} />
+            </div>
+            <span className="text-sm">{typeInfo.title}</span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "sourceId",
+      header: "Source",
+      cell: ({ row }) => {
+        const source = dataSources.find(
+          (ds) => ds.id === row.original.sourceId,
+        );
+        return (
+          <div className="text-sm text-muted-foreground">
+            {source?.name || "Unknown source"}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => getStatusBadge(row.original.status),
+    },
+    {
+      accessorKey: "destinationIds",
+      header: "Destinations",
+      cell: ({ row }) => (
+        <div className="text-sm text-muted-foreground">
+          {row.original.destinationIds.length} destination
+          {row.original.destinationIds.length !== 1 ? "s" : ""}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => (
+        <div className="text-sm text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => {
+        const pipeline = row.original;
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/workspace/data-pipelines/${pipeline.id}/edit`);
+              }}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Configure
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(pipeline.id, pipeline.name);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -124,96 +208,11 @@ export default function DataPipelinesPage() {
 
       {/* Existing Pipelines */}
       {pipelines.length > 0 ? (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Your Pipelines</h2>
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Destinations</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="w-[200px] text-right">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pipelines.map((pipeline) => {
-                      const typeInfo = getPipelineTypeInfo(pipeline.type);
-                      const Icon = typeInfo.icon;
-                      const source = dataSources.find(
-                        (ds) => ds.id === pipeline.sourceId,
-                      );
-
-                      return (
-                        <TableRow key={pipeline.id}>
-                          <TableCell className="font-medium">
-                            {pipeline.name}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`h-8 w-8 rounded-lg ${typeInfo.bgColor} flex items-center justify-center`}
-                              >
-                                <Icon className={`h-4 w-4 ${typeInfo.color}`} />
-                              </div>
-                              <span className="text-sm">{typeInfo.title}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {source?.name || "Unknown source"}
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(pipeline.status)}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {pipeline.destinationIds.length} destination
-                            {pipeline.destinationIds.length !== 1 ? "s" : ""}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(pipeline.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  router.push(
-                                    `/workspace/data-pipelines/${pipeline.id}/edit`,
-                                  )
-                                }
-                              >
-                                <Settings className="h-4 w-4 mr-2" />
-                                Configure
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() =>
-                                  handleDelete(pipeline.id, pipeline.name)
-                                }
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardContent className="p-6">
+            <DataTable columns={columns} data={pipelines} />
+          </CardContent>
+        </Card>
       ) : (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">

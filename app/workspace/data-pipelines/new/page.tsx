@@ -115,7 +115,7 @@ export default function NewPipelinePage() {
 
       {/* Main Content - Single Scroll Area */}
       <div className="flex-1 overflow-y-auto bg-muted/20">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-6 py-6">
           {currentStep === "collector" && (
             <CollectorStep
               onComplete={handleCollectorComplete}

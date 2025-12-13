@@ -44,3 +44,5 @@ export {
   StepIndicator,
   type StepIndicatorProps,
 } from "./navigation/step-indicator";
+// Data Table Components
+export { DataTable, type DataTableProps } from "./data-table";

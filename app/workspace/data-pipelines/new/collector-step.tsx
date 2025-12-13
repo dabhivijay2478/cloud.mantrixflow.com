@@ -6,19 +6,15 @@ import {
   Database,
   Edit,
   Plus,
+  Search,
   Table,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -35,14 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table as TableComponent,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/shared";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +68,7 @@ export function CollectorStep({
   const { dataSources, datasets } = useWorkspaceStore();
   const [collectors, setCollectors] =
     useState<CollectorConfig[]>(initialCollectors);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCollector, setEditingCollector] = useState<string | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
@@ -143,10 +134,112 @@ export function CollectorStep({
     }
   };
 
+  const columns: ColumnDef<CollectorConfig>[] = [
+    {
+      accessorKey: "sourceId",
+      header: "Source",
+      cell: ({ row }) => {
+        const source = dataSources.find(
+          (ds) => ds.id === row.original.sourceId,
+        );
+        return (
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Database className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">{source?.name || "Unknown"}</p>
+              <p className="text-xs text-muted-foreground">
+                {source?.type || ""}
+              </p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "selectedTables",
+      header: "Tables",
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1">
+          {row.original.selectedTables.map((table) => (
+            <Badge key={table} variant="secondary" className="text-xs">
+              <Table className="h-3 w-3 mr-1" />
+              {table}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "transformers",
+      header: "Transformers",
+      cell: ({ row }) => (
+        <Badge variant="outline">
+          {row.original.transformers.length} transformer
+          {row.original.transformers.length !== 1 ? "s" : ""}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => {
+        const collector = row.original;
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditCollector(collector);
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteCollector(collector.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  const filteredCollectors = collectors.filter((collector) => {
+    if (!searchQuery) return true;
+    const source = dataSources.find((ds) => ds.id === collector.sourceId);
+    return (
+      source?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      collector.selectedTables.some((table) =>
+        table.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    );
+  });
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Add Collector Button */}
-      <div className="flex justify-end">
+    <div className="space-y-6">
+      {/* Search and Add Button */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search collectors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
@@ -177,96 +270,8 @@ export function CollectorStep({
         </Card>
       ) : (
         <Card>
-          <CardHeader>
-            <CardTitle>Configured Collectors</CardTitle>
-            <CardDescription>
-              {collectors.length} collector{collectors.length !== 1 ? "s" : ""}{" "}
-              configured
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <TableComponent>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Source</TableHead>
-                    <TableHead>Tables</TableHead>
-                    <TableHead className="w-[150px]">Transformers</TableHead>
-                    <TableHead className="w-[100px] text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {collectors.map((collector) => {
-                    const source = dataSources.find(
-                      (ds) => ds.id === collector.sourceId,
-                    );
-                    return (
-                      <TableRow key={collector.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <Database className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">
-                                {source?.name || "Unknown"}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {source?.type || ""}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {collector.selectedTables.map((table) => (
-                              <Badge
-                                key={table}
-                                variant="secondary"
-                                className="text-xs"
-                              >
-                                <Table className="h-3 w-3 mr-1" />
-                                {table}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {collector.transformers.length} transformer
-                            {collector.transformers.length !== 1 ? "s" : ""}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleEditCollector(collector)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleDeleteCollector(collector.id)
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </TableComponent>
-            </div>
+          <CardContent className="p-6">
+            <DataTable columns={columns} data={filteredCollectors} />
           </CardContent>
         </Card>
       )}
