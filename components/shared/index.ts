@@ -35,6 +35,11 @@ export { ThemeToggle, type ThemeToggleProps } from "./layout/theme-toggle";
 // Navigation Components
 export { BackButton, type BackButtonProps } from "./navigation/back-button";
 export {
+  ProgressSteps,
+  type ProgressStep,
+  type ProgressStepsProps,
+} from "./navigation/progress-steps";
+export {
   type Step,
   StepIndicator,
   type StepIndicatorProps,

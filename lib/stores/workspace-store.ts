@@ -90,6 +90,18 @@ export interface OnboardingState {
   completed: boolean;
 }
 
+export interface Pipeline {
+  id: string;
+  name: string;
+  type: "bulk" | "stream" | "emit";
+  sourceId: string;
+  destinationIds: string[];
+  status: "active" | "paused" | "error";
+  createdAt: string;
+  description?: string;
+  config?: Record<string, unknown>;
+}
+
 interface WorkspaceState {
   // Organizations
   currentOrganization: Organization | null;
@@ -105,6 +117,9 @@ interface WorkspaceState {
 
   // Saved Queries
   savedQueries: SavedQuery[];
+
+  // Pipelines
+  pipelines: Pipeline[];
 
   // Onboarding
   onboarding: OnboardingState;
@@ -139,6 +154,11 @@ interface WorkspaceActions {
   updateSavedQuery: (id: string, updates: Partial<SavedQuery>) => void;
   removeSavedQuery: (id: string) => void;
 
+  // Pipeline actions
+  addPipeline: (pipeline: Pipeline) => void;
+  updatePipeline: (id: string, updates: Partial<Pipeline>) => void;
+  removePipeline: (id: string) => void;
+
   // Onboarding actions
   setOnboardingStep: (step: OnboardingState["currentStep"]) => void;
   updateOnboarding: (updates: Partial<OnboardingState>) => void;
@@ -164,6 +184,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       datasets: [],
       currentDataset: null,
       savedQueries: [],
+      pipelines: [],
       onboarding: {
         currentStep: "welcome",
         completed: false,
@@ -255,6 +276,22 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
           savedQueries: state.savedQueries.filter((q) => q.id !== id),
         })),
 
+      // Pipeline actions
+      addPipeline: (pipeline) =>
+        set((state) => ({
+          pipelines: [...state.pipelines, pipeline],
+        })),
+      updatePipeline: (id, updates) =>
+        set((state) => ({
+          pipelines: state.pipelines.map((pipeline) =>
+            pipeline.id === id ? { ...pipeline, ...updates } : pipeline,
+          ),
+        })),
+      removePipeline: (id) =>
+        set((state) => ({
+          pipelines: state.pipelines.filter((pipeline) => pipeline.id !== id),
+        })),
+
       // Onboarding actions
       setOnboardingStep: (step) =>
         set((state) => ({
@@ -295,6 +332,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
         dataSources: state.dataSources,
         datasets: state.datasets,
         savedQueries: state.savedQueries,
+        pipelines: state.pipelines,
         onboarding: state.onboarding,
         sidebarOpen: state.sidebarOpen,
         agentPanelOpen: state.agentPanelOpen,

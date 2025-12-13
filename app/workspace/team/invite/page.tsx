@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
+import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -168,26 +169,21 @@ export default function InviteTeamMemberPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-4xl">
-      {/* Header with Back Button */}
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/workspace/team")}
-          className="mb-4 -ml-2 hover:bg-accent"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Team
-        </Button>
-        <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Invite Team Member
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Send an invitation to add a new team member to your organization
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Invite Team Member"
+        description="Send an invitation to add a new team member to your organization"
+        backButton={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/workspace/team")}
+            className="-ml-2 hover:bg-accent"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Team
+          </Button>
+        }
+      />
 
       <div className="space-y-6">
         {/* Basic Information Card */}

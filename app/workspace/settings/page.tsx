@@ -16,6 +16,7 @@ import {
   User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/shared";
 import { ThemeCustomizer } from "@/components/theme/theme-customizer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -174,15 +175,10 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
-      {/* Header */}
-      <div className="mb-8 space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          Settings
-        </h1>
-        <p className="text-base sm:text-lg text-muted-foreground">
-          Manage your workspace, preferences, and account settings
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your workspace, preferences, and account settings"
+      />
 
       <Tabs
         value={activeTab}

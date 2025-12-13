@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -229,21 +230,19 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Team</h1>
-          <p className="text-muted-foreground">
-            Manage your team members and permissions
-          </p>
-        </div>
-        <Button
-          onClick={() => router.push("/workspace/team/invite")}
-          className="w-full sm:w-auto"
-        >
-          <UserPlus className="mr-2 h-4 w-4" />
-          Invite Member
-        </Button>
-      </div>
+      <PageHeader
+        title="Team"
+        description="Manage your team members and permissions"
+        action={
+          <Button
+            onClick={() => router.push("/workspace/team/invite")}
+            className="w-full sm:w-auto"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite Member
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>

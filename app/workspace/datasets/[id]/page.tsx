@@ -37,6 +37,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -489,29 +490,27 @@ export default function DatasetConfigurationPage() {
       className={cn("space-y-6", isEmbedded ? "p-6" : "p-6 max-w-6xl mx-auto")}
     >
       {!isEmbedded && (
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (dataSourceIdFromQuery) {
-                router.push(
-                  `/workspace/data-sources/${dataSourceIdFromQuery}/query`,
-                );
-              } else {
-                router.push("/workspace/data-sources");
-              }
-            }}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Dataset Configuration</h1>
-            <p className="text-muted-foreground">
-              Configure which columns will be available for analytics
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Dataset Configuration"
+          description="Configure which columns will be available for analytics"
+          backButton={
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (dataSourceIdFromQuery) {
+                  router.push(
+                    `/workspace/data-sources/${dataSourceIdFromQuery}/query`,
+                  );
+                } else {
+                  router.push("/workspace/data-sources");
+                }
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          }
+        />
       )}
 
       <Form {...form}>
