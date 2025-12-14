@@ -129,7 +129,7 @@ export default function EditPipelinePage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-4">
+      <div className="bg-background">
         <PageHeader
           title={`Edit Pipeline: ${pipeline.name}`}
           description="Update your data pipeline configuration"
@@ -142,8 +142,8 @@ export default function EditPipelinePage() {
       </div>
 
       {/* Main Content - Single Scroll Area */}
-      <div className="flex-1 overflow-y-auto bg-muted/20">
-        <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="flex-1 overflow-y-auto ">
+        <div className="mx-auto max-w-7xl">
           {currentStep === "collector" && (
             <CollectorStep
               onComplete={handleCollectorComplete}

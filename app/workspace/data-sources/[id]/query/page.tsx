@@ -41,49 +41,15 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import {
+  useConnection,
+  useExecuteQuery,
+  useTables,
+  useTableSchema,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 import { DatasetConfigurationEmbedded } from "./dataset-config";
-
-// Mock query execution - replace with actual API call
-const executeQuery = async (
-  _dataSourceId: string,
-  _dataSourceType: string,
-  query: string,
-): Promise<{ columns: string[]; rows: Record<string, unknown>[] }> => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  // Mock data based on query
-  const lowerQuery = query.toLowerCase().trim();
-
-  if (lowerQuery.includes("select") || lowerQuery.includes("from")) {
-    // SQL-like query
-    return {
-      columns: ["id", "name", "email", "created_at", "status"],
-      rows: Array.from({ length: 50 }, (_, i) => ({
-        id: i + 1,
-        name: `User ${i + 1}`,
-        email: `user${i + 1}@example.com`,
-        created_at: new Date(Date.now() - Math.random() * 10000000000)
-          .toISOString()
-          .split("T")[0],
-        status: i % 3 === 0 ? "active" : i % 3 === 1 ? "inactive" : "pending",
-      })),
-    };
-  }
-
-  // Default mock data
-  return {
-    columns: ["column1", "column2", "column3"],
-    rows: Array.from({ length: 10 }, (_, i) => ({
-      column1: `Value ${i + 1}-1`,
-      column2: `Value ${i + 1}-2`,
-      column3: `Value ${i + 1}-3`,
-    })),
-  };
-};
 
 // Check if data source type supports SQL queries
 const supportsSQLQueries = (type: string): boolean => {
@@ -154,8 +120,12 @@ export default function DataSourceQueryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dataSourceId = params.id as string;
-  const { dataSources, addSavedQuery, currentOrganization } =
-    useWorkspaceStore();
+  
+  // Use real API hooks
+  const { data: connection, isLoading: connectionLoading } = useConnection(dataSourceId);
+  const { data: tables } = useTables(dataSourceId);
+  const executeQueryMutation = useExecuteQuery();
+  
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<"query" | "dataset">(
     tabParam === "dataset" ? "dataset" : "query",
@@ -171,7 +141,14 @@ export default function DataSourceQueryPage() {
     }
   }, [searchParams]);
 
-  const dataSource = dataSources.find((ds) => ds.id === dataSourceId);
+  // Convert API connection to component format
+  const dataSource = connection ? {
+    id: connection.id,
+    name: connection.name,
+    type: "postgres" as const,
+    status: connection.status === "active" ? "connected" as const : "disconnected" as const,
+    tables: tables?.map(t => t.name) || [],
+  } : null;
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{
@@ -215,7 +192,22 @@ export default function DataSourceQueryPage() {
     }
   }, [dataSource, query, shouldShowSQLEditor]);
 
-  if (!dataSource) {
+  if (connectionLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+              <p className="text-muted-foreground">Loading connection...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!dataSource || !connection) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Card>
@@ -270,17 +262,43 @@ export default function DataSourceQueryPage() {
       return;
     }
 
+    if (!dataSourceId) {
+      toast.error("No connection", "Please select a data source connection.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResults(null);
 
     try {
-      const result = await executeQuery(dataSourceId, dataSource.type, query);
-      setResults(result);
-      toast.success(
-        "Query executed successfully",
-        `Returned ${result.rows.length} rows`,
-      );
+      const result = await executeQueryMutation.mutateAsync({
+        connectionId: dataSourceId,
+        data: {
+          query: query.trim(),
+        },
+      });
+
+      if (result.success && result.result) {
+        // Convert API result format to component format
+        const convertedResult = {
+          columns: result.result.columns,
+          rows: result.result.rows.map((row) => {
+            const rowObj: Record<string, unknown> = {};
+            result.result!.columns.forEach((col, idx) => {
+              rowObj[col] = row[idx];
+            });
+            return rowObj;
+          }),
+        };
+        setResults(convertedResult);
+        toast.success(
+          "Query executed successfully",
+          `Returned ${convertedResult.rows.length} rows`,
+        );
+      } else {
+        throw new Error(result.error || "Query execution failed");
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to execute query";
@@ -306,22 +324,33 @@ export default function DataSourceQueryPage() {
   };
 
   const fetchTableData = async (tableName: string) => {
+    if (!dataSourceId) return;
+    
     setTableDataLoading(true);
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const mockData = {
-        columns: ["id", "name", "value", "created_at"],
-        rows: Array.from({ length: 30 }, (_, i) => ({
-          id: i + 1,
-          name: `${tableName}_item_${i + 1}`,
-          value: Math.random() * 1000,
-          created_at: new Date(Date.now() - Math.random() * 10000000000)
-            .toISOString()
-            .split("T")[0],
-        })),
-      };
-      setTableData(mockData);
+      // Use real API to fetch table data
+      const result = await executeQueryMutation.mutateAsync({
+        connectionId: dataSourceId,
+        data: {
+          query: `SELECT * FROM ${tableName} LIMIT 100`,
+        },
+      });
+
+      if (result.success && result.result) {
+        const convertedData = {
+          columns: result.result.columns,
+          rows: result.result.rows.map((row) => {
+            const rowObj: Record<string, unknown> = {};
+            result.result!.columns.forEach((col, idx) => {
+              rowObj[col] = row[idx];
+            });
+            return rowObj;
+          }),
+        };
+        setTableData(convertedData);
+      } else {
+        throw new Error(result.error || "Failed to load table data");
+      }
     } catch (err) {
       toast.error(
         "Failed to load table data",
@@ -388,17 +417,20 @@ export default function DataSourceQueryPage() {
       return;
     }
 
+    // TODO: Implement query saving API endpoint
+    // For now, save to localStorage as a temporary solution
+    const savedQueries = JSON.parse(localStorage.getItem("savedQueries") || "[]");
     const savedQuery = {
       id: `query_${Date.now()}`,
       name: queryName,
       query: query,
       dataSourceId: dataSourceId,
-      organizationId: currentOrganization?.id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
-    addSavedQuery(savedQuery);
+    savedQueries.push(savedQuery);
+    localStorage.setItem("savedQueries", JSON.stringify(savedQueries));
+    
     toast.success("Query saved successfully", `"${queryName}" has been saved.`);
     setShowSaveDialog(false);
     setQueryName("");

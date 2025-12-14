@@ -789,28 +789,5 @@ export const allDataSources = [
   { id: "api", name: "REST API", type: "api" as const, iconType: "api" },
 ];
 
-// Mock tables/sheets for demonstration
-export const mockTables: Record<string, string[]> = {
-  postgres: ["users", "orders", "products", "transactions"],
-  mysql: ["customers", "sales", "inventory"],
-  bigquery: ["analytics_events", "user_sessions", "revenue_data"],
-  snowflake: ["warehouse_data", "sales_facts", "customer_dim"],
-  "google-sheets": ["Sheet1", "Sales Data", "Customer List"],
-  excel: ["Data", "Summary", "Details"],
-  redshift: ["fact_sales", "dim_customers", "dim_products"],
-  mssql: ["dbo.Users", "dbo.Orders", "dbo.Products"],
-  mongodb: ["users", "orders", "products"],
-  s3: ["bucket1/data.csv", "bucket2/analytics.json"],
-  "s3-datalake": ["lake/raw/", "lake/processed/"],
-  clickhouse: ["events", "metrics", "logs"],
-  hubspot: ["contacts", "deals", "companies"],
-  salesforce: ["Account", "Contact", "Opportunity"],
-  databricks: ["default.sales", "default.customers"],
-  milvus: ["vectors", "embeddings"],
-  pinecone: ["index1", "index2"],
-  weaviate: ["Class1", "Class2"],
-  pgvector: ["embeddings", "documents"],
-  "snowflake-cortex": ["cortex_data", "ml_results"],
-  "azure-blob-storage": ["container1/", "container2/"],
-  "customer-io": ["events", "campaigns"],
-};
+// Note: Tables are now fetched from the API using useTables hook
+// This mock data has been removed in favor of real API integration

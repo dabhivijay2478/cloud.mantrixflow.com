@@ -15,15 +15,23 @@ import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Pipeline } from "@/lib/stores/workspace-store";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import {
+  usePipelines,
+  useDeletePipeline,
+  useConnections,
+  useCurrentOrganization,
+  type Pipeline,
+} from "@/lib/api";
 import { toast } from "@/lib/utils/toast";
 
 type PipelineType = "bulk" | "stream" | "emit";
 
 export default function DataPipelinesPage() {
-  const { currentOrganization, dataSources, pipelines, removePipeline } =
-    useWorkspaceStore();
+  // Use real API hooks instead of workspace store
+  const { data: pipelines, isLoading: pipelinesLoading } = usePipelines();
+  const { data: connections } = useConnections();
+  const { data: currentOrganization } = useCurrentOrganization();
+  const deletePipeline = useDeletePipeline();
   const router = useRouter();
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -78,17 +86,24 @@ export default function DataPipelinesPage() {
     }
   };
 
-  const handleDelete = (pipelineId: string, pipelineName: string) => {
+  const handleDelete = async (pipelineId: string, pipelineName: string) => {
     if (
       confirm(
         `Are you sure you want to delete "${pipelineName}"? This action cannot be undone.`,
       )
     ) {
-      removePipeline(pipelineId);
-      toast.success(
-        "Pipeline deleted",
-        `${pipelineName} has been deleted successfully.`,
-      );
+      try {
+        await deletePipeline.mutateAsync(pipelineId);
+        toast.success(
+          "Pipeline deleted",
+          `${pipelineName} has been deleted successfully.`,
+        );
+      } catch (error: any) {
+        toast.error(
+          "Failed to delete pipeline",
+          error?.message || "Unable to delete the pipeline.",
+        );
+      }
     }
   };
 
@@ -99,10 +114,12 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
     },
     {
-      accessorKey: "type",
+      accessorKey: "sourceType",
       header: "Type",
       cell: ({ row }) => {
-        const typeInfo = getPipelineTypeInfo(row.original.type);
+        // Map source type to pipeline type for display
+        const sourceType = row.original.sourceType;
+        const typeInfo = getPipelineTypeInfo("bulk"); // Default to bulk for now
         const Icon = typeInfo.icon;
         return (
           <div className="flex items-center gap-2">
@@ -111,21 +128,22 @@ export default function DataPipelinesPage() {
             >
               <Icon className={`h-4 w-4 ${typeInfo.color}`} />
             </div>
-            <span className="text-sm">{typeInfo.title}</span>
+            <span className="text-sm capitalize">{sourceType}</span>
           </div>
         );
       },
     },
     {
-      accessorKey: "sourceId",
+      accessorKey: "sourceConnectionId",
       header: "Source",
       cell: ({ row }) => {
-        const source = dataSources.find(
-          (ds) => ds.id === row.original.sourceId,
+        const sourceConnectionId = row.original.sourceConnectionId;
+        const source = connections?.find(
+          (conn) => conn.id === sourceConnectionId,
         );
         return (
           <div className="text-sm text-muted-foreground">
-            {source?.name || "Unknown source"}
+            {source?.name || sourceConnectionId || "Unknown source"}
           </div>
         );
       },
@@ -136,14 +154,19 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => getStatusBadge(row.original.status),
     },
     {
-      accessorKey: "destinationIds",
-      header: "Destinations",
-      cell: ({ row }) => (
-        <div className="text-sm text-muted-foreground">
-          {row.original.destinationIds.length} destination
-          {row.original.destinationIds.length !== 1 ? "s" : ""}
-        </div>
-      ),
+      accessorKey: "destinationConnectionId",
+      header: "Destination",
+      cell: ({ row }) => {
+        const destConnectionId = row.original.destinationConnectionId;
+        const dest = connections?.find(
+          (conn) => conn.id === destConnectionId,
+        );
+        return (
+          <div className="text-sm text-muted-foreground">
+            {dest?.name || destConnectionId || "Unknown destination"}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "createdAt",
@@ -207,7 +230,13 @@ export default function DataPipelinesPage() {
       />
 
       {/* Existing Pipelines */}
-      {pipelines.length > 0 ? (
+      {pipelinesLoading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-muted-foreground">Loading pipelines...</div>
+          </CardContent>
+        </Card>
+      ) : pipelines && pipelines.length > 0 ? (
         <Card>
           <CardContent className="p-6">
             <DataTable columns={columns} data={pipelines} />

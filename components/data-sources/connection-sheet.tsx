@@ -175,27 +175,15 @@ export function ConnectionSheet({
           );
         }
       } else {
-        // Default test connection behavior
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        const success = Math.random() > 0.1;
-        const result = {
-          success,
-          message: success
-            ? "Connection successful! You can now save this connection."
-            : "Connection failed. Please check your credentials and try again.",
-        };
-        setConnectionTestResult(result);
-        if (success) {
-          toast.success(
-            "Connection test successful!",
-            "The connection to your data source was successful.",
-          );
-        } else {
-          toast.error(
-            "Connection test failed",
-            "Unable to connect to the data source. Please check your credentials and try again.",
-          );
-        }
+        // If no test connection handler provided, show error
+        setConnectionTestResult({
+          success: false,
+          message: "Test connection handler not configured. Please configure the API integration.",
+        });
+        toast.error(
+          "Test connection not available",
+          "Test connection handler is not configured. Please contact support.",
+        );
       }
     } catch {
       setConnectionTestResult({

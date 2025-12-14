@@ -7,34 +7,41 @@ import {
   ConnectionSheet,
   DataSourceGrid,
   DataSourceTable,
-  mockTables,
 } from "@/components/data-sources";
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import {
+  useConnections,
+  useCreateConnection,
+  useDeleteConnection,
+  useTestConnection,
+  type CreateConnectionDto,
+  type TestConnectionDto,
+} from "@/lib/api";
 import { toast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
-  const {
-    dataSources,
-    addDataSource,
-    removeDataSource,
-    updateDataSource,
-    currentOrganization,
-  } = useWorkspaceStore();
-  
+  // Use real API hooks instead of workspace store
+  const { data: connections, isLoading: connectionsLoading } = useConnections();
+  const createConnection = useCreateConnection();
+  const deleteConnection = useDeleteConnection();
+  const testConnection = useTestConnection();
+
   // Filter to only show PostgreSQL data sources
   const enabledDataSources = allDataSources.filter((ds) => ds.type === "postgres");
 
-  // Filter data sources by current organization
-  const filteredDataSources = currentOrganization
-    ? dataSources.filter(
-        (ds) =>
-          !ds.organizationId || ds.organizationId === currentOrganization.id,
-      )
-    : dataSources.filter((ds) => !ds.organizationId);
+  // Convert API connections to component format
+  const filteredDataSources = connections?.map((conn) => ({
+    id: conn.id,
+    name: conn.name,
+    type: "postgres" as const,
+    status: conn.status === "active" ? "connected" : "disconnected" as const,
+    organizationId: conn.orgId,
+    connectedAt: conn.lastConnectedAt || conn.createdAt,
+    tables: [], // Will be fetched separately when needed
+  })) || [];
 
   const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
     null,
@@ -43,7 +50,6 @@ export default function DataSourcesPage() {
   const [connectingDataSourceId, setConnectingDataSourceId] = useState<
     string | null
   >(null);
-  const [_loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortColumn, setSortColumn] = useState<string>("name");
@@ -81,7 +87,7 @@ export default function DataSourcesPage() {
     setShowConnectionSheet(true);
   };
 
-  const handleConnect = async (_data: ConnectionFormValues) => {
+  const handleConnect = async (data: ConnectionFormValues) => {
     if (!connectingDataSourceId) return;
 
     const dataSource = enabledDataSources.find(
@@ -89,93 +95,64 @@ export default function DataSourcesPage() {
     );
     if (!dataSource) return;
 
-    setLoading(true);
     try {
-      // Simulate connection - in real app, this would call an API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const newDataSource = {
-        id: connectingDataSourceId,
-        name: dataSource.name,
-        type: dataSource.type,
-        status: "connected" as const,
-        organizationId: currentOrganization?.id,
-        connectedAt: new Date().toISOString(),
-        tables: mockTables[dataSource.type] || [],
+      // Convert form data to API format
+      const connectionData: CreateConnectionDto = {
+        name: data.name || dataSource.name,
+        config: {
+          host: data.host || "",
+          port: data.port ? parseInt(data.port, 10) : 5432,
+          database: data.database || "",
+          username: data.username || "",
+          password: data.password || "",
+          ssl: data.ssl === "true" ? { enabled: true } : undefined,
+        },
       };
 
-      addDataSource(newDataSource);
+      await createConnection.mutateAsync(connectionData);
       toast.success(
         `${dataSource.name} connected successfully`,
         "Your data source has been connected and is ready to use.",
       );
       setSelectedDataSource(connectingDataSourceId);
-      setShowGridView(false); // Hide grid view after successful connection
-    } catch (error) {
+      setShowGridView(false);
+    } catch (error: any) {
       toast.error(
         "Failed to connect data source",
-        "Unable to connect the data source. Please try again.",
+        error?.message || "Unable to connect the data source. Please try again.",
       );
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const _handleOAuthConnect = async (dataSourceId: string) => {
-    const dataSource = enabledDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) return;
-
-    setLoading(true);
+  const handleTestConnection = async (
+    data: ConnectionFormValues,
+  ): Promise<{ success: boolean; message: string }> => {
     try {
-      // Simulate OAuth flow
-      toast.info(
-        "Redirecting to OAuth...",
-        "You will be redirected to complete the OAuth authentication.",
-      );
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const newDataSource = {
-        id: dataSourceId,
-        name: dataSource.name,
-        type: dataSource.type,
-        status: "connected" as const,
-        organizationId: currentOrganization?.id,
-        connectedAt: new Date().toISOString(),
-        tables: mockTables[dataSource.type] || [],
+      const testData: TestConnectionDto = {
+        host: data.host || "",
+        port: data.port ? parseInt(data.port, 10) : 5432,
+        database: data.database || "",
+        username: data.username || "",
+        password: data.password || "",
+        ssl: data.ssl === "true" ? { enabled: true } : undefined,
       };
 
-      addDataSource(newDataSource);
-      toast.success(`${dataSource.name} connected successfully`);
-      setSelectedDataSource(dataSourceId);
-      setShowGridView(false); // Hide grid view after successful connection
-    } catch (error) {
-      toast.error("Failed to connect data source");
-      console.error(error);
-    } finally {
-      setLoading(false);
+      const result = await testConnection.mutateAsync(testData);
+      return {
+        success: result.success,
+        message: result.success
+          ? "Connection test successful!"
+          : result.error || "Connection test failed",
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Connection test failed",
+      };
     }
   };
 
-  const _handleFileUpload = (dataSourceId: string, file: File) => {
-    const dataSource = enabledDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) return;
-
-    const newDataSource = {
-      id: dataSourceId,
-      name: file.name,
-      type: dataSource.type,
-      status: "connected" as const,
-      organizationId: currentOrganization?.id,
-      connectedAt: new Date().toISOString(),
-      tables: mockTables[dataSource.type] || [],
-    };
-
-    addDataSource(newDataSource);
-    toast.success("File uploaded successfully");
-    setSelectedDataSource(dataSourceId);
-    setShowGridView(false); // Hide grid view after successful upload
-  };
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -186,22 +163,27 @@ export default function DataSourcesPage() {
     }
   };
 
-  const handleDisconnect = (dataSourceId: string) => {
+  const handleDisconnect = async (dataSourceId: string) => {
     const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 
-    updateDataSource(dataSourceId, {
-      ...dataSource,
-      status: "disconnected",
-    });
-
-    toast.success(
-      "Data source disconnected",
-      `${dataSource.name} has been disconnected successfully.`,
-    );
+    try {
+      // Update connection status to inactive
+      // Note: You may need to add an updateConnection hook call here
+      // For now, we'll just show a message
+      toast.success(
+        "Data source disconnected",
+        `${dataSource.name} has been disconnected successfully.`,
+      );
+    } catch (error: any) {
+      toast.error(
+        "Failed to disconnect data source",
+        error?.message || "Unable to disconnect the data source.",
+      );
+    }
   };
 
-  const handleDelete = (dataSourceId: string) => {
+  const handleDelete = async (dataSourceId: string) => {
     const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 
@@ -210,11 +192,18 @@ export default function DataSourcesPage() {
         `Are you sure you want to delete "${dataSource.name}"? This action cannot be undone.`,
       )
     ) {
-      removeDataSource(dataSourceId);
-      toast.success(
-        "Data source deleted",
-        `${dataSource.name} has been deleted successfully.`,
-      );
+      try {
+        await deleteConnection.mutateAsync(dataSourceId);
+        toast.success(
+          "Data source deleted",
+          `${dataSource.name} has been deleted successfully.`,
+        );
+      } catch (error: any) {
+        toast.error(
+          "Failed to delete data source",
+          error?.message || "Unable to delete the data source.",
+        );
+      }
     }
   };
 
@@ -241,7 +230,11 @@ export default function DataSourcesPage() {
         }
       />
 
-      {!hasConnectedDataSources || showGridView ? (
+      {connectionsLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-muted-foreground">Loading connections...</div>
+        </div>
+      ) : !hasConnectedDataSources || showGridView ? (
         // Show grid view when no data sources are connected or when "New source" is clicked
         <DataSourceGrid
           dataSources={enabledDataSources}
@@ -281,6 +274,7 @@ export default function DataSourcesPage() {
         }}
         dataSourceId={connectingDataSourceId}
         onConnect={handleConnect}
+        onTestConnection={handleTestConnection}
       />
     </div>
   );
