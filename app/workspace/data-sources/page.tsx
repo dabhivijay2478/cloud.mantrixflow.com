@@ -24,6 +24,9 @@ export default function DataSourcesPage() {
     updateDataSource,
     currentOrganization,
   } = useWorkspaceStore();
+  
+  // Filter to only show PostgreSQL data sources
+  const enabledDataSources = allDataSources.filter((ds) => ds.type === "postgres");
 
   // Filter data sources by current organization
   const filteredDataSources = currentOrganization
@@ -81,7 +84,7 @@ export default function DataSourcesPage() {
   const handleConnect = async (_data: ConnectionFormValues) => {
     if (!connectingDataSourceId) return;
 
-    const dataSource = allDataSources.find(
+    const dataSource = enabledDataSources.find(
       (ds) => ds.id === connectingDataSourceId,
     );
     if (!dataSource) return;
@@ -120,7 +123,7 @@ export default function DataSourcesPage() {
   };
 
   const _handleOAuthConnect = async (dataSourceId: string) => {
-    const dataSource = allDataSources.find((ds) => ds.id === dataSourceId);
+    const dataSource = enabledDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 
     setLoading(true);
@@ -155,7 +158,7 @@ export default function DataSourcesPage() {
   };
 
   const _handleFileUpload = (dataSourceId: string, file: File) => {
-    const dataSource = allDataSources.find((ds) => ds.id === dataSourceId);
+    const dataSource = enabledDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 
     const newDataSource = {
@@ -241,6 +244,7 @@ export default function DataSourcesPage() {
       {!hasConnectedDataSources || showGridView ? (
         // Show grid view when no data sources are connected or when "New source" is clicked
         <DataSourceGrid
+          dataSources={enabledDataSources}
           isConnected={isConnected}
           getConnectedDataSource={getConnectedDataSource}
           onDataSourceClick={handleDataSourceClick}

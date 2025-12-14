@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared";
 import { Textarea } from "@/components/ui/textarea";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import type { CollectorConfig } from "./collector-step";
 import type { TransformConfig } from "./transform-step";
@@ -47,128 +48,30 @@ export interface EmitterConfig {
   connectionConfig: Record<string, string>;
 }
 
-// Mock destinations - in real app, these would come from the store
-const mockDestinations = [
-  {
-    id: "snowflake",
-    name: "Snowflake",
-    type: "data-warehouse",
-    icon: Database,
-    configFields: [
-      { key: "account", label: "Account", required: true },
-      { key: "warehouse", label: "Warehouse", required: true },
-      { key: "database", label: "Database", required: true },
-      { key: "schema", label: "Schema", required: true },
-      { key: "username", label: "Username", required: true },
-      {
-        key: "password",
-        label: "Password",
-        required: true,
-        type: "password",
-      },
-    ],
-  },
-  {
-    id: "pinecone",
-    name: "Pinecone",
-    type: "vector-db",
-    icon: Database,
-    configFields: [
-      { key: "apiKey", label: "API Key", required: true, type: "password" },
-      { key: "environment", label: "Environment", required: true },
-      { key: "index", label: "Index Name", required: true },
-    ],
-  },
-  {
-    id: "redshift",
-    name: "Amazon Redshift",
-    type: "data-warehouse",
-    icon: Database,
-    configFields: [
-      { key: "host", label: "Host", required: true },
-      { key: "port", label: "Port", required: true },
-      { key: "database", label: "Database", required: true },
-      { key: "username", label: "Username", required: true },
-      {
-        key: "password",
-        label: "Password",
-        required: true,
-        type: "password",
-      },
-    ],
-  },
-  {
-    id: "bigquery",
-    name: "Google BigQuery",
-    type: "data-warehouse",
-    icon: Database,
-    configFields: [
-      { key: "projectId", label: "Project ID", required: true },
-      { key: "dataset", label: "Dataset", required: true },
-      {
-        key: "credentials",
-        label: "Service Account JSON",
-        required: true,
-        type: "textarea",
-      },
-    ],
-  },
-  {
-    id: "s3",
-    name: "Amazon S3",
-    type: "storage",
-    icon: Database,
-    configFields: [
-      { key: "bucket", label: "Bucket Name", required: true },
-      { key: "region", label: "Region", required: true },
-      { key: "accessKeyId", label: "Access Key ID", required: true },
-      {
-        key: "secretAccessKey",
-        label: "Secret Access Key",
-        required: true,
-        type: "password",
-      },
-    ],
-  },
-  {
-    id: "postgres",
-    name: "PostgreSQL",
-    type: "database",
-    icon: Database,
-    configFields: [
-      { key: "host", label: "Host", required: true },
-      { key: "port", label: "Port", required: true },
-      { key: "database", label: "Database", required: true },
-      { key: "username", label: "Username", required: true },
-      {
-        key: "password",
-        label: "Password",
-        required: true,
-        type: "password",
-      },
-    ],
-  },
-  {
-    id: "mysql",
-    name: "MySQL",
-    type: "database",
-    icon: Database,
-    configFields: [
-      { key: "host", label: "Host", required: true },
-      { key: "port", label: "Port", required: true },
-      { key: "database", label: "Database", required: true },
-      { key: "username", label: "Username", required: true },
-      {
-        key: "password",
-        label: "Password",
-        required: true,
-        type: "password",
-      },
-    ],
-  },
-];
-
 export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
+  const { dataSources } = useWorkspaceStore();
+  
+  // Only use PostgreSQL data sources as destinations
+  const availableDestinations = dataSources
+    .filter((ds) => ds.type === "postgres")
+    .map((ds) => ({
+      id: ds.id,
+      name: ds.name,
+      type: "database",
+      icon: Database,
+      configFields: [
+        { key: "host", label: "Host", required: true },
+        { key: "port", label: "Port", required: true },
+        { key: "database", label: "Database", required: true },
+        { key: "username", label: "Username", required: true },
+        {
+          key: "password",
+          label: "Password",
+          required: true,
+          type: "password",
+        },
+      ],
+    }));
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEmitter, setEditingEmitter] = useState<string | null>(null);
   const [selectedTransformId, setSelectedTransformId] = useState<string>("");
@@ -199,7 +102,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       }));
     });
 
-  const selectedDestination = mockDestinations.find(
+  const selectedDestination = availableDestinations.find(
     (d) => d.id === selectedDestinationId,
   );
 
@@ -299,7 +202,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       accessorKey: "destinationName",
       header: "Destination",
       cell: ({ row }) => {
-        const destination = mockDestinations.find(
+        const destination = availableDestinations.find(
           (d) => d.id === row.original.destinationId,
         );
         const Icon = destination?.icon || Database;
@@ -460,7 +363,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3 p-4">
               {filteredEmitters.map((emitter) => {
-                const destination = mockDestinations.find(
+                const destination = availableDestinations.find(
                   (d) => d.id === emitter.destinationId,
                 );
                 const Icon = destination?.icon || Database;
@@ -611,8 +514,13 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
           {selectedTransformId && (
             <div className="space-y-2">
               <Label>Destination</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {mockDestinations.map((destination) => {
+              {availableDestinations.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No PostgreSQL data sources available. Please connect a PostgreSQL data source first.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {availableDestinations.map((destination) => {
                   const Icon = destination.icon;
                   const isSelected = selectedDestinationId === destination.id;
                   return (
@@ -660,7 +568,8 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                     </Card>
                   );
                 })}
-              </div>
+                </div>
+              )}
             </div>
           )}
 

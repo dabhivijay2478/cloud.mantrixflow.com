@@ -85,23 +85,21 @@ interface PipelineConfigurationFormProps {
   initialType?: PipelineType;
 }
 
-// Mock destinations - in real app, these would come from the store
-const mockDestinations = [
-  { id: "snowflake", name: "Snowflake", type: "data-warehouse" },
-  { id: "pinecone", name: "Pinecone", type: "vector-db" },
-  { id: "redshift", name: "Amazon Redshift", type: "data-warehouse" },
-  { id: "bigquery", name: "Google BigQuery", type: "data-warehouse" },
-  { id: "s3", name: "Amazon S3", type: "storage" },
-  { id: "postgres", name: "PostgreSQL", type: "database" },
-  { id: "mysql", name: "MySQL", type: "database" },
-];
-
 export function PipelineConfigurationForm({
   onCancel,
   onSubmit,
   initialType = "bulk",
 }: PipelineConfigurationFormProps) {
   const { dataSources } = useWorkspaceStore();
+  
+  // Only use PostgreSQL data sources as destinations
+  const availableDestinations = dataSources
+    .filter((ds) => ds.type === "postgres")
+    .map((ds) => ({
+      id: ds.id,
+      name: ds.name,
+      type: "database",
+    }));
   const [loading, setLoading] = useState(false);
   const [selectedDestinations, setSelectedDestinations] = useState<string[]>(
     [],
@@ -380,8 +378,13 @@ export function PipelineConfigurationForm({
           </div>
 
           <ScrollArea className="h-[300px] rounded-md border p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {mockDestinations.map((destination) => {
+            {availableDestinations.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No PostgreSQL data sources available. Please connect a PostgreSQL data source first.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {availableDestinations.map((destination) => {
                 const isSelected = selectedDestinations.includes(
                   destination.id,
                 );
@@ -429,7 +432,8 @@ export function PipelineConfigurationForm({
                   </Card>
                 );
               })}
-            </div>
+              </div>
+            )}
           </ScrollArea>
           {form.formState.errors.destinationIds && (
             <p className="text-sm text-destructive">

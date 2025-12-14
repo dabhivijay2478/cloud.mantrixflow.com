@@ -49,7 +49,7 @@ export function FormSheet({
       <SheetContent
         side={side}
         className={cn(
-          "w-full overflow-y-auto",
+          "w-full overflow-y-auto ",
           maxWidthClasses[maxWidth],
           className,
         )}
@@ -59,7 +59,7 @@ export function FormSheet({
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
-        <div className="space-y-4 py-4">{children}</div>
+        <div className="p-4">{children}</div>
 
         {footer && <SheetFooter className="pt-4 mt-auto">{footer}</SheetFooter>}
       </SheetContent>
