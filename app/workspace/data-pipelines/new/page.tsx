@@ -101,7 +101,7 @@ export default function NewPipelinePage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
-      <div className=" bg-background px-6 py-4">
+      <div className="space-y-6">
         <PageHeader
           title="Create New Pipeline"
           description="Build your data pipeline step by step"
@@ -115,7 +115,7 @@ export default function NewPipelinePage() {
 
       {/* Main Content - Single Scroll Area */}
       <div className="flex-1 overflow-y-auto ">
-        <div className="mx-auto max-w-7xl px-6 py-6">
+        <div className="mx-auto max-w-7xl ">
           {currentStep === "collector" && (
             <CollectorStep
               onComplete={handleCollectorComplete}
