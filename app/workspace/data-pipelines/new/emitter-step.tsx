@@ -16,14 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormSheet } from "@/components/shared";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -572,155 +565,146 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       )}
 
       {/* Add/Edit Emitter Sheet */}
-      <Sheet open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-2xl overflow-y-auto"
-        >
-          <SheetHeader>
-            <SheetTitle>
-              {editingEmitter ? "Edit Emitter" : "Add Emitter"}
-            </SheetTitle>
-            <SheetDescription>
-              Select a transformer and configure destination connection
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Transformer</Label>
-              <Select
-                value={selectedTransformId}
-                onValueChange={(value) => {
-                  setSelectedTransformId(value);
-                  setSelectedDestinationId("");
-                  setConfigValues({});
-                }}
-                disabled={!!editingEmitter}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a transformer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allTransforms.map((transform) => (
-                    <SelectItem key={transform.id} value={transform.id}>
-                      {transform.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedTransformId && (
-              <div className="space-y-2">
-                <Label>Destination</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {mockDestinations.map((destination) => {
-                    const Icon = destination.icon;
-                    const isSelected = selectedDestinationId === destination.id;
-                    return (
-                      <Card
-                        key={destination.id}
-                        className={cn(
-                          "cursor-pointer transition-all hover:shadow-md",
-                          isSelected && "ring-2 ring-primary border-primary",
-                        )}
-                        onClick={() => {
-                          setSelectedDestinationId(destination.id);
-                          setConfigValues({});
-                        }}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "h-10 w-10 rounded-lg flex items-center justify-center",
-                                isSelected ? "bg-primary/10" : "bg-muted",
-                              )}
-                            >
-                              <Icon
-                                className={cn(
-                                  "h-5 w-5",
-                                  isSelected
-                                    ? "text-primary"
-                                    : "text-muted-foreground",
-                                )}
-                              />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">
-                                {destination.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {destination.type}
-                              </p>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 ml-auto" />
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {selectedDestination && (
-              <>
-                <Separator />
-                <div className="space-y-4">
-                  <Label>Connection Configuration</Label>
-                  {selectedDestination.configFields.map((field) => (
-                    <div key={field.key} className="space-y-2">
-                      <Label htmlFor={field.key}>
-                        {field.label}
-                        {field.required && (
-                          <span className="text-destructive ml-1">*</span>
-                        )}
-                      </Label>
-                      {field.type === "textarea" ? (
-                        <Textarea
-                          id={field.key}
-                          placeholder={`Enter ${field.label.toLowerCase()}`}
-                          value={configValues[field.key] || ""}
-                          onChange={(e) =>
-                            handleConfigChange(field.key, e.target.value)
-                          }
-                          className="min-h-[100px] font-mono text-sm"
-                        />
-                      ) : (
-                        <Input
-                          id={field.key}
-                          type={field.type || "text"}
-                          placeholder={`Enter ${field.label.toLowerCase()}`}
-                          value={configValues[field.key] || ""}
-                          onChange={(e) =>
-                            handleConfigChange(field.key, e.target.value)
-                          }
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+      <FormSheet
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        title={editingEmitter ? "Edit Emitter" : "Add Emitter"}
+        description="Select a transformer and configure destination connection"
+        maxWidth="2xl"
+        footer={
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handleAddEmitter}
+              disabled={!isConfigValid()}
+              className="w-full sm:w-auto"
+            >
+              {editingEmitter ? "Update" : "Add"} Emitter
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Transformer</Label>
+            <Select
+              value={selectedTransformId}
+              onValueChange={(value) => {
+                setSelectedTransformId(value);
+                setSelectedDestinationId("");
+                setConfigValues({});
+              }}
+              disabled={!!editingEmitter}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a transformer" />
+              </SelectTrigger>
+              <SelectContent>
+                {allTransforms.map((transform) => (
+                  <SelectItem key={transform.id} value={transform.id}>
+                    {transform.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <SheetFooter className="border-t pt-4 mt-auto">
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                onClick={handleAddEmitter}
-                disabled={!isConfigValid()}
-                className="w-full sm:w-auto"
-              >
-                {editingEmitter ? "Update" : "Add"} Emitter
-              </Button>
+          {selectedTransformId && (
+            <div className="space-y-2">
+              <Label>Destination</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {mockDestinations.map((destination) => {
+                  const Icon = destination.icon;
+                  const isSelected = selectedDestinationId === destination.id;
+                  return (
+                    <Card
+                      key={destination.id}
+                      className={cn(
+                        "cursor-pointer transition-all hover:shadow-md",
+                        isSelected && "ring-2 ring-primary border-primary",
+                      )}
+                      onClick={() => {
+                        setSelectedDestinationId(destination.id);
+                        setConfigValues({});
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "h-10 w-10 rounded-lg flex items-center justify-center",
+                              isSelected ? "bg-primary/10" : "bg-muted",
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                "h-5 w-5",
+                                isSelected
+                                  ? "text-primary"
+                                  : "text-muted-foreground",
+                              )}
+                            />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {destination.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {destination.type}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle2 className="h-5 w-5 text-primary shrink-0 ml-auto" />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          )}
+
+          {selectedDestination && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <Label>Connection Configuration</Label>
+                {selectedDestination.configFields.map((field) => (
+                  <div key={field.key} className="space-y-2">
+                    <Label htmlFor={field.key}>
+                      {field.label}
+                      {field.required && (
+                        <span className="text-destructive ml-1">*</span>
+                      )}
+                    </Label>
+                    {field.type === "textarea" ? (
+                      <Textarea
+                        id={field.key}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        value={configValues[field.key] || ""}
+                        onChange={(e) =>
+                          handleConfigChange(field.key, e.target.value)
+                        }
+                        className="min-h-[100px] font-mono text-sm"
+                      />
+                    ) : (
+                      <Input
+                        id={field.key}
+                        type={field.type || "text"}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        value={configValues[field.key] || ""}
+                        onChange={(e) =>
+                          handleConfigChange(field.key, e.target.value)
+                        }
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </FormSheet>
 
       {/* Create Pipeline Button */}
       <div className="flex justify-end pt-2">

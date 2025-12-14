@@ -18,14 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormSheet } from "@/components/shared";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -422,153 +415,141 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       )}
 
       {/* Add/Edit Transform Sheet */}
-      <Sheet open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-5xl overflow-y-auto"
-        >
-          <SheetHeader>
-            <SheetTitle>
-              {editingTransform ? "Edit Transformer" : "Add Transformer"}
-            </SheetTitle>
-            <SheetDescription>
-              Configure field mappings from source to destination schema
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Collector</Label>
-                <Select
-                  value={selectedCollectorId}
-                  onValueChange={(value) => {
-                    setSelectedCollectorId(value);
-                    setFieldMappings({});
-                    setJsonSchema("");
-                  }}
-                  disabled={!!editingTransform}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a collector" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {collectors.map((collector) => {
-                      const source = dataSources.find(
-                        (ds) => ds.id === collector.sourceId,
-                      );
-                      return (
-                        <SelectItem key={collector.id} value={collector.id}>
-                          {source?.name || "Unknown"}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Transform Name</Label>
-                <Input
-                  value={transformName}
-                  onChange={(e) => setTransformName(e.target.value)}
-                  placeholder="e.g., Customer Data Transform"
-                />
-              </div>
+      <FormSheet
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        title={editingTransform ? "Edit Transformer" : "Add Transformer"}
+        description="Configure field mappings from source to destination schema"
+        maxWidth="5xl"
+        footer={
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handleAddTransform}
+              disabled={!selectedCollectorId || !transformName}
+              className="w-full sm:w-auto"
+            >
+              {editingTransform ? "Update" : "Add"} Transformer
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Collector</Label>
+              <Select
+                value={selectedCollectorId}
+                onValueChange={(value) => {
+                  setSelectedCollectorId(value);
+                  setFieldMappings({});
+                  setJsonSchema("");
+                }}
+                disabled={!!editingTransform}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a collector" />
+                </SelectTrigger>
+                <SelectContent>
+                  {collectors.map((collector) => {
+                    const source = dataSources.find(
+                      (ds) => ds.id === collector.sourceId,
+                    );
+                    return (
+                      <SelectItem key={collector.id} value={collector.id}>
+                        {source?.name || "Unknown"}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
-
-            {selectedCollectorId && (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="space-y-4">
-                  <div>
-                    <Label>Source Fields</Label>
-                    <ScrollArea className="h-[400px] rounded-lg border p-4">
-                      {sourceFields.length === 0 ? (
-                        <div className="py-8 text-center text-sm text-muted-foreground">
-                          No fields available
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {sourceFields.map((field) => (
-                            <div
-                              key={field.name}
-                              className="rounded-lg border p-3 space-y-2"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="font-medium text-sm">
-                                    {field.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {field.table} • {field.type}
-                                  </p>
-                                </div>
-                                <Badge variant="outline">{field.type}</Badge>
-                              </div>
-                              <Separator />
-                              <div className="space-y-2">
-                                <Label
-                                  htmlFor={`dest-${field.name}`}
-                                  className="text-xs"
-                                >
-                                  Map to:
-                                </Label>
-                                <Input
-                                  id={`dest-${field.name}`}
-                                  placeholder="destination_field"
-                                  value={fieldMappings[field.name] || ""}
-                                  onChange={(e) =>
-                                    handleFieldMapping(
-                                      field.name,
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label>JSON Schema</Label>
-                    <Textarea
-                      placeholder='{"type": "object", "properties": {...}}'
-                      value={jsonSchema}
-                      onChange={(e) => setJsonSchema(e.target.value)}
-                      className="min-h-[400px] font-mono text-xs"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={generateJsonSchema}
-                      className="w-full mt-2"
-                    >
-                      <MapIcon className="mr-2 h-4 w-4" />
-                      Generate Schema from Mappings
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label>Transform Name</Label>
+              <Input
+                value={transformName}
+                onChange={(e) => setTransformName(e.target.value)}
+                placeholder="e.g., Customer Data Transform"
+              />
+            </div>
           </div>
 
-          <SheetFooter className="border-t pt-4 mt-auto">
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                onClick={handleAddTransform}
-                disabled={!selectedCollectorId || !transformName}
-                className="w-full sm:w-auto"
-              >
-                {editingTransform ? "Update" : "Add"} Transformer
-              </Button>
+          {selectedCollectorId && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                <div>
+                  <Label>Source Fields</Label>
+                  <ScrollArea className="h-[400px] rounded-lg border p-4">
+                    {sourceFields.length === 0 ? (
+                      <div className="py-8 text-center text-sm text-muted-foreground">
+                        No fields available
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {sourceFields.map((field) => (
+                          <div
+                            key={field.name}
+                            className="rounded-lg border p-3 space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {field.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {field.table} • {field.type}
+                                </p>
+                              </div>
+                              <Badge variant="outline">{field.type}</Badge>
+                            </div>
+                            <Separator />
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor={`dest-${field.name}`}
+                                className="text-xs"
+                              >
+                                Map to:
+                              </Label>
+                              <Input
+                                id={`dest-${field.name}`}
+                                placeholder="destination_field"
+                                value={fieldMappings[field.name] || ""}
+                                onChange={(e) =>
+                                  handleFieldMapping(field.name, e.target.value)
+                                }
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>JSON Schema</Label>
+                  <Textarea
+                    placeholder='{"type": "object", "properties": {...}}'
+                    value={jsonSchema}
+                    onChange={(e) => setJsonSchema(e.target.value)}
+                    className="min-h-[400px] font-mono text-xs"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generateJsonSchema}
+                    className="w-full mt-2"
+                  >
+                    <MapIcon className="mr-2 h-4 w-4" />
+                    Generate Schema from Mappings
+                  </Button>
+                </div>
+              </div>
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          )}
+        </div>
+      </FormSheet>
 
       {/* Continue Button */}
       <div className="flex justify-end">

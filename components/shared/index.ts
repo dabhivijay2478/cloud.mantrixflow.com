@@ -46,3 +46,5 @@ export {
 } from "./navigation/step-indicator";
 // Data Table Components
 export { DataTable, type DataTableProps } from "./data-table";
+// Sheet Components
+export { FormSheet, type FormSheetProps } from "./sheet";

@@ -15,14 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { FormSheet } from "@/components/shared";
 import {
   Select,
   SelectContent,
@@ -277,135 +270,126 @@ export function CollectorStep({
       )}
 
       {/* Add/Edit Collector Sheet */}
-      <Sheet open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-2xl overflow-y-auto"
-        >
-          <SheetHeader>
-            <SheetTitle>
-              {editingCollector ? "Edit Collector" : "Add Collector"}
-            </SheetTitle>
-            <SheetDescription>
-              Select a data source and choose tables to collect
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Data Source</label>
-              <Select
-                value={selectedSourceId}
-                onValueChange={(value) => {
-                  setSelectedSourceId(value);
-                  setSelectedTables([]);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a data source">
-                    {selectedSource && (
-                      <div className="flex items-center gap-2">
-                        <Database className="h-4 w-4" />
-                        <span>{selectedSource.name}</span>
-                      </div>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {dataSources.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No data sources available
+      <FormSheet
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        title={editingCollector ? "Edit Collector" : "Add Collector"}
+        description="Select a data source and choose tables to collect"
+        maxWidth="2xl"
+        footer={
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handleAddCollector}
+              disabled={!selectedSourceId || selectedTables.length === 0}
+              className="w-full sm:w-auto"
+            >
+              {editingCollector ? "Update" : "Add"} Collector
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Data Source</label>
+            <Select
+              value={selectedSourceId}
+              onValueChange={(value) => {
+                setSelectedSourceId(value);
+                setSelectedTables([]);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a data source">
+                  {selectedSource && (
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4" />
+                      <span>{selectedSource.name}</span>
                     </div>
-                  ) : (
-                    dataSources.map((source) => (
-                      <SelectItem key={source.id} value={source.id}>
-                        <div className="flex items-center gap-2">
-                          <Database className="h-4 w-4" />
-                          <span>{source.name}</span>
-                          <Badge variant="outline" className="ml-auto text-xs">
-                            {source.type}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))
                   )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedSourceId && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Tables</label>
-                {availableTables.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-muted-foreground">
-                    No tables available for this source
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {dataSources.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No data sources available
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto p-2 border rounded-lg bg-muted/30">
-                    {availableTables.map((tableName) => {
-                      const isSelected = selectedTables.includes(tableName);
-                      return (
-                        <Card
-                          key={tableName}
-                          className={cn(
-                            "cursor-pointer transition-all hover:shadow-md relative",
-                            isSelected && "ring-2 ring-primary border-primary",
-                          )}
-                          onClick={() => handleTableToggle(tableName)}
-                        >
-                          {isSelected && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-1 top-1 h-5 w-5 text-destructive hover:text-destructive z-10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleTableToggle(tableName);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                          <CardContent className="p-3">
-                            <div className="flex items-center gap-2">
-                              <Table
-                                className={cn(
-                                  "h-4 w-4",
-                                  isSelected
-                                    ? "text-primary"
-                                    : "text-muted-foreground",
-                                )}
-                              />
-                              <span className="text-sm font-medium">
-                                {tableName}
-                              </span>
-                              {isSelected && (
-                                <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                  dataSources.map((source) => (
+                    <SelectItem key={source.id} value={source.id}>
+                      <div className="flex items-center gap-2">
+                        <Database className="h-4 w-4" />
+                        <span>{source.name}</span>
+                        <Badge variant="outline" className="ml-auto text-xs">
+                          {source.type}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))
                 )}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
 
-          <SheetFooter className="border-t pt-4 mt-auto">
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                onClick={handleAddCollector}
-                disabled={!selectedSourceId || selectedTables.length === 0}
-                className="w-full sm:w-auto"
-              >
-                {editingCollector ? "Update" : "Add"} Collector
-              </Button>
+          {selectedSourceId && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Tables</label>
+              {availableTables.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No tables available for this source
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto p-2 border rounded-lg bg-muted/30">
+                  {availableTables.map((tableName) => {
+                    const isSelected = selectedTables.includes(tableName);
+                    return (
+                      <Card
+                        key={tableName}
+                        className={cn(
+                          "cursor-pointer transition-all hover:shadow-md relative",
+                          isSelected && "ring-2 ring-primary border-primary",
+                        )}
+                        onClick={() => handleTableToggle(tableName)}
+                      >
+                        {isSelected && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1 h-5 w-5 text-destructive hover:text-destructive z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTableToggle(tableName);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-2">
+                            <Table
+                              className={cn(
+                                "h-4 w-4",
+                                isSelected
+                                  ? "text-primary"
+                                  : "text-muted-foreground",
+                              )}
+                            />
+                            <span className="text-sm font-medium">
+                              {tableName}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          )}
+        </div>
+      </FormSheet>
 
       {/* Continue Button */}
       <div className="flex justify-end pt-2">
