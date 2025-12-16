@@ -32,7 +32,20 @@ export { dataPipelinesKeys } from './hooks/use-data-pipelines';
 export * from './hooks/use-organizations';
 export { organizationsKeys } from './hooks/use-organizations';
 
+// Hooks - Users
+export * from './hooks/use-users';
+export { usersKeys } from './hooks/use-users';
+
+// Hooks - Onboarding
+export * from './hooks/use-onboarding';
+export { onboardingKeys } from './hooks/use-onboarding';
+
+// Services
+export { UsersService } from './services/users.service';
+export { OnboardingService } from './services/onboarding.service';
+
 // Types
 export type * from './types/data-sources';
 export type * from './types/data-pipelines';
 export type * from './types/organizations';
+export type * from './types/users';

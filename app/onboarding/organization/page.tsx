@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useCreateOrganization, useUpdateOnboardingStep } from "@/lib/api";
 
 const organizationSchema = z.object({
   name: z
@@ -45,12 +46,9 @@ type OrganizationFormValues = z.infer<typeof organizationSchema>;
 
 export default function OrganizationPage() {
   const router = useRouter();
-  const {
-    addOrganization,
-    setOnboardingStep,
-    updateOnboarding,
-    completeOnboarding,
-  } = useWorkspaceStore();
+  const { setOnboardingStep, completeOnboarding } = useWorkspaceStore();
+  const createOrganization = useCreateOrganization();
+  const updateOnboardingStep = useUpdateOnboardingStep();
   const [loading, setLoading] = useState(false);
 
   const handleSkip = () => {
@@ -82,21 +80,20 @@ export default function OrganizationPage() {
   const onSubmit = async (data: OrganizationFormValues) => {
     setLoading(true);
     try {
-      // In a real app, this would call an API
-      const org = {
-        id: `org_${Date.now()}`,
+      // Create organization via API
+      const org = await createOrganization.mutateAsync({
         name: data.name,
         slug: data.slug,
-        createdAt: new Date().toISOString(),
-      };
+      });
 
-      addOrganization(org);
-      updateOnboarding({ organizationId: org.id });
+      // Update onboarding step
+      await updateOnboardingStep.mutateAsync("data-source");
+      
       setOnboardingStep("data-source");
       toast.success("Organization created successfully");
       router.push("/onboarding/data-source");
-    } catch (error) {
-      toast.error("Failed to create organization");
+    } catch (error: any) {
+      toast.error("Failed to create organization", error?.message || "Please try again");
       console.error(error);
     } finally {
       setLoading(false);

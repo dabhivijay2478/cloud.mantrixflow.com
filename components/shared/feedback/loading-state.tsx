@@ -52,7 +52,7 @@ export function LoadingState({
     return (
       <div
         className={cn(
-          "flex items-center justify-center min-h-screen",
+          "flex items-center justify-center w-full h-screen",
           className,
         )}
       >

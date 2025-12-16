@@ -9,6 +9,7 @@ import {
   resetPasswordSchema,
   signupSchema,
 } from "@/lib/validations/auth";
+import { UsersService } from "@/lib/api";
 
 export type AuthActionResult<T = void> =
   | { success: true; data?: T; message?: string }
@@ -70,9 +71,44 @@ export async function loginAction(
       };
     }
 
-    // Revalidate and redirect
+    // Sync user with backend
+    try {
+      await UsersService.syncUser({
+        supabaseUserId: data.user.id,
+        email: data.user.email || '',
+        firstName: data.user.user_metadata?.first_name || data.user.user_metadata?.firstName,
+        lastName: data.user.user_metadata?.last_name || data.user.user_metadata?.lastName,
+        fullName: data.user.user_metadata?.full_name || data.user.user_metadata?.fullName,
+        avatarUrl: data.user.user_metadata?.avatar_url || data.user.user_metadata?.avatarUrl,
+        metadata: {
+          ...data.user.user_metadata,
+          ...data.user.app_metadata,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to sync user:', error);
+      // Continue even if sync fails
+    }
+
+    // Get user from backend to check onboarding status
+    let needsOnboarding = true;
+    try {
+      const backendUser = await UsersService.getCurrentUser();
+      needsOnboarding = !backendUser.onboardingCompleted;
+    } catch {
+      // If user doesn't exist yet, they need onboarding
+      needsOnboarding = true;
+    }
+    
+    // Revalidate paths
     revalidatePath("/", "layout");
-    redirect("/");
+    
+    // Redirect based on onboarding status
+    if (needsOnboarding) {
+      redirect("/onboarding/welcome");
+    } else {
+      redirect("/workspace");
+    }
   } catch (error) {
     return {
       success: false,
@@ -156,8 +192,40 @@ export async function signupAction(
     }
 
     // Session exists - user is immediately authenticated
+    // Sync user with backend
+    try {
+      await UsersService.syncUser({
+        supabaseUserId: data.user.id,
+        email: data.user.email || '',
+        firstName: data.user.user_metadata?.first_name || data.user.user_metadata?.firstName,
+        lastName: data.user.user_metadata?.last_name || data.user.user_metadata?.lastName,
+        fullName: data.user.user_metadata?.full_name || data.user.user_metadata?.fullName,
+        avatarUrl: data.user.user_metadata?.avatar_url || data.user.user_metadata?.avatarUrl,
+        metadata: {
+          ...data.user.user_metadata,
+          ...data.user.app_metadata,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to sync user:', error);
+    }
+
+    // Get user from backend to check onboarding status
+    let needsOnboarding = true;
+    try {
+      const backendUser = await UsersService.getCurrentUser();
+      needsOnboarding = !backendUser.onboardingCompleted;
+    } catch {
+      needsOnboarding = true;
+    }
+    
     revalidatePath("/", "layout");
-    redirect("/");
+    
+    if (needsOnboarding) {
+      redirect("/onboarding/welcome");
+    } else {
+      redirect("/workspace");
+    }
   } catch (error) {
     return {
       success: false,

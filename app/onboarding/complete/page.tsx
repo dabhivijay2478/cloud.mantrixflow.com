@@ -12,15 +12,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useCompleteOnboarding } from "@/lib/api";
+import { useEffect } from "react";
 
 export default function CompletePage() {
   const router = useRouter();
   const { completeOnboarding, currentOrganization, currentDataSource } =
     useWorkspaceStore();
+  const completeOnboardingApi = useCompleteOnboarding();
 
   useEffect(() => {
+    // Complete onboarding in both store and API
     completeOnboarding();
-  }, [completeOnboarding]);
+    completeOnboardingApi.mutate();
+  }, [completeOnboarding, completeOnboardingApi]);
 
   const handleGoToWorkspace = () => {
     router.push("/workspace");

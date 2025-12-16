@@ -18,34 +18,42 @@ import {
 } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useOnboardingStatus, useUpdateOnboardingStep } from "@/lib/api";
 
 export default function WelcomePage() {
   const router = useRouter();
   const { user, loading } = useAuthStore();
-  const { onboarding, setOnboardingStep, completeOnboarding } =
-    useWorkspaceStore();
+  const { setOnboardingStep, completeOnboarding } = useWorkspaceStore();
+  const { data: onboardingStatus } = useOnboardingStatus();
+  const updateOnboardingStep = useUpdateOnboardingStep();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/auth/login");
     }
-    if (onboarding.completed) {
+    if (onboardingStatus?.completed) {
       router.push("/workspace");
     }
-  }, [user, loading, onboarding.completed, router]);
+  }, [user, loading, onboardingStatus?.completed, router]);
 
-  const handleGetStarted = () => {
+  const handleGetStarted = async () => {
+    await updateOnboardingStep.mutateAsync("organization");
     setOnboardingStep("organization");
     router.push("/onboarding/organization");
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
+    await updateOnboardingStep.mutateAsync("complete");
     completeOnboarding();
     router.push("/workspace");
   };
 
   if (loading) {
-    return <LoadingState fullScreen message="Loading..." />;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <LoadingState message="Loading..." />
+      </div>
+    );
   }
 
   if (!user) {
