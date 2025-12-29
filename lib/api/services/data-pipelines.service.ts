@@ -19,16 +19,25 @@ export class DataPipelinesService {
   private static readonly BASE_PATH = 'api/data-pipelines';
 
   // Pipeline Management
-  static async createPipeline(data: CreatePipelineDto): Promise<Pipeline> {
-    return ApiClient.post<Pipeline>(this.BASE_PATH, data);
+  static async createPipeline(data: CreatePipelineDto, orgId?: string): Promise<Pipeline> {
+    const params = new URLSearchParams();
+    if (orgId) params.append('orgId', orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return ApiClient.post<Pipeline>(`${this.BASE_PATH}${queryString}`, data);
   }
 
-  static async listPipelines(): Promise<Pipeline[]> {
-    return ApiClient.get<Pipeline[]>(this.BASE_PATH);
+  static async listPipelines(orgId?: string): Promise<Pipeline[]> {
+    const params = new URLSearchParams();
+    if (orgId) params.append('orgId', orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return ApiClient.get<Pipeline[]>(`${this.BASE_PATH}${queryString}`);
   }
 
-  static async getPipeline(id: string): Promise<Pipeline> {
-    return ApiClient.get<Pipeline>(`${this.BASE_PATH}/${id}`);
+  static async getPipeline(id: string, orgId?: string): Promise<Pipeline> {
+    const params = new URLSearchParams();
+    if (orgId) params.append('orgId', orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return ApiClient.get<Pipeline>(`${this.BASE_PATH}/${id}${queryString}`);
   }
 
   static async updatePipeline(

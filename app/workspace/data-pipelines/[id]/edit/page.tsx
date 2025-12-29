@@ -1,17 +1,19 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { usePipeline, useUpdatePipeline } from "@/lib/api/hooks/use-data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import type { CollectorConfig } from "../../new/collector-step";
 import { CollectorStep } from "../../new/collector-step";
 import { EmitterStep } from "../../new/emitter-step";
 import { TransformStep } from "../../new/transform-step";
+import { toast } from "@/lib/utils/toast";
 
-type PipelineStep = "collector" | "transform" | "emitter";
+type PipelineStep = "collector" | "emitter" | "transform";
 
 interface PipelineConfig {
   collectors: CollectorConfig[];
@@ -20,31 +22,89 @@ interface PipelineConfig {
 export default function EditPipelinePage() {
   const params = useParams();
   const router = useRouter();
-  const { pipelines, updatePipeline } = useWorkspaceStore();
+  const { currentOrganization } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
   const pipelineId = params.id as string;
-
-  const pipeline = pipelines.find((p) => p.id === pipelineId);
+  const { data: pipeline, isLoading, error } = usePipeline(pipelineId, orgId);
+  const updatePipelineMutation = useUpdatePipeline();
+  
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
     collectors: [],
   });
 
-  // Load pipeline configuration
+  // Load pipeline configuration from API response
   useEffect(() => {
     if (pipeline) {
+      // Parse collectors from transformations JSONB field
+      const transformations = pipeline.transformations as any;
+      const collectors = transformations?.collectors || [];
+      const emitters = transformations?.emitters || [];
+      
+      console.log('Pipeline data:', {
+        transformations,
+        collectors,
+        emitters,
+        pipeline,
+      });
+      
       setConfig({
-        collectors: (pipeline.config?.collectors as CollectorConfig[]) || [],
+        collectors: collectors.map((c: any) => {
+          // Find emitters associated with this collector's transformers
+          const collectorEmitters = emitters.filter((e: any) => 
+            c.transformers?.some((t: any) => t.emitterId === e.id)
+          );
+          
+          return {
+            id: c.id,
+            sourceId: c.sourceId,
+            selectedTables: c.selectedTables || [],
+            emitters: collectorEmitters.map((e: any) => ({
+              id: e.id,
+              transformId: e.transformId || "",
+              destinationId: e.destinationId,
+              destinationName: e.destinationName,
+              destinationType: e.destinationType,
+              connectionConfig: e.connectionConfig || {},
+            })),
+            transformers: (c.transformers || []).map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              collectorId: t.collectorId || c.id,
+              emitterId: t.emitterId || "",
+              fieldMappings: Array.isArray(t.fieldMappings) 
+                ? t.fieldMappings 
+                : t.fieldMappings 
+                  ? Object.entries(t.fieldMappings).map(([source, destination]) => ({
+                      source: String(source),
+                      destination: String(destination),
+                    }))
+                  : [],
+            })),
+          };
+        }) as CollectorConfig[],
       });
     }
   }, [pipeline]);
 
-  if (!pipeline) {
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading pipeline...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !pipeline) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Pipeline not found</h2>
           <p className="text-muted-foreground mb-4">
-            The pipeline you're looking for doesn't exist.
+            {error ? "Failed to load pipeline" : "The pipeline you're looking for doesn't exist."}
           </p>
           <Button onClick={() => router.push("/workspace/data-pipelines")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -60,14 +120,6 @@ export default function EditPipelinePage() {
       ...prev,
       collectors,
     }));
-    setCurrentStep("transform");
-  };
-
-  const handleTransformComplete = (collectors: CollectorConfig[]) => {
-    setConfig((prev) => ({
-      ...prev,
-      collectors,
-    }));
     setCurrentStep("emitter");
   };
 
@@ -76,32 +128,83 @@ export default function EditPipelinePage() {
       ...prev,
       collectors,
     }));
+    setCurrentStep("transform");
+  };
+
+  const handleTransformComplete = (collectors: CollectorConfig[]) => {
+    setConfig((prev) => ({
+      ...prev,
+      collectors,
+    }));
     handleSavePipeline();
   };
 
-  const handleSavePipeline = () => {
-    if (pipeline) {
+  const handleSavePipeline = async () => {
+    if (!pipeline) return;
+
+    try {
+      // Extract emitters from collectors
+      const allEmitters = config.collectors.flatMap((c) => 
+        ((c as any).emitters || []).map((e: any) => ({
+          ...e,
+          collectorId: c.id,
+        }))
+      );
+      
       const allDestinationIds = [
-        ...new Set(
-          config.collectors.flatMap((c) =>
-            c.transformers.flatMap((t) =>
-              ((t as any).emitters || []).map((e: any) => e.destinationId),
-            ),
-          ),
-        ),
-      ];
-      const allSourceIds = [
-        ...new Set(config.collectors.map((c) => c.sourceId)),
+        ...new Set(allEmitters.map((e) => e.destinationId)),
       ];
 
-      updatePipeline(pipeline.id, {
-        sourceId: allSourceIds[0] || "",
-        destinationIds: allDestinationIds,
-        config: {
-          collectors: config.collectors,
+      // Get transformers with emitters
+      const transformersWithEmitters = config.collectors.flatMap((c) =>
+        (c.transformers || []).map((t: any) => ({
+          ...t,
+          collectorId: t.collectorId || c.id,
+          emitterId: t.emitterId || "",
+        }))
+      );
+
+      // Map emitters to the format expected by the API
+      const emitters = allEmitters.map((e: any) => {
+        const transformer = transformersWithEmitters.find(
+          (t: any) => t.emitterId === e.id
+        );
+        return {
+          id: e.id,
+          transformId: transformer?.id || "",
+          destinationId: e.destinationId,
+          destinationName: e.destinationName,
+          destinationType: e.destinationType,
+        };
+      });
+
+      await updatePipelineMutation.mutateAsync({
+        id: pipeline.id,
+        data: {
+          collectors: config.collectors.map((c) => ({
+            id: c.id,
+            sourceId: c.sourceId,
+            selectedTables: c.selectedTables,
+            transformers: c.transformers?.map((t) => ({
+              id: t.id,
+              name: t.name,
+              collectorId: (t as any).collectorId || c.id,
+              emitterId: (t as any).emitterId || "",
+              fieldMappings: (t as any).fieldMappings || [],
+            })),
+          })),
+          emitters: emitters,
         },
       });
+
+      toast.success("Pipeline updated", "Your pipeline has been updated successfully.");
       router.push("/workspace/data-pipelines");
+    } catch (error) {
+      console.error("Failed to update pipeline:", error);
+      toast.error(
+        "Failed to update pipeline",
+        error instanceof Error ? error.message : "Unknown error occurred",
+      );
     }
   };
 
@@ -113,14 +216,14 @@ export default function EditPipelinePage() {
         description: "Select data source and tables",
       },
       {
-        id: "transform",
-        label: "Transform",
-        description: "Map fields to schema",
-      },
-      {
         id: "emitter",
         label: "Emitter",
         description: "Configure destinations",
+      },
+      {
+        id: "transform",
+        label: "Transform",
+        description: "Map fields to schema",
       },
     ];
 
@@ -151,17 +254,17 @@ export default function EditPipelinePage() {
             />
           )}
 
-          {currentStep === "transform" && (
-            <TransformStep
-              collectors={config.collectors}
-              onComplete={handleTransformComplete}
-            />
-          )}
-
           {currentStep === "emitter" && (
             <EmitterStep
               collectors={config.collectors}
               onComplete={handleEmitterComplete}
+            />
+          )}
+
+          {currentStep === "transform" && (
+            <TransformStep
+              collectors={config.collectors}
+              onComplete={handleTransformComplete}
             />
           )}
         </div>

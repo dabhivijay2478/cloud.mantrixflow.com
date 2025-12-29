@@ -45,6 +45,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useConnections } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type PipelineType = "bulk" | "stream" | "emit";
@@ -90,14 +91,18 @@ export function PipelineConfigurationForm({
   onSubmit,
   initialType = "bulk",
 }: PipelineConfigurationFormProps) {
-  const { dataSources } = useWorkspaceStore();
+  const { currentOrganization } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
   
-  // Only use PostgreSQL data sources as destinations
-  const availableDestinations = dataSources
-    .filter((ds) => ds.type === "postgres")
-    .map((ds) => ({
-      id: ds.id,
-      name: ds.name,
+  // Fetch connections from API instead of workspace store
+  const { data: connections, isLoading: connectionsLoading } = useConnections(orgId);
+  
+  // Convert API connections to destination format
+  // All connections from the PostgreSQL endpoint are PostgreSQL connections
+  const availableDestinations = (connections || [])
+    .map((conn) => ({
+      id: conn.id,
+      name: conn.name,
       type: "database",
     }));
   const [loading, setLoading] = useState(false);
@@ -378,7 +383,15 @@ export function PipelineConfigurationForm({
           </div>
 
           <ScrollArea className="h-[300px] rounded-md border p-4">
-            {availableDestinations.length === 0 ? (
+            {!orgId ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No organization selected. Please select an organization from the sidebar.
+              </div>
+            ) : connectionsLoading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Loading data sources...
+              </div>
+            ) : availableDestinations.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 No PostgreSQL data sources available. Please connect a PostgreSQL data source first.
               </div>

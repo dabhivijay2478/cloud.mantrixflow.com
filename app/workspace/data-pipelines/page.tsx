@@ -15,23 +15,23 @@ import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  usePipelines,
-  useDeletePipeline,
-  useConnections,
-  useCurrentOrganization,
-  type Pipeline,
-} from "@/lib/api";
+import { usePipelines, useDeletePipeline, useRunPipeline } from "@/lib/api/hooks/use-data-pipelines";
+import { useConnections } from "@/lib/api/hooks/use-data-sources";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
+import type { Pipeline } from "@/lib/api/types/data-pipelines";
 
 type PipelineType = "bulk" | "stream" | "emit";
 
 export default function DataPipelinesPage() {
+  const { currentOrganization } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
+  
   // Use real API hooks instead of workspace store
-  const { data: pipelines, isLoading: pipelinesLoading } = usePipelines();
-  const { data: connections } = useConnections();
-  const { data: currentOrganization } = useCurrentOrganization();
+  const { data: pipelines, isLoading: pipelinesLoading } = usePipelines(orgId);
+  const { data: connections } = useConnections(orgId);
   const deletePipeline = useDeletePipeline();
+  const runPipeline = useRunPipeline();
   const router = useRouter();
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -107,6 +107,21 @@ export default function DataPipelinesPage() {
     }
   };
 
+  const handleRunPipeline = async (pipelineId: string, pipelineName: string) => {
+    try {
+      await runPipeline.mutateAsync(pipelineId);
+      toast.success(
+        "Pipeline execution started",
+        `${pipelineName} is now running. Check the runs tab for progress.`,
+      );
+    } catch (error: any) {
+      toast.error(
+        "Failed to run pipeline",
+        error?.message || "Unable to start the pipeline execution.",
+      );
+    }
+  };
+
   const columns: ColumnDef<Pipeline>[] = [
     {
       accessorKey: "name",
@@ -137,7 +152,18 @@ export default function DataPipelinesPage() {
       accessorKey: "sourceConnectionId",
       header: "Source",
       cell: ({ row }) => {
-        const sourceConnectionId = row.original.sourceConnectionId;
+        // Try to get sourceConnectionId from pipeline object first
+        let sourceConnectionId = (row.original as any).sourceConnectionId;
+        
+        // If not found, extract from transformations.collectors
+        if (!sourceConnectionId && row.original.transformations) {
+          const transformations = row.original.transformations as any;
+          const collectors = transformations?.collectors || [];
+          if (collectors.length > 0 && collectors[0].sourceId) {
+            sourceConnectionId = collectors[0].sourceId;
+          }
+        }
+        
         const source = connections?.find(
           (conn) => conn.id === sourceConnectionId,
         );
@@ -184,6 +210,18 @@ export default function DataPipelinesPage() {
         const pipeline = row.original;
         return (
           <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRunPipeline(pipeline.id, pipeline.name);
+              }}
+              disabled={runPipeline.isPending || pipeline.status === "paused"}
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Run
+            </Button>
             <Button
               variant="outline"
               size="sm"

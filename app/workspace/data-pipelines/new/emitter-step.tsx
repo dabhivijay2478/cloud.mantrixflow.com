@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowRight,
   CheckCircle2,
   Database,
   Edit,
@@ -30,6 +31,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared";
 import { Textarea } from "@/components/ui/textarea";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useConnections } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { CollectorConfig } from "./collector-step";
 import type { TransformConfig } from "./transform-step";
@@ -49,56 +51,51 @@ export interface EmitterConfig {
 }
 
 export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
-  const { dataSources } = useWorkspaceStore();
+  const { currentOrganization } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
   
-  // Only use PostgreSQL data sources as destinations
-  const availableDestinations = dataSources
-    .filter((ds) => ds.type === "postgres")
-    .map((ds) => ({
-      id: ds.id,
-      name: ds.name,
-      type: "database",
-      icon: Database,
-      configFields: [
-        { key: "host", label: "Host", required: true },
-        { key: "port", label: "Port", required: true },
-        { key: "database", label: "Database", required: true },
-        { key: "username", label: "Username", required: true },
-        {
-          key: "password",
-          label: "Password",
-          required: true,
-          type: "password",
-        },
-      ],
-    }));
+  // Fetch connections from API instead of workspace store
+  const { data: connections, isLoading: connectionsLoading } = useConnections(orgId);
+  
+      // Convert API connections to destination format
+      // All connections from the PostgreSQL endpoint are PostgreSQL connections
+      // Emitters don't need connection config fields - they use existing connections
+      const availableDestinations = (connections || [])
+        .map((conn) => ({
+          id: conn.id,
+          name: conn.name,
+          type: "database",
+          icon: Database,
+        }));
+
+  // Convert API connections to DataSource format for compatibility
+  const dataSources = connections?.map((conn) => ({
+    id: conn.id,
+    name: conn.name,
+    type: "postgres" as const,
+    status: conn.status === "active" ? ("connected" as const) : ("disconnected" as const),
+    organizationId: conn.orgId,
+    connectedAt: conn.lastConnectedAt || undefined,
+    tables: [],
+  })) || [];
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEmitter, setEditingEmitter] = useState<string | null>(null);
-  const [selectedTransformId, setSelectedTransformId] = useState<string>("");
+  const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
   const [selectedDestinationId, setSelectedDestinationId] =
     useState<string>("");
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Get all transforms from all collectors
-  const allTransforms: Array<TransformConfig & { collectorName: string }> =
+  // Get all emitters from all collectors (emitters are now stored at collector level)
+  const allEmitters: Array<EmitterConfig & { collectorName: string; collectorId: string }> =
     collectors.flatMap((collector) => {
-      return (collector.transformers || []).map((t) => ({
-        ...t,
-        collectorId: collector.id,
-        collectorName: `Collector ${collector.id.slice(-6)}`,
-        fieldMappings: (t as any).fieldMappings || {},
-        jsonSchema: (t as any).jsonSchema || "",
-        emitters: (t as any).emitters || [],
-      }));
-    });
-
-  // Get all emitters from all transforms
-  const allEmitters: Array<EmitterConfig & { transformName: string }> =
-    allTransforms.flatMap((transform) => {
-      return ((transform as any).emitters || []).map((e: EmitterConfig) => ({
+      const source = dataSources.find((ds) => ds.id === collector.sourceId);
+      const collectorName = source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
+      // Emitters are stored directly on collectors, not on transformers
+      return ((collector as any).emitters || []).map((e: EmitterConfig) => ({
         ...e,
-        transformName: transform.name,
+        collectorId: collector.id,
+        collectorName,
       }));
     });
 
@@ -111,65 +108,55 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   };
 
   const handleAddEmitter = () => {
-    if (!selectedTransformId || !selectedDestination) return;
+    if (!selectedCollectorId || !selectedDestination) return;
 
-    const isConfigValid = selectedDestination.configFields.every(
-      (field) => !field.required || configValues[field.key],
-    );
-
-    if (!isConfigValid) return;
-
+    // Emitters don't need connection config - they use the existing connection via destinationId
+    // Emitters are now associated with collectors, not transformers
     const newEmitter: EmitterConfig = {
       id: editingEmitter || `emitter_${Date.now()}`,
-      transformId: selectedTransformId,
+      transformId: "", // Will be set when transformer is created
       destinationId: selectedDestination.id,
       destinationName: selectedDestination.name,
       destinationType: selectedDestination.type,
-      connectionConfig: configValues,
+      connectionConfig: {}, // Empty - connection is referenced by destinationId
     };
 
-    const updatedCollectors = collectors.map((collector) => ({
-      ...collector,
-      transformers: collector.transformers.map((transform) => {
-        if (transform.id === selectedTransformId) {
-          const emitters = editingEmitter
-            ? (transform as any).emitters?.map((e: EmitterConfig) =>
-                e.id === editingEmitter ? newEmitter : e,
-              ) || []
-            : [...((transform as any).emitters || []), newEmitter];
-          return { ...transform, emitters };
-        }
-        return transform;
-      }),
-    }));
+    const updatedCollectors = collectors.map((collector) => {
+      if (collector.id === selectedCollectorId) {
+        const emitters = editingEmitter
+          ? ((collector as any).emitters || []).map((e: EmitterConfig) =>
+              e.id === editingEmitter ? newEmitter : e,
+            )
+          : [...((collector as any).emitters || []), newEmitter];
+        return { ...collector, emitters };
+      }
+      return collector;
+    });
 
     onComplete(updatedCollectors);
     setShowAddDialog(false);
     setEditingEmitter(null);
-    setSelectedTransformId("");
+    setSelectedCollectorId("");
     setSelectedDestinationId("");
     setConfigValues({});
   };
 
-  const handleDeleteEmitter = (transformId: string, emitterId: string) => {
-    const updatedCollectors = collectors.map((collector) => ({
-      ...collector,
-      transformers: collector.transformers.map((transform) => {
-        if (transform.id === transformId) {
-          const emitters = ((transform as any).emitters || []).filter(
-            (e: EmitterConfig) => e.id !== emitterId,
-          );
-          return { ...transform, emitters };
-        }
-        return transform;
-      }),
-    }));
+  const handleDeleteEmitter = (collectorId: string, emitterId: string) => {
+    const updatedCollectors = collectors.map((collector) => {
+      if (collector.id === collectorId) {
+        const emitters = ((collector as any).emitters || []).filter(
+          (e: EmitterConfig) => e.id !== emitterId,
+        );
+        return { ...collector, emitters };
+      }
+      return collector;
+    });
     onComplete(updatedCollectors);
   };
 
-  const handleEditEmitter = (emitter: EmitterConfig) => {
+  const handleEditEmitter = (emitter: EmitterConfig & { collectorId: string }) => {
     setEditingEmitter(emitter.id);
-    setSelectedTransformId(emitter.transformId);
+    setSelectedCollectorId(emitter.collectorId);
     setSelectedDestinationId(emitter.destinationId);
     setConfigValues(emitter.connectionConfig);
     setShowAddDialog(true);
@@ -180,21 +167,19 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   };
 
   const isConfigValid = () => {
-    if (!selectedDestination) return false;
-    return selectedDestination.configFields.every(
-      (field) => !field.required || configValues[field.key],
-    );
+    // Emitters only need a collector and destination selected - no connection config required
+    return !!selectedCollectorId && !!selectedDestination;
   };
 
-  type EmitterTableRow = EmitterConfig & { transformName: string };
+  type EmitterTableRow = EmitterConfig & { collectorName: string; collectorId: string };
 
   const columns: ColumnDef<EmitterTableRow>[] = [
     {
-      accessorKey: "transformName",
-      header: "Transformer",
+      accessorKey: "collectorName",
+      header: "Collector",
       cell: ({ row }) => (
         <Badge variant="outline" className="font-normal">
-          {row.original.transformName}
+          {row.original.collectorName}
         </Badge>
       ),
     },
@@ -287,7 +272,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
               className="h-8 w-8 text-destructive hover:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
-                handleDeleteEmitter(emitter.transformId, emitter.id);
+                handleDeleteEmitter(emitter.collectorId, emitter.id);
               }}
             >
               <Trash2 className="h-4 w-4" />
@@ -304,7 +289,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       emitter.destinationName
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      emitter.transformName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emitter.collectorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emitter.destinationType.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
@@ -405,7 +390,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                             className="h-8 w-8 text-destructive hover:text-destructive"
                             onClick={() =>
                               handleDeleteEmitter(
-                                emitter.transformId,
+                                emitter.collectorId,
                                 emitter.id,
                               )
                             }
@@ -418,10 +403,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">
-                            Transformer:
+                            Collector:
                           </span>
                           <Badge variant="outline" className="text-xs">
-                            {emitter.transformName}
+                            {emitter.collectorName}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
@@ -488,33 +473,60 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Transformer</Label>
+            <Label>Collector</Label>
             <Select
-              value={selectedTransformId}
+              value={selectedCollectorId}
               onValueChange={(value) => {
-                setSelectedTransformId(value);
+                setSelectedCollectorId(value);
                 setSelectedDestinationId("");
                 setConfigValues({});
               }}
               disabled={!!editingEmitter}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a transformer" />
+                <SelectValue placeholder="Select a collector" />
               </SelectTrigger>
               <SelectContent>
-                {allTransforms.map((transform) => (
-                  <SelectItem key={transform.id} value={transform.id}>
-                    {transform.name}
-                  </SelectItem>
-                ))}
+                {collectors.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No collectors available. Please add collectors first.
+                  </div>
+                ) : (
+                  collectors.map((collector) => {
+                    const source = dataSources.find(
+                      (ds) => ds.id === collector.sourceId,
+                    );
+                    const selectedTablesCount = collector.selectedTables?.length || 0;
+                    const displayName = source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
+                    return (
+                      <SelectItem key={collector.id} value={collector.id}>
+                        <div className="flex items-center gap-2 w-full">
+                          <Database className="h-4 w-4 shrink-0" />
+                          <span className="truncate flex-1">{displayName}</span>
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {selectedTablesCount} table{selectedTablesCount !== 1 ? "s" : ""}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    );
+                  })
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {selectedTransformId && (
+          {selectedCollectorId && (
             <div className="space-y-2">
               <Label>Destination</Label>
-              {availableDestinations.length === 0 ? (
+              {!orgId ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No organization selected. Please select an organization from the sidebar.
+                </div>
+              ) : connectionsLoading ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  Loading data sources...
+                </div>
+              ) : availableDestinations.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   No PostgreSQL data sources available. Please connect a PostgreSQL data source first.
                 </div>
@@ -577,49 +589,23 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
             <>
               <Separator />
               <div className="space-y-4">
-                <Label>Connection Configuration</Label>
-                {selectedDestination.configFields.map((field) => (
-                  <div key={field.key} className="space-y-2">
-                    <Label htmlFor={field.key}>
-                      {field.label}
-                      {field.required && (
-                        <span className="text-destructive ml-1">*</span>
-                      )}
-                    </Label>
-                    {field.type === "textarea" ? (
-                      <Textarea
-                        id={field.key}
-                        placeholder={`Enter ${field.label.toLowerCase()}`}
-                        value={configValues[field.key] || ""}
-                        onChange={(e) =>
-                          handleConfigChange(field.key, e.target.value)
-                        }
-                        className="min-h-[100px] font-mono text-sm"
-                      />
-                    ) : (
-                      <Input
-                        id={field.key}
-                        type={field.type || "text"}
-                        placeholder={`Enter ${field.label.toLowerCase()}`}
-                        value={configValues[field.key] || ""}
-                        onChange={(e) =>
-                          handleConfigChange(field.key, e.target.value)
-                        }
-                      />
-                    )}
-                  </div>
-                ))}
+                <div className="rounded-lg bg-muted p-4">
+                  <p className="text-sm text-muted-foreground">
+                    This emitter will use the connection "{selectedDestination.name}" 
+                    that you've already configured. No additional connection settings are needed.
+                  </p>
+                </div>
               </div>
             </>
           )}
         </div>
       </FormSheet>
 
-      {/* Create Pipeline Button */}
+      {/* Continue Button */}
       <div className="flex justify-end pt-2">
         <Button onClick={handleCreate} size="lg" className="w-full sm:w-auto">
-          <Sparkles className="mr-2 h-4 w-4" />
-          Create Pipeline
+          <ArrowRight className="mr-2 h-4 w-4" />
+          Continue to Transform
         </Button>
       </div>
     </div>

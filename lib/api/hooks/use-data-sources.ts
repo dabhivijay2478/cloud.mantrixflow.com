@@ -54,11 +54,11 @@ export function useTestConnection() {
   });
 }
 
-export function useCreateConnection() {
+export function useCreateConnection(orgId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateConnectionDto) =>
-      DataSourcesService.createConnection(data),
+      DataSourcesService.createConnection(data, orgId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.connections.lists(),
@@ -67,10 +67,11 @@ export function useCreateConnection() {
   });
 }
 
-export function useConnections() {
+export function useConnections(orgId?: string) {
   return useQuery({
-    queryKey: dataSourcesKeys.connections.lists(),
-    queryFn: () => DataSourcesService.listConnections(),
+    queryKey: dataSourcesKeys.connections.lists({ orgId }),
+    queryFn: () => DataSourcesService.listConnections(orgId),
+    enabled: !!orgId, // Only fetch if orgId is provided
   });
 }
 
@@ -111,30 +112,39 @@ export function useDeleteConnection() {
 }
 
 // Schema Discovery Hooks
-export function useDatabases(connectionId: string | undefined) {
+export function useDatabases(connectionId: string | undefined, orgId?: string) {
   return useQuery({
     queryKey: dataSourcesKeys.databases(connectionId!),
-    queryFn: () => DataSourcesService.listDatabases(connectionId!),
-    enabled: !!connectionId,
+    queryFn: () => DataSourcesService.listDatabases(connectionId!, orgId),
+    enabled: !!connectionId && !!orgId,
   });
 }
 
-export function useSchemas(connectionId: string | undefined) {
+export function useSchemas(connectionId: string | undefined, orgId?: string) {
   return useQuery({
     queryKey: dataSourcesKeys.schemas(connectionId!),
-    queryFn: () => DataSourcesService.listSchemas(connectionId!),
-    enabled: !!connectionId,
+    queryFn: () => DataSourcesService.listSchemas(connectionId!, orgId),
+    enabled: !!connectionId && !!orgId,
+  });
+}
+
+export function useSchemasWithTables(connectionId: string | undefined, orgId?: string) {
+  return useQuery({
+    queryKey: [...dataSourcesKeys.schemas(connectionId!), 'with-tables'],
+    queryFn: () => DataSourcesService.listSchemasWithTables(connectionId!, orgId),
+    enabled: !!connectionId && !!orgId,
   });
 }
 
 export function useTables(
   connectionId: string | undefined,
   schema?: string,
+  orgId?: string,
 ) {
   return useQuery({
     queryKey: dataSourcesKeys.tables(connectionId!, schema),
-    queryFn: () => DataSourcesService.listTables(connectionId!, schema),
-    enabled: !!connectionId,
+    queryFn: () => DataSourcesService.listTables(connectionId!, schema, orgId),
+    enabled: !!connectionId && !!orgId,
   });
 }
 
@@ -142,12 +152,13 @@ export function useTableSchema(
   connectionId: string | undefined,
   table: string | undefined,
   schema?: string,
+  orgId?: string,
 ) {
   return useQuery({
     queryKey: dataSourcesKeys.tableSchema(connectionId!, table!, schema),
     queryFn: () =>
-      DataSourcesService.getTableSchema(connectionId!, table!, schema),
-    enabled: !!connectionId && !!table,
+      DataSourcesService.getTableSchema(connectionId!, table!, schema, orgId),
+    enabled: !!connectionId && !!table && !!orgId,
   });
 }
 
@@ -168,7 +179,7 @@ export function useRefreshSchema() {
 }
 
 // Query Execution Hooks
-export function useExecuteQuery() {
+export function useExecuteQuery(orgId?: string) {
   return useMutation({
     mutationFn: ({
       connectionId,
@@ -176,7 +187,7 @@ export function useExecuteQuery() {
     }: {
       connectionId: string;
       data: ExecuteQueryDto;
-    }) => DataSourcesService.executeQuery(connectionId, data),
+    }) => DataSourcesService.executeQuery(connectionId, data, orgId),
   });
 }
 

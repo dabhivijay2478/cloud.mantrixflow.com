@@ -19,7 +19,7 @@ export interface FormSheetProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   side?: "left" | "right" | "top" | "bottom";
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "5xl" | "full";
+  maxWidth?: keyof typeof maxWidthClasses;
   className?: string;
 }
 
@@ -29,7 +29,11 @@ const maxWidthClasses = {
   lg: "sm:max-w-lg",
   xl: "sm:max-w-xl",
   "2xl": "sm:max-w-2xl",
+  "3xl": "sm:max-w-3xl",
+  "4xl": "sm:max-w-4xl",
   "5xl": "sm:max-w-5xl",
+  "6xl": "sm:max-w-6xl",
+  "7xl": "sm:max-w-7xl",
   full: "sm:max-w-full",
 };
 
@@ -49,8 +53,8 @@ export function FormSheet({
       <SheetContent
         side={side}
         className={cn(
-          "w-full overflow-y-auto ",
-          maxWidthClasses[maxWidth],
+          "w-full overflow-y-auto flex flex-col",
+          maxWidthClasses[maxWidth || "2xl"],
           className,
         )}
       >
@@ -59,7 +63,7 @@ export function FormSheet({
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
-        <div className="p-4">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
 
         {footer && <SheetFooter className="pt-4 mt-auto">{footer}</SheetFooter>}
       </SheetContent>

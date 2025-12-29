@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -32,11 +39,6 @@ const buildConnectionSchema = (dataSourceType: string) => {
 
   const schemaObject: Record<string, z.ZodTypeAny> = {};
 
-  // Add connection string field if supported
-  if (schema.connectionString) {
-    schemaObject.connectionString = z.string().optional();
-  }
-
   // Add all fields from schema
   schema.fields.forEach((field) => {
     if (field.required) {
@@ -48,13 +50,12 @@ const buildConnectionSchema = (dataSourceType: string) => {
     }
   });
 
+  // Validation for postgres and neon-postgres (no connection string support)
+  // All required fields must be present
+
   return z.object(schemaObject).refine(
     (data) => {
-      // If connection string is provided, it's valid
-      if (schema.connectionString && data.connectionString) {
-        return true;
-      }
-      // Otherwise, all required fields must be present
+      // All required fields must be present
       return schema.fields.every((field) => {
         if (!field.required) return true;
         return (
@@ -101,9 +102,6 @@ export function ConnectionSheet({
   const getDefaultValues = useCallback(() => {
     if (!schema) return {};
     const defaults: Record<string, string> = {};
-    if (schema.connectionString) {
-      defaults.connectionString = "";
-    }
     schema.fields.forEach((field) => {
       defaults[field.name] = "";
     });
@@ -251,98 +249,114 @@ export function ConnectionSheet({
               onSubmit={form.handleSubmit(handleConnect)}
               className="space-y-6"
             >
-              {schema.connectionString && (
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="connectionString"
-                    className="text-sm font-medium"
-                  >
-                    Connection String{" "}
-                    <span className="text-muted-foreground font-normal">
-                      (Optional)
-                    </span>
-                  </Label>
-                  <Textarea
-                    id="connectionString"
-                    placeholder={
-                      dataSource.type === "postgres"
-                        ? "postgresql://user:password@host:port/database"
-                        : dataSource.type === "mysql"
-                          ? "mysql://user:password@host:port/database"
-                          : "Enter connection string"
-                    }
-                    {...form.register("connectionString")}
-                    rows={3}
-                    className="font-mono text-sm"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Or fill in individual fields below
-                  </p>
-                </div>
-              )}
-
-              {schema.connectionString && (
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Or
-                    </span>
-                  </div>
-                </div>
-              )}
-
               <div className="grid gap-4">
-                {schema.fields.map((field) => (
-                  <div key={field.name} className="space-y-2">
-                    <Label
-                      htmlFor={field.name}
-                      className="text-sm font-medium text-foreground"
-                    >
-                      {field.label}
-                      {field.required && (
-                        <span className="text-destructive ml-1">*</span>
+                {schema.fields.map((field, index) => {
+                  // Add "Or" divider before individual fields if connection string is supported
+                  const showOrDivider = 
+                    schema.connectionString && 
+                    field.name === "connectionString" && 
+                    index > 0;
+                  
+                  const showOrAfterConnectionString = 
+                    schema.connectionString && 
+                    field.name === "connectionString" && 
+                    index < schema.fields.length - 1 &&
+                    schema.fields[index + 1]?.name !== "connectionString";
+
+                  return (
+                    <div key={field.name}>
+                      {showOrDivider && (
+                        <div className="relative my-4">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">
+                              Or
+                            </span>
+                          </div>
+                        </div>
                       )}
-                    </Label>
-                    {field.type === "textarea" ? (
-                      <Textarea
-                        id={field.name}
-                        placeholder={field.placeholder}
-                        {...form.register(field.name)}
-                        rows={4}
-                        className={
-                          field.name === "credentials" ||
-                          field.name === "headers"
-                            ? "font-mono text-sm"
-                            : ""
-                        }
-                      />
-                    ) : (
-                      <Input
-                        id={field.name}
-                        type={field.type}
-                        placeholder={field.placeholder}
-                        {...form.register(field.name)}
-                        className={cn(
-                          "h-10",
-                          field.type === "password" && "font-mono",
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={field.name}
+                          className="text-sm font-medium text-foreground"
+                        >
+                          {field.label}
+                          {field.required && (
+                            <span className="text-destructive ml-1">*</span>
+                          )}
+                        </Label>
+                        {field.type === "textarea" ? (
+                          <Textarea
+                            id={field.name}
+                            placeholder={field.placeholder}
+                            {...form.register(field.name)}
+                            rows={4}
+                            className={cn(
+                              field.name === "credentials" ||
+                              field.name === "headers" ||
+                              field.name === "connectionString"
+                                ? "font-mono text-sm"
+                                : ""
+                            )}
+                          />
+                        ) : field.type === "select" ? (
+                          <Select
+                            value={form.watch(field.name) || ""}
+                            onValueChange={(value) => {
+                              form.setValue(field.name, value);
+                            }}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder={field.placeholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.options?.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            id={field.name}
+                            type={field.type}
+                            placeholder={field.placeholder}
+                            {...form.register(field.name)}
+                            className={cn(
+                              "h-10",
+                              field.type === "password" && "font-mono",
+                            )}
+                          />
                         )}
-                      />
-                    )}
-                    {field.description && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {field.description}
-                      </p>
-                    )}
-                    {form.formState.errors[field.name] && (
-                      <p className="text-xs text-destructive mt-1">
-                        {form.formState.errors[field.name]?.message}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                        {field.description && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {field.description}
+                          </p>
+                        )}
+                        {form.formState.errors[field.name] && (
+                          <p className="text-xs text-destructive mt-1">
+                            {form.formState.errors[field.name]?.message}
+                          </p>
+                        )}
+                      </div>
+                      {showOrAfterConnectionString && (
+                        <div className="relative my-4">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">
+                              Or
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {connectionTestResult && (

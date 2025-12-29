@@ -5,10 +5,11 @@ export const connectionSchemas: Record<
     fields: Array<{
       name: string;
       label: string;
-      type: "text" | "password" | "number" | "textarea" | "file";
+      type: "text" | "password" | "number" | "textarea" | "file" | "select";
       placeholder?: string;
       required?: boolean;
       description?: string;
+      options?: Array<{ value: string; label: string }>;
     }>;
     connectionString?: boolean;
     testConnection?: boolean;
@@ -16,6 +17,27 @@ export const connectionSchemas: Record<
 > = {
   postgres: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My PostgreSQL Connection",
+        required: true,
+        description: "A friendly name to identify this connection",
+      },
+      {
+        name: "databaseType",
+        label: "Database Type",
+        type: "select",
+        placeholder: "Select database type",
+        required: true,
+        description: "Select the type of PostgreSQL database you're connecting to",
+        options: [
+          { value: "other", label: "Other PostgreSQL" },
+          { value: "neon", label: "Neon" },
+          { value: "supabase", label: "Supabase" },
+        ],
+      },
       {
         name: "host",
         label: "Host",
@@ -52,7 +74,7 @@ export const connectionSchemas: Record<
         required: true,
       },
     ],
-    connectionString: true,
+    connectionString: false,
     testConnection: true,
   },
   mysql: {

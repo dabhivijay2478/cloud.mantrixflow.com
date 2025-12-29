@@ -34,8 +34,8 @@ export const dataPipelinesKeys = {
 export function useCreatePipeline() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreatePipelineDto) =>
-      DataPipelinesService.createPipeline(data),
+    mutationFn: ({ data, orgId }: { data: CreatePipelineDto; orgId?: string }) =>
+      DataPipelinesService.createPipeline(data, orgId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.pipelines.lists(),
@@ -44,17 +44,18 @@ export function useCreatePipeline() {
   });
 }
 
-export function usePipelines() {
+export function usePipelines(orgId?: string) {
   return useQuery({
-    queryKey: dataPipelinesKeys.pipelines.lists(),
-    queryFn: () => DataPipelinesService.listPipelines(),
+    queryKey: [...dataPipelinesKeys.pipelines.lists(), orgId],
+    queryFn: () => DataPipelinesService.listPipelines(orgId),
+    enabled: !!orgId,
   });
 }
 
-export function usePipeline(id: string | undefined) {
+export function usePipeline(id: string | undefined, orgId?: string) {
   return useQuery({
-    queryKey: dataPipelinesKeys.pipelines.detail(id!),
-    queryFn: () => DataPipelinesService.getPipeline(id!),
+    queryKey: [...dataPipelinesKeys.pipelines.detail(id!), orgId],
+    queryFn: () => DataPipelinesService.getPipeline(id!, orgId),
     enabled: !!id,
   });
 }

@@ -5,12 +5,14 @@ import {
   CheckCircle2,
   Database,
   Edit,
+  Loader2,
   Plus,
   Search,
   Table,
   Trash2,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,25 +29,29 @@ import { Separator } from "@/components/ui/separator";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useConnections, useSchemasWithTables } from "@/lib/api/hooks/use-data-sources";
+import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 export interface CollectorConfig {
   id: string;
   sourceId: string;
   selectedTables: string[];
+  emitters?: Array<{
+    id: string;
+    transformId: string;
+    destinationId: string;
+    destinationName: string;
+    destinationType: string;
+    connectionConfig?: Record<string, string>;
+  }>;
   transformers: Array<{
     id: string;
     name: string;
-    fieldMappings?: Record<string, string>;
-    jsonSchema?: string;
-    emitters?: Array<{
-      id: string;
-      transformId: string;
-      destinationId: string;
-      destinationName: string;
-      destinationType: string;
-      connectionConfig: Record<string, string>;
-    }>;
+    collectorId?: string;
+    emitterId?: string;
+    fieldMappings?: Array<{ source: string; destination: string }>; // JSON array format
   }>;
 }
 
@@ -58,7 +64,24 @@ export function CollectorStep({
   onComplete,
   initialCollectors = [],
 }: CollectorStepProps) {
-  const { dataSources, datasets } = useWorkspaceStore();
+  // Get current organization from workspace store
+  const { currentOrganization, datasets } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
+
+  // Fetch connections from API
+  const { data: connections, isLoading: connectionsLoading } = useConnections(orgId);
+
+  // Convert API connections to DataSource format for compatibility
+  const dataSources = connections?.map((conn) => ({
+    id: conn.id,
+    name: conn.name,
+    type: "postgres" as const,
+    status: conn.status === "active" ? ("connected" as const) : ("disconnected" as const),
+    organizationId: conn.orgId,
+    connectedAt: conn.lastConnectedAt || undefined,
+    tables: [], // Will be populated when needed
+  })) || [];
+
   const [collectors, setCollectors] =
     useState<CollectorConfig[]>(initialCollectors);
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,17 +95,26 @@ export function CollectorStep({
     (ds) => ds.dataSourceId === selectedSourceId,
   );
 
-  const availableTables = selectedSource
-    ? sourceDatasets.length > 0
-      ? sourceDatasets.map((ds) => ds.sourceName)
-      : selectedSource.tables || []
+  // Fetch schemas with tables for the selected source
+  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(selectedSourceId, orgId);
+  
+  // Flatten all tables from all schemas
+  const availableTables = schemas
+    ? schemas.flatMap((schema) =>
+        (schema.tables || []).map((table) => ({
+          name: schema.name === "public" ? table.name : `${schema.name}.${table.name}`,
+          schema: schema.name,
+          tableName: table.name,
+        }))
+      )
     : [];
 
-  const handleTableToggle = (tableName: string) => {
+  const handleTableToggle = (tableName: string, schemaName: string) => {
+    const fullTableName = schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
     setSelectedTables((prev) =>
-      prev.includes(tableName)
-        ? prev.filter((t) => t !== tableName)
-        : [...prev, tableName],
+      prev.includes(fullTableName)
+        ? prev.filter((t) => t !== fullTableName)
+        : [...prev, fullTableName],
     );
   };
 
@@ -220,6 +252,34 @@ export function CollectorStep({
     );
   });
 
+  // Show loading or no org message
+  if (!orgId) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Database className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">
+            No organization selected
+          </h3>
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            Please select an organization from the sidebar to view data sources
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (connectionsLoading) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Database className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
+          <p className="text-sm text-muted-foreground">Loading data sources...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Search and Add Button */}
@@ -237,6 +297,7 @@ export function CollectorStep({
           onClick={() => setShowAddDialog(true)}
           size="sm"
           className="sm:size-default"
+          disabled={dataSources.length === 0}
         >
           <Plus className="mr-2 h-4 w-4" />
           <span className="hidden sm:inline">Add Collector</span>
@@ -275,7 +336,7 @@ export function CollectorStep({
         onOpenChange={setShowAddDialog}
         title={editingCollector ? "Edit Collector" : "Add Collector"}
         description="Select a data source and choose tables to collect"
-        maxWidth="2xl"
+        maxWidth="3xl"
         footer={
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
@@ -298,12 +359,12 @@ export function CollectorStep({
                 setSelectedTables([]);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a data source">
                   {selectedSource && (
                     <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4" />
-                      <span>{selectedSource.name}</span>
+                      <Database className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{selectedSource.name}</span>
                     </div>
                   )}
                 </SelectValue>
@@ -311,15 +372,25 @@ export function CollectorStep({
               <SelectContent>
                 {dataSources.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
-                    No data sources available
+                    {connectionsLoading ? (
+                      "Loading data sources..."
+                    ) : (
+                      <>
+                        No data sources available.
+                        <br />
+                        <span className="text-xs">
+                          Create a connection in Data Sources first.
+                        </span>
+                      </>
+                    )}
                   </div>
                 ) : (
                   dataSources.map((source) => (
                     <SelectItem key={source.id} value={source.id}>
                       <div className="flex items-center gap-2">
-                        <Database className="h-4 w-4" />
-                        <span>{source.name}</span>
-                        <Badge variant="outline" className="ml-auto text-xs">
+                        <Database className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{source.name}</span>
+                        <Badge variant="outline" className="ml-auto text-xs shrink-0">
                           {source.type}
                         </Badge>
                       </div>
@@ -333,57 +404,70 @@ export function CollectorStep({
           {selectedSourceId && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Tables</label>
-              {availableTables.length === 0 ? (
+              {schemasLoading ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  No tables available for this source
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                  Loading schemas and tables...
+                </div>
+              ) : !schemas || schemas.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No schemas or tables available for this source
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto p-2 border rounded-lg bg-muted/30">
-                  {availableTables.map((tableName) => {
-                    const isSelected = selectedTables.includes(tableName);
-                    return (
-                      <Card
-                        key={tableName}
-                        className={cn(
-                          "cursor-pointer transition-all hover:shadow-md relative",
-                          isSelected && "ring-2 ring-primary border-primary",
-                        )}
-                        onClick={() => handleTableToggle(tableName)}
-                      >
-                        {isSelected && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1 h-5 w-5 text-destructive hover:text-destructive z-10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTableToggle(tableName);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                        <CardContent className="p-3">
-                          <div className="flex items-center gap-2">
-                            <Table
-                              className={cn(
-                                "h-4 w-4",
-                                isSelected
-                                  ? "text-primary"
-                                  : "text-muted-foreground",
-                              )}
-                            />
-                            <span className="text-sm font-medium">
-                              {tableName}
-                            </span>
-                            {isSelected && (
-                              <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                <div className="border rounded-lg bg-muted/30 overflow-hidden flex flex-col h-[400px] sm:h-[500px]">
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <SchemaTableNavigation
+                      schemas={schemas}
+                      onTableSelect={(tableName, schemaName) => {
+                        handleTableToggle(tableName, schemaName);
+                      }}
+                      selectedTables={new Set(selectedTables)}
+                      searchable={true}
+                      isLoading={false}
+                    />
+                  </div>
+                  {selectedTables.length > 0 && (
+                    <div className="border-t p-2 sm:p-3 bg-background shrink-0">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
+                        <span className="text-xs sm:text-sm font-medium">
+                          Selected: {selectedTables.length} table{selectedTables.length !== 1 ? "s" : ""}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedTables([])}
+                          className="h-7 text-xs w-full sm:w-auto"
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                      <ScrollArea className="max-h-[100px] sm:max-h-[120px]">
+                        <div className="flex flex-wrap gap-1.5 pr-2">
+                          {selectedTables.map((table) => (
+                            <Badge
+                              key={table}
+                              variant="secondary"
+                              className="text-xs flex items-center gap-1 max-w-full"
+                            >
+                              <Table className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{table}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTables((prev) =>
+                                    prev.filter((t) => t !== table)
+                                  );
+                                }}
+                                className="ml-1 hover:text-destructive shrink-0"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -399,7 +483,7 @@ export function CollectorStep({
           size="lg"
           className="w-full sm:w-auto"
         >
-          Continue to Transform
+          Continue to Emitter
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

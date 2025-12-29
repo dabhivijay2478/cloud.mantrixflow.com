@@ -12,11 +12,11 @@ import {
   RefreshCw,
   Save,
 } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SQLEditor } from "@/components/data-sources/sql-editor";
 import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
-import { TableNavigation } from "@/components/data-sources/table-navigation";
+import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -40,16 +40,16 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useConnection,
   useExecuteQuery,
   useTables,
   useTableSchema,
+  useSchemasWithTables,
 } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import { DatasetConfigurationEmbedded } from "./dataset-config";
 
 // Check if data source type supports SQL queries
 const supportsSQLQueries = (type: string): boolean => {
@@ -118,28 +118,18 @@ const getDefaultQuery = (type: string, tableName?: string): string => {
 export default function DataSourceQueryPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const dataSourceId = params.id as string;
+  
+  // Get current organization from workspace store
+  const { currentOrganization } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
   
   // Use real API hooks
   const { data: connection, isLoading: connectionLoading } = useConnection(dataSourceId);
-  const { data: tables } = useTables(dataSourceId);
-  const executeQueryMutation = useExecuteQuery();
+  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(dataSourceId, orgId);
+  const executeQueryMutation = useExecuteQuery(orgId);
   
-  const tabParam = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<"query" | "dataset">(
-    tabParam === "dataset" ? "dataset" : "query",
-  );
-
-  // Sync tab state with URL param
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "dataset") {
-      setActiveTab("dataset");
-    } else {
-      setActiveTab("query");
-    }
-  }, [searchParams]);
+  // Removed dataset tab functionality
 
   // Convert API connection to component format
   const dataSource = connection ? {
@@ -147,8 +137,24 @@ export default function DataSourceQueryPage() {
     name: connection.name,
     type: "postgres" as const,
     status: connection.status === "active" ? "connected" as const : "disconnected" as const,
-    tables: tables?.map(t => t.name) || [],
+    tables: [], // Not used when using schema-based navigation
   } : null;
+
+  // Track selected schema and table
+  const [selectedSchema, setSelectedSchema] = useState<string | undefined>();
+  const [selectedTable, setSelectedTable] = useState<string | undefined>();
+
+  // Debug logging for schemas
+  useEffect(() => {
+    if (schemas) {
+      const totalTables = schemas.reduce((sum, s) => sum + (s.tables?.length || 0), 0);
+      console.log('[QueryPage] Schemas loaded:', {
+        totalSchemas: schemas.length,
+        totalTables,
+        schemas: schemas.map(s => ({ name: s.name, tableCount: s.tables?.length || 0 })),
+      });
+    }
+  }, [schemas]);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{
@@ -156,9 +162,8 @@ export default function DataSourceQueryPage() {
     rows: Record<string, unknown>[];
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [_error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [_queryTitle, _setQueryTitle] = useState("Untitled SQL query");
-  const [selectedTable, setSelectedTable] = useState<string | undefined>();
   const [resultsFullScreen, setResultsFullScreen] = useState(false);
   const [editorSize, setEditorSize] = useState(60);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -267,11 +272,21 @@ export default function DataSourceQueryPage() {
       return;
     }
 
+    if (!orgId) {
+      toast.error(
+        "No organization selected",
+        "Please select an organization from the sidebar before executing queries.",
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResults(null);
 
     try {
+      console.log('[QueryPage] Executing query with:', { connectionId: dataSourceId, orgId, query: query.trim() });
+      
       const result = await executeQueryMutation.mutateAsync({
         connectionId: dataSourceId,
         data: {
@@ -279,29 +294,71 @@ export default function DataSourceQueryPage() {
         },
       });
 
-      if (result.success && result.result) {
-        // Convert API result format to component format
+      console.log('[QueryPage] Query result:', result);
+      console.log('[QueryPage] Result type check:', {
+        hasRows: !!result?.rows,
+        rowsIsArray: Array.isArray(result?.rows),
+        rowsLength: result?.rows?.length,
+        firstRowType: result?.rows?.[0] ? typeof result.rows[0] : 'none',
+        firstRowIsArray: Array.isArray(result?.rows?.[0]),
+        firstRowKeys: result?.rows?.[0] ? Object.keys(result.rows[0]) : [],
+        hasColumns: !!result?.columns,
+        columnsIsArray: Array.isArray(result?.columns),
+      });
+
+      // API client extracts data.data, so result is QueryExecutionResult directly
+      // Format: { rows: Record<string, any>[] (from pg library), columns: Array<{name: string, dataType: string}>, rowCount: number, executionTimeMs: number }
+      if (result && Array.isArray(result.rows) && Array.isArray(result.columns)) {
+        // Extract column names - columns can be strings or objects with name property
+        const columnNames = result.columns.map((col: any) => 
+          typeof col === 'string' ? col : (col.name || col.column || String(col))
+        );
+        
+        // PostgreSQL returns rows as array of objects, not arrays
+        // Each row is already an object like {column1: value1, column2: value2}
         const convertedResult = {
-          columns: result.result.columns,
-          rows: result.result.rows.map((row) => {
-            const rowObj: Record<string, unknown> = {};
-            result.result!.columns.forEach((col, idx) => {
-              rowObj[col] = row[idx];
-            });
-            return rowObj;
+          columns: columnNames,
+          rows: result.rows.map((row: any) => {
+            // If row is already an object, use it directly
+            if (row && typeof row === 'object' && !Array.isArray(row)) {
+              return row as Record<string, unknown>;
+            }
+            // If row is an array, convert to object (fallback for other formats)
+            if (Array.isArray(row)) {
+              const rowObj: Record<string, unknown> = {};
+              columnNames.forEach((colName: string, idx: number) => {
+                rowObj[colName] = row[idx];
+              });
+              return rowObj;
+            }
+            // Fallback: return as-is
+            return row as Record<string, unknown>;
           }),
         };
+        
+        console.log('[QueryPage] Converted result:', {
+          columnCount: convertedResult.columns.length,
+          rowCount: convertedResult.rows.length,
+          firstRow: convertedResult.rows[0],
+          firstRowKeys: convertedResult.rows[0] ? Object.keys(convertedResult.rows[0]) : [],
+        });
+        
         setResults(convertedResult);
         toast.success(
           "Query executed successfully",
-          `Returned ${convertedResult.rows.length} rows`,
+          `Returned ${convertedResult.rows.length} rows in ${result.executionTimeMs || 0}ms`,
         );
-      } else {
+      } else if (result && 'error' in result) {
         throw new Error(result.error || "Query execution failed");
+      } else {
+        console.error('[QueryPage] Unexpected result format:', result);
+        console.error('[QueryPage] Result keys:', result ? Object.keys(result) : 'null');
+        throw new Error("Query execution failed: Unexpected response format. Check console for details.");
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error('[QueryPage] Query execution error:', err);
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to execute query";
+        err?.message || err?.error?.message || "Failed to execute query";
       setError(errorMessage);
       toast.error("Query execution failed", errorMessage);
     } finally {
@@ -309,17 +366,22 @@ export default function DataSourceQueryPage() {
     }
   };
 
-  const handleTableSelect = (tableName: string) => {
+  const handleTableSelect = (tableName: string, schemaName: string) => {
     setSelectedTable(tableName);
+    setSelectedSchema(schemaName);
+    
+    // Build full table name with schema if not public
+    const fullTableName = schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
+    
     if (shouldShowSQLEditor) {
-      const newQuery = getDefaultQuery(dataSource.type, tableName);
+      const newQuery = getDefaultQuery(dataSource.type, fullTableName);
       setQuery(newQuery);
       if (editorRef.current) {
         editorRef.current.setValue(newQuery);
       }
     } else {
       // For non-SQL data sources, fetch table data
-      fetchTableData(tableName);
+      fetchTableData(fullTableName);
     }
   };
 
@@ -336,15 +398,30 @@ export default function DataSourceQueryPage() {
         },
       });
 
-      if (result.success && result.result) {
+      // Handle the result format - API client extracts data.data
+      // PostgreSQL returns rows as array of objects, not arrays
+      if (result && Array.isArray(result.rows) && Array.isArray(result.columns)) {
+        const columnNames = result.columns.map((col: any) => 
+          typeof col === 'string' ? col : col.name || String(col)
+        );
+        
         const convertedData = {
-          columns: result.result.columns,
-          rows: result.result.rows.map((row) => {
-            const rowObj: Record<string, unknown> = {};
-            result.result!.columns.forEach((col, idx) => {
-              rowObj[col] = row[idx];
-            });
-            return rowObj;
+          columns: columnNames,
+          rows: result.rows.map((row: any) => {
+            // If row is already an object, use it directly
+            if (row && typeof row === 'object' && !Array.isArray(row)) {
+              return row as Record<string, unknown>;
+            }
+            // If row is an array, convert to object (fallback for other formats)
+            if (Array.isArray(row)) {
+              const rowObj: Record<string, unknown> = {};
+              columnNames.forEach((colName: string, idx: number) => {
+                rowObj[colName] = row[idx];
+              });
+              return rowObj;
+            }
+            // Fallback: return as-is
+            return row as Record<string, unknown>;
           }),
         };
         setTableData(convertedData);
@@ -476,45 +553,25 @@ export default function DataSourceQueryPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Top Header Bar */}
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Top Header Bar - Responsive */}
       <div className="border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between px-6 py-1">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 px-3 sm:px-4 lg:px-6 py-2 sm:py-1">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push("/workspace/data-sources")}
-              className="h-8"
+              className="h-8 shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div className="flex items-center gap-4">
-              <Tabs
-                value={activeTab}
-                onValueChange={(v) => {
-                  const newTab = v as "query" | "dataset";
-                  setActiveTab(newTab);
-                  if (newTab === "dataset") {
-                    router.push(
-                      `/workspace/data-sources/${dataSourceId}/query?tab=dataset`,
-                    );
-                  } else {
-                    router.push(
-                      `/workspace/data-sources/${dataSourceId}/query`,
-                    );
-                  }
-                }}
-              >
-                <TabsList>
-                  <TabsTrigger value="query">Query</TabsTrigger>
-                  <TabsTrigger value="dataset">Dataset</TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 sm:flex-none">
+              <h1 className="text-base sm:text-lg font-semibold truncate">Query</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {shouldShowSQLEditor && activeTab === "query" && (
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            {shouldShowSQLEditor && (
               <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -539,63 +596,49 @@ export default function DataSourceQueryPage() {
                   onClick={handleExecuteQuery}
                   disabled={loading || !query.trim()}
                   size="sm"
-                  className="h-8"
+                  className="h-8 flex-1 sm:flex-none"
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Executing...
+                      <Loader2 className="mr-1 sm:mr-2 h-4 w-4 animate-spin" />
+                      <span className="hidden sm:inline">Executing...</span>
+                      <span className="sm:hidden">Run</span>
                     </>
                   ) : (
                     <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Run query
+                      <Play className="mr-1 sm:mr-2 h-4 w-4" />
+                      <span className="hidden sm:inline">Run query</span>
+                      <span className="sm:hidden">Run</span>
                     </>
                   )}
                 </Button>
                 {results && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => {
-                        setActiveTab("dataset");
-                        router.push(
-                          `/workspace/data-sources/${dataSourceId}/query?tab=dataset`,
-                        );
-                      }}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Save as Dataset
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleDownload("csv")}>
-                          Download as CSV
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDownload("json")}
-                        >
-                          Download as JSON
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDownload("excel")}
-                        >
-                          Download as Excel
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDownload("csv")}>
+                        Download as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDownload("json")}
+                      >
+                        Download as JSON
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDownload("excel")}
+                      >
+                        Download as Excel
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </>
             )}
@@ -605,30 +648,32 @@ export default function DataSourceQueryPage() {
 
       {/* Main Content */}
       <div className="flex-1 min-h-0">
-        {activeTab === "query" ? (
-          shouldShowSQLEditor ? (
-            <div className="flex h-full">
-              {/* Tables Sidebar - Fixed width based on collapsed state */}
+        {shouldShowSQLEditor ? (
+            <div className="flex flex-col lg:flex-row h-full">
+              {/* Tables Sidebar - Hidden on mobile, visible on desktop */}
               <div
                 className={cn(
-                  "shrink-0 transition-all duration-200 border-r",
-                  sidebarCollapsed ? "w-16" : "w-64",
+                  "hidden lg:flex shrink-0 transition-all duration-200 border-r bg-muted/30",
+                  sidebarCollapsed ? "w-16" : "w-64 xl:w-72",
                 )}
               >
-                <TableNavigation
-                  tables={dataSource.tables || []}
+                <SchemaTableNavigation
+                  schemas={schemas || []}
                   onTableSelect={handleTableSelect}
                   selectedTable={selectedTable}
+                  selectedSchema={selectedSchema}
                   defaultCollapsed={sidebarCollapsed}
                   onCollapsedChange={setSidebarCollapsed}
+                  searchable={true}
+                  isLoading={schemasLoading}
                 />
               </div>
 
               {/* Editor and Results */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
                 {resultsFullScreen && results ? (
                   // Full-screen results view
-                  <div className="h-full flex flex-col bg-background">
+                  <div className="h-full w-full flex flex-col bg-background overflow-hidden">
                     <div className="flex items-center justify-between p-4 border-b shrink-0">
                       <h2 className="text-sm font-medium">Query Results</h2>
                       <Button
@@ -640,12 +685,12 @@ export default function DataSourceQueryPage() {
                         <Minimize2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
                       <SQLResultViewer
                         columns={results.columns}
                         rows={results.rows}
                         loading={loading}
-                        error={_error}
+                        error={error}
                         fullScreen={resultsFullScreen}
                         onFullScreen={setResultsFullScreen}
                         onDownload={handleDownload}
@@ -659,7 +704,7 @@ export default function DataSourceQueryPage() {
                   // Normal split view
                   <ResizablePanelGroup
                     direction="vertical"
-                    className="h-full"
+                    className="h-full w-full flex-1 min-h-0"
                     key={results ? "with-results" : "no-results"}
                   >
                     {/* Query Editor */}
@@ -675,7 +720,7 @@ export default function DataSourceQueryPage() {
                         }
                       }}
                     >
-                      <div className="h-full flex flex-col border-b">
+                      <div className="h-full w-full flex flex-col border-b overflow-hidden">
                         <SQLEditor
                           value={query}
                           onChange={setQuery}
@@ -685,7 +730,7 @@ export default function DataSourceQueryPage() {
                               setValue: (value: string) => void;
                             };
                           }}
-                          className="h-full"
+                          className="h-full w-full"
                         />
                       </div>
                     </ResizablePanel>
@@ -704,18 +749,20 @@ export default function DataSourceQueryPage() {
                           maxSize={80}
                           collapsible
                         >
-                          <SQLResultViewer
-                            columns={results.columns}
-                            rows={results.rows}
-                            loading={loading}
-                            error={_error}
-                            fullScreen={resultsFullScreen}
-                            onFullScreen={setResultsFullScreen}
-                            onDownload={handleDownload}
-                            onOpenInNewTab={() =>
-                              handleOpenInNewTab(results, "query")
-                            }
-                          />
+                          <div className="h-full w-full overflow-hidden flex flex-col">
+                            <SQLResultViewer
+                              columns={results.columns}
+                              rows={results.rows}
+                              loading={loading}
+                              error={error}
+                              fullScreen={resultsFullScreen}
+                              onFullScreen={setResultsFullScreen}
+                              onDownload={handleDownload}
+                              onOpenInNewTab={() =>
+                                handleOpenInNewTab(results, "query")
+                              }
+                            />
+                          </div>
                         </ResizablePanel>
                       </>
                     )}
@@ -725,23 +772,26 @@ export default function DataSourceQueryPage() {
             </div>
           ) : (
             // View for non-SQL data sources
-            <div className="flex-1 min-h-0 flex">
-              {/* Tables Sidebar - Fixed width based on collapsed state */}
+            <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+              {/* Tables Sidebar - Hidden on mobile, visible on desktop */}
               <div
                 className={cn(
-                  "shrink-0 transition-all duration-200 border-r",
-                  sidebarCollapsed ? "w-16" : "w-64",
+                  "hidden lg:flex shrink-0 transition-all duration-200 border-r bg-muted/30",
+                  sidebarCollapsed ? "w-16" : "w-64 xl:w-72",
                 )}
               >
-                <TableNavigation
-                  tables={dataSource.tables || []}
+                <SchemaTableNavigation
+                  schemas={schemas || []}
                   onTableSelect={handleTableSelect}
                   selectedTable={selectedTable}
+                  selectedSchema={selectedSchema}
                   defaultCollapsed={sidebarCollapsed}
                   onCollapsedChange={setSidebarCollapsed}
+                  searchable={true}
+                  isLoading={schemasLoading}
                 />
               </div>
-              <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
                 {tableData || tableDataLoading ? (
                   <>
                     {/* Header with buttons */}
@@ -787,7 +837,7 @@ export default function DataSourceQueryPage() {
                       </div>
                     </div>
                     {/* Table Data Viewer */}
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                       {tableData ? (
                         <SQLResultViewer
                           columns={tableData.columns}
@@ -822,17 +872,6 @@ export default function DataSourceQueryPage() {
                 )}
               </div>
             </div>
-          )
-        ) : (
-          <div className="h-full overflow-auto">
-            <DatasetConfigurationEmbedded
-              dataSourceId={dataSourceId}
-              onBack={() => {
-                setActiveTab("query");
-                router.push(`/workspace/data-sources/${dataSourceId}/query`);
-              }}
-            />
-          </div>
         )}
       </div>
 

@@ -19,16 +19,18 @@ export interface SSHTunnelConfig {
 }
 
 export interface TestConnectionDto {
-  host: string;
+  connectionString?: string;
+  host?: string;
   port?: number;
-  database: string;
-  username: string;
-  password: string;
+  database?: string;
+  username?: string;
+  password?: string;
   ssl?: SSLConfig | null;
   sshTunnel?: SSHTunnelConfig | null;
   connectionTimeout?: number;
   queryTimeout?: number;
   poolSize?: number;
+  databaseType?: string; // "neon", "supabase", "other"
 }
 
 export interface TestConnectionResponse {
@@ -74,6 +76,7 @@ export interface Database {
 export interface Schema {
   name: string;
   owner?: string;
+  tables?: Table[];
 }
 
 export interface Table {

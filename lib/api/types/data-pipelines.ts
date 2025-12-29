@@ -39,11 +39,35 @@ export interface CreatePipelineDto {
   syncMode?: 'full' | 'incremental';
   incrementalColumn?: string;
   syncFrequency?: 'manual' | '15min' | '1hour' | '24hours';
+  collectors?: Array<{
+    id: string;
+    sourceId: string;
+    selectedTables: string[];
+    transformers?: Array<{
+      id: string;
+      name: string;
+      fieldMappings?: Record<string, string>;
+      jsonSchema?: string;
+    }>;
+  }>;
+  emitters?: Array<{
+    id: string;
+    transformId: string;
+    destinationId: string;
+    destinationName: string;
+    destinationType: string;
+    connectionConfig: Record<string, string>;
+  }>;
 }
 
 export interface UpdatePipelineDto {
   name?: string;
   description?: string;
+  sourceType?: string;
+  sourceConnectionId?: string;
+  destinationConnectionId?: string;
+  destinationSchema?: string;
+  destinationTable?: string;
   columnMappings?: ColumnMapping[];
   transformations?: Transformation[];
   writeMode?: 'append' | 'upsert' | 'replace';
@@ -52,6 +76,26 @@ export interface UpdatePipelineDto {
   incrementalColumn?: string;
   syncFrequency?: 'manual' | '15min' | '1hour' | '24hours';
   status?: 'active' | 'paused';
+  collectors?: Array<{
+    id: string;
+    sourceId: string;
+    selectedTables: string[];
+    transformers?: Array<{
+      id: string;
+      name: string;
+      collectorId?: string;
+      emitterId?: string;
+      fieldMappings?: Array<{ source: string; destination: string }>;
+    }>;
+  }>;
+  emitters?: Array<{
+    id: string;
+    transformId: string;
+    destinationId: string;
+    destinationName: string;
+    destinationType: string;
+    connectionConfig?: Record<string, string>;
+  }>;
 }
 
 export interface Pipeline {

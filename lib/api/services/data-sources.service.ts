@@ -40,12 +40,20 @@ export class DataSourcesService {
 
   static async createConnection(
     data: CreateConnectionDto,
+    orgId?: string,
   ): Promise<Connection> {
-    return ApiClient.post<Connection>(`${this.BASE_PATH}/connections`, data);
+    if (!orgId) {
+      throw new Error('Organization ID is required to create a connection');
+    }
+    const params = `?orgId=${encodeURIComponent(orgId)}`;
+    console.log('[DataSourcesService] Creating connection with URL:', `${this.BASE_PATH}/connections${params}`);
+    console.log('[DataSourcesService] orgId being sent:', orgId);
+    return ApiClient.post<Connection>(`${this.BASE_PATH}/connections${params}`, data);
   }
 
-  static async listConnections(): Promise<Connection[]> {
-    return ApiClient.get<Connection[]>(`${this.BASE_PATH}/connections`);
+  static async listConnections(orgId?: string): Promise<Connection[]> {
+    const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : '';
+    return ApiClient.get<Connection[]>(`${this.BASE_PATH}/connections${params}`);
   }
 
   static async getConnection(id: string): Promise<Connection> {
@@ -69,25 +77,38 @@ export class DataSourcesService {
   }
 
   // Schema Discovery
-  static async listDatabases(connectionId: string): Promise<Database[]> {
+  static async listDatabases(connectionId: string, orgId?: string): Promise<Database[]> {
+    const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : '';
     return ApiClient.get<Database[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/databases`,
+      `${this.BASE_PATH}/connections/${connectionId}/databases${params}`,
     );
   }
 
-  static async listSchemas(connectionId: string): Promise<Schema[]> {
+  static async listSchemas(connectionId: string, orgId?: string): Promise<Schema[]> {
+    const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : '';
     return ApiClient.get<Schema[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/schemas`,
+      `${this.BASE_PATH}/connections/${connectionId}/schemas${params}`,
+    );
+  }
+
+  static async listSchemasWithTables(connectionId: string, orgId?: string): Promise<Schema[]> {
+    const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : '';
+    return ApiClient.get<Schema[]>(
+      `${this.BASE_PATH}/connections/${connectionId}/schemas${params}`,
     );
   }
 
   static async listTables(
     connectionId: string,
     schema?: string,
+    orgId?: string,
   ): Promise<Table[]> {
-    const params = schema ? `?schema=${encodeURIComponent(schema)}` : '';
+    const params = new URLSearchParams();
+    if (schema) params.append('schema', schema);
+    if (orgId) params.append('orgId', orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
     return ApiClient.get<Table[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/tables${params}`,
+      `${this.BASE_PATH}/connections/${connectionId}/tables${queryString}`,
     );
   }
 
@@ -95,10 +116,14 @@ export class DataSourcesService {
     connectionId: string,
     table: string,
     schema?: string,
+    orgId?: string,
   ): Promise<TableSchema> {
-    const params = schema ? `?schema=${encodeURIComponent(schema)}` : '';
+    const params = new URLSearchParams();
+    if (schema) params.append('schema', schema);
+    if (orgId) params.append('orgId', orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
     return ApiClient.get<TableSchema>(
-      `${this.BASE_PATH}/connections/${connectionId}/tables/${table}/schema${params}`,
+      `${this.BASE_PATH}/connections/${connectionId}/tables/${table}/schema${queryString}`,
     );
   }
 
@@ -112,9 +137,14 @@ export class DataSourcesService {
   static async executeQuery(
     connectionId: string,
     data: ExecuteQueryDto,
+    orgId?: string,
   ): Promise<QueryExecutionResponse> {
+    if (!orgId) {
+      throw new Error('Organization ID is required to execute a query');
+    }
+    const params = `?orgId=${encodeURIComponent(orgId)}`;
     return ApiClient.post<QueryExecutionResponse>(
-      `${this.BASE_PATH}/connections/${connectionId}/query`,
+      `${this.BASE_PATH}/connections/${connectionId}/query${params}`,
       data,
     );
   }
