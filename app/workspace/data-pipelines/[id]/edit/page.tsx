@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePipeline, useUpdatePipeline } from "@/lib/api/hooks/use-data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -27,7 +28,7 @@ export default function EditPipelinePage() {
   const pipelineId = params.id as string;
   const { data: pipeline, isLoading, error } = usePipeline(pipelineId, orgId);
   const updatePipelineMutation = useUpdatePipeline();
-  
+
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
     collectors: [],
@@ -229,12 +230,83 @@ export default function EditPipelinePage() {
 
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
+  const getMigrationStateBadge = () => {
+    if (!pipeline) return null;
+    
+    const migrationState = pipeline.migrationState || 'pending';
+    
+    switch (migrationState) {
+      case "running":
+        return (
+          <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 animate-pulse">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
+              Running
+            </div>
+          </Badge>
+        );
+      case "listing":
+        return (
+          <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:text-purple-400" />
+              Listing
+            </div>
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:text-green-400" />
+              Completed
+            </div>
+          </Badge>
+        );
+      case "error":
+        return (
+          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:text-red-400" />
+              Error
+            </div>
+          </Badge>
+        );
+      case "pending":
+        if (pipeline.status === "paused") {
+          return (
+            <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Paused
+              </div>
+            </Badge>
+          );
+        }
+        return (
+          <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:text-amber-400" />
+              Pending
+            </div>
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-background">
         <PageHeader
-          title={`Edit Pipeline: ${pipeline.name}`}
+          title={
+            <div className="flex items-center gap-3">
+              <span>{`Edit Pipeline: ${pipeline?.name || ''}`}</span>
+              {getMigrationStateBadge()}
+            </div>
+          }
           description="Update your data pipeline configuration"
           showBackIcon={true}
           onBack={() => router.push("/workspace/data-pipelines")}

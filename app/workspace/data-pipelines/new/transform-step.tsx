@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Database,
   Edit,
+  Key,
   Map as MapIcon,
   Pause,
   Play,
@@ -45,8 +46,9 @@ export interface TransformConfig {
   name: string;
   collectorId: string;
   emitterId: string;
-  fieldMappings: Array<{ source: string; destination: string }>; // JSON array format
+  fieldMappings: Array<{ source: string; destination: string; isPrimaryKey?: boolean }>; // JSON array format with primary key flag
   destinationTable?: string; // Selected destination table (schema.table format)
+  primaryKeyField?: string; // Explicitly defined primary key field name
   status?: "published" | "paused";
 }
 
@@ -74,7 +76,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [selectedEmitterId, setSelectedEmitterId] = useState<string>("");
   const [selectedDestinationTable, setSelectedDestinationTable] = useState<string>("");
   const [transformName, setTransformName] = useState("");
-  const [fieldMappings, setFieldMappings] = useState<Array<{ source: string; destination: string }>>([]);
+  const [fieldMappings, setFieldMappings] = useState<Array<{ source: string; destination: string; isPrimaryKey?: boolean }>>([]);
+  const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
@@ -99,8 +102,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       const emitter = allEmitters.find((e) => e.id === transform.emitterId);
       return {
         ...transform,
-        collectorId: collector.id,
-        collectorName: source?.name || `Data Source ${collector.sourceId.slice(-6)}`,
+      collectorId: collector.id,
+      collectorName: source?.name || `Data Source ${collector.sourceId.slice(-6)}`,
         emitterName: emitter?.destinationName || "Unknown",
         fieldMappings: transform.fieldMappings || [],
       };
@@ -232,15 +235,26 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     destinationField: string,
   ) => {
     setFieldMappings((prev) => {
-      const existing = prev.findIndex((m) => m.source === sourceField);
+      const existing = prev.findIndex((m) => m.destination === destinationField);
+      // Auto-set as primary key if this is the ID field
+      const isPrimaryKey = destinationField.toLowerCase() === 'id' || destinationField === primaryKeyField;
       if (existing >= 0) {
         // Update existing mapping
         const updated = [...prev];
-        updated[existing] = { source: sourceField, destination: destinationField };
+        updated[existing] = { source: sourceField, destination: destinationField, isPrimaryKey };
+        // If this is ID field and no primary key set yet, set it
+        if (destinationField.toLowerCase() === 'id' && !primaryKeyField) {
+          setPrimaryKeyField(destinationField);
+        }
         return updated;
       } else {
         // Add new mapping
-        return [...prev, { source: sourceField, destination: destinationField }];
+        const newMapping = { source: sourceField, destination: destinationField, isPrimaryKey };
+        // If this is ID field and no primary key set yet, set it
+        if (destinationField.toLowerCase() === 'id' && !primaryKeyField) {
+          setPrimaryKeyField(destinationField);
+        }
+        return [...prev, newMapping];
       }
     });
   };
@@ -259,6 +273,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       emitterId: selectedEmitterId,
       fieldMappings,
       destinationTable: selectedDestinationTable, // Store selected destination table
+      primaryKeyField: primaryKeyField || (fieldMappings.find(m => m.isPrimaryKey || m.destination.toLowerCase() === 'id')?.destination || ''),
     };
 
     const updatedCollectors = collectors.map((collector) => {
@@ -335,6 +350,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setTransformName(transform.name);
     setFieldMappings(transform.fieldMappings || []);
     setSelectedDestinationTable(transform.destinationTable || "");
+    setPrimaryKeyField(transform.primaryKeyField || transform.fieldMappings?.find(m => m.isPrimaryKey || m.destination.toLowerCase() === 'id')?.destination || "");
     setShowAddDialog(true);
   };
 
@@ -609,7 +625,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           </div>
 
           {selectedCollectorId && selectedEmitterId && (
-            <div className="space-y-4">
+              <div className="space-y-4">
               {/* Destination Table Selection */}
               <div className="space-y-2">
                 <Label>Destination Table</Label>
@@ -742,19 +758,19 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                           <div className="py-12 text-center text-sm text-destructive">
                             <p className="font-medium">Error loading source fields</p>
                             <p className="text-xs mt-1">Please try again</p>
-                          </div>
-                        ) : sourceFields.length === 0 ? (
+                      </div>
+                    ) : sourceFields.length === 0 ? (
                           <div className="py-12 text-center text-sm text-muted-foreground">
                             <p>No fields available.</p>
                             <p className="text-xs mt-1">Make sure tables are selected in the collector.</p>
-                          </div>
-                        ) : (
+                      </div>
+                    ) : (
                           <div className="space-y-2">
                             {sourceFields.map((field) => {
                               const mapping = fieldMappings.find((m) => m.source === field.name);
                               return (
-                                <div
-                                  key={field.name}
+                          <div
+                            key={field.name}
                                   className={`group flex items-center gap-3 rounded-lg border-2 p-3 transition-all cursor-pointer ${
                                     mapping 
                                       ? "bg-primary/10 border-primary shadow-sm" 
@@ -763,10 +779,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                 >
                                   <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-sm truncate text-foreground">
-                                      {field.name}
-                                    </p>
+                                  {field.name}
+                                </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                      {field.table} • {field.type}
+                                  {field.table} • {field.type}
                                     </p>
                                   </div>
                                   {mapping && (
@@ -794,20 +810,37 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     <div className="space-y-3 max-h-[300px] md:max-h-[400px] lg:max-h-[500px] overflow-y-auto pr-2">
                       {destinationFields.map((destinationField) => {
                         const mapping = fieldMappings.find((m) => m.destination === destinationField.name);
+                        const isIdField = destinationField.name.toLowerCase() === 'id';
                         return (
                           <div 
                             key={destinationField.name} 
                             className={`flex flex-col lg:flex-row items-stretch lg:items-center gap-3 p-3 md:p-4 rounded-lg border-2 transition-all w-full ${
                               mapping 
                                 ? "bg-primary/5 border-primary" 
+                                : isIdField
+                                ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700"
                                 : "bg-card border-border hover:border-primary/50"
                             }`}
                           >
                             {/* Fixed Destination Field (Left) */}
-                            <div className="flex-1 rounded-lg border p-3 bg-green-50 dark:bg-green-900/10 min-w-0 w-full lg:w-auto">
+                            <div className={`flex-1 rounded-lg border p-3 min-w-0 w-full lg:w-auto ${
+                              isIdField 
+                                ? "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800" 
+                                : "bg-green-50 dark:bg-green-900/10"
+                            }`}>
                               <div className="flex items-center gap-2 mb-1">
-                                <Database className="h-3 w-3 text-green-600 dark:text-green-400 shrink-0" />
-                                <p className="text-xs font-medium text-green-700 dark:text-green-400">Destination</p>
+                                <Database className={`h-3 w-3 shrink-0 ${
+                                  isIdField 
+                                    ? "text-amber-600 dark:text-amber-400" 
+                                    : "text-green-600 dark:text-green-400"
+                                }`} />
+                                <p className={`text-xs font-medium ${
+                                  isIdField 
+                                    ? "text-amber-700 dark:text-amber-400" 
+                                    : "text-green-700 dark:text-green-400"
+                                }`}>
+                                  {isIdField ? "ID (Required)" : "Destination"}
+                                </p>
                               </div>
                               <p className="text-sm font-semibold truncate">{destinationField.name}</p>
                               <p className="text-xs text-muted-foreground mt-1">{destinationField.type}</p>
@@ -822,9 +855,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                     handleFieldMapping(value, destinationField.name);
                                   }
                                 }}
+                                required={isIdField}
                               >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Select source field" />
+                                <SelectTrigger className={`w-full ${isIdField && !mapping ? "border-amber-300 dark:border-amber-700" : ""}`}>
+                                  <SelectValue placeholder={isIdField ? "Select ID field (required)" : "Select source field"} />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {sourceFields.map((field) => {
@@ -853,25 +887,73 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                               </Select>
                             </div>
                             {mapping && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 self-center"
-                                onClick={() => handleRemoveMapping(destinationField.name)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {/* Primary Key Toggle */}
+                                <Button
+                                  variant={mapping.isPrimaryKey ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-8 text-xs px-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setFieldMappings((prev) =>
+                                      prev.map((m) =>
+                                        m.destination === destinationField.name
+                                          ? { ...m, isPrimaryKey: !m.isPrimaryKey }
+                                          : m.destination === primaryKeyField
+                                          ? { ...m, isPrimaryKey: false }
+                                          : m,
+                                      ),
+                                    );
+                                    if (mapping.isPrimaryKey) {
+                                      setPrimaryKeyField("");
+                                    } else {
+                                      setPrimaryKeyField(destinationField.name);
+                                    }
+                                  }}
+                                  title={mapping.isPrimaryKey ? "Remove as Primary Key" : "Set as Primary Key"}
+                                >
+                                  <Key className="h-3 w-3 mr-1" />
+                                  {mapping.isPrimaryKey ? "PK" : "Set PK"}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    if (mapping.isPrimaryKey) {
+                                      setPrimaryKeyField("");
+                                    }
+                                    handleRemoveMapping(destinationField.name);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
                         );
                       })}
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-3 border">
+                      </div>
+                    {/* Primary Key Selection Info */}
+                    {primaryKeyField && (
+                      <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2">
+                          <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                            Primary Key: <span className="font-mono">{primaryKeyField}</span>
+                          </p>
+                        </div>
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                          This field will be used to prevent duplicate entries during migration. Duplicate records with the same primary key value will be skipped.
+                        </p>
+                      </div>
+                    )}
+                    <div className="rounded-lg bg-muted/50 p-3 border mt-4">
                       <p className="text-xs text-muted-foreground">
-                        <strong>Note:</strong> Each destination field can be mapped to one source field. Mappings are stored as JSON array format: <code className="px-1.5 py-0.5 bg-background rounded text-xs font-mono">[{"{source: \"field1\", destination: \"field2\"}"}]</code>
+                        <strong>Note:</strong> Each destination field can be mapped to one source field. Mark a field as Primary Key (PK) to prevent duplicates. Mappings are stored as JSON array format: <code className="px-1.5 py-0.5 bg-background rounded text-xs font-mono">[{"{source: \"field1\", destination: \"field2\", isPrimaryKey: true}"}]</code>
                       </p>
-                    </div>
-                  </div>
+                </div>
+                </div>
               </div>
               )}
             </div>

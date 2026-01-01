@@ -122,11 +122,11 @@ export default function NewPipelinePage() {
         (t: any) => t.emitterId === e.id
       );
       return {
-        id: e.id,
+          id: e.id,
         transformId: transformer?.id || "", // Set transformId if transformer references this emitter
-        destinationId: e.destinationId,
-        destinationName: e.destinationName,
-        destinationType: e.destinationType,
+          destinationId: e.destinationId,
+          destinationName: e.destinationName,
+          destinationType: e.destinationType,
         // connectionConfig is not needed - connection is referenced by destinationId
       };
     });

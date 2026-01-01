@@ -122,6 +122,8 @@ export interface Pipeline {
   syncFrequency: 'manual' | '15min' | '1hour' | '24hours';
   status: 'active' | 'paused' | 'error';
   lastRunAt?: Date | string;
+  lastRunStatus?: 'running' | 'success' | 'failed';
+  migrationState?: 'pending' | 'running' | 'listing' | 'completed' | 'error';
   nextRunAt?: Date | string;
   createdAt: Date | string;
   updatedAt: Date | string;

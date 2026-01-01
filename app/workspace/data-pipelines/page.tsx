@@ -3,6 +3,7 @@
 import {
   ArrowRightLeft,
   Database,
+  Pause,
   Plus,
   Settings,
   Sparkles,
@@ -15,7 +16,7 @@ import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { usePipelines, useDeletePipeline, useRunPipeline } from "@/lib/api/hooks/use-data-pipelines";
+import { usePipelines, useDeletePipeline, useRunPipeline, usePausePipeline } from "@/lib/api/hooks/use-data-pipelines";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -32,6 +33,7 @@ export default function DataPipelinesPage() {
   const { data: connections } = useConnections(orgId);
   const deletePipeline = useDeletePipeline();
   const runPipeline = useRunPipeline();
+  const pausePipeline = usePausePipeline();
   const router = useRouter();
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -63,9 +65,97 @@ export default function DataPipelinesPage() {
     }
   };
 
-  const getStatusBadge = (status: Pipeline["status"]) => {
-    switch (status) {
+  const getStatusBadge = (pipeline: Pipeline) => {
+    // Priority order: migrationState > lastRunStatus > status
+    
+    // Get migration state (default to pending if not set)
+    const migrationState = pipeline.migrationState || 'pending';
+    
+    // Migration state badges (highest priority)
+    switch (migrationState) {
+      case "running":
+        return (
+          <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 animate-pulse">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
+              Running
+            </div>
+          </Badge>
+        );
+      case "listing":
+        return (
+          <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:bg-purple-400" />
+              Listing
+            </div>
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400" />
+              Completed
+            </div>
+          </Badge>
+        );
+      case "error":
+        return (
+          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
+              Error
+            </div>
+          </Badge>
+        );
+      case "pending":
+        // Check if pipeline is paused
+        if (pipeline.status === "paused") {
+          return (
+            <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Paused
+              </div>
+            </Badge>
+          );
+        }
+        // Show pending state
+        return (
+          <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
+              Pending
+            </div>
+          </Badge>
+        );
+    }
+
+    // Fallback to lastRunStatus if migrationState is not set
+    if (pipeline.lastRunStatus === "running") {
+      return (
+        <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 animate-pulse">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
+            Running
+          </div>
+        </Badge>
+      );
+    }
+
+    // Fallback to pipeline status
+    switch (pipeline.status) {
       case "active":
+        // Show sync mode if available
+        const syncMode = (pipeline as any).syncMode;
+        if (syncMode === "incremental") {
+          return (
+            <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+              Active (Incremental)
+            </Badge>
+          );
+        }
         return (
           <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
             Active
@@ -73,14 +163,26 @@ export default function DataPipelinesPage() {
         );
       case "paused":
         return (
-          <Badge variant="outline" className="text-muted-foreground">
-            Paused
+          <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Paused
+            </div>
           </Badge>
         );
       case "error":
         return (
-          <Badge className="bg-destructive/10 text-destructive border-destructive/20">
-            Error
+          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
+              Error
+            </div>
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-muted-foreground">
+            Unknown
           </Badge>
         );
     }
@@ -118,6 +220,21 @@ export default function DataPipelinesPage() {
       toast.error(
         "Failed to run pipeline",
         error?.message || "Unable to start the pipeline execution.",
+      );
+    }
+  };
+
+  const handlePausePipeline = async (pipelineId: string, pipelineName: string) => {
+    try {
+      await pausePipeline.mutateAsync(pipelineId);
+      toast.success(
+        "Pipeline paused",
+        `${pipelineName} has been paused successfully.`,
+      );
+    } catch (error: any) {
+      toast.error(
+        "Failed to pause pipeline",
+        error?.message || "Unable to pause the pipeline.",
       );
     }
   };
@@ -177,7 +294,7 @@ export default function DataPipelinesPage() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => getStatusBadge(row.original.status),
+      cell: ({ row }) => getStatusBadge(row.original),
     },
     {
       accessorKey: "destinationConnectionId",
@@ -208,8 +325,40 @@ export default function DataPipelinesPage() {
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const pipeline = row.original;
+        const migrationState = pipeline.migrationState || 'pending';
+        const isRunning = migrationState === "running" || migrationState === "listing" || pipeline.lastRunStatus === "running";
+        const isPaused = pipeline.status === "paused";
+        const canPause = migrationState === "running" || migrationState === "listing";
+        
+        // Get button text based on actual migration state (matching status badge logic)
+        const getButtonText = () => {
+          if (migrationState === "running") return "Running...";
+          if (migrationState === "listing") return "Listing...";
+          if (pipeline.lastRunStatus === "running") return "Running...";
+          if (isPaused) return "Paused";
+          if (migrationState === "pending") return "Run";
+          if (migrationState === "completed") return "Run";
+          if (migrationState === "error") return "Run";
+          return "Run";
+        };
+        
         return (
           <div className="flex items-center justify-end gap-2">
+            {canPause && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePausePipeline(pipeline.id, pipeline.name);
+                }}
+                disabled={pausePipeline.isPending}
+                title="Pause pipeline execution"
+              >
+                <Pause className="h-4 w-4 mr-2" />
+                Pause
+              </Button>
+            )}
             <Button
               variant="default"
               size="sm"
@@ -217,10 +366,23 @@ export default function DataPipelinesPage() {
                 e.stopPropagation();
                 handleRunPipeline(pipeline.id, pipeline.name);
               }}
-              disabled={runPipeline.isPending || pipeline.status === "paused"}
+              disabled={
+                runPipeline.isPending || 
+                isPaused || 
+                isRunning
+              }
+              title={
+                runPipeline.isPending
+                  ? "Pipeline execution in progress..."
+                  : isPaused
+                  ? "Pipeline is paused. Please activate it first."
+                  : isRunning
+                  ? "Pipeline is currently running. Please wait for it to complete."
+                  : "Run pipeline"
+              }
             >
               <Zap className="h-4 w-4 mr-2" />
-              Run
+              {getButtonText()}
             </Button>
             <Button
               variant="outline"

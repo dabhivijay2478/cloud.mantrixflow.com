@@ -64,8 +64,8 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         .map((conn) => ({
           id: conn.id,
           name: conn.name,
-          type: "database",
-          icon: Database,
+      type: "database",
+      icon: Database,
         }));
 
   // Convert API connections to DataSource format for compatibility
@@ -123,13 +123,13 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === selectedCollectorId) {
-        const emitters = editingEmitter
+          const emitters = editingEmitter
           ? ((collector as any).emitters || []).map((e: EmitterConfig) =>
-              e.id === editingEmitter ? newEmitter : e,
+                e.id === editingEmitter ? newEmitter : e,
             )
           : [...((collector as any).emitters || []), newEmitter];
         return { ...collector, emitters };
-      }
+        }
       return collector;
     });
 
@@ -145,10 +145,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === collectorId) {
         const emitters = ((collector as any).emitters || []).filter(
-          (e: EmitterConfig) => e.id !== emitterId,
-        );
+            (e: EmitterConfig) => e.id !== emitterId,
+          );
         return { ...collector, emitters };
-      }
+        }
       return collector;
     });
     onComplete(updatedCollectors);
@@ -507,7 +507,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                             {selectedTablesCount} table{selectedTablesCount !== 1 ? "s" : ""}
                           </Badge>
                         </div>
-                      </SelectItem>
+                  </SelectItem>
                     );
                   })
                 )}
@@ -594,7 +594,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                     This emitter will use the connection "{selectedDestination.name}" 
                     that you've already configured. No additional connection settings are needed.
                   </p>
-                </div>
+                  </div>
               </div>
             </>
           )}
