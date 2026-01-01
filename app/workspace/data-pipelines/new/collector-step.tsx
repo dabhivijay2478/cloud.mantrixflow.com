@@ -90,6 +90,13 @@ export function CollectorStep({
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
 
+  // Update collectors when initialCollectors prop changes (for edit mode)
+  useEffect(() => {
+    if (initialCollectors && initialCollectors.length > 0) {
+      setCollectors(initialCollectors);
+    }
+  }, [initialCollectors]);
+
   const selectedSource = dataSources.find((ds) => ds.id === selectedSourceId);
   const sourceDatasets = datasets.filter(
     (ds) => ds.dataSourceId === selectedSourceId,

@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   Database,
   Pause,
+  Play,
   Plus,
   Settings,
   Sparkles,
@@ -16,7 +17,7 @@ import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { usePipelines, useDeletePipeline, useRunPipeline, usePausePipeline } from "@/lib/api/hooks/use-data-pipelines";
+import { usePipelines, useDeletePipeline, useRunPipeline, usePausePipeline, useResumePipeline } from "@/lib/api/hooks/use-data-pipelines";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -34,6 +35,7 @@ export default function DataPipelinesPage() {
   const deletePipeline = useDeletePipeline();
   const runPipeline = useRunPipeline();
   const pausePipeline = usePausePipeline();
+  const resumePipeline = useResumePipeline();
   const router = useRouter();
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -66,12 +68,24 @@ export default function DataPipelinesPage() {
   };
 
   const getStatusBadge = (pipeline: Pipeline) => {
-    // Priority order: migrationState > lastRunStatus > status
+    // Priority order: paused status > migrationState > lastRunStatus > status
+    
+    // Check if pipeline is paused first (highest priority)
+    if (pipeline.status === "paused") {
+      return (
+        <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            Paused
+          </div>
+        </Badge>
+      );
+    }
     
     // Get migration state (default to pending if not set)
     const migrationState = pipeline.migrationState || 'pending';
     
-    // Migration state badges (highest priority)
+    // Migration state badges (second priority)
     switch (migrationState) {
       case "running":
         return (
@@ -239,6 +253,21 @@ export default function DataPipelinesPage() {
     }
   };
 
+  const handleResumePipeline = async (pipelineId: string, pipelineName: string) => {
+    try {
+      await resumePipeline.mutateAsync(pipelineId);
+      toast.success(
+        "Pipeline resumed",
+        `${pipelineName} has been resumed successfully. You can now run it.`,
+      );
+    } catch (error: any) {
+      toast.error(
+        "Failed to resume pipeline",
+        error?.message || "Unable to resume the pipeline.",
+      );
+    }
+  };
+
   const columns: ColumnDef<Pipeline>[] = [
     {
       accessorKey: "name",
@@ -328,14 +357,15 @@ export default function DataPipelinesPage() {
         const migrationState = pipeline.migrationState || 'pending';
         const isRunning = migrationState === "running" || migrationState === "listing" || pipeline.lastRunStatus === "running";
         const isPaused = pipeline.status === "paused";
-        const canPause = migrationState === "running" || migrationState === "listing";
+        // Only show pause button when running/listing AND not paused
+        const canPause = (migrationState === "running" || migrationState === "listing") && !isPaused;
         
         // Get button text based on actual migration state (matching status badge logic)
         const getButtonText = () => {
           if (migrationState === "running") return "Running...";
           if (migrationState === "listing") return "Listing...";
           if (pipeline.lastRunStatus === "running") return "Running...";
-          if (isPaused) return "Paused";
+          if (isPaused) return "Run"; // Allow running even when paused (will resume)
           if (migrationState === "pending") return "Run";
           if (migrationState === "completed") return "Run";
           if (migrationState === "error") return "Run";
@@ -359,31 +389,44 @@ export default function DataPipelinesPage() {
                 Pause
               </Button>
             )}
-            <Button
-              variant="default"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRunPipeline(pipeline.id, pipeline.name);
-              }}
-              disabled={
-                runPipeline.isPending || 
-                isPaused || 
-                isRunning
-              }
-              title={
-                runPipeline.isPending
-                  ? "Pipeline execution in progress..."
-                  : isPaused
-                  ? "Pipeline is paused. Please activate it first."
-                  : isRunning
-                  ? "Pipeline is currently running. Please wait for it to complete."
-                  : "Run pipeline"
-              }
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              {getButtonText()}
-            </Button>
+            {isPaused ? (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleResumePipeline(pipeline.id, pipeline.name);
+                }}
+                disabled={resumePipeline.isPending}
+                title="Resume pipeline to active state"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Resume
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRunPipeline(pipeline.id, pipeline.name);
+                }}
+                disabled={
+                  runPipeline.isPending || 
+                  isRunning
+                }
+                title={
+                  runPipeline.isPending
+                    ? "Pipeline execution in progress..."
+                    : isRunning
+                    ? "Pipeline is currently running. Please wait for it to complete."
+                    : "Run pipeline"
+                }
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                {getButtonText()}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

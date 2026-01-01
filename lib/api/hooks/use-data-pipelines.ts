@@ -117,10 +117,16 @@ export function usePausePipeline() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => DataPipelinesService.pausePipeline(id),
-    onSuccess: (_, pipelineId) => {
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(pipelineId),
-      });
+    onSuccess: (updatedPipeline, pipelineId) => {
+      // ApiClient already extracts data from response, so updatedPipeline is the Pipeline object
+      // Update the cache with the returned pipeline data
+      if (updatedPipeline?.id) {
+        queryClient.setQueryData(
+          dataPipelinesKeys.pipelines.detail(updatedPipeline.id),
+          updatedPipeline,
+        );
+      }
+      // Invalidate lists to ensure consistency
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.pipelines.lists(),
       });
@@ -132,10 +138,16 @@ export function useResumePipeline() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => DataPipelinesService.resumePipeline(id),
-    onSuccess: (_, pipelineId) => {
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(pipelineId),
-      });
+    onSuccess: (updatedPipeline, pipelineId) => {
+      // ApiClient already extracts data from response, so updatedPipeline is the Pipeline object
+      // Update the cache with the returned pipeline data
+      if (updatedPipeline?.id) {
+        queryClient.setQueryData(
+          dataPipelinesKeys.pipelines.detail(updatedPipeline.id),
+          updatedPipeline,
+        );
+      }
+      // Invalidate lists to ensure consistency
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.pipelines.lists(),
       });

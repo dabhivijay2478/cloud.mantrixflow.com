@@ -42,19 +42,71 @@ export default function EditPipelinePage() {
       const collectors = transformations?.collectors || [];
       const emitters = transformations?.emitters || [];
       
-      console.log('Pipeline data:', {
+      console.log('Pipeline data loaded for edit:', {
         transformations,
         collectors,
         emitters,
         pipeline,
+        collectorsCount: collectors.length,
+        emittersCount: emitters.length,
+        collectorsWithEmitters: collectors.map((c: any) => ({
+          id: c.id,
+          hasEmitters: !!(c.emitters && c.emitters.length > 0),
+          emittersCount: c.emitters?.length || 0,
+          transformersCount: (c.transformers || []).length,
+          transformers: (c.transformers || []).map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            emitterId: t.emitterId,
+            fieldMappingsCount: t.fieldMappings?.length || 0,
+            fieldMappings: t.fieldMappings,
+          })),
+        })),
       });
       
-      setConfig({
-        collectors: collectors.map((c: any) => {
-          // Find emitters associated with this collector's transformers
+      // Map emitters to collectors
+      // Strategy 1: If emitters are stored directly on collectors (from new pipeline flow)
+      // Strategy 2: If emitters are in separate array, map via transformers
+      const collectorEmittersMap = new Map<string, any[]>();
+      
+      collectors.forEach((c: any) => {
+        // First, check if emitters are already on the collector (from new pipeline creation)
+        if (c.emitters && Array.isArray(c.emitters) && c.emitters.length > 0) {
+          collectorEmittersMap.set(c.id, c.emitters);
+        } else {
+          // Otherwise, map emitters via transformer relationships
+          const collectorEmitterIds = new Set<string>();
+          (c.transformers || []).forEach((t: any) => {
+            if (t.emitterId) {
+              collectorEmitterIds.add(t.emitterId);
+            }
+          });
+          
           const collectorEmitters = emitters.filter((e: any) => 
-            c.transformers?.some((t: any) => t.emitterId === e.id)
+            collectorEmitterIds.has(e.id)
           );
+          
+          if (collectorEmitters.length > 0) {
+            collectorEmittersMap.set(c.id, collectorEmitters);
+          }
+        }
+      });
+      
+      // Also check if there are emitters without collector association (fallback)
+      // In this case, associate them with the first collector
+      if (collectors.length > 0 && emitters.length > 0) {
+        const allMappedEmitterIds = new Set(
+          Array.from(collectorEmittersMap.values()).flat().map((e: any) => e.id)
+        );
+        const unmappedEmitters = emitters.filter((e: any) => !allMappedEmitterIds.has(e.id));
+        if (unmappedEmitters.length > 0 && !collectorEmittersMap.has(collectors[0].id)) {
+          collectorEmittersMap.set(collectors[0].id, unmappedEmitters);
+        }
+      }
+      
+      const finalConfig = {
+        collectors: collectors.map((c: any) => {
+          const collectorEmitters = collectorEmittersMap.get(c.id) || [];
           
           return {
             id: c.id,
@@ -73,18 +125,40 @@ export default function EditPipelinePage() {
               name: t.name,
               collectorId: t.collectorId || c.id,
               emitterId: t.emitterId || "",
+              destinationTable: t.destinationTable || "",
+              primaryKeyField: t.primaryKeyField || "",
               fieldMappings: Array.isArray(t.fieldMappings) 
-                ? t.fieldMappings 
-                : t.fieldMappings 
+                ? t.fieldMappings.map((fm: any) => ({
+                    source: typeof fm === 'object' && fm.source ? String(fm.source) : (typeof fm === 'string' ? fm : String(fm?.source || '')),
+                    destination: typeof fm === 'object' && fm.destination ? String(fm.destination) : (typeof fm === 'string' ? fm : String(fm?.destination || '')),
+                    isPrimaryKey: fm?.isPrimaryKey || false,
+                  }))
+                : t.fieldMappings && typeof t.fieldMappings === 'object'
                   ? Object.entries(t.fieldMappings).map(([source, destination]) => ({
                       source: String(source),
                       destination: String(destination),
+                      isPrimaryKey: false,
                     }))
                   : [],
             })),
           };
         }) as CollectorConfig[],
+      };
+      
+      console.log('Config set for edit:', {
+        collectorsCount: finalConfig.collectors.length,
+        configCollectors: finalConfig.collectors.map((c: any) => ({
+          id: c.id,
+          sourceId: c.sourceId,
+          selectedTables: c.selectedTables,
+          emittersCount: c.emitters?.length || 0,
+          emitters: c.emitters?.map((e: any) => ({ id: e.id, destinationId: e.destinationId, destinationName: e.destinationName })) || [],
+          transformersCount: c.transformers?.length || 0,
+          transformers: c.transformers?.map((t: any) => ({ id: t.id, name: t.name, emitterId: t.emitterId, fieldMappingsCount: t.fieldMappings?.length || 0 })) || [],
+        })),
       });
+      
+      setConfig(finalConfig);
     }
   }, [pipeline]);
 

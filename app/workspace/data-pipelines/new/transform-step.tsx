@@ -12,7 +12,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,24 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Debug: Log when collectors prop changes
+  useEffect(() => {
+    console.log('TransformStep - Collectors prop changed:', {
+      collectorsCount: collectors.length,
+      collectors: collectors.map((c) => ({
+        id: c.id,
+        sourceId: c.sourceId,
+        transformersCount: c.transformers?.length || 0,
+        transformers: c.transformers?.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          emitterId: t.emitterId,
+          fieldMappingsCount: t.fieldMappings?.length || 0,
+        })) || [],
+      })),
+    });
+  }, [collectors]);
+
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<EmitterConfig & { collectorId: string; collectorName: string }> = 
     collectors.flatMap((collector) => {
@@ -97,7 +115,23 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     TransformConfig & { collectorName: string; emitterName: string }
   > = collectors.flatMap((collector) => {
     const source = dataSources.find((ds) => ds.id === collector.sourceId);
-    return (collector.transformers || []).map((t) => {
+    const collectorTransformers = collector.transformers || [];
+    
+    // Debug logging
+    if (collectorTransformers.length > 0) {
+      console.log('TransformStep - Found transformers for collector:', {
+        collectorId: collector.id,
+        transformersCount: collectorTransformers.length,
+        transformers: collectorTransformers.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          emitterId: t.emitterId,
+          fieldMappingsCount: t.fieldMappings?.length || 0,
+        })),
+      });
+    }
+    
+    return collectorTransformers.map((t) => {
       const transform = (t as any) as TransformConfig;
       const emitter = allEmitters.find((e) => e.id === transform.emitterId);
       return {
@@ -108,6 +142,19 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         fieldMappings: transform.fieldMappings || [],
       };
     });
+  });
+  
+  // Debug logging for all transforms
+  console.log('TransformStep - All transforms:', {
+    collectorsCount: collectors.length,
+    allTransformsCount: allTransforms.length,
+    allTransforms: allTransforms.map((t) => ({
+      id: t.id,
+      name: t.name,
+      collectorId: t.collectorId,
+      emitterId: t.emitterId,
+      fieldMappingsCount: t.fieldMappings?.length || 0,
+    })),
   });
 
   const selectedCollector = collectors.find(
