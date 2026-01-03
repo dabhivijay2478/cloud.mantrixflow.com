@@ -51,7 +51,15 @@ export default function NewPipelinePage() {
     handleCreatePipeline();
   };
 
+  const [isCreating, setIsCreating] = useState(false);
+
   const handleCreatePipeline = async () => {
+    // Prevent double submission
+    if (isCreating) {
+      console.warn("Pipeline creation already in progress, ignoring duplicate request");
+      return;
+    }
+
     if (!orgId) {
       toast.error("No organization selected", "Please select an organization from the sidebar.");
       return;
@@ -61,6 +69,8 @@ export default function NewPipelinePage() {
       toast.error("No collectors", "Please add at least one collector.");
       return;
     }
+
+    setIsCreating(true);
 
     // Get all unique source IDs and destination IDs
     const allSourceIds = [...new Set(config.collectors.map((c) => c.sourceId))];
@@ -194,6 +204,8 @@ export default function NewPipelinePage() {
         "Failed to create pipeline",
         error instanceof Error ? error.message : "Unknown error occurred",
       );
+    } finally {
+      setIsCreating(false);
     }
   };
 
