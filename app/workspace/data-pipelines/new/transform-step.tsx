@@ -70,25 +70,25 @@ export interface TransformConfig {
 export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-
+  
   // Fetch connections from API
   const { data: connections } = useConnections(orgId);
-
+  
   // Convert API connections to DataSource format for compatibility
   const dataSources =
     connections?.map((conn) => ({
-      id: conn.id,
-      name: conn.name,
-      type: "postgres" as const,
+    id: conn.id,
+    name: conn.name,
+    type: "postgres" as const,
       status:
         conn.status === "active"
           ? ("connected" as const)
           : ("disconnected" as const),
-      organizationId: conn.orgId,
-      connectedAt: conn.lastConnectedAt || undefined,
-      tables: [],
-    })) || [];
-
+    organizationId: conn.orgId,
+    connectedAt: conn.lastConnectedAt || undefined,
+    tables: [],
+  })) || [];
+  
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransform, setEditingTransform] = useState<string | null>(null);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
@@ -145,7 +145,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     // Debug logging
     if (collectorTransformers.length > 0) {
       console.log("TransformStep - Found transformers for collector:", {
-        collectorId: collector.id,
+      collectorId: collector.id,
         transformersCount: collectorTransformers.length,
         transformers: collectorTransformers.map((t: any) => ({
           id: t.id,
@@ -222,14 +222,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     ) {
       return [];
     }
-
+    
     return selectedCollector.selectedTables.map((tableName) => {
       const parts = tableName.includes(".")
         ? tableName.split(".")
         : ["public", tableName];
       const schema = parts[0];
       const table = parts[1];
-
+      
       return {
         tableName,
         schema,
@@ -246,7 +246,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         queryKey: ["table-schema", connectionId, table, schema, "source"],
         queryFn: () =>
           DataSourcesService.getTableSchema(connectionId, table, schema, orgId),
-        enabled: !!connectionId && !!table && !!orgId,
+      enabled: !!connectionId && !!table && !!orgId,
       })
     ),
   });
@@ -254,7 +254,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   // Build source fields from fetched table schemas
   const sourceFields = useMemo(() => {
     const fields: Array<{ name: string; type: string; table: string }> = [];
-
+    
     sourceSchemaQueries.forEach((query, index) => {
       if (query.data && query.data.columns) {
         const tableInfo = sourceTableQueries[index];
@@ -267,7 +267,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         });
       }
     });
-
+    
     return fields;
   }, [sourceSchemaQueries, sourceTableQueries]);
 
@@ -356,7 +356,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         const updated = prev.map((m) => {
           if (m.destination === destinationField) {
             return {
-              source: sourceField,
+          source: sourceField,
               destination: destinationField,
               isPrimaryKey: shouldSetAsPK,
             };
@@ -705,10 +705,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           </div>
         }
       >
-        <div className="space-y-4 w-full">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-6 w-full">
+          {/* Combined Configuration Row - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Collector Field */}
             <div className="space-y-2">
-              <Label>Collector</Label>
+              <Label className="text-sm font-medium text-foreground">
+                Collector
+              </Label>
               <Select
                 value={selectedCollectorId}
                 onValueChange={(value) => {
@@ -718,7 +722,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 }}
                 disabled={!!editingTransform}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-10 w-full">
                   <SelectValue placeholder="Select a collector" />
                 </SelectTrigger>
                 <SelectContent>
@@ -739,12 +743,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       return (
                         <SelectItem key={collector.id} value={collector.id}>
                           <div className="flex items-center gap-2 w-full">
-                            <Database className="h-4 w-4 shrink-0" />
-                            <span className="truncate flex-1">
+                            <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate flex-1 font-medium">
                               {displayName}
                             </span>
                             <Badge
-                              variant="outline"
+                              variant="secondary"
                               className="text-xs shrink-0"
                             >
                               {selectedTablesCount} table
@@ -758,8 +762,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Emitter Field */}
             <div className="space-y-2">
-              <Label>Emitter</Label>
+              <Label className="text-sm font-medium text-foreground">
+                Emitter
+              </Label>
               <Select
                 value={selectedEmitterId}
                 onValueChange={(value) => {
@@ -769,7 +777,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 }}
                 disabled={!!editingTransform || !selectedCollectorId}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-10 w-full">
                   <SelectValue placeholder="Select an emitter" />
                 </SelectTrigger>
                 <SelectContent>
@@ -783,8 +791,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     availableEmitters.map((emitter) => (
                       <SelectItem key={emitter.id} value={emitter.id}>
                         <div className="flex items-center gap-2 w-full">
-                          <Database className="h-4 w-4 shrink-0" />
-                          <span className="truncate flex-1">
+                          <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="truncate flex-1 font-medium">
                             {emitter.destinationName}
                           </span>
                         </div>
@@ -794,21 +802,26 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Transform Name Field */}
             <div className="space-y-2">
-              <Label>Transform Name</Label>
+              <Label className="text-sm font-medium text-foreground">
+                Transform Name
+              </Label>
               <Input
                 value={transformName}
                 onChange={(e) => setTransformName(e.target.value)}
                 placeholder="e.g., Customer Data Transform"
+                className="h-10 w-full"
               />
-            </div>
           </div>
 
-          {selectedCollectorId && selectedEmitterId && (
-            <div className="space-y-4">
-              {/* Destination Table Selection */}
-              <div className="space-y-2">
-                <Label>Destination Table</Label>
+            {/* Destination Table Field - Conditionally Rendered */}
+            {selectedCollectorId && selectedEmitterId && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <Label className="text-sm font-medium text-foreground">
+                  Destination Table
+                </Label>
                 <Select
                   value={selectedDestinationTable}
                   onValueChange={(value) => {
@@ -816,13 +829,16 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     setFieldMappings([]);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10 w-full">
                     <SelectValue placeholder="Select destination table" />
                   </SelectTrigger>
                   <SelectContent>
                     {destinationSchemasLoading ? (
                       <div className="p-4 text-center text-sm text-muted-foreground">
-                        Loading tables...
+                        <div className="inline-flex items-center gap-2">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent"></div>
+                          Loading tables...
+                      </div>
                       </div>
                     ) : destinationTables.length === 0 ? (
                       <div className="p-4 text-center text-sm text-muted-foreground">
@@ -832,8 +848,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       destinationTables.map((table) => (
                         <SelectItem key={table.fullName} value={table.fullName}>
                           <div className="flex items-center gap-2 w-full">
-                            <Database className="h-4 w-4 shrink-0" />
-                            <span className="truncate flex-1">
+                            <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate flex-1 font-medium">
                               {table.fullName}
                             </span>
                           </div>
@@ -842,10 +858,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Select the destination table to map fields to
-                </p>
               </div>
+            )}
+          </div>
+
+          {selectedCollectorId && selectedEmitterId && (
+              <div className="space-y-4">
 
               {/* Side-by-side Field Mapping */}
               {selectedDestinationTable && (
@@ -860,7 +878,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                         {fieldMappings.length} mapping
                         {fieldMappings.length !== 1 ? "s" : ""} created
                       </Badge>
-                    </div>
+                      </div>
                     {/* Table Layout */}
                     <div className="border rounded-lg overflow-hidden">
                       <div className="max-h-[500px] md:max-h-[600px] overflow-y-auto">
@@ -969,9 +987,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                           </div>
                                           <p className="text-xs text-muted-foreground font-mono mt-0.5">
                                             {destinationField.type}
-                                          </p>
-                                        </div>
-                                      </div>
+                                </p>
+                              </div>
+                            </div>
                                     </TableCell>
 
                                     {/* Source Field Select */}
@@ -1014,8 +1032,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                 <span className="text-xs text-muted-foreground truncate max-w-[200px]">
                                                   {mapping.source}
                                                 </span>
-                                              </div>
-                                            )}
+                      </div>
+                    )}
                                           </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1063,7 +1081,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                       Current
                                                     </Badge>
                                                   )}
-                                                </div>
+                </div>
                                               </SelectItem>
                                             );
                                           })}
@@ -1074,11 +1092,11 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                     {/* Primary Key Toggle */}
                                     <TableCell className="text-center">
                                       {mapping ? (
-                                        <Button
+                  <Button
                                           variant={
                                             isPrimaryKey ? "default" : "outline"
                                           }
-                                          size="sm"
+                    size="sm"
                                           className={`h-8 w-8 p-0 ${
                                             isPrimaryKey
                                               ? "bg-primary hover:bg-primary/90"
@@ -1145,7 +1163,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                 : ""
                                             }`}
                                           />
-                                        </Button>
+                  </Button>
                                       ) : (
                                         <span className="text-xs text-muted-foreground">
                                           -
@@ -1184,8 +1202,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                             )}
                           </TableBody>
                         </Table>
-                      </div>
-                    </div>
+                </div>
+              </div>
           
                   </div>
                 </div>

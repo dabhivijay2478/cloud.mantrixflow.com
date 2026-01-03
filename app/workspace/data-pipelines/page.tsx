@@ -180,7 +180,7 @@ export default function DataPipelinesPage() {
           <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Paused
+            Paused
             </div>
           </Badge>
         );
@@ -189,7 +189,7 @@ export default function DataPipelinesPage() {
           <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
-              Error
+            Error
             </div>
           </Badge>
         );
