@@ -71,20 +71,26 @@ export async function loginAction(
       };
     }
 
+    // Get auth token from the session for API calls
+    const authToken = data.session.access_token;
+
     // Sync user with backend
     try {
-      await UsersService.syncUser({
-        supabaseUserId: data.user.id,
-        email: data.user.email || '',
-        firstName: data.user.user_metadata?.first_name || data.user.user_metadata?.firstName,
-        lastName: data.user.user_metadata?.last_name || data.user.user_metadata?.lastName,
-        fullName: data.user.user_metadata?.full_name || data.user.user_metadata?.fullName,
-        avatarUrl: data.user.user_metadata?.avatar_url || data.user.user_metadata?.avatarUrl,
-        metadata: {
-          ...data.user.user_metadata,
-          ...data.user.app_metadata,
+      await UsersService.syncUser(
+        {
+          supabaseUserId: data.user.id,
+          email: data.user.email || '',
+          firstName: data.user.user_metadata?.first_name || data.user.user_metadata?.firstName,
+          lastName: data.user.user_metadata?.last_name || data.user.user_metadata?.lastName,
+          fullName: data.user.user_metadata?.full_name || data.user.user_metadata?.fullName,
+          avatarUrl: data.user.user_metadata?.avatar_url || data.user.user_metadata?.avatarUrl,
+          metadata: {
+            ...data.user.user_metadata,
+            ...data.user.app_metadata,
+          },
         },
-      });
+        { token: authToken },
+      );
     } catch (error) {
       console.error('Failed to sync user:', error);
       // Continue even if sync fails
@@ -93,7 +99,7 @@ export async function loginAction(
     // Get user from backend to check onboarding status
     let needsOnboarding = true;
     try {
-      const backendUser = await UsersService.getCurrentUser();
+      const backendUser = await UsersService.getCurrentUser({ token: authToken });
       needsOnboarding = !backendUser.onboardingCompleted;
     } catch {
       // If user doesn't exist yet, they need onboarding
@@ -104,12 +110,29 @@ export async function loginAction(
     revalidatePath("/", "layout");
     
     // Redirect based on onboarding status
+    // IMPORTANT: redirect() throws a NEXT_REDIRECT error which is expected
+    // This error should be re-thrown so Next.js can handle the redirect properly
     if (needsOnboarding) {
       redirect("/onboarding/welcome");
     } else {
       redirect("/workspace");
     }
   } catch (error) {
+    // Check if it's a Next.js redirect error - if so, re-throw it
+    // Next.js uses a special error with digest starting with "NEXT_REDIRECT"
+    if (
+      error &&
+      typeof error === 'object' &&
+      'digest' in error &&
+      typeof error.digest === 'string' &&
+      error.digest.startsWith('NEXT_REDIRECT')
+    ) {
+      // This is a redirect, not an error - re-throw so Next.js handles it
+      throw error;
+    }
+    
+    // For all other errors, return an error response
+    console.error('[loginAction] Error:', error);
     return {
       success: false,
       error:
