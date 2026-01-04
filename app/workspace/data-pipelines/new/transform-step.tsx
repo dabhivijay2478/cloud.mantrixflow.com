@@ -517,6 +517,29 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   };
 
   const handleContinue = () => {
+    // Validate that at least one transformer has field mappings
+    const hasValidTransformers = collectors.some((collector) => {
+      return (
+        collector.transformers &&
+        collector.transformers.length > 0 &&
+        collector.transformers.some((t: any) => {
+          return (
+            t.fieldMappings &&
+            Array.isArray(t.fieldMappings) &&
+            t.fieldMappings.length > 0
+          );
+        })
+      );
+    });
+
+    if (!hasValidTransformers) {
+      // This validation is handled in the parent component (page.tsx)
+      // We'll still allow continue but the parent will catch it
+      console.warn(
+        "No transformers with field mappings found. Pipeline creation will fail.",
+      );
+    }
+
     onComplete(collectors);
   };
 

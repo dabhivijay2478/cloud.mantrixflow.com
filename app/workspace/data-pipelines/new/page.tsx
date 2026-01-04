@@ -54,6 +54,29 @@ export default function NewPipelinePage() {
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreatePipeline = async () => {
+    // Validate that at least one transformer with field mappings exists
+    const hasValidTransformers = config.collectors.some((collector) => {
+      return (
+        collector.transformers &&
+        collector.transformers.length > 0 &&
+        collector.transformers.some((t: any) => {
+          return (
+            t.fieldMappings &&
+            Array.isArray(t.fieldMappings) &&
+            t.fieldMappings.length > 0
+          );
+        })
+      );
+    });
+
+    if (!hasValidTransformers) {
+      toast.error(
+        "Missing field mappings",
+        "Please configure at least one transformer with field mappings before creating the pipeline.",
+      );
+      return;
+    }
+
     // Prevent double submission
     if (isCreating) {
       console.warn("Pipeline creation already in progress, ignoring duplicate request");
@@ -182,14 +205,24 @@ export default function NewPipelinePage() {
             id: c.id,
             sourceId: c.sourceId,
             selectedTables: c.selectedTables,
-            transformers: c.transformers?.map((t) => ({
-              id: t.id,
-              name: t.name,
-              collectorId: (t as any).collectorId || c.id,
-              emitterId: (t as any).emitterId || "", // Reference to emitter
-              fieldMappings: (t as any).fieldMappings || [], // JSON array format
-              destinationTable: (t as any).destinationTable, // Include destination table
-            })),
+            transformers: c.transformers
+              ?.filter((t: any) => {
+                // Only include transformers that have field mappings
+                return (
+                  t.fieldMappings &&
+                  Array.isArray(t.fieldMappings) &&
+                  t.fieldMappings.length > 0
+                );
+              })
+              .map((t) => ({
+                id: t.id,
+                name: t.name,
+                collectorId: (t as any).collectorId || c.id,
+                emitterId: (t as any).emitterId || "", // Reference to emitter
+                fieldMappings: (t as any).fieldMappings || [], // JSON array format - already filtered above
+                primaryKeyField: (t as any).primaryKeyField, // Include primary key field
+                destinationTable: (t as any).destinationTable, // Include destination table
+              })),
           })),
           emitters: emitters,
         },
