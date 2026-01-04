@@ -48,15 +48,20 @@ export default function NewPipelinePage() {
       ...prev,
       collectors,
     }));
-    handleCreatePipeline();
+    // Pass the updated collectors directly to avoid stale state issue
+    handleCreatePipeline(collectors);
   };
 
   const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreatePipeline = async () => {
+  const handleCreatePipeline = async (collectorsOverride?: CollectorConfig[]) => {
+    // Use the provided collectors if available, otherwise fall back to state
+    // This fixes the issue where newly created transformers aren't detected on first save
+    const collectorsToUse = collectorsOverride || config.collectors;
+    
     // Validate that at least one transformer with field mappings exists
     // Check all collectors and their transformers, ensuring fieldMappings is properly structured
-    const hasValidTransformers = config.collectors.some((collector) => {
+    const hasValidTransformers = collectorsToUse.some((collector) => {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
@@ -104,7 +109,7 @@ export default function NewPipelinePage() {
       return;
     }
 
-    if (config.collectors.length === 0) {
+    if (collectorsToUse.length === 0) {
       toast.error("No collectors", "Please add at least one collector.");
       return;
     }
@@ -112,10 +117,10 @@ export default function NewPipelinePage() {
     setIsCreating(true);
 
     // Get all unique source IDs and destination IDs
-    const allSourceIds = [...new Set(config.collectors.map((c) => c.sourceId))];
+    const allSourceIds = [...new Set(collectorsToUse.map((c) => c.sourceId))];
     
     // Extract emitters from collectors (emitters are now stored at collector level, not transformer level)
-    const allEmitters = config.collectors.flatMap((c) => 
+    const allEmitters = collectorsToUse.flatMap((c) => 
       ((c as any).emitters || []).map((e: any) => ({
         ...e,
         collectorId: c.id,
@@ -155,7 +160,7 @@ export default function NewPipelinePage() {
     }
 
     // Map transformers to emitters - set transformId on emitters
-    const transformersWithEmitters = config.collectors.flatMap((c) =>
+    const transformersWithEmitters = collectorsToUse.flatMap((c) =>
       (c.transformers || []).map((t: any) => ({
         ...t,
         collectorId: t.collectorId || c.id,
@@ -182,7 +187,7 @@ export default function NewPipelinePage() {
 
     try {
       // Use the first collector's source as the primary source
-      const firstCollector = config.collectors[0];
+      const firstCollector = collectorsToUse[0];
       const primarySourceId = firstCollector.sourceId;
 
       // Get destination connection ID from emitters
@@ -193,7 +198,7 @@ export default function NewPipelinePage() {
       let destinationTable = `pipeline_${Date.now()}`;
       let destinationSchema = "public";
       
-      const firstTransformer = config.collectors
+      const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
         .find((t: any) => t.destinationTable);
       
@@ -208,7 +213,7 @@ export default function NewPipelinePage() {
       await createPipelineMutation.mutateAsync({
         data: {
           name: `Pipeline ${new Date().toLocaleDateString()}`,
-          description: `Pipeline with ${config.collectors.length} collector(s)`,
+          description: `Pipeline with ${collectorsToUse.length} collector(s)`,
           sourceType: "postgres",
           sourceConnectionId: primarySourceId,
           destinationConnectionId: destinationConnectionId,
@@ -217,7 +222,7 @@ export default function NewPipelinePage() {
           syncMode: "full",
           syncFrequency: "manual",
           writeMode: "append",
-          collectors: config.collectors.map((c) => ({
+          collectors: collectorsToUse.map((c) => ({
             id: c.id,
             sourceId: c.sourceId,
             selectedTables: c.selectedTables,
