@@ -4,7 +4,7 @@ A modern, full-featured Business Intelligence platform built with Next.js, featu
 
 ## 🚀 Overview
 
-MantrixFlow is an AI-powered Business Intelligence platform that transforms your data into actionable insights. It provides a comprehensive suite of tools for data visualization, dashboard creation, data source management, and AI-assisted analytics.
+MantrixFlow is an AI-powered Business Intelligence platform that transforms your data into actionable insights. It provides a comprehensive suite of tools for data visualization, dashboard creation, data source management, and AI-assisted analytics. The frontend is built with Next.js 16 and React 19, providing a modern, responsive user experience.
 
 ## ✨ Key Features
 
@@ -38,10 +38,12 @@ MantrixFlow is an AI-powered Business Intelligence platform that transforms your
 - **Natural Language Queries**: AI prompt interface for data exploration
 
 ### 📈 Data Management
-- **Data Sources**: Connect multiple data sources
-- **Data Pipelines**: Manage and monitor data pipelines
+- **Data Sources**: Connect and manage PostgreSQL data sources
+- **Data Pipelines**: Create, manage, and monitor data transformation pipelines
+- **Schema Discovery**: Automatic database schema discovery and visualization
+- **Query Execution**: Execute custom queries with audit logging
+- **Data Synchronization**: Automated data sync jobs with scheduling
 - **Datasets**: Organize and manage datasets
-- **Data Import**: Import data from various sources
 
 ### 👥 Team & Collaboration
 - **Team Management**: Invite and manage team members
@@ -70,6 +72,8 @@ MantrixFlow is an AI-powered Business Intelligence platform that transforms your
 ### Backend & Database
 - **Supabase** - Backend-as-a-Service (Auth, Database)
 - **Supabase SSR** - Server-side rendering support
+- **MantrixFlow API** - NestJS backend API for data management
+- **React Query** - Data fetching and caching
 
 ### State Management
 - **Zustand** - Lightweight state management
@@ -121,6 +125,10 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
+# Backend API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+API_URL=http://localhost:8000
+
 # Optional: NextAuth Configuration
 NEXTAUTH_SECRET=your_nextauth_secret
 NEXTAUTH_URL=http://localhost:3000
@@ -136,13 +144,29 @@ NEXTAUTH_URL=http://localhost:3000
    - `http://localhost:3000/auth/callback`
    - `http://localhost:3000/auth/reset-password`
 
-### 5. Run Development Server
+### 5. Backend API Setup
+
+The frontend requires the MantrixFlow API backend to be running. See the [Backend README](../api/README.md) for setup instructions.
+
+**Quick Start:**
+```bash
+# In a separate terminal, from the root directory
+cd apps/api
+bun install
+bun run start:dev
+```
+
+The API will be available at `http://localhost:8000` with Swagger docs at `http://localhost:8000/api/docs`.
+
+### 6. Run Development Server
 
 ```bash
 bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+**Note**: Make sure both the frontend (port 3000) and backend API (port 8000) are running for full functionality.
 
 ## 📁 Project Structure
 
@@ -317,6 +341,48 @@ function Dashboard() {
 }
 ```
 
+## 🔌 Backend API Integration
+
+The frontend communicates with the MantrixFlow API backend for all data operations:
+
+### API Client
+
+The frontend uses React Query for API calls. API client utilities are located in `/lib/api/`:
+
+- **Data Sources**: PostgreSQL connection management
+- **Data Pipelines**: Pipeline creation and execution
+- **Users**: User profile and onboarding
+- **Organizations**: Team and workspace management
+
+### Authentication
+
+All API requests are authenticated using JWT tokens from Supabase:
+- Tokens are automatically included in API requests
+- Tokens are refreshed automatically when expired
+- Unauthenticated requests redirect to login
+
+### Example API Usage
+
+```tsx
+import { usePostgresConnections } from '@/lib/api';
+
+function DataSourcesPage() {
+  const { data: connections, isLoading } = usePostgresConnections();
+  
+  if (isLoading) return <div>Loading...</div>;
+  
+  return (
+    <div>
+      {connections?.map(conn => (
+        <div key={conn.id}>{conn.name}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+For more details, see the [Backend API README](../api/README.md).
+
 ## 📚 Documentation
 
 Comprehensive documentation is available in the `/docs` directory:
@@ -417,8 +483,15 @@ bun start
 Update your `.env.local` with production values:
 
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_production_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_production_anon_key
+
+# Backend API
+NEXT_PUBLIC_API_URL=https://api.your-domain.com
+API_URL=https://api.your-domain.com
+
+# NextAuth
 NEXTAUTH_URL=https://your-domain.com
 ```
 
@@ -472,6 +545,13 @@ This project is part of the MantrixFlow platform.
 4. **CORS errors**
    - Ensure site URL is configured in Supabase
    - Check middleware configuration
+   - Verify backend API CORS settings
+
+5. **API connection errors**
+   - Verify backend API is running on port 8000
+   - Check `NEXT_PUBLIC_API_URL` in environment variables
+   - Ensure backend API CORS allows your frontend origin
+   - Check browser console for detailed error messages
 
 ### Debug Mode
 
