@@ -38,9 +38,16 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
+  // Get user - this will read from cookies if available
+  // If no cookies, it won't find a user, but that's okay
+  // The client-side session in localStorage will be used for client components
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  
+  // Note: The middleware doesn't sync localStorage to cookies automatically
+  // Client-side sessions are stored in localStorage and are accessible to client components
+  // Server actions need cookies, which are set when the page loads if a session exists
 
   if (
     !user &&

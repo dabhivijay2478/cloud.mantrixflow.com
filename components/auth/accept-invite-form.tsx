@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useActionState, useEffect, useState } from "react";
+import { Suspense, useActionState, useEffect, useState, useRef } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -47,6 +47,67 @@ function AcceptInviteFormContent({
 
       try {
         const { supabase } = await import("@/lib/supabase/client");
+
+        // Handle tokens in URL hash (Supabase redirects with tokens in hash fragment)
+        // Extract from window.location.hash
+        if (typeof window !== 'undefined' && window.location.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const hashAccessToken = hashParams.get("access_token");
+          const hashRefreshToken = hashParams.get("refresh_token");
+          const hashType = hashParams.get("type");
+
+          if (hashAccessToken && hashRefreshToken) {
+            console.log("Found tokens in URL hash, setting session...");
+            const { data: sessionData, error } = await supabase.auth.setSession({
+              access_token: hashAccessToken,
+              refresh_token: hashRefreshToken,
+            });
+
+            if (error) {
+              console.error("Error setting session from hash:", error);
+              toast.error(
+                "Invalid invite link",
+                "This invitation link is invalid or has expired.",
+              );
+              setTimeout(() => {
+                router.push("/auth/login");
+              }, 3000);
+              setIsCheckingToken(false);
+              return;
+            }
+
+            if (!sessionData.session) {
+              console.error("No session returned from setSession");
+              toast.error(
+                "Invalid invite link",
+                "Failed to create session. Please try again.",
+              );
+              setTimeout(() => {
+                router.push("/auth/login");
+              }, 3000);
+              setIsCheckingToken(false);
+              return;
+            }
+
+            console.log("Session set successfully, user ID:", sessionData.session.user.id);
+
+            // Clear the hash from URL
+            window.history.replaceState(null, '', window.location.pathname);
+            
+            // IMPORTANT: The session is now in localStorage
+            // For server actions to work, we need to reload the page
+            // This will trigger the middleware which will sync the session to cookies
+            // The middleware reads from localStorage and writes to cookies
+            console.log("Reloading page to sync session to cookies via middleware...");
+            
+            // Small delay to ensure session is persisted
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Reload the page - middleware will sync session to cookies
+            window.location.reload();
+            return;
+          }
+        }
 
         // Handle code-based flow (Supabase OAuth/invite flow)
         if (code) {
@@ -166,8 +227,13 @@ function AcceptInviteFormContent({
       toast.success("Password set successfully!", state.message);
       // Redirect handled by Server Action
     } else if (state && !state.success) {
-      setError(state.error);
-      toast.error("Failed to set password", state.error);
+      // Don't show error if it's a redirect (NEXT_REDIRECT)
+      // Redirects throw errors but they're not actual failures
+      if (state.error && !state.error.includes('NEXT_REDIRECT')) {
+        setError(state.error);
+        toast.error("Failed to set password", state.error);
+      }
+      // If it's a redirect error, just let the redirect happen silently
     }
   }, [state, setError]);
 

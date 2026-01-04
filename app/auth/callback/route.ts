@@ -114,6 +114,21 @@ export async function GET(request: Request) {
     }
   }
 
+  // If we reach here and it's an invite type, redirect to accept-invite
+  // The tokens might be in the URL hash (client-side only), so let the client handle it
+  if (type === "invite") {
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const isLocalEnv = process.env.NODE_ENV === "development";
+    const redirectPath = "/auth/accept-invite";
+    if (isLocalEnv) {
+      return NextResponse.redirect(`${origin}${redirectPath}`);
+    } else if (forwardedHost) {
+      return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+    } else {
+      return NextResponse.redirect(`${origin}${redirectPath}`);
+    }
+  }
+
   // return the user to an error page with instructions
   return NextResponse.redirect(`${origin}/auth/auth-code-error`);
 }
