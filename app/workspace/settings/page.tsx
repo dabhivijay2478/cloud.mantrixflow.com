@@ -1,21 +1,18 @@
 "use client";
 
 import {
-  Bell,
   Building2,
   Check,
-  Copy,
-  Key,
   Loader2,
   Mail,
   Palette,
-  Plus,
   Save,
   Shield,
-  Trash2,
   User,
+  Lock,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/shared";
 import { ThemeCustomizer } from "@/components/theme/theme-customizer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,48 +30,41 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useCurrentUser, useUpdateUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 
 export default function SettingsPage() {
   const { currentOrganization, updateOrganization } = useWorkspaceStore();
-  const { user } = useAuthStore();
+  const { user: authUser } = useAuthStore();
+  const { data: user, isLoading: userLoading } = useCurrentUser();
+  const updateUser = useUpdateUser();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("organization");
+  const [activeTab, setActiveTab] = useState("profile");
+
+  // Profile form state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   // Organization settings
   const [orgName, setOrgName] = useState(currentOrganization?.name || "");
   const [orgSlug, setOrgSlug] = useState(currentOrganization?.slug || "");
   const [orgDescription, setOrgDescription] = useState("");
 
-  // User preferences
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [dashboardUpdates, setDashboardUpdates] = useState(true);
-  const [dataSourceAlerts, setDataSourceAlerts] = useState(true);
-  const [weeklyReports, setWeeklyReports] = useState(false);
-
   // Appearance
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
-  const [compactMode, setCompactMode] = useState(false);
-  const [showTooltips, setShowTooltips] = useState(true);
 
-  // API Keys (mock)
-  const [apiKeys, setApiKeys] = useState([
-    {
-      id: "1",
-      name: "Production API Key",
-      key: "sk_live_...",
-      created: "2024-01-15",
-      lastUsed: "2024-04-20",
-    },
-    {
-      id: "2",
-      name: "Development API Key",
-      key: "sk_test_...",
-      created: "2024-02-10",
-      lastUsed: "2024-04-18",
-    },
-  ]);
+  // Initialize profile form with user data
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+      setFullName(user.fullName || "");
+      setAvatarUrl(user.avatarUrl || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     if (currentOrganization) {
@@ -107,24 +97,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSavePreferences = async () => {
-    setLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      toast.success(
-        "Preferences saved successfully",
-        "Your notification preferences have been updated.",
-      );
-    } catch {
-      toast.error(
-        "Failed to save preferences",
-        "Unable to save preferences. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const _handleSaveAppearance = async () => {
     setLoading(true);
     try {
@@ -143,25 +115,28 @@ export default function SettingsPage() {
     }
   };
 
-  const handleCopyApiKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    toast.success(
-      "API key copied to clipboard",
-      "The API key has been copied to your clipboard.",
-    );
-  };
+  const handleSaveProfile = async () => {
+    if (!user) return;
 
-  const handleDeleteApiKey = (id: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this API key? This action cannot be undone.",
-      )
-    ) {
-      setApiKeys(apiKeys.filter((k) => k.id !== id));
+    setLoading(true);
+    try {
+      await updateUser.mutateAsync({
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+        fullName: fullName.trim() || undefined,
+        avatarUrl: avatarUrl.trim() || undefined,
+      });
       toast.success(
-        "API key deleted",
-        "The API key has been successfully deleted.",
+        "Profile updated successfully",
+        "Your profile information has been updated.",
       );
+    } catch (error) {
+      toast.error(
+        "Failed to update profile",
+        error instanceof Error ? error.message : "Unable to update profile. Please try again.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -174,15 +149,10 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
-      {/* Header */}
-      <div className="mb-8 space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          Settings
-        </h1>
-        <p className="text-base sm:text-lg text-muted-foreground">
-          Manage your workspace, preferences, and account settings
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your workspace, preferences, and account settings"
+      />
 
       <Tabs
         value={activeTab}
@@ -193,25 +163,18 @@ export default function SettingsPage() {
         <div className="border-b">
           <TabsList className="inline-flex h-auto w-full sm:w-auto bg-transparent p-0 space-x-1 sm:space-x-2">
             <TabsTrigger
+              value="profile"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger
               value="organization"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Organization</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="preferences"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
-            >
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Preferences</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="notifications"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
-            >
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
             </TabsTrigger>
             <TabsTrigger
               value="appearance"
@@ -229,6 +192,191 @@ export default function SettingsPage() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        {/* Profile Settings */}
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                Update your personal information and profile details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {userLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : user ? (
+                <>
+                  {/* Read-only fields */}
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        Email Address
+                      </Label>
+                      <Input
+                        value={user.email}
+                        disabled
+                        className="h-10 bg-muted/50 cursor-not-allowed"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Email address cannot be changed
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        User ID
+                      </Label>
+                      <Input
+                        value={user.id}
+                        disabled
+                        className="h-10 bg-muted/50 cursor-not-allowed font-mono text-xs"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your unique user identifier
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-6 space-y-4">
+                    <h3 className="text-sm font-semibold">Editable Information</h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <Label htmlFor="first-name" className="text-sm font-medium">
+                          First Name
+                          <span className="text-muted-foreground font-normal ml-2 text-xs">
+                            (Optional)
+                          </span>
+                        </Label>
+                        <Input
+                          id="first-name"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          placeholder="John"
+                          className="h-10"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label htmlFor="last-name" className="text-sm font-medium">
+                          Last Name
+                          <span className="text-muted-foreground font-normal ml-2 text-xs">
+                            (Optional)
+                          </span>
+                        </Label>
+                        <Input
+                          id="last-name"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          placeholder="Doe"
+                          className="h-10"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="full-name" className="text-sm font-medium">
+                        Full Name
+                        <span className="text-muted-foreground font-normal ml-2 text-xs">
+                          (Optional)
+                        </span>
+                      </Label>
+                      <Input
+                        id="full-name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="John Doe"
+                        className="h-10"
+                        disabled={loading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your display name (will be used if first/last name are not provided)
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="avatar-url" className="text-sm font-medium">
+                        Avatar URL
+                        <span className="text-muted-foreground font-normal ml-2 text-xs">
+                          (Optional)
+                        </span>
+                      </Label>
+                      <Input
+                        id="avatar-url"
+                        value={avatarUrl}
+                        onChange={(e) => setAvatarUrl(e.target.value)}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="h-10"
+                        disabled={loading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        URL to your profile picture
+                      </p>
+                      {avatarUrl && (
+                        <div className="mt-2">
+                          <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-border">
+                            <img
+                              src={avatarUrl}
+                              alt="Avatar preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFirstName(user.firstName || "");
+                        setLastName(user.lastName || "");
+                        setFullName(user.fullName || "");
+                        setAvatarUrl(user.avatarUrl || "");
+                      }}
+                      disabled={loading}
+                      className="w-full sm:w-auto"
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      onClick={handleSaveProfile}
+                      disabled={loading}
+                      className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Unable to load user information
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Organization Settings */}
         <TabsContent value="organization" className="space-y-6">
@@ -346,221 +494,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Preferences */}
-        <TabsContent value="preferences" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Preferences</CardTitle>
-              <CardDescription>
-                Customize your workspace experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                  <div className="space-y-1 flex-1">
-                    <Label
-                      htmlFor="compact-mode"
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Compact Mode
-                    </Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Reduce spacing and padding for a more compact interface
-                    </p>
-                  </div>
-                  <Switch
-                    id="compact-mode"
-                    checked={compactMode}
-                    onCheckedChange={setCompactMode}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                  <div className="space-y-1 flex-1">
-                    <Label
-                      htmlFor="show-tooltips"
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Show Tooltips
-                    </Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Display helpful tooltips on hover
-                    </p>
-                  </div>
-                  <Switch
-                    id="show-tooltips"
-                    checked={showTooltips}
-                    onCheckedChange={setShowTooltips}
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCompactMode(false);
-                    setShowTooltips(true);
-                  }}
-                  disabled={loading}
-                  className="w-full sm:w-auto"
-                >
-                  Reset to Defaults
-                </Button>
-                <Button
-                  onClick={handleSavePreferences}
-                  disabled={loading}
-                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Preferences
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Choose how you want to be notified about updates
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border-2 bg-card hover:bg-accent/50 transition-colors">
-                  <div className="space-y-1 flex-1">
-                    <Label
-                      htmlFor="email-notifications"
-                      className="text-sm font-medium cursor-pointer flex items-center gap-2"
-                    >
-                      <Mail className="h-4 w-4 text-primary" />
-                      Email Notifications
-                    </Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Receive notifications via email
-                    </p>
-                  </div>
-                  <Switch
-                    id="email-notifications"
-                    checked={emailNotifications}
-                    onCheckedChange={setEmailNotifications}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                  <div className="space-y-1 flex-1">
-                    <Label
-                      htmlFor="dashboard-updates"
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Dashboard Updates
-                    </Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Get notified when dashboards are updated
-                    </p>
-                  </div>
-                  <Switch
-                    id="dashboard-updates"
-                    checked={dashboardUpdates}
-                    onCheckedChange={setDashboardUpdates}
-                    disabled={loading || !emailNotifications}
-                  />
-                </div>
-
-                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                  <div className="space-y-1 flex-1">
-                    <Label
-                      htmlFor="data-source-alerts"
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Data Source Alerts
-                    </Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Receive alerts about data source issues
-                    </p>
-                  </div>
-                  <Switch
-                    id="data-source-alerts"
-                    checked={dataSourceAlerts}
-                    onCheckedChange={setDataSourceAlerts}
-                    disabled={loading || !emailNotifications}
-                  />
-                </div>
-
-                <div className="flex items-start sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                  <div className="space-y-1 flex-1">
-                    <Label
-                      htmlFor="weekly-reports"
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Weekly Reports
-                    </Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Receive weekly summary reports
-                    </p>
-                  </div>
-                  <Switch
-                    id="weekly-reports"
-                    checked={weeklyReports}
-                    onCheckedChange={setWeeklyReports}
-                    disabled={loading || !emailNotifications}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEmailNotifications(true);
-                    setDashboardUpdates(true);
-                    setDataSourceAlerts(true);
-                    setWeeklyReports(false);
-                  }}
-                  disabled={loading}
-                  className="w-full sm:w-auto"
-                >
-                  Reset to Defaults
-                </Button>
-                <Button
-                  onClick={handleSavePreferences}
-                  disabled={loading}
-                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Preferences
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Appearance */}
         <TabsContent value="appearance" className="space-y-6">
           {/* Theme Mode Selection */}
@@ -616,108 +549,8 @@ export default function SettingsPage() {
 
         {/* Security */}
         <TabsContent value="security" className="space-y-6">
-          {/* API Keys Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle>API Keys</CardTitle>
-                  <CardDescription className="mt-1">
-                    Manage your API keys for programmatic access
-                  </CardDescription>
-                </div>
-                <Button size="sm" className="w-full sm:w-auto shadow-sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create API Key
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {apiKeys.map((apiKey) => (
-                <div
-                  key={apiKey.id}
-                  className="group border-2 rounded-xl p-4 sm:p-5 hover:border-primary/50 hover:shadow-md transition-all duration-300"
-                >
-                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                    <div className="flex-1 space-y-3 w-full">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <span className="font-semibold text-base">
-                          {apiKey.name}
-                        </span>
-                        <Badge
-                          variant={
-                            apiKey.key.includes("live")
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="text-xs w-fit"
-                        >
-                          {apiKey.key.includes("live")
-                            ? "Production"
-                            : "Development"}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                        <code className="flex-1 text-sm font-mono truncate">
-                          {apiKey.key}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyApiKey(apiKey.key)}
-                          className="h-8 px-3 shrink-0 hover:bg-background"
-                        >
-                          <Copy className="h-3.5 w-3.5 mr-1.5" />
-                          Copy
-                        </Button>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
-                        <span>
-                          Created:{" "}
-                          {new Date(apiKey.created).toLocaleDateString()}
-                        </span>
-                        <span>
-                          Last used:{" "}
-                          {new Date(apiKey.lastUsed).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteApiKey(apiKey.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full lg:w-auto"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              ))}
-
-              {apiKeys.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                    <Key className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <p className="text-lg font-medium mb-2">
-                    No API keys created yet
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                    Create an API key to get started with programmatic access to
-                    your workspace
-                  </p>
-                  <Button className="shadow-sm">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Your First API Key
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Account Security Section */}
-          {user && (
+          {authUser && (
             <Card>
               <CardHeader>
                 <CardTitle>Account Security</CardTitle>
@@ -734,7 +567,7 @@ export default function SettingsPage() {
                     <div>
                       <p className="font-medium text-sm">Email Address</p>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {user.email}
+                        {authUser.email}
                       </p>
                     </div>
                   </div>

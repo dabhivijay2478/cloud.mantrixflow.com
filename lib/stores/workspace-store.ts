@@ -44,25 +44,6 @@ export interface DataSource {
   selectedTables?: string[]; // New field for multiple selection
 }
 
-export interface Dashboard {
-  id: string;
-  name: string;
-  description?: string;
-  organizationId: string;
-  dataSourceId?: string;
-  createdAt: string;
-  updatedAt: string;
-  components: DashboardComponent[];
-}
-
-export interface DashboardComponent {
-  id: string;
-  type: string;
-  position: { x: number; y: number; w: number; h: number };
-  config: Record<string, unknown>;
-  zIndex?: number;
-}
-
 export interface DatasetColumn {
   name: string;
   type: "string" | "number" | "date" | "boolean";
@@ -102,12 +83,23 @@ export interface OnboardingState {
     | "connect"
     | "select"
     | "importing"
-    | "first-dashboard"
     | "complete";
   organizationId?: string;
   dataSourceId?: string;
   connectorType?: string;
   completed: boolean;
+}
+
+export interface Pipeline {
+  id: string;
+  name: string;
+  type: "bulk" | "stream" | "emit";
+  sourceId: string;
+  destinationIds: string[];
+  status: "active" | "paused" | "error";
+  createdAt: string;
+  description?: string;
+  config?: Record<string, unknown>;
 }
 
 interface WorkspaceState {
@@ -119,10 +111,6 @@ interface WorkspaceState {
   dataSources: DataSource[];
   currentDataSource: DataSource | null;
 
-  // Dashboards
-  dashboards: Dashboard[];
-  currentDashboard: Dashboard | null;
-
   // Datasets
   datasets: Dataset[];
   currentDataset: Dataset | null;
@@ -130,16 +118,16 @@ interface WorkspaceState {
   // Saved Queries
   savedQueries: SavedQuery[];
 
+  // Pipelines
+  pipelines: Pipeline[];
+
   // Onboarding
   onboarding: OnboardingState;
 
   // UI State
   sidebarOpen: boolean;
-  componentsPanelOpen: boolean;
   agentPanelOpen: boolean;
-  propertiesPanelOpen: boolean;
   dataPanelOpen: boolean;
-  selectedComponentId: string | null;
   selectedDatasetId: string | null;
 }
 
@@ -155,22 +143,6 @@ interface WorkspaceActions {
   updateDataSource: (id: string, updates: Partial<DataSource>) => void;
   removeDataSource: (id: string) => void;
 
-  // Dashboard actions
-  setCurrentDashboard: (dashboard: Dashboard | null) => void;
-  addDashboard: (dashboard: Dashboard) => void;
-  updateDashboard: (id: string, updates: Partial<Dashboard>) => void;
-  removeDashboard: (id: string) => void;
-  addComponentToDashboard: (
-    dashboardId: string,
-    component: DashboardComponent,
-  ) => void;
-  updateDashboardComponent: (
-    dashboardId: string,
-    componentId: string,
-    updates: Partial<DashboardComponent>,
-  ) => void;
-  removeDashboardComponent: (dashboardId: string, componentId: string) => void;
-
   // Dataset actions
   setCurrentDataset: (dataset: Dataset | null) => void;
   addDataset: (dataset: Dataset) => void;
@@ -182,6 +154,11 @@ interface WorkspaceActions {
   updateSavedQuery: (id: string, updates: Partial<SavedQuery>) => void;
   removeSavedQuery: (id: string) => void;
 
+  // Pipeline actions
+  addPipeline: (pipeline: Pipeline) => void;
+  updatePipeline: (id: string, updates: Partial<Pipeline>) => void;
+  removePipeline: (id: string) => void;
+
   // Onboarding actions
   setOnboardingStep: (step: OnboardingState["currentStep"]) => void;
   updateOnboarding: (updates: Partial<OnboardingState>) => void;
@@ -189,14 +166,10 @@ interface WorkspaceActions {
 
   // UI actions
   setSidebarOpen: (open: boolean) => void;
-  setComponentsPanelOpen: (open: boolean) => void;
   setAgentPanelOpen: (open: boolean) => void;
-  setPropertiesPanelOpen: (open: boolean) => void;
   setDataPanelOpen: (open: boolean) => void;
-  setSelectedComponentId: (id: string | null) => void;
   setSelectedDatasetId: (id: string | null) => void;
   toggleSidebar: () => void;
-  toggleComponentsPanel: () => void;
   toggleAgentPanel: () => void;
 }
 
@@ -208,21 +181,17 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       organizations: [],
       dataSources: [],
       currentDataSource: null,
-      dashboards: [],
-      currentDashboard: null,
       datasets: [],
       currentDataset: null,
       savedQueries: [],
+      pipelines: [],
       onboarding: {
         currentStep: "welcome",
         completed: false,
       },
       sidebarOpen: true,
-      componentsPanelOpen: true,
       agentPanelOpen: true,
-      propertiesPanelOpen: true,
       dataPanelOpen: true,
-      selectedComponentId: null,
       selectedDatasetId: null,
 
       // Organization actions
@@ -267,89 +236,6 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
             state.currentDataSource?.id === id ? null : state.currentDataSource,
         })),
 
-      // Dashboard actions
-      setCurrentDashboard: (dashboard) => set({ currentDashboard: dashboard }),
-      addDashboard: (dashboard) =>
-        set((state) => ({
-          dashboards: [...state.dashboards, dashboard],
-          currentDashboard: dashboard,
-        })),
-      updateDashboard: (id, updates) =>
-        set((state) => ({
-          dashboards: state.dashboards.map((dash) =>
-            dash.id === id ? { ...dash, ...updates } : dash,
-          ),
-          currentDashboard:
-            state.currentDashboard?.id === id
-              ? { ...state.currentDashboard, ...updates }
-              : state.currentDashboard,
-        })),
-      removeDashboard: (id) =>
-        set((state) => ({
-          dashboards: state.dashboards.filter((dash) => dash.id !== id),
-          currentDashboard:
-            state.currentDashboard?.id === id ? null : state.currentDashboard,
-        })),
-      addComponentToDashboard: (dashboardId, component) =>
-        set((state) => ({
-          dashboards: state.dashboards.map((dash) =>
-            dash.id === dashboardId
-              ? { ...dash, components: [...dash.components, component] }
-              : dash,
-          ),
-          currentDashboard:
-            state.currentDashboard?.id === dashboardId
-              ? {
-                  ...state.currentDashboard,
-                  components: [...state.currentDashboard.components, component],
-                }
-              : state.currentDashboard,
-        })),
-      updateDashboardComponent: (dashboardId, componentId, updates) =>
-        set((state) => ({
-          dashboards: state.dashboards.map((dash) =>
-            dash.id === dashboardId
-              ? {
-                  ...dash,
-                  components: dash.components.map((comp) =>
-                    comp.id === componentId ? { ...comp, ...updates } : comp,
-                  ),
-                }
-              : dash,
-          ),
-          currentDashboard:
-            state.currentDashboard?.id === dashboardId
-              ? {
-                  ...state.currentDashboard,
-                  components: state.currentDashboard.components.map((comp) =>
-                    comp.id === componentId ? { ...comp, ...updates } : comp,
-                  ),
-                }
-              : state.currentDashboard,
-        })),
-      removeDashboardComponent: (dashboardId, componentId) =>
-        set((state) => ({
-          dashboards: state.dashboards.map((dash) =>
-            dash.id === dashboardId
-              ? {
-                  ...dash,
-                  components: dash.components.filter(
-                    (comp) => comp.id !== componentId,
-                  ),
-                }
-              : dash,
-          ),
-          currentDashboard:
-            state.currentDashboard?.id === dashboardId
-              ? {
-                  ...state.currentDashboard,
-                  components: state.currentDashboard.components.filter(
-                    (comp) => comp.id !== componentId,
-                  ),
-                }
-              : state.currentDashboard,
-        })),
-
       // Dataset actions
       setCurrentDataset: (dataset) => set({ currentDataset: dataset }),
       addDataset: (dataset) =>
@@ -390,6 +276,22 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
           savedQueries: state.savedQueries.filter((q) => q.id !== id),
         })),
 
+      // Pipeline actions
+      addPipeline: (pipeline) =>
+        set((state) => ({
+          pipelines: [...state.pipelines, pipeline],
+        })),
+      updatePipeline: (id, updates) =>
+        set((state) => ({
+          pipelines: state.pipelines.map((pipeline) =>
+            pipeline.id === id ? { ...pipeline, ...updates } : pipeline,
+          ),
+        })),
+      removePipeline: (id) =>
+        set((state) => ({
+          pipelines: state.pipelines.filter((pipeline) => pipeline.id !== id),
+        })),
+
       // Onboarding actions
       setOnboardingStep: (step) =>
         set((state) => ({
@@ -410,16 +312,11 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
 
       // UI actions
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
-      setComponentsPanelOpen: (open) => set({ componentsPanelOpen: open }),
       setAgentPanelOpen: (open) => set({ agentPanelOpen: open }),
-      setPropertiesPanelOpen: (open) => set({ propertiesPanelOpen: open }),
       setDataPanelOpen: (open) => set({ dataPanelOpen: open }),
-      setSelectedComponentId: (id) => set({ selectedComponentId: id }),
       setSelectedDatasetId: (id) => set({ selectedDatasetId: id }),
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      toggleComponentsPanel: () =>
-        set((state) => ({ componentsPanelOpen: !state.componentsPanelOpen })),
       toggleAgentPanel: () =>
         set((state) => ({ agentPanelOpen: !state.agentPanelOpen })),
     }),
@@ -433,16 +330,13 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
         currentOrganization: state.currentOrganization,
         organizations: state.organizations,
         dataSources: state.dataSources,
-        dashboards: state.dashboards,
         datasets: state.datasets,
         savedQueries: state.savedQueries,
+        pipelines: state.pipelines,
         onboarding: state.onboarding,
         sidebarOpen: state.sidebarOpen,
-        componentsPanelOpen: state.componentsPanelOpen,
         agentPanelOpen: state.agentPanelOpen,
-        propertiesPanelOpen: state.propertiesPanelOpen,
         dataPanelOpen: state.dataPanelOpen,
-        selectedComponentId: state.selectedComponentId,
         selectedDatasetId: state.selectedDatasetId,
       }),
     },

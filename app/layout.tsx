@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/lib/providers/query-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Using CSS-based font loading to avoid Turbopack issues
+// Fonts are loaded via @import in globals.css instead
 
 export const metadata: Metadata = {
   title: "MantrixFlow - AI BI Platform",
@@ -28,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
       >
         {/* Skip to content link for accessibility */}
         <Link
@@ -37,15 +30,17 @@ export default function RootLayout({
         >
           Skip to main content
         </Link>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          enableColorScheme
-        >
-          {children}
-        </ThemeProvider>
-        <Toaster />
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            enableColorScheme
+          >
+            {children}
+          </ThemeProvider>
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   );

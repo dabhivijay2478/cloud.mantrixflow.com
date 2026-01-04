@@ -5,6 +5,7 @@ import {
   Check,
   Crown,
   Edit,
+  Loader2,
   Mail,
   MoreVertical,
   Shield,
@@ -14,8 +15,16 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo } from "react";
+import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
+import {
+  useOrganizationMembers,
+  useUpdateMember,
+  useRemoveMember,
+} from "@/lib/api";
+import { useCurrentOrganization } from "@/lib/api";
+import type { OrganizationMember } from "@/lib/api/types/organizations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,82 +106,96 @@ const roleConfig: Record<
 export default function TeamPage() {
   const router = useRouter();
 
-  // Mock team members - in a real app, this would come from the store/API
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john@example.com",
-      role: "owner",
-      avatar: null,
-      status: "active",
-      joinedAt: "2024-01-15",
-      agentPanelAccess: true,
-      allowedModels: [
-        "gpt-4o",
-        "claude-opus-4-20250514",
-        "gemini-2.0-flash-exp",
-      ],
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane@example.com",
-      role: "admin",
-      avatar: null,
-      status: "active",
-      joinedAt: "2024-02-20",
-      agentPanelAccess: true,
-      allowedModels: ["gpt-4o", "gpt-4o-mini"],
-    },
-    {
-      id: "3",
-      name: "Bob Johnson",
-      email: "bob@example.com",
-      role: "member",
-      avatar: null,
-      status: "active",
-      joinedAt: "2024-03-10",
-      agentPanelAccess: true,
-      allowedModels: ["gpt-4o-mini"],
-    },
-    {
-      id: "4",
-      name: "Alice Williams",
-      email: "alice@example.com",
-      role: "viewer",
-      avatar: null,
-      status: "pending",
-      joinedAt: "2024-04-05",
-      agentPanelAccess: false,
-      allowedModels: [],
-    },
-    {
-      id: "5",
-      name: "Charlie Brown",
-      email: "charlie@example.com",
-      role: "guest",
-      avatar: null,
-      status: "active",
-      joinedAt: "2024-04-12",
-      agentPanelAccess: false,
-      allowedModels: [],
-    },
-  ]);
+  // Get current organization
+  const { data: currentOrg, isLoading: orgLoading } = useCurrentOrganization();
+  const organizationId = currentOrg?.id;
 
-  const handleRoleChange = (memberId: string, newRole: TeamMemberRole) => {
-    setTeamMembers(
-      teamMembers.map((member) =>
-        member.id === memberId ? { ...member, role: newRole } : member,
-      ),
-    );
-    toast.success("Role updated successfully");
+  // Fetch organization members
+  const {
+    data: members,
+    isLoading: membersLoading,
+    error: membersError,
+  } = useOrganizationMembers(organizationId);
+
+  // Mutations
+  const updateMember = useUpdateMember();
+  const removeMember = useRemoveMember();
+
+  // Transform API members to TeamMember format
+  const teamMembers: TeamMember[] = useMemo(() => {
+    if (!members) return [];
+
+    return members.map((member: OrganizationMember) => {
+      // Map status: invited -> pending, accepted/active -> active
+      const status: TeamMember["status"] =
+        member.status === "invited"
+          ? "pending"
+          : member.status === "active" || member.status === "accepted"
+            ? "active"
+            : "inactive";
+
+      return {
+        id: member.id,
+        name: member.email.split("@")[0], // Use email prefix as name until user signs up
+        email: member.email,
+        role: member.role,
+        avatar: null,
+        status,
+        joinedAt: member.acceptedAt
+          ? new Date(member.acceptedAt).toISOString().split("T")[0]
+          : member.invitedAt
+            ? new Date(member.invitedAt).toISOString().split("T")[0]
+            : undefined,
+        agentPanelAccess: member.agentPanelAccess,
+        allowedModels: member.allowedModels || [],
+      };
+    });
+  }, [members]);
+
+  const handleRoleChange = async (memberId: string, newRole: TeamMemberRole) => {
+    if (!organizationId) {
+      toast.error("No organization selected");
+      return;
+    }
+
+    try {
+      await updateMember.mutateAsync({
+        organizationId,
+        memberId,
+        data: { role: newRole },
+      });
+      toast.success("Role updated successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update role. Please try again.",
+      );
+    }
   };
 
-  const handleRemoveMember = (memberId: string) => {
-    if (confirm("Are you sure you want to remove this team member?")) {
-      setTeamMembers(teamMembers.filter((member) => member.id !== memberId));
+  const handleRemoveMember = async (memberId: string) => {
+    if (!organizationId) {
+      toast.error("No organization selected");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to remove this team member?")) {
+      return;
+    }
+
+    try {
+      await removeMember.mutateAsync({
+        organizationId,
+        memberId,
+      });
       toast.success("Team member removed");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove member. Please try again.",
+      );
     }
   };
 
@@ -229,21 +252,19 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Team</h1>
-          <p className="text-muted-foreground">
-            Manage your team members and permissions
-          </p>
-        </div>
-        <Button
-          onClick={() => router.push("/workspace/team/invite")}
-          className="w-full sm:w-auto"
-        >
-          <UserPlus className="mr-2 h-4 w-4" />
-          Invite Member
-        </Button>
-      </div>
+      <PageHeader
+        title="Team"
+        description="Manage your team members and permissions"
+        action={
+          <Button
+            onClick={() => router.push("/workspace/team/invite")}
+            className="w-full sm:w-auto"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite Member
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -274,7 +295,31 @@ export default function TeamPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teamMembers.length === 0 ? (
+                {orgLoading || membersLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <p className="text-muted-foreground">Loading members...</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : membersError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-destructive">
+                          Failed to load team members
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {membersError instanceof Error
+                            ? membersError.message
+                            : "An error occurred"}
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : teamMembers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">

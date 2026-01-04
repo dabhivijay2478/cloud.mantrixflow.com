@@ -4,7 +4,6 @@ import {
   Building2,
   ChevronsUpDown,
   Database,
-  FileText,
   GitBranch,
   LayoutDashboard,
   Plus,
@@ -13,7 +12,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Logo } from "@/components/logo";
+import { useOrganizations, useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,17 +135,48 @@ export function WorkspaceSidebar() {
   const {
     currentOrganization,
     organizations,
-    dashboards,
     dataSources,
     setCurrentOrganization,
   } = useWorkspaceStore();
-
-  // Filter dashboards by current organization
-  const filteredDashboards = currentOrganization
-    ? dashboards.filter(
-        (dashboard) => dashboard.organizationId === currentOrganization.id,
-      )
-    : [];
+  
+  // Sync organizations from API to workspace store
+  const { data: apiOrganizations, isLoading: orgsLoading } = useOrganizations();
+  const { data: apiCurrentOrg, isLoading: currentOrgLoading } = useCurrentOrganization();
+  
+  useEffect(() => {
+    // Only sync if API data is loaded
+    if (orgsLoading || currentOrgLoading) return;
+    
+    // Sync organizations list - update store with API organizations
+    if (apiOrganizations && apiOrganizations.length > 0) {
+      // Check if we need to update the organizations list
+      // For now, we'll trust the store, but ensure current org is valid
+      const orgIds = new Set(apiOrganizations.map(org => org.id));
+      
+      // If current organization doesn't exist in API orgs, update it
+      if (currentOrganization && !orgIds.has(currentOrganization.id)) {
+        // Current org is invalid, switch to API current org or first org
+        if (apiCurrentOrg) {
+          console.log('[WorkspaceSidebar] Syncing current org from API:', apiCurrentOrg.id);
+          setCurrentOrganization(apiCurrentOrg);
+        } else if (apiOrganizations.length > 0) {
+          console.log('[WorkspaceSidebar] Setting first org as current:', apiOrganizations[0].id);
+          setCurrentOrganization(apiOrganizations[0]);
+        }
+      }
+    }
+    
+    // Sync current organization from API - only if store doesn't have one
+    if (!currentOrganization) {
+      if (apiCurrentOrg) {
+        console.log('[WorkspaceSidebar] Setting current org from API (store was empty):', apiCurrentOrg.id);
+        setCurrentOrganization(apiCurrentOrg);
+      } else if (apiOrganizations && apiOrganizations.length > 0) {
+        console.log('[WorkspaceSidebar] Setting first org as current (no API current org):', apiOrganizations[0].id);
+        setCurrentOrganization(apiOrganizations[0]);
+      }
+    }
+  }, [apiOrganizations, apiCurrentOrg, currentOrganization, orgsLoading, currentOrgLoading, setCurrentOrganization]);
 
   // Filter data sources by current organization
   const filteredDataSources = currentOrganization
@@ -178,23 +210,6 @@ export function WorkspaceSidebar() {
                   <Link href="/workspace">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname?.startsWith("/workspace/dashboards")}
-                  tooltip="Dashboards"
-                >
-                  <Link href="/workspace/dashboards">
-                    <FileText className="h-4 w-4" />
-                    <span>Dashboards</span>
-                    {filteredDashboards.length > 0 && (
-                      <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                        {filteredDashboards.length}
-                      </span>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

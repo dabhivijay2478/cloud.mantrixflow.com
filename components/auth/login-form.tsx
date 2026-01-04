@@ -63,6 +63,11 @@ function LoginFormContent({
   // Handle form errors
   useEffect(() => {
     if (state && !state.success) {
+      // Ignore NEXT_REDIRECT errors as they are expected behavior for redirects
+      if (typeof state.error === 'string' && state.error.includes('NEXT_REDIRECT')) {
+        console.log("Ignoring expected NEXT_REDIRECT error in login form.");
+        return;
+      }
       setError(state.error);
       toast.error("Login failed", state.error);
     }

@@ -58,6 +58,9 @@ export const resetPasswordSchema = z
         "Password must contain at least one uppercase letter, one lowercase letter, and one number",
       ),
     confirmPassword: z.string().min(1, "Please confirm your password"),
+    // Optional tokens for server action (if session not in cookies)
+    accessToken: z.string().optional(),
+    refreshToken: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",

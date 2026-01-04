@@ -16,7 +16,7 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function ImportingPage() {
   const router = useRouter();
-  const { setOnboardingStep, completeOnboarding } = useWorkspaceStore();
+  const { completeOnboarding } = useWorkspaceStore();
 
   const handleSkip = () => {
     completeOnboarding();
@@ -43,14 +43,14 @@ export default function ImportingPage() {
       } else {
         clearInterval(interval);
         setTimeout(() => {
-          setOnboardingStep("first-dashboard");
-          router.push("/onboarding/first-dashboard");
+          completeOnboarding();
+          router.push("/onboarding/complete");
         }, 1000);
       }
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [router, setOnboardingStep]);
+  }, [router, completeOnboarding]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

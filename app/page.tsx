@@ -24,7 +24,6 @@ export default function Home() {
   //   );
   // }
 
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
       <main className="flex flex-col items-center justify-center text-center space-y-8 p-8">

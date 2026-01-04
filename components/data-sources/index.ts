@@ -1,5 +1,5 @@
 export { ConnectionSheet } from "./connection-sheet";
-export { allDataSources, connectionSchemas, mockTables } from "./constants";
+export { allDataSources, connectionSchemas } from "./constants";
 export { DataSourceCard } from "./data-source-card";
 export {
   DataSourceCardSkeleton,

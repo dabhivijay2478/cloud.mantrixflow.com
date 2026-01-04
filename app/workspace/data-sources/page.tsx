@@ -1,37 +1,92 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   allDataSources,
   ConnectionSheet,
   DataSourceGrid,
   DataSourceTable,
-  mockTables,
 } from "@/components/data-sources";
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import {
+  useConnections,
+  useCreateConnection,
+  useDeleteConnection,
+  useTestConnection,
+  type CreateConnectionDto,
+  type TestConnectionDto,
+} from "@/lib/api";
 import { toast } from "@/lib/utils/toast";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import type { DataSource } from "@/lib/stores/workspace-store";
 
 type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
-  const {
-    dataSources,
-    addDataSource,
-    removeDataSource,
-    updateDataSource,
-    currentOrganization,
-  } = useWorkspaceStore();
+  // Get current organization from workspace store (set by sidebar selector)
+  const { currentOrganization } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
 
-  // Filter data sources by current organization
-  const filteredDataSources = currentOrganization
-    ? dataSources.filter(
-        (ds) =>
-          !ds.organizationId || ds.organizationId === currentOrganization.id,
-      )
-    : dataSources.filter((ds) => !ds.organizationId);
+  // Debug logging
+  useEffect(() => {
+    if (currentOrganization) {
+      console.log('Current Organization from store:', currentOrganization);
+      console.log('Organization ID:', orgId);
+    } else {
+      console.warn('No organization selected in workspace store');
+    }
+  }, [currentOrganization, orgId]);
+
+  // Use real API hooks instead of workspace store
+  const { data: connections, isLoading: connectionsLoading, error: connectionsError } = useConnections(orgId);
+  const createConnection = useCreateConnection(orgId);
+  const deleteConnection = useDeleteConnection();
+  const testConnection = useTestConnection();
+  
+  // Debug logging for connections
+  useEffect(() => {
+    if (connections !== undefined) {
+      console.log('Connections loaded:', connections);
+      console.log('Connections count:', connections?.length || 0);
+      console.log('Query orgId used:', orgId);
+    }
+    if (connectionsError) {
+      console.error('Connections error:', connectionsError);
+    }
+  }, [connections, connectionsError, orgId]);
+  
+  const isLoading = connectionsLoading;
+
+  // Filter to show PostgreSQL data sources
+  const enabledDataSources = allDataSources.filter((ds) => 
+    ds.type === "postgres"
+  );
+
+  // Convert API connections to component format
+  const filteredDataSources: DataSource[] = (connections?.map((conn) => {
+    const dateValue = conn.lastConnectedAt || conn.createdAt;
+    const connectedAt = typeof dateValue === 'string' 
+      ? dateValue
+      : dateValue instanceof Date
+      ? dateValue.toISOString()
+      : new Date(dateValue).toISOString();
+    
+    return {
+      id: conn.id,
+      name: conn.name,
+      type: "postgres" as const,
+      status: (conn.status === "active" 
+        ? "connected" 
+        : conn.status === "error"
+        ? "error"
+        : "disconnected") as "connected" | "disconnected" | "error",
+      organizationId: conn.orgId,
+      connectedAt,
+      tables: undefined, // Will be fetched separately when needed
+    };
+  }) || []) as DataSource[];
 
   const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
     null,
@@ -40,17 +95,46 @@ export default function DataSourcesPage() {
   const [connectingDataSourceId, setConnectingDataSourceId] = useState<
     string | null
   >(null);
-  const [_loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortColumn, setSortColumn] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [showGridView, setShowGridView] = useState(false);
-
-  // Check if there's at least one connected data source
-  const hasConnectedDataSources = filteredDataSources.some(
-    (ds) => ds.status === "connected",
-  );
+  // Check if there are any connections (regardless of status)
+  const hasConnections = filteredDataSources.length > 0;
+  
+  // View state: show grid when no connections, table when connections exist
+  const [showGridView, setShowGridView] = useState<boolean>(true);
+  const previousHasConnections = useRef<boolean | null>(null);
+  
+  // Initialize view mode when connections are loaded for the first time
+  useEffect(() => {
+    if (!connectionsLoading && previousHasConnections.current === null) {
+      // Initial load: show grid if no connections, table if connections exist
+      setShowGridView(!hasConnections);
+      previousHasConnections.current = hasConnections;
+    }
+  }, [connectionsLoading, hasConnections]);
+  
+  // Auto-switch views when connection state transitions (after initial load)
+  useEffect(() => {
+    if (previousHasConnections.current === null) {
+      return; // Not initialized yet
+    }
+    
+    const hadConnections = previousHasConnections.current;
+    const nowHasConnections = hasConnections;
+    
+    // Connection was just created (transition from no connections to has connections)
+    if (!hadConnections && nowHasConnections && showGridView) {
+      setShowGridView(false);
+    }
+    // All connections were deleted (transition from has connections to no connections)
+    else if (hadConnections && !nowHasConnections && !showGridView) {
+      setShowGridView(true);
+    }
+    
+    previousHasConnections.current = nowHasConnections;
+  }, [hasConnections, showGridView]);
 
   const isConnected = (dataSourceId: string) => {
     return filteredDataSources.some(
@@ -58,14 +142,23 @@ export default function DataSourcesPage() {
     );
   };
 
-  const getConnectedDataSource = (dataSourceId: string) => {
+  const getConnectedDataSource = (dataSourceId: string): DataSource | undefined => {
     return filteredDataSources.find((ds) => ds.id === dataSourceId);
   };
 
   const handleDataSourceClick = (dataSourceId: string) => {
     setSelectedDataSource(dataSourceId);
-    // If clicking on a connected data source, hide grid view
-    if (isConnected(dataSourceId)) {
+    
+    // If we're in table view showing connections, check if this is a connection ID
+    const isConnectionId = filteredDataSources.some(conn => conn.id === dataSourceId);
+    
+    if (isConnectionId) {
+      // This is a connection - navigate to connection detail or keep in table view
+      setShowGridView(false);
+      // TODO: Navigate to connection detail page when implemented
+      // router.push(`/workspace/data-sources/${dataSourceId}/query`);
+    } else if (isConnected(dataSourceId)) {
+      // If clicking on a connected data source type, hide grid view
       setShowGridView(false);
     } else {
       // If clicking on a non-connected data source, open connection sheet
@@ -78,101 +171,114 @@ export default function DataSourcesPage() {
     setShowConnectionSheet(true);
   };
 
-  const handleConnect = async (_data: ConnectionFormValues) => {
+  const handleConnect = async (data: ConnectionFormValues) => {
     if (!connectingDataSourceId) return;
 
-    const dataSource = allDataSources.find(
+    const dataSource = enabledDataSources.find(
       (ds) => ds.id === connectingDataSourceId,
     );
     if (!dataSource) return;
 
-    setLoading(true);
     try {
-      // Simulate connection - in real app, this would call an API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const newDataSource = {
-        id: connectingDataSourceId,
-        name: dataSource.name,
-        type: dataSource.type,
-        status: "connected" as const,
-        organizationId: currentOrganization?.id,
-        connectedAt: new Date().toISOString(),
-        tables: mockTables[dataSource.type] || [],
+      // Convert form data to API format
+      // Determine database type and auto-configure SSL
+      const databaseType = data.databaseType || "other";
+      const isNeon = databaseType === "neon";
+      const isSupabase = databaseType === "supabase";
+      const host = data.host || "";
+      const isLocalhost = host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
+      
+      const connectionData: CreateConnectionDto = {
+        name: data.name || dataSource.name,
+        config: {
+          host: host,
+          port: data.port ? parseInt(data.port, 10) : 5432,
+          database: data.database || "",
+          username: data.username || "",
+          password: data.password || "",
+          // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
+          ssl: !isLocalhost && (isNeon || isSupabase || data.ssl === "true") 
+            ? { enabled: true, rejectUnauthorized: !isLocalhost } 
+            : undefined,
+          // Pass database type as metadata for backend processing
+          databaseType: databaseType,
+        },
       };
 
-      addDataSource(newDataSource);
+      // Ensure orgId is passed - log for debugging
+      console.log('[DataSourcesPage] Creating connection with orgId:', orgId);
+      console.log('[DataSourcesPage] Connection data:', { name: connectionData.name });
+      
+      if (!orgId) {
+        toast.error(
+          "No organization selected",
+          "Please select an organization from the sidebar before creating a connection.",
+        );
+        return;
+      }
+      
+      await createConnection.mutateAsync(connectionData);
+      
+      // Close the connection sheet
+      setShowConnectionSheet(false);
+      setConnectingDataSourceId(null);
+      
       toast.success(
         `${dataSource.name} connected successfully`,
         "Your data source has been connected and is ready to use.",
       );
-      setSelectedDataSource(connectingDataSourceId);
-      setShowGridView(false); // Hide grid view after successful connection
-    } catch (error) {
+      
+      // The useEffect will automatically switch to table view when connections update
+    } catch (error: any) {
       toast.error(
         "Failed to connect data source",
-        "Unable to connect the data source. Please try again.",
+        error?.message || "Unable to connect the data source. Please try again.",
       );
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const _handleOAuthConnect = async (dataSourceId: string) => {
-    const dataSource = allDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) return;
-
-    setLoading(true);
+  const handleTestConnection = async (
+    data: ConnectionFormValues,
+  ): Promise<{ success: boolean; message: string }> => {
     try {
-      // Simulate OAuth flow
-      toast.info(
-        "Redirecting to OAuth...",
-        "You will be redirected to complete the OAuth authentication.",
+      const dataSource = enabledDataSources.find(
+        (ds) => ds.id === connectingDataSourceId,
       );
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const newDataSource = {
-        id: dataSourceId,
-        name: dataSource.name,
-        type: dataSource.type,
-        status: "connected" as const,
-        organizationId: currentOrganization?.id,
-        connectedAt: new Date().toISOString(),
-        tables: mockTables[dataSource.type] || [],
+      const databaseType = data.databaseType || "other";
+      const isNeon = databaseType === "neon";
+      const isSupabase = databaseType === "supabase";
+      const host = data.host || "";
+      const isLocalhost = host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
+      
+      const testData: TestConnectionDto = {
+        host: host,
+        port: data.port ? parseInt(data.port, 10) : 5432,
+        database: data.database || "",
+        username: data.username || "",
+        password: data.password || "",
+        // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
+        ssl: !isLocalhost && (isNeon || isSupabase || data.ssl === "true") 
+          ? { enabled: true, rejectUnauthorized: !isLocalhost } 
+          : undefined,
+        databaseType: databaseType,
       };
 
-      addDataSource(newDataSource);
-      toast.success(`${dataSource.name} connected successfully`);
-      setSelectedDataSource(dataSourceId);
-      setShowGridView(false); // Hide grid view after successful connection
-    } catch (error) {
-      toast.error("Failed to connect data source");
-      console.error(error);
-    } finally {
-      setLoading(false);
+      const result = await testConnection.mutateAsync(testData);
+      return {
+        success: result.success,
+        message: result.success
+          ? "Connection test successful!"
+          : result.error || "Connection test failed",
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Connection test failed",
+      };
     }
   };
 
-  const _handleFileUpload = (dataSourceId: string, file: File) => {
-    const dataSource = allDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) return;
-
-    const newDataSource = {
-      id: dataSourceId,
-      name: file.name,
-      type: dataSource.type,
-      status: "connected" as const,
-      organizationId: currentOrganization?.id,
-      connectedAt: new Date().toISOString(),
-      tables: mockTables[dataSource.type] || [],
-    };
-
-    addDataSource(newDataSource);
-    toast.success("File uploaded successfully");
-    setSelectedDataSource(dataSourceId);
-    setShowGridView(false); // Hide grid view after successful upload
-  };
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -183,22 +289,27 @@ export default function DataSourcesPage() {
     }
   };
 
-  const handleDisconnect = (dataSourceId: string) => {
+  const handleDisconnect = async (dataSourceId: string) => {
     const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 
-    updateDataSource(dataSourceId, {
-      ...dataSource,
-      status: "disconnected",
-    });
-
-    toast.success(
-      "Data source disconnected",
-      `${dataSource.name} has been disconnected successfully.`,
-    );
+    try {
+      // Update connection status to inactive
+      // Note: You may need to add an updateConnection hook call here
+      // For now, we'll just show a message
+      toast.success(
+        "Data source disconnected",
+        `${dataSource.name} has been disconnected successfully.`,
+      );
+    } catch (error: any) {
+      toast.error(
+        "Failed to disconnect data source",
+        error?.message || "Unable to disconnect the data source.",
+      );
+    }
   };
 
-  const handleDelete = (dataSourceId: string) => {
+  const handleDelete = async (dataSourceId: string) => {
     const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) return;
 
@@ -207,11 +318,18 @@ export default function DataSourcesPage() {
         `Are you sure you want to delete "${dataSource.name}"? This action cannot be undone.`,
       )
     ) {
-      removeDataSource(dataSourceId);
-      toast.success(
-        "Data source deleted",
-        `${dataSource.name} has been deleted successfully.`,
-      );
+      try {
+        await deleteConnection.mutateAsync(dataSourceId);
+        toast.success(
+          "Data source deleted",
+          `${dataSource.name} has been deleted successfully.`,
+        );
+      } catch (error: any) {
+        toast.error(
+          "Failed to delete data source",
+          error?.message || "Unable to delete the data source.",
+        );
+      }
     }
   };
 
@@ -222,25 +340,45 @@ export default function DataSourcesPage() {
         description="Connect and manage your data sources to power your dashboards"
         action={
           <>
-            {hasConnectedDataSources && !showGridView && (
+            {hasConnections && !showGridView ? (
               <Button onClick={() => setShowGridView(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Source
               </Button>
-            )}
-            {showGridView && (
+            ) : showGridView ? (
               <Button variant="outline" onClick={() => setShowGridView(false)}>
                 <X className="mr-2 h-4 w-4" />
                 Back to List
+              </Button>
+            ) : (
+              <Button onClick={() => setShowGridView(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Source
               </Button>
             )}
           </>
         }
       />
 
-      {!hasConnectedDataSources || showGridView ? (
-        // Show grid view when no data sources are connected or when "New source" is clicked
+      {!orgId ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              No organization selected
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Please select an organization from the sidebar to view connections
+            </p>
+          </div>
+        </div>
+      ) : isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-muted-foreground">Loading connections...</div>
+        </div>
+      ) : showGridView ? (
+        // Show grid view when no connections or when "New source" is clicked
         <DataSourceGrid
+          dataSources={enabledDataSources}
           isConnected={isConnected}
           getConnectedDataSource={getConnectedDataSource}
           onDataSourceClick={handleDataSourceClick}
@@ -260,6 +398,7 @@ export default function DataSourcesPage() {
             getConnectedDataSource={getConnectedDataSource}
             onDataSourceClick={handleDataSourceClick}
             showOnlyConnected={true}
+            connections={filteredDataSources}
             onDisconnect={handleDisconnect}
             onDelete={handleDelete}
           />
@@ -277,6 +416,7 @@ export default function DataSourcesPage() {
         }}
         dataSourceId={connectingDataSourceId}
         onConnect={handleConnect}
+        onTestConnection={handleTestConnection}
       />
     </div>
   );

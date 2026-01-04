@@ -243,7 +243,6 @@ export function DatasetConfigurationEmbedded({
     dataSources,
     datasets,
     savedQueries,
-    dashboards,
     addDataset,
     removeDataset,
     updateDataset,
@@ -258,18 +257,19 @@ export function DatasetConfigurationEmbedded({
     new Set(),
   );
   const [savingDatasets, setSavingDatasets] = useState(false);
-  
+
   // Mock sync status - in real app, this would come from the dataset or a separate sync status store
   const getSyncStatus = (dataset: Dataset) => {
     // Mock: randomly determine if synced (in real app, this would be from dataset.lastSyncAt)
     const lastSync = dataset.updatedAt; // Using updatedAt as proxy for lastSync
     const syncTime = new Date(lastSync);
     const now = new Date();
-    const hoursSinceSync = (now.getTime() - syncTime.getTime()) / (1000 * 60 * 60);
-    
+    const hoursSinceSync =
+      (now.getTime() - syncTime.getTime()) / (1000 * 60 * 60);
+
     // Consider synced if updated within last 24 hours
     const isSynced = hoursSinceSync < 24;
-    
+
     return {
       isSynced,
       lastSyncAt: lastSync,
@@ -328,7 +328,9 @@ export function DatasetConfigurationEmbedded({
         })
         .catch((error) => {
           toast.error("Failed to fetch columns", {
-            description: error.message || "Unable to load columns from the selected source.",
+            description:
+              error.message ||
+              "Unable to load columns from the selected source.",
             className: "bg-red-50 border-red-200 text-red-900",
           });
         })
@@ -422,7 +424,8 @@ export function DatasetConfigurationEmbedded({
   const onSubmit = async (data: DatasetFormValues) => {
     if (selectedColumns.length === 0) {
       toast.error("Please select at least one column", {
-        description: "You need to select at least one column to create a dataset.",
+        description:
+          "You need to select at least one column to create a dataset.",
         className: "bg-red-50 border-red-200 text-red-900",
       });
       return;
@@ -464,7 +467,8 @@ export function DatasetConfigurationEmbedded({
       setSelectedColumns([]);
     } catch (error) {
       toast.error("Failed to save dataset", {
-        description: "An error occurred while creating the dataset. Please try again.",
+        description:
+          "An error occurred while creating the dataset. Please try again.",
         className: "bg-red-50 border-red-200 text-red-900",
       });
       console.error(error);
@@ -486,21 +490,6 @@ export function DatasetConfigurationEmbedded({
         className: "bg-green-50 border-green-200 text-green-900",
       });
     }
-  };
-
-  // Check if a dataset is used in any dashboard
-  const isDatasetUsedInDashboard = (datasetId: string): boolean => {
-    return dashboards.some(
-      (dashboard) =>
-        dashboard.dataSourceId === dataSourceId &&
-        dashboard.components.some(
-          (component) =>
-            component.config &&
-            typeof component.config === "object" &&
-            "datasetId" in component.config &&
-            component.config.datasetId === datasetId,
-        ),
-    );
   };
 
   const handleToggleDatasetSelection = (datasetId: string) => {
@@ -673,7 +662,6 @@ export function DatasetConfigurationEmbedded({
                   <TableHead>Name</TableHead>
                   <TableHead>Source Type</TableHead>
                   <TableHead>Columns</TableHead>
-                  <TableHead>Used in Dashboard</TableHead>
                   <TableHead>Sync Status</TableHead>
                   <TableHead>Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -684,15 +672,15 @@ export function DatasetConfigurationEmbedded({
                   const selectedCols = dataset.columns.filter(
                     (c) => c.selected,
                   );
-                  const isUsed = isDatasetUsedInDashboard(dataset.id);
                   const isSelected = selectedDatasets.has(dataset.id);
                   const syncStatus = getSyncStatus(dataset);
-                  const isCustomQuery = dataset.sourceType === "custom_query";
                   const isTableSource = dataset.sourceType === "table";
-                  
+
                   // Get the specific table(s) used by this dataset
-                  const datasetTables = isTableSource ? [dataset.sourceName] : [];
-                  
+                  const datasetTables = isTableSource
+                    ? [dataset.sourceName]
+                    : [];
+
                   return (
                     <TableRow
                       key={dataset.id}
@@ -713,13 +701,13 @@ export function DatasetConfigurationEmbedded({
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1.5">
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={cn(
                               "text-xs w-fit",
-                              isTableSource 
-                                ? "bg-blue-50 text-blue-700 border-blue-200" 
-                                : "bg-purple-50 text-purple-700 border-purple-200"
+                              isTableSource
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-purple-50 text-purple-700 border-purple-200",
                             )}
                           >
                             {isTableSource ? "Table" : "Custom Query"}
@@ -739,20 +727,6 @@ export function DatasetConfigurationEmbedded({
                         {selectedCols.length} selected
                       </TableCell>
                       <TableCell>
-                        {isUsed ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-800 border-green-200"
-                          >
-                            Yes
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            No
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5">
                             <RefreshCw
@@ -760,16 +734,18 @@ export function DatasetConfigurationEmbedded({
                                 "h-3.5 w-3.5",
                                 syncStatus.isSynced
                                   ? "text-green-600"
-                                  : "text-yellow-600"
+                                  : "text-yellow-600",
                               )}
                             />
                             <Badge
-                              variant={syncStatus.isSynced ? "secondary" : "outline"}
+                              variant={
+                                syncStatus.isSynced ? "secondary" : "outline"
+                              }
                               className={cn(
                                 "text-xs",
                                 syncStatus.isSynced
                                   ? "bg-green-100 text-green-800 border-green-200"
-                                  : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                  : "bg-yellow-100 text-yellow-800 border-yellow-200",
                               )}
                             >
                               {syncStatus.isSynced ? "Synced" : "Not Synced"}
@@ -820,7 +796,6 @@ export function DatasetConfigurationEmbedded({
             </Table>
           </CardContent>
         </Card>
-
       </div>
     );
   }

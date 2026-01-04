@@ -132,30 +132,25 @@ const models = [
 ];
 
 const suggestions = [
-  "Add a revenue chart",
-  "Show user growth trends",
-  "Create a sales breakdown",
-  "Display top products",
-  "Generate a customer demographics visualization",
-  "Create a monthly performance dashboard",
-  "Show conversion funnel",
-  "Display regional sales map",
+  "Help me understand my data sources",
+  "How do I create a data pipeline?",
+  "What data sources are supported?",
+  "Explain data transformation",
+  "Show me pipeline examples",
+  "How do I connect to a database?",
+  "What is streaming data?",
+  "How do I export my data?",
 ];
 
 const mockResponses = [
-  "I'll create a revenue chart for you. This will show your revenue trends over time and help you visualize your business performance.",
-  "I'm generating a user growth trends visualization. This will display how your user base has grown over different time periods.",
-  "I'll create a sales breakdown component that categorizes your sales data by different dimensions like product, region, or time period.",
-  "I'm generating a top products visualization that will show your best-performing products based on sales metrics.",
+  "I can help you understand your data sources. You can connect various databases, APIs, and file systems to start building your data pipelines.",
+  "To create a data pipeline, first connect a data source, then configure the transformation rules, and finally set up the destination where you want the data to flow.",
+  "We support many data sources including PostgreSQL, MySQL, MongoDB, BigQuery, Snowflake, S3, APIs, and more. Check the data sources page for the full list.",
+  "Data transformation allows you to modify, filter, and enrich your data as it flows through the pipeline. You can use SQL queries or visual transformations.",
 ];
 
 export function AgentPanel() {
-  const {
-    agentPanelOpen,
-    setAgentPanelOpen,
-    currentDashboard,
-    addComponentToDashboard,
-  } = useWorkspaceStore();
+  const { agentPanelOpen, setAgentPanelOpen } = useWorkspaceStore();
   const [model, setModel] = useState<string>(models[0].id);
   const [text, setText] = useState<string>("");
   const [useWebSearch, setUseWebSearch] = useState<boolean>(false);
@@ -221,13 +216,8 @@ export function AgentPanel() {
 
       setMessages((prev) => [...prev, userMessage]);
 
-      // Generate component and create assistant response
+      // Generate assistant response
       setTimeout(async () => {
-        if (!currentDashboard) {
-          toast.error("Please select a dashboard first");
-          return;
-        }
-
         const assistantMessageId = `assistant-${Date.now()}`;
         const randomResponse =
           mockResponses[Math.floor(Math.random() * mockResponses.length)];
@@ -238,11 +228,11 @@ export function AgentPanel() {
           sources: [
             {
               href: "#",
-              title: "Dashboard Component Generated",
+              title: "AI Response Generated",
             },
           ],
           reasoning: {
-            content: `Analyzing the request: "${content}". I'll generate an appropriate dashboard component based on the user's requirements.`,
+            content: `Analyzing the request: "${content}". I'll provide assistance based on your requirements.`,
             duration: 5,
           },
           versions: [
@@ -255,51 +245,20 @@ export function AgentPanel() {
 
         setMessages((prev) => [...prev, assistantMessage]);
 
-        // Simulate component generation
+        // Simulate AI response
         try {
           await new Promise((resolve) => setTimeout(resolve, 500));
-
-          // Determine component type based on content
-          let componentType = "line-chart";
-          if (
-            content.toLowerCase().includes("map") ||
-            content.toLowerCase().includes("regional")
-          ) {
-            componentType = "map";
-          } else if (content.toLowerCase().includes("funnel")) {
-            componentType = "funnel-chart";
-          } else if (
-            content.toLowerCase().includes("pie") ||
-            content.toLowerCase().includes("breakdown")
-          ) {
-            componentType = "pie-chart";
-          } else if (content.toLowerCase().includes("bar")) {
-            componentType = "bar-chart";
-          }
-
-          const component = {
-            id: `comp_${Date.now()}`,
-            type: componentType,
-            position: { x: 0, y: 0, w: 6, h: 4 },
-            config: {
-              title: content,
-              data: [],
-            },
-          };
-
-          addComponentToDashboard(currentDashboard.id, component);
-          toast.success("Component generated successfully!");
 
           // Stream the response
           await streamResponse(assistantMessageId, randomResponse);
         } catch (error) {
-          toast.error("Failed to generate component");
+          toast.error("Failed to generate response");
           console.error(error);
           setStatus("error");
         }
       }, 500);
     },
-    [currentDashboard, addComponentToDashboard, streamResponse],
+    [streamResponse],
   );
 
   const handleSubmit = (message: PromptInputMessage) => {
@@ -389,7 +348,8 @@ export function AgentPanel() {
               <div className="text-center space-y-2">
                 <Sparkles className="h-8 w-8 mx-auto text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Start a conversation to generate dashboard components
+                  Start a conversation to get help with data pipelines and
+                  sources
                 </p>
               </div>
             </div>

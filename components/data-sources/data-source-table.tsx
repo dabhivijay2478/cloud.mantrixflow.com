@@ -52,6 +52,7 @@ interface DataSourceTableProps {
   getConnectedDataSource: (id: string) => DataSource | undefined;
   onDataSourceClick: (id: string) => void;
   showOnlyConnected?: boolean;
+  connections?: DataSource[]; // Actual connections from API
   onDisconnect?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -68,6 +69,7 @@ export function DataSourceTable({
   getConnectedDataSource,
   onDataSourceClick,
   showOnlyConnected = false,
+  connections = [],
   onDisconnect,
   onDelete,
 }: DataSourceTableProps) {
@@ -84,11 +86,16 @@ export function DataSourceTable({
   };
 
   const getFilteredAndSortedDataSources = () => {
-    let filtered = [...allDataSources];
-
-    // If showOnlyConnected is true, only show connected data sources
-    if (showOnlyConnected) {
-      filtered = filtered.filter((ds) => isConnected(ds.id));
+    // If showOnlyConnected is true and we have connections, use the actual connections
+    let filtered: DataSource[];
+    if (showOnlyConnected && connections.length > 0) {
+      filtered = [...connections];
+    } else {
+      filtered = [...allDataSources];
+      // If showOnlyConnected is true but no connections, filter by connected status
+      if (showOnlyConnected) {
+        filtered = filtered.filter((ds) => isConnected(ds.id));
+      }
     }
 
     // Apply search filter
@@ -256,13 +263,24 @@ export function DataSourceTable({
               </TableHeader>
               <TableBody>
                 {getFilteredAndSortedDataSources().map((dataSource) => {
-                  const connected = isConnected(dataSource.id);
-                  const connectedData = getConnectedDataSource(dataSource.id);
+                  // When showing connections, dataSource is already a connection
+                  // When showing all data sources, check if it's connected
+                  const connected = showOnlyConnected && connections.length > 0 
+                    ? true 
+                    : isConnected(dataSource.id);
+                  const connectedData = showOnlyConnected && connections.length > 0
+                    ? dataSource
+                    : getConnectedDataSource(dataSource.id);
                   const selectedTables =
                     connectedData?.selectedTables ||
                     (connectedData?.selectedTable
                       ? [connectedData.selectedTable]
                       : []);
+                  
+                  // Get icon type - use dataSource.type if available, otherwise infer from connection
+                  const iconType = 'iconType' in dataSource 
+                    ? dataSource.iconType 
+                    : dataSource.type === 'postgres' ? 'postgres' : dataSource.type;
 
                   return (
                     <TableRow
@@ -273,7 +291,7 @@ export function DataSourceTable({
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                            {getIconComponent(dataSource.iconType, 16)}
+                            {getIconComponent(iconType, 16)}
                           </div>
                           <span className="font-semibold">
                             {dataSource.name}

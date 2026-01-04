@@ -1,17 +1,15 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowLeft,
-  Bot,
   Check,
   Loader2,
   Mail,
   Shield,
-  Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
+import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,8 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import {
   inviteTeamMemberAction,
   type TeamActionResult,
@@ -99,45 +95,10 @@ const roleConfig: Record<
   },
 };
 
-const availableModels = [
-  {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    provider: "OpenAI",
-    description: "Most capable model",
-  },
-  {
-    id: "gpt-4o-mini",
-    name: "GPT-4o Mini",
-    provider: "OpenAI",
-    description: "Fast and efficient",
-  },
-  {
-    id: "claude-opus-4-20250514",
-    name: "Claude 4 Opus",
-    provider: "Anthropic",
-    description: "Best for complex tasks",
-  },
-  {
-    id: "claude-sonnet-4-20250514",
-    name: "Claude 4 Sonnet",
-    provider: "Anthropic",
-    description: "Balanced performance",
-  },
-  {
-    id: "gemini-2.0-flash-exp",
-    name: "Gemini 2.0 Flash",
-    provider: "Google",
-    description: "Lightning fast",
-  },
-];
-
 export default function InviteTeamMemberPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("member");
-  const [agentPanelAccess, setAgentPanelAccess] = useState(false);
-  const [allowedModels, setAllowedModels] = useState<string[]>([]);
 
   const [state, formAction, isPending] = useActionState<
     TeamActionResult | null,
@@ -147,48 +108,38 @@ export default function InviteTeamMemberPage() {
   // Handle form state changes
   useEffect(() => {
     if (state?.success) {
-      toast.success(
-        "Invitation sent!",
-        state.message || `Invitation sent to ${email}`,
-      );
+      toast.success("Invitation sent!", {
+        description: state.message || `Invitation sent to ${email}`,
+      });
+      // Reset form and redirect after a short delay
+      setTimeout(() => {
+        setEmail("");
+        setSelectedRole("member");
+        router.push("/workspace/team");
+      }, 1500);
     } else if (state && !state.success) {
-      toast.error("Failed to send invitation", state.error);
+      toast.error("Failed to send invitation", { description: state.error });
     }
-  }, [state, email]);
+  }, [state, email, router]);
 
-  const toggleModelPermission = (modelId: string) => {
-    if (allowedModels.includes(modelId)) {
-      setAllowedModels(allowedModels.filter((id) => id !== modelId));
-    } else {
-      setAllowedModels([...allowedModels, modelId]);
-    }
-  };
-
-  const selectedRoleConfig = roleConfig[selectedRole];
-  const Icon = selectedRoleConfig.icon;
 
   return (
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-4xl">
-      {/* Header with Back Button */}
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/workspace/team")}
-          className="mb-4 -ml-2 hover:bg-accent"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Team
-        </Button>
-        <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Invite Team Member
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Send an invitation to add a new team member to your organization
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Invite Team Member"
+        description="Send an invitation to add a new team member to your organization"
+        backButton={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/workspace/team")}
+            className="-ml-2 hover:bg-accent"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Team
+          </Button>
+        }
+      />
 
       <div className="space-y-6">
         {/* Basic Information Card */}
@@ -294,179 +245,8 @@ export default function InviteTeamMemberPage() {
                   </ScrollArea>
                 </SelectContent>
               </Select>
-
-              {/* Selected Role Preview */}
-              <div className="p-4 rounded-xl border-2 bg-accent/50">
-                <div className="flex items-start gap-3 mb-3">
-                  <div
-                    className={cn(
-                      "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm",
-                      selectedRoleConfig.bgColor,
-                      "text-white",
-                    )}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-base">
-                      {selectedRoleConfig.label}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-0.5">
-                      {selectedRoleConfig.description}
-                    </div>
-                  </div>
-                </div>
-                <Separator className="my-3" />
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Permissions
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedRoleConfig.permissions.map((permission) => (
-                      <Badge
-                        key={permission}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        <Check className="h-3 w-3 mr-1" />
-                        {permission}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </CardContent>
-        </Card>
-
-        {/* Agent Panel Access Card */}
-        <Card className="border-2">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1 flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-primary" />
-                  Agent Panel Access
-                  <Badge variant="outline" className="ml-2">
-                    Optional
-                  </Badge>
-                </CardTitle>
-                <CardDescription>
-                  Grant access to AI-powered dashboard generation tools
-                </CardDescription>
-              </div>
-              <Switch
-                id="agent-panel-access"
-                name="agentPanelAccess"
-                checked={agentPanelAccess}
-                onCheckedChange={setAgentPanelAccess}
-                disabled={isPending}
-              />
-              <input
-                type="hidden"
-                name="agentPanelAccess"
-                value={agentPanelAccess ? "true" : "false"}
-              />
-            </div>
-          </CardHeader>
-
-          {agentPanelAccess && (
-            <CardContent className="space-y-4 pt-0">
-              <div className="p-4 rounded-lg bg-primary/5 border-l-4 border-primary">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium mb-1">Select AI Models</p>
-                    <p className="text-xs text-muted-foreground">
-                      Choose which AI models this member can use for generating
-                      dashboards and insights
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {availableModels.map((model) => {
-                  const isSelected = allowedModels.includes(model.id);
-                  return (
-                    <button
-                      key={model.id}
-                      type="button"
-                      onClick={() => toggleModelPermission(model.id)}
-                      className={cn(
-                        "group relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all w-full text-left hover:shadow-md",
-                        isSelected
-                          ? "border-primary bg-primary/5 shadow-sm"
-                          : "border-border hover:border-primary/50 hover:bg-accent/50",
-                      )}
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div
-                          className={cn(
-                            "h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all flex-shrink-0",
-                            isSelected
-                              ? "border-primary bg-primary shadow-sm"
-                              : "border-muted-foreground/30 group-hover:border-primary/50",
-                          )}
-                        >
-                          {isSelected && (
-                            <Check className="h-4 w-4 text-primary-foreground" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-semibold">
-                              {model.name}
-                            </p>
-                            <Badge variant="outline" className="text-xs">
-                              {model.provider}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {model.description}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {allowedModels.length === 0 && (
-                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-1">
-                        No models selected
-                      </p>
-                      <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80">
-                        Please select at least one model to enable agent panel
-                        access
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {allowedModels.length > 0 && (
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <div className="flex items-start gap-3">
-                    <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
-                        {allowedModels.length} model
-                        {allowedModels.length !== 1 ? "s" : ""} selected
-                      </p>
-                      <p className="text-xs text-green-600/80 dark:text-green-400/80">
-                        Member will have access to the selected AI models
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          )}
         </Card>
 
         {/* Action Buttons */}
@@ -475,19 +255,6 @@ export default function InviteTeamMemberPage() {
             <form action={formAction} noValidate>
               <input type="hidden" name="email" value={email} />
               <input type="hidden" name="role" value={selectedRole} />
-              <input
-                type="hidden"
-                name="agentPanelAccess"
-                value={agentPanelAccess ? "true" : "false"}
-              />
-              {allowedModels.map((modelId) => (
-                <input
-                  key={modelId}
-                  type="hidden"
-                  name="allowedModels"
-                  value={modelId}
-                />
-              ))}
               <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
                 <Button
                   type="button"
@@ -500,11 +267,7 @@ export default function InviteTeamMemberPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={
-                    isPending ||
-                    !email.trim() ||
-                    (agentPanelAccess && allowedModels.length === 0)
-                  }
+                  disabled={isPending || !email.trim()}
                   className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
                   size="lg"
                   aria-busy={isPending}

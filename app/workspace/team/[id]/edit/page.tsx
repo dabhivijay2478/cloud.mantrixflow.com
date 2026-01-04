@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -328,26 +329,21 @@ export default function EditTeamMemberPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-4xl">
-      {/* Header with Back Button */}
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/workspace/team")}
-          className="mb-4 -ml-2 hover:bg-accent"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Team
-        </Button>
-        <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Edit Team Member
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Update team member information, role, and permissions
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Edit Team Member"
+        description="Update team member information, role, and permissions"
+        backButton={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/workspace/team")}
+            className="-ml-2 hover:bg-accent"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Team
+          </Button>
+        }
+      />
 
       <div className="space-y-6">
         {/* Member Profile Card */}
