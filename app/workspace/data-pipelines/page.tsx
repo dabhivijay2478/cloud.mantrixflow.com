@@ -6,7 +6,6 @@ import {
   Pause,
   Play,
   Plus,
-  Settings,
   Sparkles,
   Trash2,
   Zap,
@@ -428,17 +427,6 @@ export default function DataPipelinesPage() {
               </Button>
             )}
             <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/workspace/data-pipelines/${pipeline.id}/edit`);
-              }}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Configure
-            </Button>
-            <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-destructive hover:text-destructive"
@@ -482,7 +470,7 @@ export default function DataPipelinesPage() {
       ) : pipelines && pipelines.length > 0 ? (
         <Card>
           <CardContent className="p-6">
-            <DataTable columns={columns} data={pipelines} />
+            <DataTable columns={columns} data={pipelines} enableSorting={true} />
           </CardContent>
         </Card>
       ) : (
