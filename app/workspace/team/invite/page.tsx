@@ -151,10 +151,18 @@ export default function InviteTeamMemberPage() {
       toast.success("Invitation sent!", {
         description: state.message || `Invitation sent to ${email}`,
       });
+      // Reset form and redirect after a short delay
+      setTimeout(() => {
+        setEmail("");
+        setSelectedRole("member");
+        setAgentPanelAccess(false);
+        setAllowedModels([]);
+        router.push("/workspace/team");
+      }, 1500);
     } else if (state && !state.success) {
       toast.error("Failed to send invitation", { description: state.error });
     }
-  }, [state, email]);
+  }, [state, email, router]);
 
   const toggleModelPermission = (modelId: string) => {
     if (allowedModels.includes(modelId)) {

@@ -31,6 +31,8 @@ export { dataPipelinesKeys } from './hooks/use-data-pipelines';
 // Hooks - Organizations
 export * from './hooks/use-organizations';
 export { organizationsKeys } from './hooks/use-organizations';
+export * from './hooks/use-organization-members';
+export { organizationMembersKeys } from './hooks/use-organization-members';
 
 // Hooks - Users
 export * from './hooks/use-users';

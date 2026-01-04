@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { OrganizationsService } from "@/lib/api/services/organizations.service";
+import { UsersService } from "@/lib/api/services/users.service";
 
 export type TeamActionResult<T = void> =
   | { success: true; data?: T; message?: string }
@@ -81,12 +83,69 @@ export async function inviteTeamMemberAction(
       };
     }
 
-    // TODO: Implement actual invitation logic (send email, create invitation record, etc.)
-    // For now, simulate success
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Get current organization
+    let organizationId: string;
+    try {
+      const currentUser = await UsersService.getCurrentUser();
+      if (currentUser.currentOrgId) {
+        organizationId = currentUser.currentOrgId;
+      } else {
+        // Fallback: get current organization from API
+        const currentOrg = await OrganizationsService.getCurrentOrganization();
+        if (!currentOrg) {
+          return {
+            success: false,
+            error: "No organization selected. Please select an organization first.",
+          };
+        }
+        organizationId = currentOrg.id;
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to get current organization. Please try again.",
+      };
+    }
 
-    revalidatePath("/workspace/team");
-    redirect("/workspace/team");
+    // Invite member via API
+    try {
+      await OrganizationsService.inviteMember(organizationId, {
+        email: validation.data.email,
+        role: validation.data.role,
+        agentPanelAccess: validation.data.agentPanelAccess,
+        allowedModels: validation.data.allowedModels,
+      });
+
+      revalidatePath("/workspace/team");
+      // Don't redirect - let the form handle success message
+      return {
+        success: true,
+        message: `Invitation sent to ${validation.data.email}`,
+      };
+    } catch (error) {
+      // Handle API errors
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to send invitation";
+      
+      // Check if it's a duplicate invite error
+      if (errorMessage.includes("already been invited")) {
+        return {
+          success: false,
+          error: errorMessage,
+          fieldErrors: {
+            email: ["This user has already been invited to this organization"],
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   } catch (error) {
     return {
       success: false,
