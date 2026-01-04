@@ -1,21 +1,20 @@
 "use client";
 
 import {
+  CheckCircle2,
   ChevronDown,
-  ChevronRight,
   ChevronLeft,
-  Database,
+  ChevronRight,
   Folder,
   Search,
   Table as TableIcon,
-  CheckCircle2,
 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Schema } from "@/lib/api/types/data-sources";
 import { cn } from "@/lib/utils";
-import type { Schema, Table } from "@/lib/api/types/data-sources";
 
 interface SchemaTableNavigationProps {
   schemas: Schema[];

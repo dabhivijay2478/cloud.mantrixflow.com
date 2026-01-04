@@ -44,8 +44,8 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useConnections } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 
 type PipelineType = "bulk" | "stream" | "emit";

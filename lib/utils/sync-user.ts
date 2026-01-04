@@ -3,8 +3,8 @@
  * Call this after successful login/signup/email confirmation
  */
 
-import { supabase } from "@/lib/supabase/client";
 import { UsersService } from "@/lib/api";
+import { supabase } from "@/lib/supabase/client";
 
 export async function syncUserAfterAuth(): Promise<void> {
   try {

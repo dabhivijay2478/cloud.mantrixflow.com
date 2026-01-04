@@ -2,11 +2,11 @@
  * Users TanStack Query Hooks
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  UsersService,
-  type UpdateUserDto,
   type CreateUserDto,
+  type UpdateUserDto,
+  UsersService,
 } from "../services/users.service";
 
 export const usersKeys = {

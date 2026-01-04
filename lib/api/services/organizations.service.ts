@@ -5,12 +5,12 @@
 
 import { ApiClient } from "../client";
 import type {
-  Organization,
   CreateOrganizationDto,
-  UpdateOrganizationDto,
-  OrganizationMember,
   InviteMemberDto,
+  Organization,
+  OrganizationMember,
   UpdateMemberDto,
+  UpdateOrganizationDto,
 } from "../types/organizations";
 
 export class OrganizationsService {
@@ -20,42 +20,54 @@ export class OrganizationsService {
   static async createOrganization(
     data: CreateOrganizationDto,
   ): Promise<Organization> {
-    return ApiClient.post<Organization>(this.BASE_PATH, data);
+    return ApiClient.post<Organization>(OrganizationsService.BASE_PATH, data);
   }
 
   static async listOrganizations(): Promise<Organization[]> {
-    return ApiClient.get<Organization[]>(this.BASE_PATH);
+    return ApiClient.get<Organization[]>(OrganizationsService.BASE_PATH);
   }
 
   static async getOrganization(id: string): Promise<Organization> {
-    return ApiClient.get<Organization>(`${this.BASE_PATH}/${id}`);
+    return ApiClient.get<Organization>(
+      `${OrganizationsService.BASE_PATH}/${id}`,
+    );
   }
 
   static async updateOrganization(
     id: string,
     data: UpdateOrganizationDto,
   ): Promise<Organization> {
-    return ApiClient.patch<Organization>(`${this.BASE_PATH}/${id}`, data);
+    return ApiClient.patch<Organization>(
+      `${OrganizationsService.BASE_PATH}/${id}`,
+      data,
+    );
   }
 
   static async deleteOrganization(id: string): Promise<{ deletedId: string }> {
-    return ApiClient.delete<{ deletedId: string }>(`${this.BASE_PATH}/${id}`);
+    return ApiClient.delete<{ deletedId: string }>(
+      `${OrganizationsService.BASE_PATH}/${id}`,
+    );
   }
 
   static async getCurrentOrganization(options?: {
     token?: string | null;
   }): Promise<Organization | null> {
     try {
-      return ApiClient.get<Organization>(`${this.BASE_PATH}/current`, {
-        token: options?.token,
-      });
+      return ApiClient.get<Organization>(
+        `${OrganizationsService.BASE_PATH}/current`,
+        {
+          token: options?.token,
+        },
+      );
     } catch {
       return null;
     }
   }
 
   static async setCurrentOrganization(id: string): Promise<Organization> {
-    return ApiClient.post<Organization>(`${this.BASE_PATH}/${id}/set-current`);
+    return ApiClient.post<Organization>(
+      `${OrganizationsService.BASE_PATH}/${id}/set-current`,
+    );
   }
 
   // Organization Member Management
@@ -70,7 +82,7 @@ export class OrganizationsService {
       tokenLength: options?.token?.length || 0,
     });
     return ApiClient.post<OrganizationMember>(
-      `${this.BASE_PATH}/${organizationId}/members/invite`,
+      `${OrganizationsService.BASE_PATH}/${organizationId}/members/invite`,
       data,
       { token: options?.token },
     );
@@ -80,7 +92,7 @@ export class OrganizationsService {
     organizationId: string,
   ): Promise<OrganizationMember[]> {
     return ApiClient.get<OrganizationMember[]>(
-      `${this.BASE_PATH}/${organizationId}/members`,
+      `${OrganizationsService.BASE_PATH}/${organizationId}/members`,
     );
   }
 
@@ -89,7 +101,7 @@ export class OrganizationsService {
     memberId: string,
   ): Promise<OrganizationMember> {
     return ApiClient.get<OrganizationMember>(
-      `${this.BASE_PATH}/${organizationId}/members/${memberId}`,
+      `${OrganizationsService.BASE_PATH}/${organizationId}/members/${memberId}`,
     );
   }
 
@@ -99,7 +111,7 @@ export class OrganizationsService {
     data: UpdateMemberDto,
   ): Promise<OrganizationMember> {
     return ApiClient.patch<OrganizationMember>(
-      `${this.BASE_PATH}/${organizationId}/members/${memberId}`,
+      `${OrganizationsService.BASE_PATH}/${organizationId}/members/${memberId}`,
       data,
     );
   }
@@ -109,7 +121,7 @@ export class OrganizationsService {
     memberId: string,
   ): Promise<{ deletedId: string }> {
     return ApiClient.delete<{ deletedId: string }>(
-      `${this.BASE_PATH}/${organizationId}/members/${memberId}`,
+      `${OrganizationsService.BASE_PATH}/${organizationId}/members/${memberId}`,
     );
   }
 }

@@ -1,23 +1,22 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
   CheckCircle2,
   Database,
   Edit,
-  Map as MapIcon,
   Plus,
   Search,
-  Settings,
   Sparkles,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FormSheet } from "@/components/shared";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -27,14 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/shared";
-import { Textarea } from "@/components/ui/textarea";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useConnections } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import type { CollectorConfig } from "./collector-step";
-import type { TransformConfig } from "./transform-step";
 
 interface EmitterStepProps {
   collectors: CollectorConfig[];
@@ -87,7 +82,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
   const [selectedDestinationId, setSelectedDestinationId] =
     useState<string>("");
-  const [configValues, setConfigValues] = useState<Record<string, string>>({});
+  const [_configValues, setConfigValues] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
@@ -98,7 +93,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     const collectorName =
       source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
     // Emitters are stored directly on collectors, not on transformers
-    return ((collector as any).emitters || []).map((e: EmitterConfig) => ({
+    return (collector.emitters || []).map((e: EmitterConfig) => ({
       ...e,
       collectorId: collector.id,
       collectorName,
@@ -109,7 +104,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     (d) => d.id === selectedDestinationId,
   );
 
-  const handleConfigChange = (key: string, value: string) => {
+  const _handleConfigChange = (key: string, value: string) => {
     setConfigValues((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -130,10 +125,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === selectedCollectorId) {
         const emitters = editingEmitter
-          ? ((collector as any).emitters || []).map((e: EmitterConfig) =>
+          ? (collector.emitters || []).map((e: EmitterConfig) =>
               e.id === editingEmitter ? newEmitter : e,
             )
-          : [...((collector as any).emitters || []), newEmitter];
+          : [...(collector.emitters || []), newEmitter];
         return { ...collector, emitters };
       }
       return collector;
@@ -150,7 +145,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const handleDeleteEmitter = (collectorId: string, emitterId: string) => {
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === collectorId) {
-        const emitters = ((collector as any).emitters || []).filter(
+        const emitters = (collector.emitters || []).filter(
           (e: EmitterConfig) => e.id !== emitterId,
         );
         return { ...collector, emitters };

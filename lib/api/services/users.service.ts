@@ -39,7 +39,7 @@ export class UsersService {
     data: CreateUserDto,
     options?: { token?: string | null },
   ): Promise<User> {
-    return ApiClient.post<User>(`${this.BASE_PATH}/sync`, data, {
+    return ApiClient.post<User>(`${UsersService.BASE_PATH}/sync`, data, {
       token: options?.token,
     });
   }
@@ -47,24 +47,24 @@ export class UsersService {
   static async getCurrentUser(options?: {
     token?: string | null;
   }): Promise<User> {
-    return ApiClient.get<User>(`${this.BASE_PATH}/me`, {
+    return ApiClient.get<User>(`${UsersService.BASE_PATH}/me`, {
       token: options?.token,
     });
   }
 
   static async getUser(id: string): Promise<User> {
-    return ApiClient.get<User>(`${this.BASE_PATH}/${id}`);
+    return ApiClient.get<User>(`${UsersService.BASE_PATH}/${id}`);
   }
 
   static async updateUser(data: UpdateUserDto): Promise<User> {
-    return ApiClient.patch<User>(`${this.BASE_PATH}/me`, data);
+    return ApiClient.patch<User>(`${UsersService.BASE_PATH}/me`, data);
   }
 
   static async updateOnboarding(
     completed: boolean,
     step?: string,
   ): Promise<User> {
-    return ApiClient.patch<User>(`${this.BASE_PATH}/me/onboarding`, {
+    return ApiClient.patch<User>(`${UsersService.BASE_PATH}/me/onboarding`, {
       completed,
       step,
     });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   allDataSources,
   ConnectionSheet,
@@ -11,16 +11,16 @@ import {
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
+  type CreateConnectionDto,
+  type TestConnectionDto,
   useConnections,
   useCreateConnection,
   useDeleteConnection,
   useTestConnection,
-  type CreateConnectionDto,
-  type TestConnectionDto,
 } from "@/lib/api";
-import { toast } from "@/lib/utils/toast";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import type { DataSource } from "@/lib/stores/workspace-store";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { toast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
@@ -242,12 +242,12 @@ export default function DataSourcesPage() {
       );
 
       // The useEffect will automatically switch to table view when connections update
-    } catch (error: any) {
-      toast.error(
-        "Failed to connect data source",
-        error?.message ||
-          "Unable to connect the data source. Please try again.",
-      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to connect the data source. Please try again.";
+      toast.error("Failed to connect data source", errorMessage);
       console.error(error);
     }
   };
@@ -256,7 +256,7 @@ export default function DataSourcesPage() {
     data: ConnectionFormValues,
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const dataSource = enabledDataSources.find(
+      const _dataSource = enabledDataSources.find(
         (ds) => ds.id === connectingDataSourceId,
       );
       const databaseType = data.databaseType || "other";
@@ -287,10 +287,12 @@ export default function DataSourcesPage() {
           ? "Connection test successful!"
           : result.error || "Connection test failed",
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Connection test failed";
       return {
         success: false,
-        message: error?.message || "Connection test failed",
+        message: errorMessage,
       };
     }
   };
@@ -316,11 +318,12 @@ export default function DataSourcesPage() {
         "Data source disconnected",
         `${dataSource.name} has been disconnected successfully.`,
       );
-    } catch (error: any) {
-      toast.error(
-        "Failed to disconnect data source",
-        error?.message || "Unable to disconnect the data source.",
-      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to disconnect the data source.";
+      toast.error("Failed to disconnect data source", errorMessage);
     }
   };
 
@@ -339,11 +342,12 @@ export default function DataSourcesPage() {
           "Data source deleted",
           `${dataSource.name} has been deleted successfully.`,
         );
-      } catch (error: any) {
-        toast.error(
-          "Failed to delete data source",
-          error?.message || "Unable to delete the data source.",
-        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Unable to delete the data source.";
+        toast.error("Failed to delete data source", errorMessage);
       }
     }
   };
@@ -354,24 +358,22 @@ export default function DataSourcesPage() {
         title="Data Sources"
         description="Connect and manage your data sources to power your dashboards"
         action={
-          <>
-            {hasConnections && !showGridView ? (
-              <Button onClick={() => setShowGridView(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Source
-              </Button>
-            ) : showGridView ? (
-              <Button variant="outline" onClick={() => setShowGridView(false)}>
-                <X className="mr-2 h-4 w-4" />
-                Back to List
-              </Button>
-            ) : (
-              <Button onClick={() => setShowGridView(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Source
-              </Button>
-            )}
-          </>
+          hasConnections && !showGridView ? (
+            <Button onClick={() => setShowGridView(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Source
+            </Button>
+          ) : showGridView ? (
+            <Button variant="outline" onClick={() => setShowGridView(false)}>
+              <X className="mr-2 h-4 w-4" />
+              Back to List
+            </Button>
+          ) : (
+            <Button onClick={() => setShowGridView(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Source
+            </Button>
+          )
         }
       />
 

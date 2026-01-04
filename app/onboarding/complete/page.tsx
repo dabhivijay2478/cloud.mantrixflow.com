@@ -11,9 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useCompleteOnboarding } from "@/lib/api";
-import { useEffect } from "react";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function CompletePage() {
   const router = useRouter();

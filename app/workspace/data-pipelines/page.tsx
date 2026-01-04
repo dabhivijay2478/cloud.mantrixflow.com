@@ -1,5 +1,6 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRightLeft,
   Database,
@@ -11,22 +12,21 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  usePipelines,
   useDeletePipeline,
-  useRunPipeline,
   usePausePipeline,
+  usePipelines,
   useResumePipeline,
+  useRunPipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
+import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
-import type { Pipeline } from "@/lib/api/types/data-pipelines";
 
 type PipelineType = "bulk" | "stream" | "emit";
 
@@ -171,9 +171,9 @@ export default function DataPipelinesPage() {
 
     // Fallback to pipeline status
     switch (pipeline.status) {
-      case "active":
+      case "active": {
         // Show sync mode if available
-        const syncMode = (pipeline as any).syncMode;
+        const syncMode = pipeline.syncMode;
         if (syncMode === "incremental") {
           return (
             <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
@@ -186,6 +186,7 @@ export default function DataPipelinesPage() {
             Active
           </Badge>
         );
+      }
       case "paused":
         return (
           <Badge
@@ -228,11 +229,12 @@ export default function DataPipelinesPage() {
           "Pipeline deleted",
           `${pipelineName} has been deleted successfully.`,
         );
-      } catch (error: any) {
-        toast.error(
-          "Failed to delete pipeline",
-          error?.message || "Unable to delete the pipeline.",
-        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Unable to delete the pipeline.";
+        toast.error("Failed to delete pipeline", errorMessage);
       }
     }
   };
@@ -247,11 +249,12 @@ export default function DataPipelinesPage() {
         "Pipeline execution started",
         `${pipelineName} is now running. Check the runs tab for progress.`,
       );
-    } catch (error: any) {
-      toast.error(
-        "Failed to run pipeline",
-        error?.message || "Unable to start the pipeline execution.",
-      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to start the pipeline execution.";
+      toast.error("Failed to run pipeline", errorMessage);
     }
   };
 
@@ -265,11 +268,12 @@ export default function DataPipelinesPage() {
         "Pipeline paused",
         `${pipelineName} has been paused successfully.`,
       );
-    } catch (error: any) {
-      toast.error(
-        "Failed to pause pipeline",
-        error?.message || "Unable to pause the pipeline.",
-      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to pause the pipeline.";
+      toast.error("Failed to pause pipeline", errorMessage);
     }
   };
 
@@ -283,11 +287,12 @@ export default function DataPipelinesPage() {
         "Pipeline resumed",
         `${pipelineName} has been resumed successfully. You can now run it.`,
       );
-    } catch (error: any) {
-      toast.error(
-        "Failed to resume pipeline",
-        error?.message || "Unable to resume the pipeline.",
-      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to resume the pipeline.";
+      toast.error("Failed to resume pipeline", errorMessage);
     }
   };
 
@@ -322,11 +327,15 @@ export default function DataPipelinesPage() {
       header: "Source",
       cell: ({ row }) => {
         // Try to get sourceConnectionId from pipeline object first
-        let sourceConnectionId = (row.original as any).sourceConnectionId;
+        let sourceConnectionId = (
+          row.original as { sourceConnectionId?: string }
+        ).sourceConnectionId;
 
         // If not found, extract from transformations.collectors
         if (!sourceConnectionId && row.original.transformations) {
-          const transformations = row.original.transformations as any;
+          const transformations = row.original.transformations as {
+            collectors?: Array<{ sourceId?: string }>;
+          };
           const collectors = transformations?.collectors || [];
           if (collectors.length > 0 && collectors[0].sourceId) {
             sourceConnectionId = collectors[0].sourceId;

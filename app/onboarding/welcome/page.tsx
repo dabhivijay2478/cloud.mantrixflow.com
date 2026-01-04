@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Sparkles, Building2 } from "lucide-react";
+import { ArrowRight, Building2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
@@ -16,13 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useAuthStore } from "@/lib/stores/auth-store";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import {
+  useCurrentOrganization,
   useOnboardingStatus,
   useUpdateOnboardingStep,
-  useCurrentOrganization,
 } from "@/lib/api";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function WelcomePage() {
   const router = useRouter();

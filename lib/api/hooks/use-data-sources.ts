@@ -3,14 +3,14 @@
  * Reusable hooks for PostgreSQL data source API endpoints
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataSourcesService } from "../services/data-sources.service";
 import type {
-  TestConnectionDto,
   CreateConnectionDto,
-  UpdateConnectionDto,
-  ExecuteQueryDto,
   CreateSyncJobDto,
+  ExecuteQueryDto,
+  TestConnectionDto,
+  UpdateConnectionDto,
   UpdateSyncJobScheduleDto,
 } from "../types/data-sources";
 

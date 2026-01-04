@@ -3,13 +3,9 @@
  * TanStack Query hooks for organization member management
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { OrganizationsService } from "../services/organizations.service";
-import type {
-  OrganizationMember,
-  InviteMemberDto,
-  UpdateMemberDto,
-} from "../types/organizations";
+import type { InviteMemberDto, UpdateMemberDto } from "../types/organizations";
 
 // Query keys factory
 export const organizationMembersKeys = {

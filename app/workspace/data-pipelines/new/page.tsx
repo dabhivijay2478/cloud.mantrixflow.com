@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useCreatePipeline } from "@/lib/api/hooks/use-data-pipelines";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
 import { CollectorStep } from "./collector-step";
@@ -16,6 +16,8 @@ type PipelineStep = "collector" | "transform" | "emitter";
 interface PipelineConfig {
   collectors: CollectorConfig[];
 }
+
+type Transformer = CollectorConfig["transformers"][number];
 
 export default function NewPipelinePage() {
   const router = useRouter();
@@ -68,7 +70,7 @@ export default function NewPipelinePage() {
         return false;
       }
 
-      return collector.transformers.some((t: any) => {
+      return collector.transformers.some((t) => {
         // Check if fieldMappings exists and is a non-empty array
         const fieldMappings = t.fieldMappings;
         if (!fieldMappings) {
@@ -79,9 +81,13 @@ export default function NewPipelinePage() {
         if (Array.isArray(fieldMappings)) {
           return (
             fieldMappings.length > 0 &&
-            fieldMappings.some((fm: any) => {
+            fieldMappings.some((fm) => {
               // Ensure each mapping has required fields
-              return fm && (fm.source || fm.destination);
+              return (
+                fm &&
+                typeof fm === "object" &&
+                ("source" in fm || "destination" in fm)
+              );
             })
           );
         }
@@ -127,11 +133,11 @@ export default function NewPipelinePage() {
     setIsCreating(true);
 
     // Get all unique source IDs and destination IDs
-    const allSourceIds = [...new Set(collectorsToUse.map((c) => c.sourceId))];
+    const _allSourceIds = [...new Set(collectorsToUse.map((c) => c.sourceId))];
 
     // Extract emitters from collectors (emitters are now stored at collector level, not transformer level)
     const allEmitters = collectorsToUse.flatMap((c) =>
-      ((c as any).emitters || []).map((e: any) => ({
+      (c.emitters || []).map((e) => ({
         ...e,
         collectorId: c.id,
       })),
@@ -173,7 +179,7 @@ export default function NewPipelinePage() {
 
     // Map transformers to emitters - set transformId on emitters
     const transformersWithEmitters = collectorsToUse.flatMap((c) =>
-      (c.transformers || []).map((t: any) => ({
+      (c.transformers || []).map((t) => ({
         ...t,
         collectorId: t.collectorId || c.id,
         emitterId: t.emitterId || "",
@@ -182,10 +188,10 @@ export default function NewPipelinePage() {
 
     // Map emitters to the format expected by the API
     // Set transformId for emitters that are referenced by transformers
-    const emitters = allEmitters.map((e: any) => {
+    const emitters = allEmitters.map((e) => {
       // Find transformer that references this emitter
       const transformer = transformersWithEmitters.find(
-        (t: any) => t.emitterId === e.id,
+        (t) => t.emitterId === e.id,
       );
       return {
         id: e.id,
@@ -212,7 +218,10 @@ export default function NewPipelinePage() {
 
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t: any) => t.destinationTable);
+        .find(
+          (t): t is Transformer & { destinationTable: string } =>
+            !!(t as { destinationTable?: string }).destinationTable,
+        );
 
       if (firstTransformer?.destinationTable) {
         const tableParts = firstTransformer.destinationTable.includes(".")
@@ -240,7 +249,7 @@ export default function NewPipelinePage() {
             sourceId: c.sourceId,
             selectedTables: c.selectedTables,
             transformers: (c.transformers || [])
-              .filter((t: any) => {
+              .filter((t) => {
                 // Only include transformers that have valid field mappings
                 const fieldMappings = t.fieldMappings;
                 if (!fieldMappings) {
@@ -251,8 +260,12 @@ export default function NewPipelinePage() {
                 if (Array.isArray(fieldMappings)) {
                   return (
                     fieldMappings.length > 0 &&
-                    fieldMappings.some((fm: any) => {
-                      return fm && (fm.source || fm.destination);
+                    fieldMappings.some((fm) => {
+                      return (
+                        fm &&
+                        typeof fm === "object" &&
+                        ("source" in fm || "destination" in fm)
+                      );
                     })
                   );
                 }
@@ -265,14 +278,19 @@ export default function NewPipelinePage() {
                   ? t.fieldMappings
                   : [];
 
+                const transformerWithExtras = t as Transformer & {
+                  primaryKeyField?: string;
+                  destinationTable?: string;
+                };
+
                 return {
                   id: t.id,
                   name: t.name,
-                  collectorId: (t as any).collectorId || c.id,
-                  emitterId: (t as any).emitterId || "", // Reference to emitter
+                  collectorId: t.collectorId || c.id,
+                  emitterId: t.emitterId || "", // Reference to emitter
                   fieldMappings: fieldMappings, // Always an array
-                  primaryKeyField: (t as any).primaryKeyField, // Include primary key field
-                  destinationTable: (t as any).destinationTable, // Include destination table
+                  primaryKeyField: transformerWithExtras.primaryKeyField, // Include primary key field
+                  destinationTable: transformerWithExtras.destinationTable, // Include destination table
                 };
               }),
           })),
@@ -316,7 +334,7 @@ export default function NewPipelinePage() {
       },
     ];
 
-  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
+  const _currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">

@@ -1,11 +1,10 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2, Mail, Shield } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,

@@ -2,7 +2,7 @@
  * Onboarding TanStack Query Hooks
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { OnboardingService } from "../services/onboarding.service";
 
 export const onboardingKeys = {

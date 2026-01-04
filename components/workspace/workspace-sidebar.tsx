@@ -15,10 +15,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Logo } from "@/components/logo";
 import {
-  useOrganizations,
-  useCurrentOrganization,
-} from "@/lib/api/hooks/use-organizations";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -41,6 +37,10 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  useCurrentOrganization,
+  useOrganizations,
+} from "@/lib/api/hooks/use-organizations";
 import {
   type Organization,
   useWorkspaceStore,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useQueries } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
   Database,
@@ -11,15 +13,13 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FormSheet } from "@/components/shared";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -35,14 +35,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/shared";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import {
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import type { CollectorConfig } from "./collector-step";
 import type { EmitterConfig } from "./emitter-step";
 
@@ -110,7 +108,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         sourceId: c.sourceId,
         transformersCount: c.transformers?.length || 0,
         transformers:
-          c.transformers?.map((t: any) => ({
+          c.transformers?.map((t) => ({
             id: t.id,
             name: t.name,
             emitterId: t.emitterId,
@@ -127,7 +125,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const source = dataSources.find((ds) => ds.id === collector.sourceId);
     const collectorName =
       source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
-    return ((collector as any).emitters || []).map((e: EmitterConfig) => ({
+    return (collector.emitters || []).map((e: EmitterConfig) => ({
       ...e,
       collectorId: collector.id,
       collectorName,
@@ -146,7 +144,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       console.log("TransformStep - Found transformers for collector:", {
         collectorId: collector.id,
         transformersCount: collectorTransformers.length,
-        transformers: collectorTransformers.map((t: any) => ({
+        transformers: collectorTransformers.map((t) => ({
           id: t.id,
           name: t.name,
           emitterId: t.emitterId,
@@ -156,7 +154,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     }
 
     return collectorTransformers.map((t) => {
-      const transform = t as any as TransformConfig;
+      const transform = t as TransformConfig;
       const emitter = allEmitters.find((e) => e.id === transform.emitterId);
       return {
         ...transform,
@@ -241,7 +239,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   // Fetch schemas for source tables
   const sourceSchemaQueries = useQueries({
     queries: sourceTableQueries.map(
-      ({ tableName, schema, table, connectionId }) => ({
+      ({ tableName: _tableName, schema, table, connectionId }) => ({
         queryKey: ["table-schema", connectionId, table, schema, "source"],
         queryFn: () =>
           DataSourcesService.getTableSchema(connectionId, table, schema, orgId),
@@ -255,7 +253,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const fields: Array<{ name: string; type: string; table: string }> = [];
 
     sourceSchemaQueries.forEach((query, index) => {
-      if (query.data && query.data.columns) {
+      if (query.data?.columns) {
         const tableInfo = sourceTableQueries[index];
         query.data.columns.forEach((col) => {
           fields.push({
@@ -301,7 +299,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         ],
         queryFn: () => {
           if (!destinationTableQuery) {
-            return Promise.resolve({ columns: [] } as any);
+            return Promise.resolve({ columns: [] } as { columns: string[] });
           }
           return DataSourcesService.getTableSchema(
             destinationTableQuery.connectionId,
@@ -450,7 +448,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       if (collector.id === selectedCollectorId) {
         const transformers = editingTransform
           ? collector.transformers.map((t) =>
-              (t as any).id === editingTransform ? newTransform : t,
+              t.id === editingTransform ? newTransform : t,
             )
           : [...collector.transformers, newTransform];
         return { ...collector, transformers };
@@ -474,7 +472,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         return {
           ...collector,
           transformers: collector.transformers.filter(
-            (t) => (t as any).id !== transformId,
+            (t) => t.id !== transformId,
           ),
         };
       }
@@ -489,9 +487,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         return {
           ...collector,
           transformers: collector.transformers.map((t) =>
-            (t as any).id === transformId
-              ? { ...t, status: "paused" as const }
-              : t,
+            t.id === transformId ? { ...t, status: "paused" as const } : t,
           ),
         };
       }
@@ -523,7 +519,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       return (
         collector.transformers &&
         collector.transformers.length > 0 &&
-        collector.transformers.some((t: any) => {
+        collector.transformers.some((t) => {
           return (
             t.fieldMappings &&
             Array.isArray(t.fieldMappings) &&
@@ -1009,7 +1005,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                       <Select
                                         value={mapping?.source || undefined}
                                         onValueChange={(value) => {
-                                          if (value && value.trim()) {
+                                          if (value?.trim()) {
                                             handleFieldMapping(
                                               value,
                                               destinationField.name,

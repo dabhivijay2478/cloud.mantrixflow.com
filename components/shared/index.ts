@@ -5,6 +5,8 @@
 
 // Data Display Components
 export { Timestamp, type TimestampProps } from "./data-display/timestamp";
+// Data Table Components
+export { DataTable, type DataTableProps } from "./data-table";
 export {
   DashboardCardSkeleton,
   type DashboardCardSkeletonProps,
@@ -35,8 +37,8 @@ export { ThemeToggle, type ThemeToggleProps } from "./layout/theme-toggle";
 // Navigation Components
 export { BackButton, type BackButtonProps } from "./navigation/back-button";
 export {
-  ProgressSteps,
   type ProgressStep,
+  ProgressSteps,
   type ProgressStepsProps,
 } from "./navigation/progress-steps";
 export {
@@ -44,7 +46,5 @@ export {
   StepIndicator,
   type StepIndicatorProps,
 } from "./navigation/step-indicator";
-// Data Table Components
-export { DataTable, type DataTableProps } from "./data-table";
 // Sheet Components
 export { FormSheet, type FormSheetProps } from "./sheet";

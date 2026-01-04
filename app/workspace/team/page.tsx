@@ -16,15 +16,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
-import {
-  useOrganizationMembers,
-  useUpdateMember,
-  useRemoveMember,
-} from "@/lib/api";
-import { useCurrentOrganization } from "@/lib/api";
-import type { OrganizationMember } from "@/lib/api/types/organizations";
+import { PageHeader } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +44,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  useCurrentOrganization,
+  useOrganizationMembers,
+  useRemoveMember,
+  useUpdateMember,
+} from "@/lib/api";
+import type { OrganizationMember } from "@/lib/api/types/organizations";
 import { cn } from "@/lib/utils";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";

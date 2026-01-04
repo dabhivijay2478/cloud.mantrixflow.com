@@ -8,11 +8,11 @@
 
 // Example 1: Replace mock connections with real API
 import {
+  type CreateConnectionDto,
   useConnections,
   useCreateConnection,
   useDeleteConnection,
   useTestConnection,
-  type CreateConnectionDto,
 } from "@/lib/api";
 
 export function ExampleDataSourcesPage() {
@@ -23,7 +23,7 @@ export function ExampleDataSourcesPage() {
   const deleteConnection = useDeleteConnection();
   const testConnection = useTestConnection();
 
-  const handleConnect = async (formData: CreateConnectionDto) => {
+  const _handleConnect = async (formData: CreateConnectionDto) => {
     try {
       // Test connection first
       const testResult = await testConnection.mutateAsync(formData.config);
@@ -53,7 +53,9 @@ export function ExampleDataSourcesPage() {
       {connections?.map((conn) => (
         <div key={conn.id}>
           {conn.name} - {conn.status}
-          <button onClick={() => handleDelete(conn.id)}>Delete</button>
+          <button type="button" onClick={() => handleDelete(conn.id)}>
+            Delete
+          </button>
         </div>
       ))}
     </div>
@@ -61,7 +63,7 @@ export function ExampleDataSourcesPage() {
 }
 
 // Example 2: Using schema discovery
-import { useTables, useTableSchema } from "@/lib/api";
+import { useTableSchema, useTables } from "@/lib/api";
 
 export function ExampleSchemaDiscovery({
   connectionId,
@@ -97,7 +99,8 @@ export function ExampleSchemaDiscovery({
 }
 
 // Example 3: Using pipelines
-import { usePipelines, useRunPipeline, usePipelineStats } from "@/lib/api";
+import type { Pipeline } from "@/lib/api";
+import { usePipelineStats, usePipelines, useRunPipeline } from "@/lib/api";
 
 export function ExamplePipelinesPage() {
   const { data: pipelines } = usePipelines();
@@ -124,7 +127,7 @@ function PipelineCard({
   pipeline,
   onRun,
 }: {
-  pipeline: any;
+  pipeline: Pipeline;
   onRun: () => void;
 }) {
   const { data: stats } = usePipelineStats(pipeline.id);
@@ -142,7 +145,9 @@ function PipelineCard({
           </p>
         </div>
       )}
-      <button onClick={onRun}>Run Pipeline</button>
+      <button type="button" onClick={onRun}>
+        Run Pipeline
+      </button>
     </div>
   );
 }
@@ -179,7 +184,11 @@ export function ExampleQueryEditor({ connectionId }: { connectionId: string }) {
         onChange={(e) => setQuery(e.target.value)}
         rows={10}
       />
-      <button onClick={handleExecute} disabled={executeQuery.isPending}>
+      <button
+        type="button"
+        onClick={handleExecute}
+        disabled={executeQuery.isPending}
+      >
         {executeQuery.isPending ? "Executing..." : "Execute Query"}
       </button>
     </div>

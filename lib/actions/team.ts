@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { ApiClientError } from "@/lib/api/client";
 import { OrganizationsService } from "@/lib/api/services/organizations.service";
 import { UsersService } from "@/lib/api/services/users.service";
-import { ApiClientError } from "@/lib/api/client";
 
 export type TeamActionResult<T = void> =
   | { success: true; data?: T; message?: string }

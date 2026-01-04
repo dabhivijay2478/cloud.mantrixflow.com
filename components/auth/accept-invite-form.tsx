@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useActionState, useEffect, useState, useRef } from "react";
+import { Suspense, useActionState, useEffect, useState } from "react";
 import {
   AuthErrorDisplay,
   AuthFormHeader,
@@ -56,7 +56,7 @@ function AcceptInviteFormContent({
           );
           const hashAccessToken = hashParams.get("access_token");
           const hashRefreshToken = hashParams.get("refresh_token");
-          const hashType = hashParams.get("type");
+          const _hashType = hashParams.get("type");
 
           if (hashAccessToken && hashRefreshToken) {
             console.log("Found tokens in URL hash, setting session...");

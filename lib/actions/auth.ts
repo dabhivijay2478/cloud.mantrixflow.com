@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { UsersService } from "@/lib/api";
 import { createClient } from "@/lib/supabase/server";
 import {
   forgotPasswordSchema,
@@ -9,7 +10,6 @@ import {
   resetPasswordSchema,
   signupSchema,
 } from "@/lib/validations/auth";
-import { UsersService } from "@/lib/api";
 
 export type AuthActionResult<T = void> =
   | { success: true; data?: T; message?: string }
@@ -411,7 +411,7 @@ export async function acceptInviteAction(
 
     // Verify user has a valid session (from invite link)
     // Try getUser() first as it's more reliable for server-side
-    let user;
+    let user: { id: string; email?: string } | null = null;
     const {
       data: { user: userData },
       error: userError,

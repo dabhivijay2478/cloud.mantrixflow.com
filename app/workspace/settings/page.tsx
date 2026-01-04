@@ -4,13 +4,14 @@ import {
   Building2,
   Check,
   Loader2,
+  Lock,
   Mail,
   Palette,
   Save,
   Shield,
   User,
-  Lock,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { ThemeCustomizer } from "@/components/theme/theme-customizer";
@@ -25,12 +26,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser, useUpdateUser } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { useCurrentUser, useUpdateUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 
@@ -339,9 +339,11 @@ export default function SettingsPage() {
                       {avatarUrl && (
                         <div className="mt-2">
                           <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-border">
-                            <img
+                            <Image
                               src={avatarUrl}
                               alt="Avatar preview"
+                              width={80}
+                              height={80}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display =

@@ -5,24 +5,24 @@
 
 import { ApiClient } from "../client";
 import type {
-  TestConnectionDto,
-  TestConnectionResponse,
-  CreateConnectionDto,
-  UpdateConnectionDto,
   Connection,
+  ConnectionHealth,
+  ConnectionMetrics,
+  CreateConnectionDto,
+  CreateSyncJobDto,
   Database,
+  ExecuteQueryDto,
+  ExplainQueryResponse,
+  QueryExecutionResponse,
+  QueryLog,
   Schema,
+  SyncJob,
   Table,
   TableSchema,
-  ExecuteQueryDto,
-  QueryExecutionResponse,
-  ExplainQueryResponse,
-  CreateSyncJobDto,
-  SyncJob,
+  TestConnectionDto,
+  TestConnectionResponse,
+  UpdateConnectionDto,
   UpdateSyncJobScheduleDto,
-  ConnectionHealth,
-  QueryLog,
-  ConnectionMetrics,
 } from "../types/data-sources";
 
 export class DataSourcesService {
@@ -33,7 +33,7 @@ export class DataSourcesService {
     data: TestConnectionDto,
   ): Promise<TestConnectionResponse> {
     return ApiClient.post<TestConnectionResponse>(
-      `${this.BASE_PATH}/test-connection`,
+      `${DataSourcesService.BASE_PATH}/test-connection`,
       data,
     );
   }
@@ -48,11 +48,11 @@ export class DataSourcesService {
     const params = `?orgId=${encodeURIComponent(orgId)}`;
     console.log(
       "[DataSourcesService] Creating connection with URL:",
-      `${this.BASE_PATH}/connections${params}`,
+      `${DataSourcesService.BASE_PATH}/connections${params}`,
     );
     console.log("[DataSourcesService] orgId being sent:", orgId);
     return ApiClient.post<Connection>(
-      `${this.BASE_PATH}/connections${params}`,
+      `${DataSourcesService.BASE_PATH}/connections${params}`,
       data,
     );
   }
@@ -60,12 +60,14 @@ export class DataSourcesService {
   static async listConnections(orgId?: string): Promise<Connection[]> {
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Connection[]>(
-      `${this.BASE_PATH}/connections${params}`,
+      `${DataSourcesService.BASE_PATH}/connections${params}`,
     );
   }
 
   static async getConnection(id: string): Promise<Connection> {
-    return ApiClient.get<Connection>(`${this.BASE_PATH}/connections/${id}`);
+    return ApiClient.get<Connection>(
+      `${DataSourcesService.BASE_PATH}/connections/${id}`,
+    );
   }
 
   static async updateConnection(
@@ -73,14 +75,14 @@ export class DataSourcesService {
     data: UpdateConnectionDto,
   ): Promise<Connection> {
     return ApiClient.patch<Connection>(
-      `${this.BASE_PATH}/connections/${id}`,
+      `${DataSourcesService.BASE_PATH}/connections/${id}`,
       data,
     );
   }
 
   static async deleteConnection(id: string): Promise<{ deletedId: string }> {
     return ApiClient.delete<{ deletedId: string }>(
-      `${this.BASE_PATH}/connections/${id}`,
+      `${DataSourcesService.BASE_PATH}/connections/${id}`,
     );
   }
 
@@ -91,7 +93,7 @@ export class DataSourcesService {
   ): Promise<Database[]> {
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Database[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/databases${params}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/databases${params}`,
     );
   }
 
@@ -101,7 +103,7 @@ export class DataSourcesService {
   ): Promise<Schema[]> {
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Schema[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/schemas${params}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/schemas${params}`,
     );
   }
 
@@ -111,7 +113,7 @@ export class DataSourcesService {
   ): Promise<Schema[]> {
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Schema[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/schemas${params}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/schemas${params}`,
     );
   }
 
@@ -125,7 +127,7 @@ export class DataSourcesService {
     if (orgId) params.append("orgId", orgId);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<Table[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/tables${queryString}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/tables${queryString}`,
     );
   }
 
@@ -140,7 +142,7 @@ export class DataSourcesService {
     if (orgId) params.append("orgId", orgId);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<TableSchema>(
-      `${this.BASE_PATH}/connections/${connectionId}/tables/${table}/schema${queryString}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/tables/${table}/schema${queryString}`,
     );
   }
 
@@ -148,7 +150,7 @@ export class DataSourcesService {
     connectionId: string,
   ): Promise<{ success: boolean }> {
     return ApiClient.post<{ success: boolean }>(
-      `${this.BASE_PATH}/connections/${connectionId}/refresh-schema`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/refresh-schema`,
     );
   }
 
@@ -163,7 +165,7 @@ export class DataSourcesService {
     }
     const params = `?orgId=${encodeURIComponent(orgId)}`;
     return ApiClient.post<QueryExecutionResponse>(
-      `${this.BASE_PATH}/connections/${connectionId}/query${params}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/query${params}`,
       data,
     );
   }
@@ -173,7 +175,7 @@ export class DataSourcesService {
     data: ExecuteQueryDto,
   ): Promise<ExplainQueryResponse> {
     return ApiClient.post<ExplainQueryResponse>(
-      `${this.BASE_PATH}/connections/${connectionId}/query/explain`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/query/explain`,
       data,
     );
   }
@@ -184,14 +186,14 @@ export class DataSourcesService {
     data: CreateSyncJobDto,
   ): Promise<SyncJob> {
     return ApiClient.post<SyncJob>(
-      `${this.BASE_PATH}/connections/${connectionId}/sync`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync`,
       data,
     );
   }
 
   static async listSyncJobs(connectionId: string): Promise<SyncJob[]> {
     return ApiClient.get<SyncJob[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/sync-jobs`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs`,
     );
   }
 
@@ -200,7 +202,7 @@ export class DataSourcesService {
     jobId: string,
   ): Promise<SyncJob> {
     return ApiClient.get<SyncJob>(
-      `${this.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}`,
     );
   }
 
@@ -209,7 +211,7 @@ export class DataSourcesService {
     jobId: string,
   ): Promise<{ success: boolean }> {
     return ApiClient.post<{ success: boolean }>(
-      `${this.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/cancel`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/cancel`,
     );
   }
 
@@ -219,7 +221,7 @@ export class DataSourcesService {
     data: UpdateSyncJobScheduleDto,
   ): Promise<SyncJob> {
     return ApiClient.patch<SyncJob>(
-      `${this.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/schedule`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/schedule`,
       data,
     );
   }
@@ -229,7 +231,7 @@ export class DataSourcesService {
     connectionId: string,
   ): Promise<ConnectionHealth> {
     return ApiClient.get<ConnectionHealth>(
-      `${this.BASE_PATH}/connections/${connectionId}/health`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/health`,
     );
   }
 
@@ -243,7 +245,7 @@ export class DataSourcesService {
     if (offset) params.append("offset", offset.toString());
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<QueryLog[]>(
-      `${this.BASE_PATH}/connections/${connectionId}/query-logs${queryString}`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/query-logs${queryString}`,
     );
   }
 
@@ -251,7 +253,7 @@ export class DataSourcesService {
     connectionId: string,
   ): Promise<ConnectionMetrics> {
     return ApiClient.get<ConnectionMetrics>(
-      `${this.BASE_PATH}/connections/${connectionId}/metrics`,
+      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/metrics`,
     );
   }
 }

@@ -5,14 +5,14 @@
 
 import { ApiClient } from "../client";
 import type {
+  AutoMapResponse,
   CreatePipelineDto,
-  UpdatePipelineDto,
+  DryRunResult,
   Pipeline,
   PipelineRun,
   PipelineStats,
+  UpdatePipelineDto,
   ValidationResult,
-  AutoMapResponse,
-  DryRunResult,
 } from "../types/data-pipelines";
 
 export class DataPipelinesService {
@@ -26,58 +26,82 @@ export class DataPipelinesService {
     const params = new URLSearchParams();
     if (orgId) params.append("orgId", orgId);
     const queryString = params.toString() ? `?${params.toString()}` : "";
-    return ApiClient.post<Pipeline>(`${this.BASE_PATH}${queryString}`, data);
+    return ApiClient.post<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}${queryString}`,
+      data,
+    );
   }
 
   static async listPipelines(orgId?: string): Promise<Pipeline[]> {
     const params = new URLSearchParams();
     if (orgId) params.append("orgId", orgId);
     const queryString = params.toString() ? `?${params.toString()}` : "";
-    return ApiClient.get<Pipeline[]>(`${this.BASE_PATH}${queryString}`);
+    return ApiClient.get<Pipeline[]>(
+      `${DataPipelinesService.BASE_PATH}${queryString}`,
+    );
   }
 
   static async getPipeline(id: string, orgId?: string): Promise<Pipeline> {
     const params = new URLSearchParams();
     if (orgId) params.append("orgId", orgId);
     const queryString = params.toString() ? `?${params.toString()}` : "";
-    return ApiClient.get<Pipeline>(`${this.BASE_PATH}/${id}${queryString}`);
+    return ApiClient.get<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${id}${queryString}`,
+    );
   }
 
   static async updatePipeline(
     id: string,
     data: UpdatePipelineDto,
   ): Promise<Pipeline> {
-    return ApiClient.patch<Pipeline>(`${this.BASE_PATH}/${id}`, data);
+    return ApiClient.patch<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${id}`,
+      data,
+    );
   }
 
   static async deletePipeline(id: string): Promise<{ deletedId: string }> {
-    return ApiClient.delete<{ deletedId: string }>(`${this.BASE_PATH}/${id}`);
+    return ApiClient.delete<{ deletedId: string }>(
+      `${DataPipelinesService.BASE_PATH}/${id}`,
+    );
   }
 
   // Pipeline Execution
   static async runPipeline(id: string): Promise<PipelineRun> {
-    return ApiClient.post<PipelineRun>(`${this.BASE_PATH}/${id}/run`);
+    return ApiClient.post<PipelineRun>(
+      `${DataPipelinesService.BASE_PATH}/${id}/run`,
+    );
   }
 
   static async dryRunPipeline(id: string): Promise<DryRunResult> {
-    return ApiClient.post<DryRunResult>(`${this.BASE_PATH}/${id}/dry-run`);
+    return ApiClient.post<DryRunResult>(
+      `${DataPipelinesService.BASE_PATH}/${id}/dry-run`,
+    );
   }
 
   static async pausePipeline(id: string): Promise<Pipeline> {
-    return ApiClient.post<Pipeline>(`${this.BASE_PATH}/${id}/pause`);
+    return ApiClient.post<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${id}/pause`,
+    );
   }
 
   static async resumePipeline(id: string): Promise<Pipeline> {
-    return ApiClient.post<Pipeline>(`${this.BASE_PATH}/${id}/resume`);
+    return ApiClient.post<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${id}/resume`,
+    );
   }
 
   // Pipeline Configuration
   static async validatePipeline(id: string): Promise<ValidationResult> {
-    return ApiClient.post<ValidationResult>(`${this.BASE_PATH}/${id}/validate`);
+    return ApiClient.post<ValidationResult>(
+      `${DataPipelinesService.BASE_PATH}/${id}/validate`,
+    );
   }
 
   static async autoMapColumns(id: string): Promise<AutoMapResponse> {
-    return ApiClient.post<AutoMapResponse>(`${this.BASE_PATH}/${id}/auto-map`);
+    return ApiClient.post<AutoMapResponse>(
+      `${DataPipelinesService.BASE_PATH}/${id}/auto-map`,
+    );
   }
 
   // Pipeline Monitoring
@@ -91,15 +115,19 @@ export class DataPipelinesService {
     if (offset) params.append("offset", offset.toString());
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<PipelineRun[]>(
-      `${this.BASE_PATH}/${id}/runs${queryString}`,
+      `${DataPipelinesService.BASE_PATH}/${id}/runs${queryString}`,
     );
   }
 
   static async getPipelineRun(id: string, runId: string): Promise<PipelineRun> {
-    return ApiClient.get<PipelineRun>(`${this.BASE_PATH}/${id}/runs/${runId}`);
+    return ApiClient.get<PipelineRun>(
+      `${DataPipelinesService.BASE_PATH}/${id}/runs/${runId}`,
+    );
   }
 
   static async getPipelineStats(id: string): Promise<PipelineStats> {
-    return ApiClient.get<PipelineStats>(`${this.BASE_PATH}/${id}/stats`);
+    return ApiClient.get<PipelineStats>(
+      `${DataPipelinesService.BASE_PATH}/${id}/stats`,
+    );
   }
 }

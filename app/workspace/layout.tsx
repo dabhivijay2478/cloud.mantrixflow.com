@@ -6,9 +6,9 @@ import { LoadingState } from "@/components/shared";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { WorkspaceTopbar } from "@/components/workspace/workspace-topbar";
+import { useOnboardingStatus } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { useOnboardingStatus } from "@/lib/api";
 
 export default function WorkspaceLayout({
   children,

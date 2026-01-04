@@ -25,8 +25,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useCreateOrganization, useUpdateOnboardingStep } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 const organizationSchema = z.object({
   name: z
@@ -81,7 +81,7 @@ export default function OrganizationPage() {
     setLoading(true);
     try {
       // Create organization via API
-      const org = await createOrganization.mutateAsync({
+      await createOrganization.mutateAsync({
         name: data.name,
         slug: data.slug,
       });
@@ -92,11 +92,10 @@ export default function OrganizationPage() {
       setOnboardingStep("data-source");
       toast.success("Organization created successfully");
       router.push("/onboarding/data-source");
-    } catch (error: any) {
-      toast.error(
-        "Failed to create organization",
-        error?.message || "Please try again",
-      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Please try again";
+      toast.error("Failed to create organization", errorMessage);
       console.error(error);
     } finally {
       setLoading(false);

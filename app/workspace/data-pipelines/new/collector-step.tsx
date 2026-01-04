@@ -1,8 +1,8 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
-  CheckCircle2,
   Database,
   Edit,
   Loader2,
@@ -12,12 +12,15 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
+import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FormSheet } from "@/components/shared";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -25,17 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/shared";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import {
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
-import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export interface CollectorConfig {
   id: string;
@@ -106,7 +103,7 @@ export function CollectorStep({
   }, [initialCollectors]);
 
   const selectedSource = dataSources.find((ds) => ds.id === selectedSourceId);
-  const sourceDatasets = datasets.filter(
+  const _sourceDatasets = datasets.filter(
     (ds) => ds.dataSourceId === selectedSourceId,
   );
 
@@ -117,7 +114,7 @@ export function CollectorStep({
   );
 
   // Flatten all tables from all schemas
-  const availableTables = schemas
+  const _availableTables = schemas
     ? schemas.flatMap((schema) =>
         (schema.tables || []).map((table) => ({
           name:
@@ -375,8 +372,9 @@ export function CollectorStep({
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Data Source</label>
+            <Label htmlFor="data-source-select">Data Source</Label>
             <Select
+              id="data-source-select"
               value={selectedSourceId}
               onValueChange={(value) => {
                 setSelectedSourceId(value);
@@ -430,7 +428,7 @@ export function CollectorStep({
 
           {selectedSourceId && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Tables</label>
+              <Label htmlFor="tables-select">Select Tables</Label>
               {schemasLoading ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
@@ -480,6 +478,7 @@ export function CollectorStep({
                               <Table className="h-3 w-3 shrink-0" />
                               <span className="truncate">{table}</span>
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedTables((prev) =>

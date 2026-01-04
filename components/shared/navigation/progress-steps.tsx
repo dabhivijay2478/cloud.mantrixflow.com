@@ -1,12 +1,12 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 /**
  * ProgressSteps
@@ -54,9 +54,16 @@ export function ProgressSteps({
       {steps.map((step, index) => (
         <Tooltip key={step.id}>
           <TooltipTrigger asChild>
-            <div
+            <button
+              type="button"
               className="flex flex-col items-center gap-0.5 sm:gap-1 cursor-pointer"
               onClick={() => onStepClick?.(step.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onStepClick?.(step.id);
+                }
+              }}
             >
               <div
                 className={cn(
@@ -84,7 +91,7 @@ export function ProgressSteps({
               >
                 {step.label}
               </p>
-            </div>
+            </button>
           </TooltipTrigger>
           {step.description && (
             <TooltipContent>

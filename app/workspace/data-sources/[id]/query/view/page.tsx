@@ -3,21 +3,21 @@
 import { ArrowLeft, Database, RefreshCw } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
 import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
+import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import {
   useConnection,
-  useSchemasWithTables,
   useExecuteQuery,
+  useSchemasWithTables,
 } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 
 // Mock query execution - replace with actual API call
-const executeQuery = async (
+const _executeQuery = async (
   _dataSourceId: string,
   _dataSourceType: string,
   query: string,
@@ -56,7 +56,7 @@ const executeQuery = async (
 };
 
 // Mock table data fetch - replace with actual API call
-const fetchTableData = async (
+const _fetchTableData = async (
   _dataSourceId: string,
   _dataSourceType: string,
   tableName: string,
@@ -135,7 +135,7 @@ export default function QueryResultsViewPage() {
         setQuery(parsed.query || "");
         setTableName(parsed.tableName || "");
         // Extract schema from table name if it contains a dot
-        if (parsed.tableName && parsed.tableName.includes(".")) {
+        if (parsed.tableName?.includes(".")) {
           const [schema, table] = parsed.tableName.split(".");
           setSelectedSchema(schema);
           setSelectedTable(table);
@@ -179,15 +179,22 @@ export default function QueryResultsViewPage() {
           Array.isArray(result.rows) &&
           Array.isArray(result.columns)
         ) {
-          const columnNames = result.columns.map((col: any) =>
-            typeof col === "string"
-              ? col
-              : col.name || col.column || String(col),
+          const columnNames = result.columns.map(
+            (col: string | { name?: string; column?: string } | unknown) =>
+              typeof col === "string"
+                ? col
+                : typeof col === "object" &&
+                    col !== null &&
+                    ("name" in col || "column" in col)
+                  ? (col as { name?: string; column?: string }).name ||
+                    (col as { name?: string; column?: string }).column ||
+                    String(col)
+                  : String(col),
           );
 
           newResults = {
             columns: columnNames,
-            rows: result.rows.map((row: any) => {
+            rows: result.rows.map((row: unknown) => {
               if (row && typeof row === "object" && !Array.isArray(row)) {
                 return row as Record<string, unknown>;
               }
@@ -218,15 +225,22 @@ export default function QueryResultsViewPage() {
           Array.isArray(result.rows) &&
           Array.isArray(result.columns)
         ) {
-          const columnNames = result.columns.map((col: any) =>
-            typeof col === "string"
-              ? col
-              : col.name || col.column || String(col),
+          const columnNames = result.columns.map(
+            (col: string | { name?: string; column?: string } | unknown) =>
+              typeof col === "string"
+                ? col
+                : typeof col === "object" &&
+                    col !== null &&
+                    ("name" in col || "column" in col)
+                  ? (col as { name?: string; column?: string }).name ||
+                    (col as { name?: string; column?: string }).column ||
+                    String(col)
+                  : String(col),
           );
 
           newResults = {
             columns: columnNames,
-            rows: result.rows.map((row: any) => {
+            rows: result.rows.map((row: unknown) => {
               if (row && typeof row === "object" && !Array.isArray(row)) {
                 return row as Record<string, unknown>;
               }
@@ -298,13 +312,22 @@ export default function QueryResultsViewPage() {
         Array.isArray(result.rows) &&
         Array.isArray(result.columns)
       ) {
-        const columnNames = result.columns.map((col: any) =>
-          typeof col === "string" ? col : col.name || col.column || String(col),
+        const columnNames = result.columns.map(
+          (col: string | { name?: string; column?: string } | unknown) =>
+            typeof col === "string"
+              ? col
+              : typeof col === "object" &&
+                  col !== null &&
+                  ("name" in col || "column" in col)
+                ? (col as { name?: string; column?: string }).name ||
+                  (col as { name?: string; column?: string }).column ||
+                  String(col)
+                : String(col),
         );
 
         const convertedResult = {
           columns: columnNames,
-          rows: result.rows.map((row: any) => {
+          rows: result.rows.map((row: unknown) => {
             if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;
             }

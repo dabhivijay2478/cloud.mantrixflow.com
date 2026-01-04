@@ -14,9 +14,9 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { SQLEditor } from "@/components/data-sources/sql-editor";
 import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
-import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -43,8 +43,6 @@ import {
 import {
   useConnection,
   useExecuteQuery,
-  useTables,
-  useTableSchema,
   useSchemasWithTables,
 } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -333,15 +331,24 @@ export default function DataSourceQueryPage() {
         Array.isArray(result.columns)
       ) {
         // Extract column names - columns can be strings or objects with name property
-        const columnNames = result.columns.map((col: any) =>
-          typeof col === "string" ? col : col.name || col.column || String(col),
+        const columnNames = result.columns.map(
+          (col: string | { name?: string; column?: string } | unknown) =>
+            typeof col === "string"
+              ? col
+              : typeof col === "object" &&
+                  col !== null &&
+                  ("name" in col || "column" in col)
+                ? (col as { name?: string; column?: string }).name ||
+                  (col as { name?: string; column?: string }).column ||
+                  String(col)
+                : String(col),
         );
 
         // PostgreSQL returns rows as array of objects, not arrays
         // Each row is already an object like {column1: value1, column2: value2}
         const convertedResult = {
           columns: columnNames,
-          rows: result.rows.map((row: any) => {
+          rows: result.rows.map((row: unknown) => {
             // If row is already an object, use it directly
             if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;
@@ -385,10 +392,18 @@ export default function DataSourceQueryPage() {
           "Query execution failed: Unexpected response format. Check console for details.",
         );
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("[QueryPage] Query execution error:", err);
       const errorMessage =
-        err?.message || err?.error?.message || "Failed to execute query";
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" &&
+              err !== null &&
+              "error" in err &&
+              typeof (err as { error?: { message?: string } }).error
+                ?.message === "string"
+            ? (err as { error: { message: string } }).error.message
+            : "Failed to execute query";
       setError(errorMessage);
       toast.error("Query execution failed", errorMessage);
     } finally {
@@ -436,13 +451,18 @@ export default function DataSourceQueryPage() {
         Array.isArray(result.rows) &&
         Array.isArray(result.columns)
       ) {
-        const columnNames = result.columns.map((col: any) =>
-          typeof col === "string" ? col : col.name || String(col),
+        const columnNames = result.columns.map(
+          (col: string | { name?: string } | unknown) =>
+            typeof col === "string"
+              ? col
+              : typeof col === "object" && col !== null && "name" in col
+                ? (col as { name?: string }).name || String(col)
+                : String(col),
         );
 
         const convertedData = {
           columns: columnNames,
-          rows: result.rows.map((row: any) => {
+          rows: result.rows.map((row: unknown) => {
             // If row is already an object, use it directly
             if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;

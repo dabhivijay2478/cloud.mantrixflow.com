@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import type * as React from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import type * as React from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { ProgressStep } from "../navigation/progress-steps";
 import { ProgressSteps } from "../navigation/progress-steps";
 
@@ -46,7 +46,7 @@ export function PageHeader({
   description,
   action,
   breadcrumbs,
-  backButton,
+  backButton: _backButton,
   showBackIcon = false,
   onBack,
   progressSteps,

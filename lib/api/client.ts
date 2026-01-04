@@ -3,7 +3,7 @@
  * Reusable fetch wrapper with error handling
  */
 
-import { getApiUrl, createFetchOptions } from "./config";
+import { createFetchOptions, getApiUrl } from "./config";
 
 export interface ApiError {
   code: string;
