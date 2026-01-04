@@ -17,8 +17,10 @@ export default function WorkspaceLayout({
 }>) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthStore();
-  const { onboarding, sidebarOpen, setSidebarOpen, updateOnboarding } = useWorkspaceStore();
-  const { data: onboardingStatus, isLoading: onboardingLoading } = useOnboardingStatus();
+  const { onboarding, sidebarOpen, setSidebarOpen, updateOnboarding } =
+    useWorkspaceStore();
+  const { data: onboardingStatus, isLoading: onboardingLoading } =
+    useOnboardingStatus();
 
   // Sync store with API response
   useEffect(() => {
@@ -43,11 +45,18 @@ export default function WorkspaceLayout({
 
     // Use API status as source of truth, fallback to store
     const isCompleted = onboardingStatus?.completed ?? onboarding.completed;
-    
+
     if (!isCompleted) {
       router.push("/onboarding/welcome");
     }
-  }, [user, authLoading, onboardingLoading, onboardingStatus?.completed, onboarding.completed, router]);
+  }, [
+    user,
+    authLoading,
+    onboardingLoading,
+    onboardingStatus?.completed,
+    onboarding.completed,
+    router,
+  ]);
 
   // Show loading while checking auth or onboarding status
   if (authLoading || onboardingLoading) {

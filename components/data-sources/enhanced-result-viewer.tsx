@@ -1,8 +1,22 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronUp, Download, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -122,7 +136,9 @@ export function EnhancedResultViewer({
       <div className="flex items-center justify-center h-full">
         <div className="text-center max-w-md">
           <div className="text-destructive text-4xl mb-4">⚠️</div>
-          <p className="text-destructive font-medium mb-2">Error loading results</p>
+          <p className="text-destructive font-medium mb-2">
+            Error loading results
+          </p>
           <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
@@ -136,14 +152,19 @@ export function EnhancedResultViewer({
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <h3 className="font-semibold text-xs sm:text-sm truncate">{title}</h3>
           <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {rows.length.toLocaleString()} row{rows.length !== 1 ? "s" : ""} • {columns.length} column{columns.length !== 1 ? "s" : ""}
+            {rows.length.toLocaleString()} row{rows.length !== 1 ? "s" : ""} •{" "}
+            {columns.length} column{columns.length !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
           {onDownload && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-none">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 flex-1 sm:flex-none"
+                >
                   <Download className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Download</span>
                 </Button>
@@ -204,19 +225,18 @@ export function EnhancedResultViewer({
                         key={col}
                         className={cn(
                           "px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-semibold cursor-pointer select-none hover:bg-muted/70 transition-colors whitespace-nowrap",
-                          isSorted && "bg-muted"
+                          isSorted && "bg-muted",
                         )}
                         onClick={() => handleSort(col)}
                       >
                         <div className="flex items-center gap-1 sm:gap-2">
                           <span className="text-xs sm:text-sm">{col}</span>
-                          {isSorted && (
-                            sortDirection === "asc" ? (
+                          {isSorted &&
+                            (sortDirection === "asc" ? (
                               <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                             ) : (
                               <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                            )
-                          )}
+                            ))}
                         </div>
                       </TableHead>
                     );
@@ -235,7 +255,11 @@ export function EnhancedResultViewer({
                   </TableRow>
                 ) : (
                   paginatedRows.map((row, idx) => {
-                    const rowKey = row.id ? String(row.id) : (showAllRows ? `row-${idx}` : `row-${(page - 1) * rowsPerPage + idx}`);
+                    const rowKey = row.id
+                      ? String(row.id)
+                      : showAllRows
+                        ? `row-${idx}`
+                        : `row-${(page - 1) * rowsPerPage + idx}`;
                     return (
                       <TableRow
                         key={rowKey}
@@ -246,7 +270,10 @@ export function EnhancedResultViewer({
                             key={col}
                             className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm"
                           >
-                            <div className="max-w-[150px] sm:max-w-[250px] lg:max-w-md truncate" title={formatCellValue(row[col])}>
+                            <div
+                              className="max-w-[150px] sm:max-w-[250px] lg:max-w-md truncate"
+                              title={formatCellValue(row[col])}
+                            >
                               {formatCellValue(row[col])}
                             </div>
                           </TableCell>
@@ -270,8 +297,11 @@ export function EnhancedResultViewer({
             ) : (
               <>
                 Showing {((page - 1) * rowsPerPage + 1).toLocaleString()} to{" "}
-                {Math.min(page * rowsPerPage, sortedRows.length).toLocaleString()} of{" "}
-                {sortedRows.length.toLocaleString()} rows
+                {Math.min(
+                  page * rowsPerPage,
+                  sortedRows.length,
+                ).toLocaleString()}{" "}
+                of {sortedRows.length.toLocaleString()} rows
               </>
             )}
           </div>
@@ -317,7 +347,9 @@ export function EnhancedResultViewer({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={page === totalPages}
                       className="h-8 flex-1 sm:flex-none"
                     >
@@ -333,4 +365,3 @@ export function EnhancedResultViewer({
     </div>
   );
 }
-

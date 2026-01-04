@@ -18,11 +18,11 @@ export async function GET(request: Request) {
       // Verify the token using verifyOtp
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: token,
-        type: 'invite',
+        type: "invite",
       });
 
       if (error || !data.session || !data.user) {
-        console.error('Error verifying invite token:', error);
+        console.error("Error verifying invite token:", error);
         return NextResponse.redirect(`${origin}/auth/auth-code-error`);
       }
 
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       }
     } catch (error) {
-      console.error('Error in token verification:', error);
+      console.error("Error in token verification:", error);
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
   }
@@ -47,10 +47,11 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && data?.user) {
       // Check if this is from an invite (check type parameter and user metadata)
-      const isInvite = type === "invite" || 
-                       data.user.app_metadata?.organizationId || 
-                       data.user.user_metadata?.organizationId;
-      
+      const isInvite =
+        type === "invite" ||
+        data.user.app_metadata?.organizationId ||
+        data.user.user_metadata?.organizationId;
+
       // If this is an invite, redirect to accept-invite page for password setup
       // The session is already set via exchangeCodeForSession, so they can proceed
       if (isInvite) {
@@ -60,28 +61,38 @@ export async function GET(request: Request) {
         if (isLocalEnv) {
           return NextResponse.redirect(`${origin}${redirectPath}`);
         } else if (forwardedHost) {
-          return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+          return NextResponse.redirect(
+            `https://${forwardedHost}${redirectPath}`,
+          );
         } else {
           return NextResponse.redirect(`${origin}${redirectPath}`);
         }
       }
-      
+
       // Sync user with backend (this will link them to organization_members if invited)
       try {
         await UsersService.syncUser({
           supabaseUserId: data.user.id,
-          email: data.user.email || '',
-          firstName: data.user.user_metadata?.first_name || data.user.user_metadata?.firstName,
-          lastName: data.user.user_metadata?.last_name || data.user.user_metadata?.lastName,
-          fullName: data.user.user_metadata?.full_name || data.user.user_metadata?.fullName,
-          avatarUrl: data.user.user_metadata?.avatar_url || data.user.user_metadata?.avatarUrl,
+          email: data.user.email || "",
+          firstName:
+            data.user.user_metadata?.first_name ||
+            data.user.user_metadata?.firstName,
+          lastName:
+            data.user.user_metadata?.last_name ||
+            data.user.user_metadata?.lastName,
+          fullName:
+            data.user.user_metadata?.full_name ||
+            data.user.user_metadata?.fullName,
+          avatarUrl:
+            data.user.user_metadata?.avatar_url ||
+            data.user.user_metadata?.avatarUrl,
           metadata: {
             ...data.user.user_metadata,
             ...data.user.app_metadata,
           },
         });
       } catch (error) {
-        console.error('Failed to sync user in callback:', error);
+        console.error("Failed to sync user in callback:", error);
         // Continue even if sync fails
       }
 

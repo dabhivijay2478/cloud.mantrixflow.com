@@ -3,7 +3,7 @@
  * Service layer for data pipeline endpoints
  */
 
-import { ApiClient } from '../client';
+import { ApiClient } from "../client";
 import type {
   CreatePipelineDto,
   UpdatePipelineDto,
@@ -13,30 +13,33 @@ import type {
   ValidationResult,
   AutoMapResponse,
   DryRunResult,
-} from '../types/data-pipelines';
+} from "../types/data-pipelines";
 
 export class DataPipelinesService {
-  private static readonly BASE_PATH = 'api/data-pipelines';
+  private static readonly BASE_PATH = "api/data-pipelines";
 
   // Pipeline Management
-  static async createPipeline(data: CreatePipelineDto, orgId?: string): Promise<Pipeline> {
+  static async createPipeline(
+    data: CreatePipelineDto,
+    orgId?: string,
+  ): Promise<Pipeline> {
     const params = new URLSearchParams();
-    if (orgId) params.append('orgId', orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : '';
+    if (orgId) params.append("orgId", orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.post<Pipeline>(`${this.BASE_PATH}${queryString}`, data);
   }
 
   static async listPipelines(orgId?: string): Promise<Pipeline[]> {
     const params = new URLSearchParams();
-    if (orgId) params.append('orgId', orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : '';
+    if (orgId) params.append("orgId", orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<Pipeline[]>(`${this.BASE_PATH}${queryString}`);
   }
 
   static async getPipeline(id: string, orgId?: string): Promise<Pipeline> {
     const params = new URLSearchParams();
-    if (orgId) params.append('orgId', orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : '';
+    if (orgId) params.append("orgId", orgId);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<Pipeline>(`${this.BASE_PATH}/${id}${queryString}`);
   }
 
@@ -69,18 +72,12 @@ export class DataPipelinesService {
   }
 
   // Pipeline Configuration
-  static async validatePipeline(
-    id: string,
-  ): Promise<ValidationResult> {
-    return ApiClient.post<ValidationResult>(
-      `${this.BASE_PATH}/${id}/validate`,
-    );
+  static async validatePipeline(id: string): Promise<ValidationResult> {
+    return ApiClient.post<ValidationResult>(`${this.BASE_PATH}/${id}/validate`);
   }
 
   static async autoMapColumns(id: string): Promise<AutoMapResponse> {
-    return ApiClient.post<AutoMapResponse>(
-      `${this.BASE_PATH}/${id}/auto-map`,
-    );
+    return ApiClient.post<AutoMapResponse>(`${this.BASE_PATH}/${id}/auto-map`);
   }
 
   // Pipeline Monitoring
@@ -90,21 +87,16 @@ export class DataPipelinesService {
     offset?: number,
   ): Promise<PipelineRun[]> {
     const params = new URLSearchParams();
-    if (limit) params.append('limit', limit.toString());
-    if (offset) params.append('offset', offset.toString());
-    const queryString = params.toString() ? `?${params.toString()}` : '';
+    if (limit) params.append("limit", limit.toString());
+    if (offset) params.append("offset", offset.toString());
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<PipelineRun[]>(
       `${this.BASE_PATH}/${id}/runs${queryString}`,
     );
   }
 
-  static async getPipelineRun(
-    id: string,
-    runId: string,
-  ): Promise<PipelineRun> {
-    return ApiClient.get<PipelineRun>(
-      `${this.BASE_PATH}/${id}/runs/${runId}`,
-    );
+  static async getPipelineRun(id: string, runId: string): Promise<PipelineRun> {
+    return ApiClient.get<PipelineRun>(`${this.BASE_PATH}/${id}/runs/${runId}`);
   }
 
   static async getPipelineStats(id: string): Promise<PipelineStats> {

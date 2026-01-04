@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  
+
   // Note: The middleware doesn't sync localStorage to cookies automatically
   // Client-side sessions are stored in localStorage and are accessible to client components
   // Server actions need cookies, which are set when the page loads if a session exists

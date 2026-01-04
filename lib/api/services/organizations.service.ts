@@ -3,7 +3,7 @@
  * Service layer for organization endpoints
  */
 
-import { ApiClient } from '../client';
+import { ApiClient } from "../client";
 import type {
   Organization,
   CreateOrganizationDto,
@@ -11,10 +11,10 @@ import type {
   OrganizationMember,
   InviteMemberDto,
   UpdateMemberDto,
-} from '../types/organizations';
+} from "../types/organizations";
 
 export class OrganizationsService {
-  private static readonly BASE_PATH = 'api/organizations';
+  private static readonly BASE_PATH = "api/organizations";
 
   // Organization Management
   static async createOrganization(
@@ -42,17 +42,19 @@ export class OrganizationsService {
     return ApiClient.delete<{ deletedId: string }>(`${this.BASE_PATH}/${id}`);
   }
 
-  static async getCurrentOrganization(options?: { token?: string | null }): Promise<Organization | null> {
+  static async getCurrentOrganization(options?: {
+    token?: string | null;
+  }): Promise<Organization | null> {
     try {
-      return ApiClient.get<Organization>(`${this.BASE_PATH}/current`, { token: options?.token });
+      return ApiClient.get<Organization>(`${this.BASE_PATH}/current`, {
+        token: options?.token,
+      });
     } catch {
       return null;
     }
   }
 
-  static async setCurrentOrganization(
-    id: string,
-  ): Promise<Organization> {
+  static async setCurrentOrganization(id: string): Promise<Organization> {
     return ApiClient.post<Organization>(`${this.BASE_PATH}/${id}/set-current`);
   }
 
@@ -62,7 +64,7 @@ export class OrganizationsService {
     data: InviteMemberDto,
     options?: { token?: string | null },
   ): Promise<OrganizationMember> {
-    console.log('[OrganizationsService] inviteMember called:', {
+    console.log("[OrganizationsService] inviteMember called:", {
       organizationId,
       hasToken: !!options?.token,
       tokenLength: options?.token?.length || 0,

@@ -32,56 +32,61 @@ export default function DataSourcesPage() {
   // Debug logging
   useEffect(() => {
     if (currentOrganization) {
-      console.log('Current Organization from store:', currentOrganization);
-      console.log('Organization ID:', orgId);
+      console.log("Current Organization from store:", currentOrganization);
+      console.log("Organization ID:", orgId);
     } else {
-      console.warn('No organization selected in workspace store');
+      console.warn("No organization selected in workspace store");
     }
   }, [currentOrganization, orgId]);
 
   // Use real API hooks instead of workspace store
-  const { data: connections, isLoading: connectionsLoading, error: connectionsError } = useConnections(orgId);
+  const {
+    data: connections,
+    isLoading: connectionsLoading,
+    error: connectionsError,
+  } = useConnections(orgId);
   const createConnection = useCreateConnection(orgId);
   const deleteConnection = useDeleteConnection();
   const testConnection = useTestConnection();
-  
+
   // Debug logging for connections
   useEffect(() => {
     if (connections !== undefined) {
-      console.log('Connections loaded:', connections);
-      console.log('Connections count:', connections?.length || 0);
-      console.log('Query orgId used:', orgId);
+      console.log("Connections loaded:", connections);
+      console.log("Connections count:", connections?.length || 0);
+      console.log("Query orgId used:", orgId);
     }
     if (connectionsError) {
-      console.error('Connections error:', connectionsError);
+      console.error("Connections error:", connectionsError);
     }
   }, [connections, connectionsError, orgId]);
-  
+
   const isLoading = connectionsLoading;
 
   // Filter to show PostgreSQL data sources
-  const enabledDataSources = allDataSources.filter((ds) => 
-    ds.type === "postgres"
+  const enabledDataSources = allDataSources.filter(
+    (ds) => ds.type === "postgres",
   );
 
   // Convert API connections to component format
   const filteredDataSources: DataSource[] = (connections?.map((conn) => {
     const dateValue = conn.lastConnectedAt || conn.createdAt;
-    const connectedAt = typeof dateValue === 'string' 
-      ? dateValue
-      : dateValue instanceof Date
-      ? dateValue.toISOString()
-      : new Date(dateValue).toISOString();
-    
+    const connectedAt =
+      typeof dateValue === "string"
+        ? dateValue
+        : dateValue instanceof Date
+          ? dateValue.toISOString()
+          : new Date(dateValue).toISOString();
+
     return {
       id: conn.id,
       name: conn.name,
       type: "postgres" as const,
-      status: (conn.status === "active" 
-        ? "connected" 
+      status: (conn.status === "active"
+        ? "connected"
         : conn.status === "error"
-        ? "error"
-        : "disconnected") as "connected" | "disconnected" | "error",
+          ? "error"
+          : "disconnected") as "connected" | "disconnected" | "error",
       organizationId: conn.orgId,
       connectedAt,
       tables: undefined, // Will be fetched separately when needed
@@ -101,11 +106,11 @@ export default function DataSourcesPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   // Check if there are any connections (regardless of status)
   const hasConnections = filteredDataSources.length > 0;
-  
+
   // View state: show grid when no connections, table when connections exist
   const [showGridView, setShowGridView] = useState<boolean>(true);
   const previousHasConnections = useRef<boolean | null>(null);
-  
+
   // Initialize view mode when connections are loaded for the first time
   useEffect(() => {
     if (!connectionsLoading && previousHasConnections.current === null) {
@@ -114,16 +119,16 @@ export default function DataSourcesPage() {
       previousHasConnections.current = hasConnections;
     }
   }, [connectionsLoading, hasConnections]);
-  
+
   // Auto-switch views when connection state transitions (after initial load)
   useEffect(() => {
     if (previousHasConnections.current === null) {
       return; // Not initialized yet
     }
-    
+
     const hadConnections = previousHasConnections.current;
     const nowHasConnections = hasConnections;
-    
+
     // Connection was just created (transition from no connections to has connections)
     if (!hadConnections && nowHasConnections && showGridView) {
       setShowGridView(false);
@@ -132,7 +137,7 @@ export default function DataSourcesPage() {
     else if (hadConnections && !nowHasConnections && !showGridView) {
       setShowGridView(true);
     }
-    
+
     previousHasConnections.current = nowHasConnections;
   }, [hasConnections, showGridView]);
 
@@ -142,16 +147,20 @@ export default function DataSourcesPage() {
     );
   };
 
-  const getConnectedDataSource = (dataSourceId: string): DataSource | undefined => {
+  const getConnectedDataSource = (
+    dataSourceId: string,
+  ): DataSource | undefined => {
     return filteredDataSources.find((ds) => ds.id === dataSourceId);
   };
 
   const handleDataSourceClick = (dataSourceId: string) => {
     setSelectedDataSource(dataSourceId);
-    
+
     // If we're in table view showing connections, check if this is a connection ID
-    const isConnectionId = filteredDataSources.some(conn => conn.id === dataSourceId);
-    
+    const isConnectionId = filteredDataSources.some(
+      (conn) => conn.id === dataSourceId,
+    );
+
     if (isConnectionId) {
       // This is a connection - navigate to connection detail or keep in table view
       setShowGridView(false);
@@ -186,8 +195,9 @@ export default function DataSourcesPage() {
       const isNeon = databaseType === "neon";
       const isSupabase = databaseType === "supabase";
       const host = data.host || "";
-      const isLocalhost = host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
-      
+      const isLocalhost =
+        host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
+
       const connectionData: CreateConnectionDto = {
         name: data.name || dataSource.name,
         config: {
@@ -197,18 +207,21 @@ export default function DataSourcesPage() {
           username: data.username || "",
           password: data.password || "",
           // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
-          ssl: !isLocalhost && (isNeon || isSupabase || data.ssl === "true") 
-            ? { enabled: true, rejectUnauthorized: !isLocalhost } 
-            : undefined,
+          ssl:
+            !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
+              ? { enabled: true, rejectUnauthorized: !isLocalhost }
+              : undefined,
           // Pass database type as metadata for backend processing
           databaseType: databaseType,
         },
       };
 
       // Ensure orgId is passed - log for debugging
-      console.log('[DataSourcesPage] Creating connection with orgId:', orgId);
-      console.log('[DataSourcesPage] Connection data:', { name: connectionData.name });
-      
+      console.log("[DataSourcesPage] Creating connection with orgId:", orgId);
+      console.log("[DataSourcesPage] Connection data:", {
+        name: connectionData.name,
+      });
+
       if (!orgId) {
         toast.error(
           "No organization selected",
@@ -216,23 +229,24 @@ export default function DataSourcesPage() {
         );
         return;
       }
-      
+
       await createConnection.mutateAsync(connectionData);
-      
+
       // Close the connection sheet
       setShowConnectionSheet(false);
       setConnectingDataSourceId(null);
-      
+
       toast.success(
         `${dataSource.name} connected successfully`,
         "Your data source has been connected and is ready to use.",
       );
-      
+
       // The useEffect will automatically switch to table view when connections update
     } catch (error: any) {
       toast.error(
         "Failed to connect data source",
-        error?.message || "Unable to connect the data source. Please try again.",
+        error?.message ||
+          "Unable to connect the data source. Please try again.",
       );
       console.error(error);
     }
@@ -249,8 +263,9 @@ export default function DataSourcesPage() {
       const isNeon = databaseType === "neon";
       const isSupabase = databaseType === "supabase";
       const host = data.host || "";
-      const isLocalhost = host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
-      
+      const isLocalhost =
+        host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
+
       const testData: TestConnectionDto = {
         host: host,
         port: data.port ? parseInt(data.port, 10) : 5432,
@@ -258,9 +273,10 @@ export default function DataSourcesPage() {
         username: data.username || "",
         password: data.password || "",
         // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
-        ssl: !isLocalhost && (isNeon || isSupabase || data.ssl === "true") 
-          ? { enabled: true, rejectUnauthorized: !isLocalhost } 
-          : undefined,
+        ssl:
+          !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
+            ? { enabled: true, rejectUnauthorized: !isLocalhost }
+            : undefined,
         databaseType: databaseType,
       };
 
@@ -278,7 +294,6 @@ export default function DataSourcesPage() {
       };
     }
   };
-
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {

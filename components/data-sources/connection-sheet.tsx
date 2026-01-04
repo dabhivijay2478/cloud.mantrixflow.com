@@ -176,7 +176,8 @@ export function ConnectionSheet({
         // If no test connection handler provided, show error
         setConnectionTestResult({
           success: false,
-          message: "Test connection handler not configured. Please configure the API integration.",
+          message:
+            "Test connection handler not configured. Please configure the API integration.",
         });
         toast.error(
           "Test connection not available",
@@ -252,14 +253,14 @@ export function ConnectionSheet({
               <div className="grid gap-4">
                 {schema.fields.map((field, index) => {
                   // Add "Or" divider before individual fields if connection string is supported
-                  const showOrDivider = 
-                    schema.connectionString && 
-                    field.name === "connectionString" && 
+                  const showOrDivider =
+                    schema.connectionString &&
+                    field.name === "connectionString" &&
                     index > 0;
-                  
-                  const showOrAfterConnectionString = 
-                    schema.connectionString && 
-                    field.name === "connectionString" && 
+
+                  const showOrAfterConnectionString =
+                    schema.connectionString &&
+                    field.name === "connectionString" &&
                     index < schema.fields.length - 1 &&
                     schema.fields[index + 1]?.name !== "connectionString";
 
@@ -295,10 +296,10 @@ export function ConnectionSheet({
                             rows={4}
                             className={cn(
                               field.name === "credentials" ||
-                              field.name === "headers" ||
-                              field.name === "connectionString"
+                                field.name === "headers" ||
+                                field.name === "connectionString"
                                 ? "font-mono text-sm"
-                                : ""
+                                : "",
                             )}
                           />
                         ) : field.type === "select" ? (
@@ -313,7 +314,10 @@ export function ConnectionSheet({
                             </SelectTrigger>
                             <SelectContent>
                               {field.options?.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
                                   {option.label}
                                 </SelectItem>
                               ))}

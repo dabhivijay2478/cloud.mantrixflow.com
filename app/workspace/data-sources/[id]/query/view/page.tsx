@@ -8,10 +8,10 @@ import { SchemaTableNavigation } from "@/components/data-sources/schema-table-na
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { 
-  useConnection, 
-  useSchemasWithTables, 
-  useExecuteQuery 
+import {
+  useConnection,
+  useSchemasWithTables,
+  useExecuteQuery,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
@@ -83,8 +83,12 @@ export default function QueryResultsViewPage() {
   const orgId = currentOrganization?.id;
 
   // Fetch connection and schemas from API
-  const { data: connection, isLoading: connectionLoading } = useConnection(dataSourceId);
-  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(dataSourceId, orgId);
+  const { data: connection, isLoading: connectionLoading } =
+    useConnection(dataSourceId);
+  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
+    dataSourceId,
+    orgId,
+  );
   const executeQueryMutation = useExecuteQuery(orgId);
 
   const [results, setResults] = useState<{
@@ -101,13 +105,18 @@ export default function QueryResultsViewPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Convert API connection to component format
-  const dataSource = connection ? {
-    id: connection.id,
-    name: connection.name,
-    type: "postgres" as const,
-    status: connection.status === "active" ? "connected" as const : "disconnected" as const,
-    tables: [],
-  } : null;
+  const dataSource = connection
+    ? {
+        id: connection.id,
+        name: connection.name,
+        type: "postgres" as const,
+        status:
+          connection.status === "active"
+            ? ("connected" as const)
+            : ("disconnected" as const),
+        tables: [],
+      }
+    : null;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -117,18 +126,21 @@ export default function QueryResultsViewPage() {
     if (storedData) {
       try {
         const parsed = JSON.parse(storedData);
-        console.log('[QueryViewPage] Loading data from sessionStorage:', parsed);
+        console.log(
+          "[QueryViewPage] Loading data from sessionStorage:",
+          parsed,
+        );
         setResults(parsed.results);
         setViewType(parsed.viewType || "query");
         setQuery(parsed.query || "");
         setTableName(parsed.tableName || "");
         // Extract schema from table name if it contains a dot
-        if (parsed.tableName && parsed.tableName.includes('.')) {
-          const [schema, table] = parsed.tableName.split('.');
+        if (parsed.tableName && parsed.tableName.includes(".")) {
+          const [schema, table] = parsed.tableName.split(".");
           setSelectedSchema(schema);
           setSelectedTable(table);
         } else if (parsed.tableName) {
-          setSelectedSchema('public');
+          setSelectedSchema("public");
           setSelectedTable(parsed.tableName);
         }
       } catch (err) {
@@ -136,7 +148,9 @@ export default function QueryResultsViewPage() {
         toast.error("Failed to load results", "Invalid data format");
       }
     } else {
-      console.warn('[QueryViewPage] No data found in sessionStorage, redirecting...');
+      console.warn(
+        "[QueryViewPage] No data found in sessionStorage, redirecting...",
+      );
       // No data found, redirect back
       router.push(`/workspace/data-sources/${dataSourceId}/query`);
     }
@@ -150,7 +164,7 @@ export default function QueryResultsViewPage() {
 
     try {
       let newResults: { columns: string[]; rows: Record<string, unknown>[] };
-      
+
       if (viewType === "query" && query) {
         // Execute query using API
         const result = await executeQueryMutation.mutateAsync({
@@ -160,15 +174,21 @@ export default function QueryResultsViewPage() {
           },
         });
 
-        if (result && Array.isArray(result.rows) && Array.isArray(result.columns)) {
-          const columnNames = result.columns.map((col: any) => 
-            typeof col === 'string' ? col : (col.name || col.column || String(col))
+        if (
+          result &&
+          Array.isArray(result.rows) &&
+          Array.isArray(result.columns)
+        ) {
+          const columnNames = result.columns.map((col: any) =>
+            typeof col === "string"
+              ? col
+              : col.name || col.column || String(col),
           );
-          
+
           newResults = {
             columns: columnNames,
             rows: result.rows.map((row: any) => {
-              if (row && typeof row === 'object' && !Array.isArray(row)) {
+              if (row && typeof row === "object" && !Array.isArray(row)) {
                 return row as Record<string, unknown>;
               }
               if (Array.isArray(row)) {
@@ -193,15 +213,21 @@ export default function QueryResultsViewPage() {
           },
         });
 
-        if (result && Array.isArray(result.rows) && Array.isArray(result.columns)) {
-          const columnNames = result.columns.map((col: any) => 
-            typeof col === 'string' ? col : (col.name || col.column || String(col))
+        if (
+          result &&
+          Array.isArray(result.rows) &&
+          Array.isArray(result.columns)
+        ) {
+          const columnNames = result.columns.map((col: any) =>
+            typeof col === "string"
+              ? col
+              : col.name || col.column || String(col),
           );
-          
+
           newResults = {
             columns: columnNames,
             rows: result.rows.map((row: any) => {
-              if (row && typeof row === 'object' && !Array.isArray(row)) {
+              if (row && typeof row === "object" && !Array.isArray(row)) {
                 return row as Record<string, unknown>;
               }
               if (Array.isArray(row)) {
@@ -248,7 +274,8 @@ export default function QueryResultsViewPage() {
   const handleTableSelect = async (tableName: string, schemaName: string) => {
     if (!dataSource || !orgId) return;
 
-    const fullTableName = schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
+    const fullTableName =
+      schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
     setTableName(fullTableName);
     setSelectedTable(tableName);
     setSelectedSchema(schemaName);
@@ -266,15 +293,19 @@ export default function QueryResultsViewPage() {
       });
 
       // Handle the result format
-      if (result && Array.isArray(result.rows) && Array.isArray(result.columns)) {
-        const columnNames = result.columns.map((col: any) => 
-          typeof col === 'string' ? col : (col.name || col.column || String(col))
+      if (
+        result &&
+        Array.isArray(result.rows) &&
+        Array.isArray(result.columns)
+      ) {
+        const columnNames = result.columns.map((col: any) =>
+          typeof col === "string" ? col : col.name || col.column || String(col),
         );
-        
+
         const convertedResult = {
           columns: columnNames,
           rows: result.rows.map((row: any) => {
-            if (row && typeof row === 'object' && !Array.isArray(row)) {
+            if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;
             }
             if (Array.isArray(row)) {
@@ -389,7 +420,9 @@ export default function QueryResultsViewPage() {
               <span className="hidden sm:inline">Back</span>
             </Button>
             <div className="min-w-0 flex-1 sm:flex-none">
-              <h1 className="text-base sm:text-lg font-semibold truncate">Query Results</h1>
+              <h1 className="text-base sm:text-lg font-semibold truncate">
+                Query Results
+              </h1>
               {viewType === "table" && tableName && (
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   Table: {tableName}
@@ -445,7 +478,9 @@ export default function QueryResultsViewPage() {
                 loading={loading}
                 error={error}
                 hideExternalTabButton={true}
-                title={viewType === "table" ? `Table: ${tableName}` : "Query Results"}
+                title={
+                  viewType === "table" ? `Table: ${tableName}` : "Query Results"
+                }
                 onDownload={(format) => {
                   // Handle download
                   const headers = results.columns.join(",");
@@ -461,11 +496,12 @@ export default function QueryResultsViewPage() {
                           .map((col) => {
                             const val = row[col];
                             if (val === null || val === undefined) return "";
-                            if (typeof val === "object") return JSON.stringify(val);
+                            if (typeof val === "object")
+                              return JSON.stringify(val);
                             return String(val).replace(/"/g, '""');
                           })
                           .map((v) => `"${v}"`)
-                          .join(",")
+                          .join(","),
                       ),
                     ].join("\n");
                     filename = `${viewType === "table" ? tableName : "query-results"}.csv`;
@@ -483,7 +519,10 @@ export default function QueryResultsViewPage() {
                   a.download = filename;
                   a.click();
                   URL.revokeObjectURL(url);
-                  toast.success("Download started", `Downloading as ${format.toUpperCase()}`);
+                  toast.success(
+                    "Download started",
+                    `Downloading as ${format.toUpperCase()}`,
+                  );
                 }}
               />
             </div>
@@ -491,7 +530,9 @@ export default function QueryResultsViewPage() {
             <div className="flex-1 flex items-center justify-center p-4">
               <div className="text-center">
                 <Database className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-sm sm:text-base text-muted-foreground">No results to display</p>
+                <p className="text-sm sm:text-base text-muted-foreground">
+                  No results to display
+                </p>
               </div>
             </div>
           )}

@@ -29,7 +29,10 @@ import { Separator } from "@/components/ui/separator";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { useConnections, useSchemasWithTables } from "@/lib/api/hooks/use-data-sources";
+import {
+  useConnections,
+  useSchemasWithTables,
+} from "@/lib/api/hooks/use-data-sources";
 import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -69,18 +72,23 @@ export function CollectorStep({
   const orgId = currentOrganization?.id;
 
   // Fetch connections from API
-  const { data: connections, isLoading: connectionsLoading } = useConnections(orgId);
+  const { data: connections, isLoading: connectionsLoading } =
+    useConnections(orgId);
 
   // Convert API connections to DataSource format for compatibility
-  const dataSources = connections?.map((conn) => ({
-    id: conn.id,
-    name: conn.name,
-    type: "postgres" as const,
-    status: conn.status === "active" ? ("connected" as const) : ("disconnected" as const),
-    organizationId: conn.orgId,
-    connectedAt: conn.lastConnectedAt || undefined,
-    tables: [], // Will be populated when needed
-  })) || [];
+  const dataSources =
+    connections?.map((conn) => ({
+      id: conn.id,
+      name: conn.name,
+      type: "postgres" as const,
+      status:
+        conn.status === "active"
+          ? ("connected" as const)
+          : ("disconnected" as const),
+      organizationId: conn.orgId,
+      connectedAt: conn.lastConnectedAt || undefined,
+      tables: [], // Will be populated when needed
+    })) || [];
 
   const [collectors, setCollectors] =
     useState<CollectorConfig[]>(initialCollectors);
@@ -103,21 +111,28 @@ export function CollectorStep({
   );
 
   // Fetch schemas with tables for the selected source
-  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(selectedSourceId, orgId);
-  
+  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
+    selectedSourceId,
+    orgId,
+  );
+
   // Flatten all tables from all schemas
   const availableTables = schemas
     ? schemas.flatMap((schema) =>
         (schema.tables || []).map((table) => ({
-          name: schema.name === "public" ? table.name : `${schema.name}.${table.name}`,
+          name:
+            schema.name === "public"
+              ? table.name
+              : `${schema.name}.${table.name}`,
           schema: schema.name,
           tableName: table.name,
-        }))
+        })),
       )
     : [];
 
   const handleTableToggle = (tableName: string, schemaName: string) => {
-    const fullTableName = schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
+    const fullTableName =
+      schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
     setSelectedTables((prev) =>
       prev.includes(fullTableName)
         ? prev.filter((t) => t !== fullTableName)
@@ -281,7 +296,9 @@ export function CollectorStep({
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <Database className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
-          <p className="text-sm text-muted-foreground">Loading data sources...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading data sources...
+          </p>
         </CardContent>
       </Card>
     );
@@ -397,7 +414,10 @@ export function CollectorStep({
                       <div className="flex items-center gap-2">
                         <Database className="h-4 w-4 shrink-0" />
                         <span className="truncate">{source.name}</span>
-                        <Badge variant="outline" className="ml-auto text-xs shrink-0">
+                        <Badge
+                          variant="outline"
+                          className="ml-auto text-xs shrink-0"
+                        >
                           {source.type}
                         </Badge>
                       </div>
@@ -437,7 +457,8 @@ export function CollectorStep({
                     <div className="border-t p-2 sm:p-3 bg-background shrink-0">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
                         <span className="text-xs sm:text-sm font-medium">
-                          Selected: {selectedTables.length} table{selectedTables.length !== 1 ? "s" : ""}
+                          Selected: {selectedTables.length} table
+                          {selectedTables.length !== 1 ? "s" : ""}
                         </span>
                         <Button
                           variant="ghost"
@@ -462,7 +483,7 @@ export function CollectorStep({
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedTables((prev) =>
-                                    prev.filter((t) => t !== table)
+                                    prev.filter((t) => t !== table),
                                   );
                                 }}
                                 className="ml-1 hover:text-destructive shrink-0"

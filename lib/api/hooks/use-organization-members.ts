@@ -3,21 +3,21 @@
  * TanStack Query hooks for organization member management
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { OrganizationsService } from '../services/organizations.service';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { OrganizationsService } from "../services/organizations.service";
 import type {
   OrganizationMember,
   InviteMemberDto,
   UpdateMemberDto,
-} from '../types/organizations';
+} from "../types/organizations";
 
 // Query keys factory
 export const organizationMembersKeys = {
-  all: ['organization-members'] as const,
-  lists: () => [...organizationMembersKeys.all, 'list'] as const,
+  all: ["organization-members"] as const,
+  lists: () => [...organizationMembersKeys.all, "list"] as const,
   list: (organizationId: string) =>
     [...organizationMembersKeys.lists(), organizationId] as const,
-  details: () => [...organizationMembersKeys.all, 'detail'] as const,
+  details: () => [...organizationMembersKeys.all, "detail"] as const,
   detail: (organizationId: string, memberId: string) =>
     [...organizationMembersKeys.details(), organizationId, memberId] as const,
 };
@@ -27,7 +27,7 @@ export const organizationMembersKeys = {
  */
 export function useOrganizationMembers(organizationId: string | undefined) {
   return useQuery({
-    queryKey: organizationMembersKeys.list(organizationId || ''),
+    queryKey: organizationMembersKeys.list(organizationId || ""),
     queryFn: () => OrganizationsService.listMembers(organizationId!),
     enabled: !!organizationId,
     staleTime: 30 * 1000, // 30 seconds
@@ -43,8 +43,8 @@ export function useOrganizationMember(
 ) {
   return useQuery({
     queryKey: organizationMembersKeys.detail(
-      organizationId || '',
-      memberId || '',
+      organizationId || "",
+      memberId || "",
     ),
     queryFn: () => OrganizationsService.getMember(organizationId!, memberId!),
     enabled: !!organizationId && !!memberId,
@@ -127,4 +127,3 @@ export function useRemoveMember() {
     },
   });
 }
-

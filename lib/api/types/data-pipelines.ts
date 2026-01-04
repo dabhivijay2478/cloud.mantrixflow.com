@@ -15,7 +15,7 @@ export interface ColumnMapping {
 
 export interface Transformation {
   sourceColumn: string;
-  transformType: 'rename' | 'cast' | 'concat' | 'split' | 'custom';
+  transformType: "rename" | "cast" | "concat" | "split" | "custom";
   transformConfig: Record<string, unknown>;
   destinationColumn: string;
 }
@@ -34,11 +34,11 @@ export interface CreatePipelineDto {
   destinationTable: string;
   columnMappings?: ColumnMapping[];
   transformations?: Transformation[];
-  writeMode?: 'append' | 'upsert' | 'replace';
+  writeMode?: "append" | "upsert" | "replace";
   upsertKey?: string[];
-  syncMode?: 'full' | 'incremental';
+  syncMode?: "full" | "incremental";
   incrementalColumn?: string;
-  syncFrequency?: 'manual' | '15min' | '1hour' | '24hours';
+  syncFrequency?: "manual" | "15min" | "1hour" | "24hours";
   collectors?: Array<{
     id: string;
     sourceId: string;
@@ -70,12 +70,12 @@ export interface UpdatePipelineDto {
   destinationTable?: string;
   columnMappings?: ColumnMapping[];
   transformations?: Transformation[];
-  writeMode?: 'append' | 'upsert' | 'replace';
+  writeMode?: "append" | "upsert" | "replace";
   upsertKey?: string[];
-  syncMode?: 'full' | 'incremental';
+  syncMode?: "full" | "incremental";
   incrementalColumn?: string;
-  syncFrequency?: 'manual' | '15min' | '1hour' | '24hours';
-  status?: 'active' | 'paused';
+  syncFrequency?: "manual" | "15min" | "1hour" | "24hours";
+  status?: "active" | "paused";
   collectors?: Array<{
     id: string;
     sourceId: string;
@@ -115,15 +115,15 @@ export interface Pipeline {
   destinationTable: string;
   columnMappings?: ColumnMapping[];
   transformations?: Transformation[];
-  writeMode: 'append' | 'upsert' | 'replace';
+  writeMode: "append" | "upsert" | "replace";
   upsertKey?: string[];
-  syncMode: 'full' | 'incremental';
+  syncMode: "full" | "incremental";
   incrementalColumn?: string;
-  syncFrequency: 'manual' | '15min' | '1hour' | '24hours';
-  status: 'active' | 'paused' | 'error';
+  syncFrequency: "manual" | "15min" | "1hour" | "24hours";
+  status: "active" | "paused" | "error";
   lastRunAt?: Date | string;
-  lastRunStatus?: 'running' | 'success' | 'failed';
-  migrationState?: 'pending' | 'running' | 'listing' | 'completed' | 'error';
+  lastRunStatus?: "running" | "success" | "failed";
+  migrationState?: "pending" | "running" | "listing" | "completed" | "error";
   nextRunAt?: Date | string;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -132,7 +132,7 @@ export interface Pipeline {
 export interface PipelineRun {
   id: string;
   pipelineId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   rowsProcessed?: number;
   rowsWritten?: number;
   executionTimeMs?: number;

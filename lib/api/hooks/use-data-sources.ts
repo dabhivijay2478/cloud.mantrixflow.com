@@ -3,8 +3,8 @@
  * Reusable hooks for PostgreSQL data source API endpoints
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DataSourcesService } from '../services/data-sources.service';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DataSourcesService } from "../services/data-sources.service";
 import type {
   TestConnectionDto,
   CreateConnectionDto,
@@ -12,38 +12,50 @@ import type {
   ExecuteQueryDto,
   CreateSyncJobDto,
   UpdateSyncJobScheduleDto,
-} from '../types/data-sources';
+} from "../types/data-sources";
 
 // Query Keys
 export const dataSourcesKeys = {
-  all: ['data-sources'] as const,
+  all: ["data-sources"] as const,
   connections: {
-    all: ['data-sources', 'connections'] as const,
-    lists: () => [...dataSourcesKeys.connections.all, 'list'] as const,
+    all: ["data-sources", "connections"] as const,
+    lists: () => [...dataSourcesKeys.connections.all, "list"] as const,
     list: (filters?: Record<string, unknown>) =>
       [...dataSourcesKeys.connections.lists(), filters] as const,
-    details: () => [...dataSourcesKeys.connections.all, 'detail'] as const,
+    details: () => [...dataSourcesKeys.connections.all, "detail"] as const,
     detail: (id: string) =>
       [...dataSourcesKeys.connections.details(), id] as const,
   },
   databases: (connectionId: string) =>
-    [...dataSourcesKeys.all, 'databases', connectionId] as const,
+    [...dataSourcesKeys.all, "databases", connectionId] as const,
   schemas: (connectionId: string) =>
-    [...dataSourcesKeys.all, 'schemas', connectionId] as const,
+    [...dataSourcesKeys.all, "schemas", connectionId] as const,
   tables: (connectionId: string, schema?: string) =>
-    [...dataSourcesKeys.all, 'tables', connectionId, schema] as const,
+    [...dataSourcesKeys.all, "tables", connectionId, schema] as const,
   tableSchema: (connectionId: string, table: string, schema?: string) =>
-    [...dataSourcesKeys.all, 'table-schema', connectionId, table, schema] as const,
+    [
+      ...dataSourcesKeys.all,
+      "table-schema",
+      connectionId,
+      table,
+      schema,
+    ] as const,
   syncJobs: (connectionId: string) =>
-    [...dataSourcesKeys.all, 'sync-jobs', connectionId] as const,
+    [...dataSourcesKeys.all, "sync-jobs", connectionId] as const,
   syncJob: (connectionId: string, jobId: string) =>
-    [...dataSourcesKeys.all, 'sync-jobs', connectionId, jobId] as const,
+    [...dataSourcesKeys.all, "sync-jobs", connectionId, jobId] as const,
   health: (connectionId: string) =>
-    [...dataSourcesKeys.all, 'health', connectionId] as const,
+    [...dataSourcesKeys.all, "health", connectionId] as const,
   queryLogs: (connectionId: string, limit?: number, offset?: number) =>
-    [...dataSourcesKeys.all, 'query-logs', connectionId, limit, offset] as const,
+    [
+      ...dataSourcesKeys.all,
+      "query-logs",
+      connectionId,
+      limit,
+      offset,
+    ] as const,
   metrics: (connectionId: string) =>
-    [...dataSourcesKeys.all, 'metrics', connectionId] as const,
+    [...dataSourcesKeys.all, "metrics", connectionId] as const,
 };
 
 // Connection Management Hooks
@@ -128,10 +140,14 @@ export function useSchemas(connectionId: string | undefined, orgId?: string) {
   });
 }
 
-export function useSchemasWithTables(connectionId: string | undefined, orgId?: string) {
+export function useSchemasWithTables(
+  connectionId: string | undefined,
+  orgId?: string,
+) {
   return useQuery({
-    queryKey: [...dataSourcesKeys.schemas(connectionId!), 'with-tables'],
-    queryFn: () => DataSourcesService.listSchemasWithTables(connectionId!, orgId),
+    queryKey: [...dataSourcesKeys.schemas(connectionId!), "with-tables"],
+    queryFn: () =>
+      DataSourcesService.listSchemasWithTables(connectionId!, orgId),
     enabled: !!connectionId && !!orgId,
   });
 }
@@ -308,7 +324,8 @@ export function useQueryLogs(
 ) {
   return useQuery({
     queryKey: dataSourcesKeys.queryLogs(connectionId!, limit, offset),
-    queryFn: () => DataSourcesService.getQueryLogs(connectionId!, limit, offset),
+    queryFn: () =>
+      DataSourcesService.getQueryLogs(connectionId!, limit, offset),
     enabled: !!connectionId,
   });
 }

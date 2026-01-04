@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  Check,
-  Loader2,
-  Mail,
-  Shield,
-} from "lucide-react";
+import { ArrowLeft, Check, Loader2, Mail, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
@@ -121,7 +115,6 @@ export default function InviteTeamMemberPage() {
       toast.error("Failed to send invitation", { description: state.error });
     }
   }, [state, email, router]);
-
 
   return (
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-4xl">

@@ -31,7 +31,8 @@ export const connectionSchemas: Record<
         type: "select",
         placeholder: "Select database type",
         required: true,
-        description: "Select the type of PostgreSQL database you're connecting to",
+        description:
+          "Select the type of PostgreSQL database you're connecting to",
         options: [
           { value: "other", label: "Other PostgreSQL" },
           { value: "neon", label: "Neon" },

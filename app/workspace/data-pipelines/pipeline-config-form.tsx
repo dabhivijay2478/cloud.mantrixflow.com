@@ -93,18 +93,18 @@ export function PipelineConfigurationForm({
 }: PipelineConfigurationFormProps) {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-  
+
   // Fetch connections from API instead of workspace store
-  const { data: connections, isLoading: connectionsLoading } = useConnections(orgId);
-  
+  const { data: connections, isLoading: connectionsLoading } =
+    useConnections(orgId);
+
   // Convert API connections to destination format
   // All connections from the PostgreSQL endpoint are PostgreSQL connections
-  const availableDestinations = (connections || [])
-    .map((conn) => ({
-      id: conn.id,
-      name: conn.name,
-      type: "database",
-    }));
+  const availableDestinations = (connections || []).map((conn) => ({
+    id: conn.id,
+    name: conn.name,
+    type: "database",
+  }));
   const [loading, setLoading] = useState(false);
   const [selectedDestinations, setSelectedDestinations] = useState<string[]>(
     [],
@@ -385,7 +385,8 @@ export function PipelineConfigurationForm({
           <ScrollArea className="h-[300px] rounded-md border p-4">
             {!orgId ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                No organization selected. Please select an organization from the sidebar.
+                No organization selected. Please select an organization from the
+                sidebar.
               </div>
             ) : connectionsLoading ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
@@ -393,58 +394,59 @@ export function PipelineConfigurationForm({
               </div>
             ) : availableDestinations.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                No PostgreSQL data sources available. Please connect a PostgreSQL data source first.
+                No PostgreSQL data sources available. Please connect a
+                PostgreSQL data source first.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {availableDestinations.map((destination) => {
-                const isSelected = selectedDestinations.includes(
-                  destination.id,
-                );
-                return (
-                  <Card
-                    key={destination.id}
-                    className={cn(
-                      "cursor-pointer transition-all hover:shadow-md",
-                      isSelected && "ring-2 ring-primary border-primary",
-                    )}
-                    onClick={() => handleDestinationToggle(destination.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "h-10 w-10 rounded-lg flex items-center justify-center",
-                              isSelected ? "bg-primary/10" : "bg-muted",
-                            )}
-                          >
-                            <Database
+                  const isSelected = selectedDestinations.includes(
+                    destination.id,
+                  );
+                  return (
+                    <Card
+                      key={destination.id}
+                      className={cn(
+                        "cursor-pointer transition-all hover:shadow-md",
+                        isSelected && "ring-2 ring-primary border-primary",
+                      )}
+                      onClick={() => handleDestinationToggle(destination.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
                               className={cn(
-                                "h-5 w-5",
-                                isSelected
-                                  ? "text-primary"
-                                  : "text-muted-foreground",
+                                "h-10 w-10 rounded-lg flex items-center justify-center",
+                                isSelected ? "bg-primary/10" : "bg-muted",
                               )}
-                            />
+                            >
+                              <Database
+                                className={cn(
+                                  "h-5 w-5",
+                                  isSelected
+                                    ? "text-primary"
+                                    : "text-muted-foreground",
+                                )}
+                              />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">
+                                {destination.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {destination.type}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-sm">
-                              {destination.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {destination.type}
-                            </p>
-                          </div>
+                          {isSelected && (
+                            <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                          )}
                         </div>
-                        {isSelected && (
-                          <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </ScrollArea>

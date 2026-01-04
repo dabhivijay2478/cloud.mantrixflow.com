@@ -1,10 +1,10 @@
 /**
  * Example: How to integrate API hooks into existing pages
- * 
+ *
  * This file shows examples of replacing mock data with real API calls
  */
 
-'use client';
+"use client";
 
 // Example 1: Replace mock connections with real API
 import {
@@ -13,12 +13,12 @@ import {
   useDeleteConnection,
   useTestConnection,
   type CreateConnectionDto,
-} from '@/lib/api';
+} from "@/lib/api";
 
 export function ExampleDataSourcesPage() {
   // Replace: const { dataSources } = useWorkspaceStore();
   const { data: connections, isLoading, error } = useConnections();
-  
+
   const createConnection = useCreateConnection();
   const deleteConnection = useDeleteConnection();
   const testConnection = useTestConnection();
@@ -27,20 +27,20 @@ export function ExampleDataSourcesPage() {
     try {
       // Test connection first
       const testResult = await testConnection.mutateAsync(formData.config);
-      
+
       if (!testResult.success) {
-        throw new Error(testResult.error || 'Connection test failed');
+        throw new Error(testResult.error || "Connection test failed");
       }
 
       // Create connection
       await createConnection.mutateAsync(formData);
     } catch (error) {
-      console.error('Failed to create connection:', error);
+      console.error("Failed to create connection:", error);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure?')) {
+    if (confirm("Are you sure?")) {
       await deleteConnection.mutateAsync(id);
     }
   };
@@ -61,11 +61,15 @@ export function ExampleDataSourcesPage() {
 }
 
 // Example 2: Using schema discovery
-import { useTables, useTableSchema } from '@/lib/api';
+import { useTables, useTableSchema } from "@/lib/api";
 
-export function ExampleSchemaDiscovery({ connectionId }: { connectionId: string }) {
-  const { data: tables } = useTables(connectionId, 'public');
-  const { data: schema } = useTableSchema(connectionId, 'users', 'public');
+export function ExampleSchemaDiscovery({
+  connectionId,
+}: {
+  connectionId: string;
+}) {
+  const { data: tables } = useTables(connectionId, "public");
+  const { data: schema } = useTableSchema(connectionId, "users", "public");
 
   return (
     <div>
@@ -82,7 +86,7 @@ export function ExampleSchemaDiscovery({ connectionId }: { connectionId: string 
           <ul>
             {schema.columns.map((col) => (
               <li key={col.name}>
-                {col.name}: {col.dataType} {col.nullable ? '(nullable)' : ''}
+                {col.name}: {col.dataType} {col.nullable ? "(nullable)" : ""}
               </li>
             ))}
           </ul>
@@ -93,11 +97,7 @@ export function ExampleSchemaDiscovery({ connectionId }: { connectionId: string 
 }
 
 // Example 3: Using pipelines
-import {
-  usePipelines,
-  useRunPipeline,
-  usePipelineStats,
-} from '@/lib/api';
+import { usePipelines, useRunPipeline, usePipelineStats } from "@/lib/api";
 
 export function ExamplePipelinesPage() {
   const { data: pipelines } = usePipelines();
@@ -136,7 +136,10 @@ function PipelineCard({
       {stats && (
         <div>
           <p>Total Runs: {stats.totalRuns}</p>
-          <p>Success Rate: {(stats.successfulRuns / stats.totalRuns * 100).toFixed(1)}%</p>
+          <p>
+            Success Rate:{" "}
+            {((stats.successfulRuns / stats.totalRuns) * 100).toFixed(1)}%
+          </p>
         </div>
       )}
       <button onClick={onRun}>Run Pipeline</button>
@@ -145,12 +148,12 @@ function PipelineCard({
 }
 
 // Example 4: Query execution
-import { useState } from 'react';
-import { useExecuteQuery } from '@/lib/api';
+import { useState } from "react";
+import { useExecuteQuery } from "@/lib/api";
 
 export function ExampleQueryEditor({ connectionId }: { connectionId: string }) {
   const executeQuery = useExecuteQuery();
-  const [query, setQuery] = useState('SELECT * FROM users LIMIT 10');
+  const [query, setQuery] = useState("SELECT * FROM users LIMIT 10");
 
   const handleExecute = async () => {
     try {
@@ -160,12 +163,12 @@ export function ExampleQueryEditor({ connectionId }: { connectionId: string }) {
       });
 
       if (result.success && result.result) {
-        console.log('Columns:', result.result.columns);
-        console.log('Rows:', result.result.rows);
-        console.log('Row Count:', result.result.rowCount);
+        console.log("Columns:", result.result.columns);
+        console.log("Rows:", result.result.rows);
+        console.log("Row Count:", result.result.rowCount);
       }
     } catch (error) {
-      console.error('Query failed:', error);
+      console.error("Query failed:", error);
     }
   };
 
@@ -176,11 +179,8 @@ export function ExampleQueryEditor({ connectionId }: { connectionId: string }) {
         onChange={(e) => setQuery(e.target.value)}
         rows={10}
       />
-      <button
-        onClick={handleExecute}
-        disabled={executeQuery.isPending}
-      >
-        {executeQuery.isPending ? 'Executing...' : 'Execute Query'}
+      <button onClick={handleExecute} disabled={executeQuery.isPending}>
+        {executeQuery.isPending ? "Executing..." : "Execute Query"}
       </button>
     </div>
   );

@@ -6,7 +6,10 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePipeline, useUpdatePipeline } from "@/lib/api/hooks/use-data-pipelines";
+import {
+  usePipeline,
+  useUpdatePipeline,
+} from "@/lib/api/hooks/use-data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import type { CollectorConfig } from "../../new/collector-step";
 import { CollectorStep } from "../../new/collector-step";
@@ -41,8 +44,8 @@ export default function EditPipelinePage() {
       const transformations = pipeline.transformations as any;
       const collectors = transformations?.collectors || [];
       const emitters = transformations?.emitters || [];
-      
-      console.log('Pipeline data loaded for edit:', {
+
+      console.log("Pipeline data loaded for edit:", {
         transformations,
         collectors,
         emitters,
@@ -63,12 +66,12 @@ export default function EditPipelinePage() {
           })),
         })),
       });
-      
+
       // Map emitters to collectors
       // Strategy 1: If emitters are stored directly on collectors (from new pipeline flow)
       // Strategy 2: If emitters are in separate array, map via transformers
       const collectorEmittersMap = new Map<string, any[]>();
-      
+
       collectors.forEach((c: any) => {
         // First, check if emitters are already on the collector (from new pipeline creation)
         if (c.emitters && Array.isArray(c.emitters) && c.emitters.length > 0) {
@@ -81,33 +84,40 @@ export default function EditPipelinePage() {
               collectorEmitterIds.add(t.emitterId);
             }
           });
-          
-          const collectorEmitters = emitters.filter((e: any) => 
-            collectorEmitterIds.has(e.id)
+
+          const collectorEmitters = emitters.filter((e: any) =>
+            collectorEmitterIds.has(e.id),
           );
-          
+
           if (collectorEmitters.length > 0) {
             collectorEmittersMap.set(c.id, collectorEmitters);
           }
         }
       });
-      
+
       // Also check if there are emitters without collector association (fallback)
       // In this case, associate them with the first collector
       if (collectors.length > 0 && emitters.length > 0) {
         const allMappedEmitterIds = new Set(
-          Array.from(collectorEmittersMap.values()).flat().map((e: any) => e.id)
+          Array.from(collectorEmittersMap.values())
+            .flat()
+            .map((e: any) => e.id),
         );
-        const unmappedEmitters = emitters.filter((e: any) => !allMappedEmitterIds.has(e.id));
-        if (unmappedEmitters.length > 0 && !collectorEmittersMap.has(collectors[0].id)) {
+        const unmappedEmitters = emitters.filter(
+          (e: any) => !allMappedEmitterIds.has(e.id),
+        );
+        if (
+          unmappedEmitters.length > 0 &&
+          !collectorEmittersMap.has(collectors[0].id)
+        ) {
           collectorEmittersMap.set(collectors[0].id, unmappedEmitters);
         }
       }
-      
+
       const finalConfig = {
         collectors: collectors.map((c: any) => {
           const collectorEmitters = collectorEmittersMap.get(c.id) || [];
-          
+
           return {
             id: c.id,
             sourceId: c.sourceId,
@@ -127,37 +137,60 @@ export default function EditPipelinePage() {
               emitterId: t.emitterId || "",
               destinationTable: t.destinationTable || "",
               primaryKeyField: t.primaryKeyField || "",
-              fieldMappings: Array.isArray(t.fieldMappings) 
+              fieldMappings: Array.isArray(t.fieldMappings)
                 ? t.fieldMappings.map((fm: any) => ({
-                    source: typeof fm === 'object' && fm.source ? String(fm.source) : (typeof fm === 'string' ? fm : String(fm?.source || '')),
-                    destination: typeof fm === 'object' && fm.destination ? String(fm.destination) : (typeof fm === 'string' ? fm : String(fm?.destination || '')),
+                    source:
+                      typeof fm === "object" && fm.source
+                        ? String(fm.source)
+                        : typeof fm === "string"
+                          ? fm
+                          : String(fm?.source || ""),
+                    destination:
+                      typeof fm === "object" && fm.destination
+                        ? String(fm.destination)
+                        : typeof fm === "string"
+                          ? fm
+                          : String(fm?.destination || ""),
                     isPrimaryKey: fm?.isPrimaryKey || false,
                   }))
-                : t.fieldMappings && typeof t.fieldMappings === 'object'
-                  ? Object.entries(t.fieldMappings).map(([source, destination]) => ({
-                      source: String(source),
-                      destination: String(destination),
-                      isPrimaryKey: false,
-                    }))
+                : t.fieldMappings && typeof t.fieldMappings === "object"
+                  ? Object.entries(t.fieldMappings).map(
+                      ([source, destination]) => ({
+                        source: String(source),
+                        destination: String(destination),
+                        isPrimaryKey: false,
+                      }),
+                    )
                   : [],
             })),
           };
         }) as CollectorConfig[],
       };
-      
-      console.log('Config set for edit:', {
+
+      console.log("Config set for edit:", {
         collectorsCount: finalConfig.collectors.length,
         configCollectors: finalConfig.collectors.map((c: any) => ({
           id: c.id,
           sourceId: c.sourceId,
           selectedTables: c.selectedTables,
           emittersCount: c.emitters?.length || 0,
-          emitters: c.emitters?.map((e: any) => ({ id: e.id, destinationId: e.destinationId, destinationName: e.destinationName })) || [],
+          emitters:
+            c.emitters?.map((e: any) => ({
+              id: e.id,
+              destinationId: e.destinationId,
+              destinationName: e.destinationName,
+            })) || [],
           transformersCount: c.transformers?.length || 0,
-          transformers: c.transformers?.map((t: any) => ({ id: t.id, name: t.name, emitterId: t.emitterId, fieldMappingsCount: t.fieldMappings?.length || 0 })) || [],
+          transformers:
+            c.transformers?.map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              emitterId: t.emitterId,
+              fieldMappingsCount: t.fieldMappings?.length || 0,
+            })) || [],
         })),
       });
-      
+
       setConfig(finalConfig);
     }
   }, [pipeline]);
@@ -179,7 +212,9 @@ export default function EditPipelinePage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Pipeline not found</h2>
           <p className="text-muted-foreground mb-4">
-            {error ? "Failed to load pipeline" : "The pipeline you're looking for doesn't exist."}
+            {error
+              ? "Failed to load pipeline"
+              : "The pipeline you're looking for doesn't exist."}
           </p>
           <Button onClick={() => router.push("/workspace/data-pipelines")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -219,13 +254,13 @@ export default function EditPipelinePage() {
 
     try {
       // Extract emitters from collectors
-      const allEmitters = config.collectors.flatMap((c) => 
+      const allEmitters = config.collectors.flatMap((c) =>
         ((c as any).emitters || []).map((e: any) => ({
           ...e,
           collectorId: c.id,
-        }))
+        })),
       );
-      
+
       const allDestinationIds = [
         ...new Set(allEmitters.map((e) => e.destinationId)),
       ];
@@ -236,13 +271,13 @@ export default function EditPipelinePage() {
           ...t,
           collectorId: t.collectorId || c.id,
           emitterId: t.emitterId || "",
-        }))
+        })),
       );
 
       // Map emitters to the format expected by the API
       const emitters = allEmitters.map((e: any) => {
         const transformer = transformersWithEmitters.find(
-          (t: any) => t.emitterId === e.id
+          (t: any) => t.emitterId === e.id,
         );
         return {
           id: e.id,
@@ -272,7 +307,10 @@ export default function EditPipelinePage() {
         },
       });
 
-      toast.success("Pipeline updated", "Your pipeline has been updated successfully.");
+      toast.success(
+        "Pipeline updated",
+        "Your pipeline has been updated successfully.",
+      );
       router.push("/workspace/data-pipelines");
     } catch (error) {
       console.error("Failed to update pipeline:", error);
@@ -306,9 +344,9 @@ export default function EditPipelinePage() {
 
   const getMigrationStateBadge = () => {
     if (!pipeline) return null;
-    
-    const migrationState = pipeline.migrationState || 'pending';
-    
+
+    const migrationState = pipeline.migrationState || "pending";
+
     switch (migrationState) {
       case "running":
         return (
@@ -349,7 +387,10 @@ export default function EditPipelinePage() {
       case "pending":
         if (pipeline.status === "paused") {
           return (
-            <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+            <Badge
+              variant="outline"
+              className="text-muted-foreground border-amber-300 dark:border-amber-700"
+            >
               <div className="flex items-center gap-1.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 Paused
@@ -377,7 +418,7 @@ export default function EditPipelinePage() {
         <PageHeader
           title={
             <div className="flex items-center gap-3">
-              <span>{`Edit Pipeline: ${pipeline?.name || ''}`}</span>
+              <span>{`Edit Pipeline: ${pipeline?.name || ""}`}</span>
               {getMigrationStateBadge()}
             </div>
           }

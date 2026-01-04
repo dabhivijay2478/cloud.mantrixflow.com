@@ -27,8 +27,17 @@ export interface UpdateOrganizationDto {
 /**
  * Organization Member Types
  */
-export type OrganizationMemberRole = 'owner' | 'admin' | 'member' | 'viewer' | 'guest';
-export type OrganizationMemberStatus = 'invited' | 'accepted' | 'active' | 'inactive';
+export type OrganizationMemberRole =
+  | "owner"
+  | "admin"
+  | "member"
+  | "viewer"
+  | "guest";
+export type OrganizationMemberStatus =
+  | "invited"
+  | "accepted"
+  | "active"
+  | "inactive";
 
 export interface OrganizationMember {
   id: string;

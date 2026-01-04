@@ -119,26 +119,35 @@ export default function DataSourceQueryPage() {
   const params = useParams();
   const router = useRouter();
   const dataSourceId = params.id as string;
-  
+
   // Get current organization from workspace store
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-  
+
   // Use real API hooks
-  const { data: connection, isLoading: connectionLoading } = useConnection(dataSourceId);
-  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(dataSourceId, orgId);
+  const { data: connection, isLoading: connectionLoading } =
+    useConnection(dataSourceId);
+  const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
+    dataSourceId,
+    orgId,
+  );
   const executeQueryMutation = useExecuteQuery(orgId);
-  
+
   // Removed dataset tab functionality
 
   // Convert API connection to component format
-  const dataSource = connection ? {
-    id: connection.id,
-    name: connection.name,
-    type: "postgres" as const,
-    status: connection.status === "active" ? "connected" as const : "disconnected" as const,
-    tables: [], // Not used when using schema-based navigation
-  } : null;
+  const dataSource = connection
+    ? {
+        id: connection.id,
+        name: connection.name,
+        type: "postgres" as const,
+        status:
+          connection.status === "active"
+            ? ("connected" as const)
+            : ("disconnected" as const),
+        tables: [], // Not used when using schema-based navigation
+      }
+    : null;
 
   // Track selected schema and table
   const [selectedSchema, setSelectedSchema] = useState<string | undefined>();
@@ -147,11 +156,17 @@ export default function DataSourceQueryPage() {
   // Debug logging for schemas
   useEffect(() => {
     if (schemas) {
-      const totalTables = schemas.reduce((sum, s) => sum + (s.tables?.length || 0), 0);
-      console.log('[QueryPage] Schemas loaded:', {
+      const totalTables = schemas.reduce(
+        (sum, s) => sum + (s.tables?.length || 0),
+        0,
+      );
+      console.log("[QueryPage] Schemas loaded:", {
         totalSchemas: schemas.length,
         totalTables,
-        schemas: schemas.map(s => ({ name: s.name, tableCount: s.tables?.length || 0 })),
+        schemas: schemas.map((s) => ({
+          name: s.name,
+          tableCount: s.tables?.length || 0,
+        })),
       });
     }
   }, [schemas]);
@@ -285,8 +300,12 @@ export default function DataSourceQueryPage() {
     setResults(null);
 
     try {
-      console.log('[QueryPage] Executing query with:', { connectionId: dataSourceId, orgId, query: query.trim() });
-      
+      console.log("[QueryPage] Executing query with:", {
+        connectionId: dataSourceId,
+        orgId,
+        query: query.trim(),
+      });
+
       const result = await executeQueryMutation.mutateAsync({
         connectionId: dataSourceId,
         data: {
@@ -294,12 +313,12 @@ export default function DataSourceQueryPage() {
         },
       });
 
-      console.log('[QueryPage] Query result:', result);
-      console.log('[QueryPage] Result type check:', {
+      console.log("[QueryPage] Query result:", result);
+      console.log("[QueryPage] Result type check:", {
         hasRows: !!result?.rows,
         rowsIsArray: Array.isArray(result?.rows),
         rowsLength: result?.rows?.length,
-        firstRowType: result?.rows?.[0] ? typeof result.rows[0] : 'none',
+        firstRowType: result?.rows?.[0] ? typeof result.rows[0] : "none",
         firstRowIsArray: Array.isArray(result?.rows?.[0]),
         firstRowKeys: result?.rows?.[0] ? Object.keys(result.rows[0]) : [],
         hasColumns: !!result?.columns,
@@ -308,19 +327,23 @@ export default function DataSourceQueryPage() {
 
       // API client extracts data.data, so result is QueryExecutionResult directly
       // Format: { rows: Record<string, any>[] (from pg library), columns: Array<{name: string, dataType: string}>, rowCount: number, executionTimeMs: number }
-      if (result && Array.isArray(result.rows) && Array.isArray(result.columns)) {
+      if (
+        result &&
+        Array.isArray(result.rows) &&
+        Array.isArray(result.columns)
+      ) {
         // Extract column names - columns can be strings or objects with name property
-        const columnNames = result.columns.map((col: any) => 
-          typeof col === 'string' ? col : (col.name || col.column || String(col))
+        const columnNames = result.columns.map((col: any) =>
+          typeof col === "string" ? col : col.name || col.column || String(col),
         );
-        
+
         // PostgreSQL returns rows as array of objects, not arrays
         // Each row is already an object like {column1: value1, column2: value2}
         const convertedResult = {
           columns: columnNames,
           rows: result.rows.map((row: any) => {
             // If row is already an object, use it directly
-            if (row && typeof row === 'object' && !Array.isArray(row)) {
+            if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;
             }
             // If row is an array, convert to object (fallback for other formats)
@@ -335,28 +358,35 @@ export default function DataSourceQueryPage() {
             return row as Record<string, unknown>;
           }),
         };
-        
-        console.log('[QueryPage] Converted result:', {
+
+        console.log("[QueryPage] Converted result:", {
           columnCount: convertedResult.columns.length,
           rowCount: convertedResult.rows.length,
           firstRow: convertedResult.rows[0],
-          firstRowKeys: convertedResult.rows[0] ? Object.keys(convertedResult.rows[0]) : [],
+          firstRowKeys: convertedResult.rows[0]
+            ? Object.keys(convertedResult.rows[0])
+            : [],
         });
-        
+
         setResults(convertedResult);
         toast.success(
           "Query executed successfully",
           `Returned ${convertedResult.rows.length} rows in ${result.executionTimeMs || 0}ms`,
         );
-      } else if (result && 'error' in result) {
+      } else if (result && "error" in result) {
         throw new Error(result.error || "Query execution failed");
       } else {
-        console.error('[QueryPage] Unexpected result format:', result);
-        console.error('[QueryPage] Result keys:', result ? Object.keys(result) : 'null');
-        throw new Error("Query execution failed: Unexpected response format. Check console for details.");
+        console.error("[QueryPage] Unexpected result format:", result);
+        console.error(
+          "[QueryPage] Result keys:",
+          result ? Object.keys(result) : "null",
+        );
+        throw new Error(
+          "Query execution failed: Unexpected response format. Check console for details.",
+        );
       }
     } catch (err: any) {
-      console.error('[QueryPage] Query execution error:', err);
+      console.error("[QueryPage] Query execution error:", err);
       const errorMessage =
         err?.message || err?.error?.message || "Failed to execute query";
       setError(errorMessage);
@@ -369,10 +399,11 @@ export default function DataSourceQueryPage() {
   const handleTableSelect = (tableName: string, schemaName: string) => {
     setSelectedTable(tableName);
     setSelectedSchema(schemaName);
-    
+
     // Build full table name with schema if not public
-    const fullTableName = schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
-    
+    const fullTableName =
+      schemaName === "public" ? tableName : `${schemaName}.${tableName}`;
+
     if (shouldShowSQLEditor) {
       const newQuery = getDefaultQuery(dataSource.type, fullTableName);
       setQuery(newQuery);
@@ -387,7 +418,7 @@ export default function DataSourceQueryPage() {
 
   const fetchTableData = async (tableName: string) => {
     if (!dataSourceId) return;
-    
+
     setTableDataLoading(true);
     try {
       // Use real API to fetch table data
@@ -400,16 +431,20 @@ export default function DataSourceQueryPage() {
 
       // Handle the result format - API client extracts data.data
       // PostgreSQL returns rows as array of objects, not arrays
-      if (result && Array.isArray(result.rows) && Array.isArray(result.columns)) {
-        const columnNames = result.columns.map((col: any) => 
-          typeof col === 'string' ? col : col.name || String(col)
+      if (
+        result &&
+        Array.isArray(result.rows) &&
+        Array.isArray(result.columns)
+      ) {
+        const columnNames = result.columns.map((col: any) =>
+          typeof col === "string" ? col : col.name || String(col),
         );
-        
+
         const convertedData = {
           columns: columnNames,
           rows: result.rows.map((row: any) => {
             // If row is already an object, use it directly
-            if (row && typeof row === 'object' && !Array.isArray(row)) {
+            if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;
             }
             // If row is an array, convert to object (fallback for other formats)
@@ -496,7 +531,9 @@ export default function DataSourceQueryPage() {
 
     // TODO: Implement query saving API endpoint
     // For now, save to localStorage as a temporary solution
-    const savedQueries = JSON.parse(localStorage.getItem("savedQueries") || "[]");
+    const savedQueries = JSON.parse(
+      localStorage.getItem("savedQueries") || "[]",
+    );
     const savedQuery = {
       id: `query_${Date.now()}`,
       name: queryName,
@@ -507,7 +544,7 @@ export default function DataSourceQueryPage() {
     };
     savedQueries.push(savedQuery);
     localStorage.setItem("savedQueries", JSON.stringify(savedQueries));
-    
+
     toast.success("Query saved successfully", `"${queryName}" has been saved.`);
     setShowSaveDialog(false);
     setQueryName("");
@@ -567,7 +604,9 @@ export default function DataSourceQueryPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 sm:flex-none">
-              <h1 className="text-base sm:text-lg font-semibold truncate">Query</h1>
+              <h1 className="text-base sm:text-lg font-semibold truncate">
+                Query
+              </h1>
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -615,11 +654,7 @@ export default function DataSourceQueryPage() {
                 {results && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                      >
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <Download className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -627,14 +662,10 @@ export default function DataSourceQueryPage() {
                       <DropdownMenuItem onClick={() => handleDownload("csv")}>
                         Download as CSV
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDownload("json")}
-                      >
+                      <DropdownMenuItem onClick={() => handleDownload("json")}>
                         Download as JSON
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDownload("excel")}
-                      >
+                      <DropdownMenuItem onClick={() => handleDownload("excel")}>
                         Download as Excel
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -649,229 +680,229 @@ export default function DataSourceQueryPage() {
       {/* Main Content */}
       <div className="flex-1 min-h-0">
         {shouldShowSQLEditor ? (
-            <div className="flex flex-col lg:flex-row h-full">
-              {/* Tables Sidebar - Hidden on mobile, visible on desktop */}
-              <div
-                className={cn(
-                  "hidden lg:flex shrink-0 transition-all duration-200 border-r bg-muted/30",
-                  sidebarCollapsed ? "w-16" : "w-64 xl:w-72",
-                )}
-              >
-                <SchemaTableNavigation
-                  schemas={schemas || []}
-                  onTableSelect={handleTableSelect}
-                  selectedTable={selectedTable}
-                  selectedSchema={selectedSchema}
-                  defaultCollapsed={sidebarCollapsed}
-                  onCollapsedChange={setSidebarCollapsed}
-                  searchable={true}
-                  isLoading={schemasLoading}
-                />
-              </div>
+          <div className="flex flex-col lg:flex-row h-full">
+            {/* Tables Sidebar - Hidden on mobile, visible on desktop */}
+            <div
+              className={cn(
+                "hidden lg:flex shrink-0 transition-all duration-200 border-r bg-muted/30",
+                sidebarCollapsed ? "w-16" : "w-64 xl:w-72",
+              )}
+            >
+              <SchemaTableNavigation
+                schemas={schemas || []}
+                onTableSelect={handleTableSelect}
+                selectedTable={selectedTable}
+                selectedSchema={selectedSchema}
+                defaultCollapsed={sidebarCollapsed}
+                onCollapsedChange={setSidebarCollapsed}
+                searchable={true}
+                isLoading={schemasLoading}
+              />
+            </div>
 
-              {/* Editor and Results */}
-              <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
-                {resultsFullScreen && results ? (
-                  // Full-screen results view
-                  <div className="h-full w-full flex flex-col bg-background overflow-hidden">
-                    <div className="flex items-center justify-between p-4 border-b shrink-0">
-                      <h2 className="text-sm font-medium">Query Results</h2>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setResultsFullScreen(false)}
-                        className="h-8"
-                      >
-                        <Minimize2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
-                      <SQLResultViewer
-                        columns={results.columns}
-                        rows={results.rows}
-                        loading={loading}
-                        error={error}
-                        fullScreen={resultsFullScreen}
-                        onFullScreen={setResultsFullScreen}
-                        onDownload={handleDownload}
-                        onOpenInNewTab={() =>
-                          handleOpenInNewTab(results, "query")
-                        }
+            {/* Editor and Results */}
+            <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+              {resultsFullScreen && results ? (
+                // Full-screen results view
+                <div className="h-full w-full flex flex-col bg-background overflow-hidden">
+                  <div className="flex items-center justify-between p-4 border-b shrink-0">
+                    <h2 className="text-sm font-medium">Query Results</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setResultsFullScreen(false)}
+                      className="h-8"
+                    >
+                      <Minimize2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+                    <SQLResultViewer
+                      columns={results.columns}
+                      rows={results.rows}
+                      loading={loading}
+                      error={error}
+                      fullScreen={resultsFullScreen}
+                      onFullScreen={setResultsFullScreen}
+                      onDownload={handleDownload}
+                      onOpenInNewTab={() =>
+                        handleOpenInNewTab(results, "query")
+                      }
+                    />
+                  </div>
+                </div>
+              ) : (
+                // Normal split view
+                <ResizablePanelGroup
+                  direction="vertical"
+                  className="h-full w-full flex-1 min-h-0"
+                  key={results ? "with-results" : "no-results"}
+                >
+                  {/* Query Editor */}
+                  <ResizablePanel
+                    id="editor-panel"
+                    defaultSize={results ? editorSize : 100}
+                    minSize={20}
+                    maxSize={results ? 80 : 100}
+                    collapsible={!!results}
+                    onResize={(size) => {
+                      if (results) {
+                        setEditorSize(size);
+                      }
+                    }}
+                  >
+                    <div className="h-full w-full flex flex-col border-b overflow-hidden">
+                      <SQLEditor
+                        value={query}
+                        onChange={setQuery}
+                        language={language}
+                        onMount={(editor) => {
+                          editorRef.current = editor as {
+                            setValue: (value: string) => void;
+                          };
+                        }}
+                        className="h-full w-full"
                       />
                     </div>
-                  </div>
-                ) : (
-                  // Normal split view
-                  <ResizablePanelGroup
-                    direction="vertical"
-                    className="h-full w-full flex-1 min-h-0"
-                    key={results ? "with-results" : "no-results"}
-                  >
-                    {/* Query Editor */}
-                    <ResizablePanel
-                      id="editor-panel"
-                      defaultSize={results ? editorSize : 100}
-                      minSize={20}
-                      maxSize={results ? 80 : 100}
-                      collapsible={!!results}
-                      onResize={(size) => {
-                        if (results) {
-                          setEditorSize(size);
-                        }
-                      }}
-                    >
-                      <div className="h-full w-full flex flex-col border-b overflow-hidden">
-                        <SQLEditor
-                          value={query}
-                          onChange={setQuery}
-                          language={language}
-                          onMount={(editor) => {
-                            editorRef.current = editor as {
-                              setValue: (value: string) => void;
-                            };
-                          }}
-                          className="h-full w-full"
-                        />
-                      </div>
-                    </ResizablePanel>
+                  </ResizablePanel>
 
-                    {results && (
-                      <>
-                        <ResizableHandle withHandle className="bg-border" />
-                        {/* Results */}
-                        <ResizablePanel
-                          id="results-panel"
-                          defaultSize={Math.max(
-                            20,
-                            Math.min(80, 100 - editorSize),
-                          )}
-                          minSize={20}
-                          maxSize={80}
-                          collapsible
-                        >
-                          <div className="h-full w-full overflow-hidden flex flex-col">
-                            <SQLResultViewer
-                              columns={results.columns}
-                              rows={results.rows}
-                              loading={loading}
-                              error={error}
-                              fullScreen={resultsFullScreen}
-                              onFullScreen={setResultsFullScreen}
-                              onDownload={handleDownload}
-                              onOpenInNewTab={() =>
-                                handleOpenInNewTab(results, "query")
-                              }
-                            />
-                          </div>
-                        </ResizablePanel>
-                      </>
-                    )}
-                  </ResizablePanelGroup>
-                )}
-              </div>
-            </div>
-          ) : (
-            // View for non-SQL data sources
-            <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
-              {/* Tables Sidebar - Hidden on mobile, visible on desktop */}
-              <div
-                className={cn(
-                  "hidden lg:flex shrink-0 transition-all duration-200 border-r bg-muted/30",
-                  sidebarCollapsed ? "w-16" : "w-64 xl:w-72",
-                )}
-              >
-                <SchemaTableNavigation
-                  schemas={schemas || []}
-                  onTableSelect={handleTableSelect}
-                  selectedTable={selectedTable}
-                  selectedSchema={selectedSchema}
-                  defaultCollapsed={sidebarCollapsed}
-                  onCollapsedChange={setSidebarCollapsed}
-                  searchable={true}
-                  isLoading={schemasLoading}
-                />
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                {tableData || tableDataLoading ? (
-                  <>
-                    {/* Header with buttons */}
-                    <div className="flex items-center justify-between p-4 border-b shrink-0">
-                      <div className="flex items-center gap-2">
-                        {selectedTable && (
-                          <h3 className="text-sm font-medium">
-                            Table: {selectedTable}
-                          </h3>
+                  {results && (
+                    <>
+                      <ResizableHandle withHandle className="bg-border" />
+                      {/* Results */}
+                      <ResizablePanel
+                        id="results-panel"
+                        defaultSize={Math.max(
+                          20,
+                          Math.min(80, 100 - editorSize),
                         )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {tableData && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleOpenInNewTab(tableData, "table")
-                              }
-                              className="h-8"
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              View in New Tab
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleRefreshTableData}
-                              disabled={tableDataLoading}
-                              className="h-8"
-                            >
-                              <RefreshCw
-                                className={cn(
-                                  "h-4 w-4 mr-2",
-                                  tableDataLoading && "animate-spin",
-                                )}
-                              />
-                              Refresh
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {/* Table Data Viewer */}
-                    <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                      {tableData ? (
-                        <SQLResultViewer
-                          columns={tableData.columns}
-                          rows={tableData.rows}
-                          loading={tableDataLoading}
-                          error={null}
-                          onOpenInNewTab={() =>
-                            handleOpenInNewTab(tableData, "table")
-                          }
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                            <p className="text-muted-foreground">
-                              Loading table data...
-                            </p>
-                          </div>
+                        minSize={20}
+                        maxSize={80}
+                        collapsible
+                      >
+                        <div className="h-full w-full overflow-hidden flex flex-col">
+                          <SQLResultViewer
+                            columns={results.columns}
+                            rows={results.rows}
+                            loading={loading}
+                            error={error}
+                            fullScreen={resultsFullScreen}
+                            onFullScreen={setResultsFullScreen}
+                            onDownload={handleDownload}
+                            onOpenInNewTab={() =>
+                              handleOpenInNewTab(results, "query")
+                            }
+                          />
                         </div>
+                      </ResizablePanel>
+                    </>
+                  )}
+                </ResizablePanelGroup>
+              )}
+            </div>
+          </div>
+        ) : (
+          // View for non-SQL data sources
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+            {/* Tables Sidebar - Hidden on mobile, visible on desktop */}
+            <div
+              className={cn(
+                "hidden lg:flex shrink-0 transition-all duration-200 border-r bg-muted/30",
+                sidebarCollapsed ? "w-16" : "w-64 xl:w-72",
+              )}
+            >
+              <SchemaTableNavigation
+                schemas={schemas || []}
+                onTableSelect={handleTableSelect}
+                selectedTable={selectedTable}
+                selectedSchema={selectedSchema}
+                defaultCollapsed={sidebarCollapsed}
+                onCollapsedChange={setSidebarCollapsed}
+                searchable={true}
+                isLoading={schemasLoading}
+              />
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+              {tableData || tableDataLoading ? (
+                <>
+                  {/* Header with buttons */}
+                  <div className="flex items-center justify-between p-4 border-b shrink-0">
+                    <div className="flex items-center gap-2">
+                      {selectedTable && (
+                        <h3 className="text-sm font-medium">
+                          Table: {selectedTable}
+                        </h3>
                       )}
                     </div>
-                  </>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                      <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">
-                        Select a table from the sidebar to view data
-                      </p>
+                    <div className="flex items-center gap-2">
+                      {tableData && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleOpenInNewTab(tableData, "table")
+                            }
+                            className="h-8"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View in New Tab
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRefreshTableData}
+                            disabled={tableDataLoading}
+                            className="h-8"
+                          >
+                            <RefreshCw
+                              className={cn(
+                                "h-4 w-4 mr-2",
+                                tableDataLoading && "animate-spin",
+                              )}
+                            />
+                            Refresh
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
+                  {/* Table Data Viewer */}
+                  <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                    {tableData ? (
+                      <SQLResultViewer
+                        columns={tableData.columns}
+                        rows={tableData.rows}
+                        loading={tableDataLoading}
+                        error={null}
+                        onOpenInNewTab={() =>
+                          handleOpenInNewTab(tableData, "table")
+                        }
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                          <p className="text-muted-foreground">
+                            Loading table data...
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      Select a table from the sidebar to view data
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
         )}
       </div>
 

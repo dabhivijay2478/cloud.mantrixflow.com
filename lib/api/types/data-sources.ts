@@ -55,7 +55,7 @@ export interface Connection {
   orgId: string;
   userId: string;
   name: string;
-  status: 'active' | 'inactive' | 'error';
+  status: "active" | "inactive" | "error";
   port: number;
   sslEnabled: boolean;
   sshTunnelEnabled: boolean;
@@ -82,7 +82,7 @@ export interface Schema {
 export interface Table {
   name: string;
   schema: string;
-  type: 'table' | 'view' | 'materialized_view';
+  type: "table" | "view" | "materialized_view";
   rowCount?: number;
   size?: string;
 }
@@ -150,7 +150,7 @@ export interface CreateSyncJobDto {
   sourceSchema?: string;
   destinationTable: string;
   destinationSchema?: string;
-  writeMode?: 'append' | 'upsert' | 'replace';
+  writeMode?: "append" | "upsert" | "replace";
   columnMappings?: Array<{
     source: string;
     destination: string;
@@ -162,7 +162,7 @@ export interface CreateSyncJobDto {
 export interface SyncJob {
   id: string;
   connectionId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   sourceTable: string;
   destinationTable: string;
   rowsProcessed?: number;
@@ -175,13 +175,13 @@ export interface SyncJob {
 }
 
 export interface UpdateSyncJobScheduleDto {
-  frequency?: 'manual' | '15min' | '1hour' | '24hours';
+  frequency?: "manual" | "15min" | "1hour" | "24hours";
   enabled?: boolean;
 }
 
 // Health & Monitoring Types
 export interface ConnectionHealth {
-  status: 'healthy' | 'unhealthy' | 'degraded';
+  status: "healthy" | "unhealthy" | "degraded";
   responseTimeMs: number;
   lastCheckedAt: Date | string;
   version?: string;

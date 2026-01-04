@@ -69,25 +69,25 @@ export interface TransformConfig {
 export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-  
+
   // Fetch connections from API
   const { data: connections } = useConnections(orgId);
-  
+
   // Convert API connections to DataSource format for compatibility
   const dataSources =
     connections?.map((conn) => ({
-    id: conn.id,
-    name: conn.name,
-    type: "postgres" as const,
+      id: conn.id,
+      name: conn.name,
+      type: "postgres" as const,
       status:
         conn.status === "active"
           ? ("connected" as const)
           : ("disconnected" as const),
-    organizationId: conn.orgId,
-    connectedAt: conn.lastConnectedAt || undefined,
-    tables: [],
-  })) || [];
-  
+      organizationId: conn.orgId,
+      connectedAt: conn.lastConnectedAt || undefined,
+      tables: [],
+    })) || [];
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransform, setEditingTransform] = useState<string | null>(null);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
@@ -144,7 +144,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     // Debug logging
     if (collectorTransformers.length > 0) {
       console.log("TransformStep - Found transformers for collector:", {
-      collectorId: collector.id,
+        collectorId: collector.id,
         transformersCount: collectorTransformers.length,
         transformers: collectorTransformers.map((t: any) => ({
           id: t.id,
@@ -183,7 +183,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   });
 
   const selectedCollector = collectors.find(
-    (c) => c.id === selectedCollectorId
+    (c) => c.id === selectedCollectorId,
   );
 
   // Get available emitters for the selected collector
@@ -193,7 +193,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   }, [selectedCollectorId, allEmitters]);
 
   const selectedEmitter = availableEmitters.find(
-    (e) => e.id === selectedEmitterId
+    (e) => e.id === selectedEmitterId,
   );
 
   // Fetch schemas with tables for the destination connection
@@ -208,7 +208,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         schema: schema.name,
         table: table.name,
         fullName: `${schema.name}.${table.name}`,
-      }))
+      })),
     );
   }, [destinationSchemas]);
 
@@ -221,14 +221,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     ) {
       return [];
     }
-    
+
     return selectedCollector.selectedTables.map((tableName) => {
       const parts = tableName.includes(".")
         ? tableName.split(".")
         : ["public", tableName];
       const schema = parts[0];
       const table = parts[1];
-      
+
       return {
         tableName,
         schema,
@@ -245,15 +245,15 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         queryKey: ["table-schema", connectionId, table, schema, "source"],
         queryFn: () =>
           DataSourcesService.getTableSchema(connectionId, table, schema, orgId),
-      enabled: !!connectionId && !!table && !!orgId,
-      })
+        enabled: !!connectionId && !!table && !!orgId,
+      }),
     ),
   });
 
   // Build source fields from fetched table schemas
   const sourceFields = useMemo(() => {
     const fields: Array<{ name: string; type: string; table: string }> = [];
-    
+
     sourceSchemaQueries.forEach((query, index) => {
       if (query.data && query.data.columns) {
         const tableInfo = sourceTableQueries[index];
@@ -266,7 +266,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         });
       }
     });
-    
+
     return fields;
   }, [sourceSchemaQueries, sourceTableQueries]);
 
@@ -307,7 +307,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             destinationTableQuery.connectionId,
             destinationTableQuery.table,
             destinationTableQuery.schema,
-            orgId
+            orgId,
           );
         },
         enabled:
@@ -329,17 +329,17 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         name: col.name,
         type: col.dataType || "unknown",
         table: destinationTableQuery.tableName || "",
-      })
+      }),
     );
   }, [destinationSchemaQuery, destinationTableQuery]);
 
   const handleFieldMapping = (
     sourceField: string,
-    destinationField: string
+    destinationField: string,
   ) => {
     setFieldMappings((prev) => {
       const existing = prev.findIndex(
-        (m) => m.destination === destinationField
+        (m) => m.destination === destinationField,
       );
       // Auto-set as primary key if this is the ID field
       const isPrimaryKey =
@@ -355,7 +355,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         const updated = prev.map((m) => {
           if (m.destination === destinationField) {
             return {
-          source: sourceField,
+              source: sourceField,
               destination: destinationField,
               isPrimaryKey: shouldSetAsPK,
             };
@@ -378,7 +378,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       } else {
         // Add new mapping - remove PK from all existing fields if this is being set as PK
         const updated = prev.map((m) =>
-          shouldSetAsPK && m.isPrimaryKey ? { ...m, isPrimaryKey: false } : m
+          shouldSetAsPK && m.isPrimaryKey ? { ...m, isPrimaryKey: false } : m,
         );
 
         const newMapping = {
@@ -399,7 +399,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
   const handleRemoveMapping = (destinationField: string) => {
     setFieldMappings((prev) =>
-      prev.filter((m) => m.destination !== destinationField)
+      prev.filter((m) => m.destination !== destinationField),
     );
   };
 
@@ -413,16 +413,23 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       return;
 
     // Validate that field mappings exist and are not empty
-    if (!fieldMappings || !Array.isArray(fieldMappings) || fieldMappings.length === 0) {
+    if (
+      !fieldMappings ||
+      !Array.isArray(fieldMappings) ||
+      fieldMappings.length === 0
+    ) {
       // Show error - field mappings are required
-      alert("Please configure at least one field mapping before saving the transformer.");
+      alert(
+        "Please configure at least one field mapping before saving the transformer.",
+      );
       return;
     }
 
     // Ensure fieldMappings is always an array and not empty
-    const validFieldMappings = Array.isArray(fieldMappings) && fieldMappings.length > 0
-      ? fieldMappings
-      : [];
+    const validFieldMappings =
+      Array.isArray(fieldMappings) && fieldMappings.length > 0
+        ? fieldMappings
+        : [];
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
@@ -434,7 +441,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       primaryKeyField:
         primaryKeyField ||
         validFieldMappings.find(
-          (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id"
+          (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id",
         )?.destination ||
         "",
     };
@@ -443,7 +450,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       if (collector.id === selectedCollectorId) {
         const transformers = editingTransform
           ? collector.transformers.map((t) =>
-              (t as any).id === editingTransform ? newTransform : t
+              (t as any).id === editingTransform ? newTransform : t,
             )
           : [...collector.transformers, newTransform];
         return { ...collector, transformers };
@@ -467,7 +474,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         return {
           ...collector,
           transformers: collector.transformers.filter(
-            (t) => (t as any).id !== transformId
+            (t) => (t as any).id !== transformId,
           ),
         };
       }
@@ -484,7 +491,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           transformers: collector.transformers.map((t) =>
             (t as any).id === transformId
               ? { ...t, status: "paused" as const }
-              : t
+              : t,
           ),
         };
       }
@@ -503,9 +510,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setPrimaryKeyField(
       transform.primaryKeyField ||
         transform.fieldMappings?.find(
-          (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id"
+          (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id",
         )?.destination ||
-        ""
+        "",
     );
     setShowAddDialog(true);
   };
@@ -738,7 +745,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   ) : (
                     collectors.map((collector) => {
                       const source = dataSources.find(
-                        (ds) => ds.id === collector.sourceId
+                        (ds) => ds.id === collector.sourceId,
                       );
                       const selectedTablesCount =
                         collector.selectedTables?.length || 0;
@@ -819,7 +826,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 placeholder="e.g., Customer Data Transform"
                 className="h-10 w-full"
               />
-          </div>
+            </div>
 
             {/* Destination Table Field - Conditionally Rendered */}
             {selectedCollectorId && selectedEmitterId && (
@@ -843,7 +850,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                         <div className="inline-flex items-center gap-2">
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent"></div>
                           Loading tables...
-                      </div>
+                        </div>
                       </div>
                     ) : destinationTables.length === 0 ? (
                       <div className="p-4 text-center text-sm text-muted-foreground">
@@ -868,8 +875,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           </div>
 
           {selectedCollectorId && selectedEmitterId && (
-              <div className="space-y-4">
-
+            <div className="space-y-4">
               {/* Side-by-side Field Mapping */}
               {selectedDestinationTable && (
                 <div>
@@ -883,7 +889,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                         {fieldMappings.length} mapping
                         {fieldMappings.length !== 1 ? "s" : ""} created
                       </Badge>
-                      </div>
+                    </div>
                     {/* Table Layout */}
                     <div className="border rounded-lg overflow-hidden">
                       <div className="max-h-[500px] md:max-h-[600px] overflow-y-auto">
@@ -915,10 +921,11 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                   type: string;
                                   table: string;
                                 },
-                                index: number
+                                index: number,
                               ) => {
                                 const mapping = fieldMappings.find(
-                                  (m) => m.destination === destinationField.name
+                                  (m) =>
+                                    m.destination === destinationField.name,
                                 );
                                 const isIdField =
                                   destinationField.name.toLowerCase() === "id";
@@ -937,8 +944,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                           ? "bg-primary/5 hover:bg-primary/10"
                                           : "bg-blue-50/30 dark:bg-blue-950/10 hover:bg-blue-50/50 dark:hover:bg-blue-950/20"
                                         : isIdField
-                                        ? "bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50/70 dark:hover:bg-amber-950/30"
-                                        : "hover:bg-muted/50"
+                                          ? "bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50/70 dark:hover:bg-amber-950/30"
+                                          : "hover:bg-muted/50"
                                     } transition-colors`}
                                   >
                                     {/* Row Number */}
@@ -954,8 +961,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                             isIdField
                                               ? "bg-amber-100 dark:bg-amber-900/40"
                                               : isPrimaryKey
-                                              ? "bg-primary/20"
-                                              : "bg-green-100 dark:bg-green-900/40"
+                                                ? "bg-primary/20"
+                                                : "bg-green-100 dark:bg-green-900/40"
                                           }`}
                                         >
                                           <Database
@@ -963,8 +970,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                               isIdField
                                                 ? "text-amber-600 dark:text-amber-400"
                                                 : isPrimaryKey
-                                                ? "text-primary"
-                                                : "text-green-600 dark:text-green-400"
+                                                  ? "text-primary"
+                                                  : "text-green-600 dark:text-green-400"
                                             }`}
                                           />
                                         </div>
@@ -992,9 +999,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                           </div>
                                           <p className="text-xs text-muted-foreground font-mono mt-0.5">
                                             {destinationField.type}
-                                </p>
-                              </div>
-                            </div>
+                                          </p>
+                                        </div>
+                                      </div>
                                     </TableCell>
 
                                     {/* Source Field Select */}
@@ -1005,7 +1012,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                           if (value && value.trim()) {
                                             handleFieldMapping(
                                               value,
-                                              destinationField.name
+                                              destinationField.name,
                                             );
                                           }
                                         }}
@@ -1016,8 +1023,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                             isIdField && !mapping
                                               ? "border-amber-300 dark:border-amber-700"
                                               : mapping
-                                              ? "border-primary/50"
-                                              : ""
+                                                ? "border-primary/50"
+                                                : ""
                                           }`}
                                         >
                                           <SelectValue
@@ -1037,8 +1044,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                 <span className="text-xs text-muted-foreground truncate max-w-[200px]">
                                                   {mapping.source}
                                                 </span>
-                      </div>
-                    )}
+                                              </div>
+                                            )}
                                           </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1049,14 +1056,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                 (m) =>
                                                   m.source === field.name &&
                                                   m.destination !==
-                                                    destinationField.name
+                                                    destinationField.name,
                                               );
                                             const isCurrentlyMapped =
                                               fieldMappings.some(
                                                 (m) =>
                                                   m.source === field.name &&
                                                   m.destination ===
-                                                    destinationField.name
+                                                    destinationField.name,
                                               );
                                             return (
                                               <SelectItem
@@ -1086,7 +1093,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                       Current
                                                     </Badge>
                                                   )}
-                </div>
+                                                </div>
                                               </SelectItem>
                                             );
                                           })}
@@ -1097,17 +1104,17 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                     {/* Primary Key Toggle */}
                                     <TableCell className="text-center">
                                       {mapping ? (
-                  <Button
+                                        <Button
                                           variant={
                                             isPrimaryKey ? "default" : "outline"
                                           }
-                    size="sm"
+                                          size="sm"
                                           className={`h-8 w-8 p-0 ${
                                             isPrimaryKey
                                               ? "bg-primary hover:bg-primary/90"
                                               : canSetPrimaryKey
-                                              ? "hover:border-primary/50"
-                                              : "opacity-50 cursor-not-allowed"
+                                                ? "hover:border-primary/50"
+                                                : "opacity-50 cursor-not-allowed"
                                           }`}
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -1140,13 +1147,13 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                   };
                                                 }
                                                 return m;
-                                              })
+                                              }),
                                             );
 
                                             // Update primary key field state
                                             if (willBePrimaryKey) {
                                               setPrimaryKeyField(
-                                                destinationField.name
+                                                destinationField.name,
                                               );
                                             } else {
                                               setPrimaryKeyField("");
@@ -1157,8 +1164,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                             isPrimaryKey
                                               ? "Remove as Primary Key"
                                               : hasPrimaryKey
-                                              ? "Another field is already set as Primary Key"
-                                              : "Set as Primary Key"
+                                                ? "Another field is already set as Primary Key"
+                                                : "Set as Primary Key"
                                           }
                                         >
                                           <Key
@@ -1168,7 +1175,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                                 : ""
                                             }`}
                                           />
-                  </Button>
+                                        </Button>
                                       ) : (
                                         <span className="text-xs text-muted-foreground">
                                           -
@@ -1188,7 +1195,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                               setPrimaryKeyField("");
                                             }
                                             handleRemoveMapping(
-                                              destinationField.name
+                                              destinationField.name,
                                             );
                                           }}
                                           title="Remove mapping"
@@ -1203,13 +1210,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                     </TableCell>
                                   </TableRow>
                                 );
-                              }
+                              },
                             )}
                           </TableBody>
                         </Table>
-                </div>
-              </div>
-          
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

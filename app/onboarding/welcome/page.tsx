@@ -18,7 +18,11 @@ import {
 } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { useOnboardingStatus, useUpdateOnboardingStep, useCurrentOrganization } from "@/lib/api";
+import {
+  useOnboardingStatus,
+  useUpdateOnboardingStep,
+  useCurrentOrganization,
+} from "@/lib/api";
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -29,7 +33,8 @@ export default function WelcomePage() {
   const updateOnboardingStep = useUpdateOnboardingStep();
 
   // Check if user is invited (has currentOrgId)
-  const isInvitedUser = !!onboardingStatus?.currentOrgId || !!currentOrganization;
+  const isInvitedUser =
+    !!onboardingStatus?.currentOrgId || !!currentOrganization;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,20 +87,28 @@ export default function WelcomePage() {
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
               <Building2 className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-3xl">Welcome to {currentOrganization.name}</CardTitle>
+            <CardTitle className="text-3xl">
+              Welcome to {currentOrganization.name}
+            </CardTitle>
             <CardDescription className="text-lg">
-              You've been invited to join this organization. Let's get you started!
+              You've been invited to join this organization. Let's get you
+              started!
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center space-y-2">
               <p className="text-muted-foreground">
-                You're now part of <strong>{currentOrganization.name}</strong>. 
-                You can start exploring dashboards, connecting data sources, and collaborating with your team.
+                You're now part of <strong>{currentOrganization.name}</strong>.
+                You can start exploring dashboards, connecting data sources, and
+                collaborating with your team.
               </p>
             </div>
             <div className="space-y-2">
-              <Button onClick={handleContinueToDashboard} className="w-full" size="lg">
+              <Button
+                onClick={handleContinueToDashboard}
+                className="w-full"
+                size="lg"
+              >
                 Continue to Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

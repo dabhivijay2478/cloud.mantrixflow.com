@@ -52,7 +52,10 @@ export async function inviteTeamMemberAction(
       allowedModels: [], // Default to empty, removed from UI
     };
 
-    console.log("[INVITE] Raw data extracted:", { email: rawData.email, role: rawData.role });
+    console.log("[INVITE] Raw data extracted:", {
+      email: rawData.email,
+      role: rawData.role,
+    });
 
     const validation = inviteTeamMemberSchema.safeParse(rawData);
 
@@ -77,10 +80,13 @@ export async function inviteTeamMemberAction(
     console.log("[INVITE] Getting auth token...");
     let authToken: string | null = null;
     try {
-      const { createClient } = await import('@/lib/supabase/server');
+      const { createClient } = await import("@/lib/supabase/server");
       const supabase = await createClient();
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
       if (sessionError) {
         console.error("[INVITE] Session error:", sessionError);
         return {
@@ -88,7 +94,7 @@ export async function inviteTeamMemberAction(
           error: "Authentication required. Please log in again.",
         };
       }
-      
+
       authToken = session?.access_token || null;
       if (!authToken) {
         console.error("[INVITE] No access token in session");
@@ -97,8 +103,12 @@ export async function inviteTeamMemberAction(
           error: "Authentication required. Please log in again.",
         };
       }
-      
-      console.log("[INVITE] ✓ Auth token retrieved (length:", authToken.length, ")");
+
+      console.log(
+        "[INVITE] ✓ Auth token retrieved (length:",
+        authToken.length,
+        ")",
+      );
     } catch (tokenError) {
       console.error("[INVITE] ✗ Error getting auth token:", tokenError);
       return {
@@ -111,17 +121,22 @@ export async function inviteTeamMemberAction(
     console.log("[INVITE] Getting current organization...");
     let organizationId: string;
     try {
-      const currentUser = await UsersService.getCurrentUser({ token: authToken });
+      const currentUser = await UsersService.getCurrentUser({
+        token: authToken,
+      });
       if (currentUser.currentOrgId) {
         organizationId = currentUser.currentOrgId;
         console.log("[INVITE] Got organization ID from user:", organizationId);
       } else {
         // Fallback: get current organization from API
-        const currentOrg = await OrganizationsService.getCurrentOrganization({ token: authToken });
+        const currentOrg = await OrganizationsService.getCurrentOrganization({
+          token: authToken,
+        });
         if (!currentOrg) {
           return {
             success: false,
-            error: "No organization selected. Please select an organization first.",
+            error:
+              "No organization selected. Please select an organization first.",
           };
         }
         organizationId = currentOrg.id;
@@ -169,10 +184,19 @@ export async function inviteTeamMemberAction(
       // Comprehensive error logging
       console.error("[INVITE] Error caught in API call");
       console.error("[INVITE] Error type:", error?.constructor?.name);
-      console.error("[INVITE] Error instance check - ApiClientError:", error instanceof ApiClientError);
-      console.error("[INVITE] Error instance check - Error:", error instanceof Error);
-      console.error("[INVITE] Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      
+      console.error(
+        "[INVITE] Error instance check - ApiClientError:",
+        error instanceof ApiClientError,
+      );
+      console.error(
+        "[INVITE] Error instance check - Error:",
+        error instanceof Error,
+      );
+      console.error(
+        "[INVITE] Full error object:",
+        JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      );
+
       let errorMessage = "Failed to send invitation";
       let fieldErrors: Record<string, string[]> | undefined;
 
@@ -180,9 +204,10 @@ export async function inviteTeamMemberAction(
       // IMPORTANT: Server actions can't serialize Error objects properly,
       // so we need to extract the message before returning
       let extractedMessage = "Failed to send invitation";
-      
+
       if (error instanceof ApiClientError) {
-        extractedMessage = error.message || `API Error: ${error.code} (${error.statusCode})`;
+        extractedMessage =
+          error.message || `API Error: ${error.code} (${error.statusCode})`;
         console.error("[INVITE] ApiClientError details:", {
           code: error.code,
           message: error.message,
@@ -190,65 +215,86 @@ export async function inviteTeamMemberAction(
           details: error.details,
         });
         // Include details if available
-        if (error.details && typeof error.details === 'object') {
+        if (error.details && typeof error.details === "object") {
           const detailsStr = JSON.stringify(error.details);
-          if (detailsStr && detailsStr !== '{}') {
+          if (detailsStr && detailsStr !== "{}") {
             extractedMessage += `: ${detailsStr}`;
           }
         }
       } else if (error instanceof Error) {
-        extractedMessage = error.message || error.toString() || "An error occurred";
+        extractedMessage =
+          error.message || error.toString() || "An error occurred";
         console.error("[INVITE] Error name:", error.name);
         console.error("[INVITE] Error message:", error.message);
         console.error("[INVITE] Error toString:", error.toString());
         if (error.stack) {
           console.error("[INVITE] Error stack:", error.stack);
         }
-      } else if (typeof error === 'object' && error !== null) {
+      } else if (typeof error === "object" && error !== null) {
         const err = error as Record<string, unknown>;
         // Try multiple common error message fields
         extractedMessage = String(
-          err.message || 
-          err.error || 
-          err.msg ||
-          err.errorMessage ||
-          (typeof err.toString === 'function' ? err.toString() : null) ||
-          JSON.stringify(err).substring(0, 200) || 
-          "Failed to send invitation"
+          err.message ||
+            err.error ||
+            err.msg ||
+            err.errorMessage ||
+            (typeof err.toString === "function" ? err.toString() : null) ||
+            JSON.stringify(err).substring(0, 200) ||
+            "Failed to send invitation",
         );
         console.error("[INVITE] Error object keys:", Object.keys(err));
-        console.error("[INVITE] Error object stringified:", JSON.stringify(err).substring(0, 500));
+        console.error(
+          "[INVITE] Error object stringified:",
+          JSON.stringify(err).substring(0, 500),
+        );
       } else {
         extractedMessage = String(error || "An unknown error occurred");
         console.error("[INVITE] Primitive error value:", error);
       }
-      
+
       errorMessage = extractedMessage;
-      
+
       // Normalize error message - replace generic messages
-      if (errorMessage === "An error occurred" || !errorMessage || errorMessage.trim() === "") {
-        errorMessage = "Failed to send invitation. Please check your connection and try again.";
+      if (
+        errorMessage === "An error occurred" ||
+        !errorMessage ||
+        errorMessage.trim() === ""
+      ) {
+        errorMessage =
+          "Failed to send invitation. Please check your connection and try again.";
       }
-      
+
       // Check for specific error patterns
-      if (errorMessage.includes("already been invited") || 
-          errorMessage.includes("already exists") || 
-          errorMessage.includes("Conflict") ||
-          errorMessage.includes("409")) {
-        errorMessage = "This user has already been invited to this organization";
+      if (
+        errorMessage.includes("already been invited") ||
+        errorMessage.includes("already exists") ||
+        errorMessage.includes("Conflict") ||
+        errorMessage.includes("409")
+      ) {
+        errorMessage =
+          "This user has already been invited to this organization";
         fieldErrors = {
           email: [errorMessage],
         };
-      } else if (errorMessage.includes("not found") || 
-                 errorMessage.includes("NotFound") ||
-                 errorMessage.includes("404")) {
-        errorMessage = "Organization not found. Please select an organization first.";
-      } else if (errorMessage.includes("Unauthorized") || 
-                 errorMessage.includes("401")) {
-        errorMessage = "You are not authorized to invite members. Please log in again.";
-      } else if (errorMessage.includes("Forbidden") || 
-                 errorMessage.includes("403")) {
-        errorMessage = "You don't have permission to invite members to this organization.";
+      } else if (
+        errorMessage.includes("not found") ||
+        errorMessage.includes("NotFound") ||
+        errorMessage.includes("404")
+      ) {
+        errorMessage =
+          "Organization not found. Please select an organization first.";
+      } else if (
+        errorMessage.includes("Unauthorized") ||
+        errorMessage.includes("401")
+      ) {
+        errorMessage =
+          "You are not authorized to invite members. Please log in again.";
+      } else if (
+        errorMessage.includes("Forbidden") ||
+        errorMessage.includes("403")
+      ) {
+        errorMessage =
+          "You don't have permission to invite members to this organization.";
       }
 
       console.error("[INVITE] Final error message:", errorMessage);
@@ -263,13 +309,17 @@ export async function inviteTeamMemberAction(
     // Log full error for debugging
     console.error("[INVITE] Unexpected outer catch error:", error);
     console.error("[INVITE] Error type:", error?.constructor?.name);
-    console.error("[INVITE] Full error:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    
+    console.error(
+      "[INVITE] Full error:",
+      JSON.stringify(error, Object.getOwnPropertyNames(error)),
+    );
+
     // Try to extract meaningful error message
     let errorMessage = "An unexpected error occurred. Please try again.";
-    
+
     if (error instanceof ApiClientError) {
-      errorMessage = error.message || `API Error: ${error.code} (${error.statusCode})`;
+      errorMessage =
+        error.message || `API Error: ${error.code} (${error.statusCode})`;
       console.error("[INVITE] ApiClientError:", {
         code: error.code,
         message: error.message,
@@ -280,14 +330,16 @@ export async function inviteTeamMemberAction(
       errorMessage = error.message || "An unexpected error occurred";
       console.error("[INVITE] Error message:", error.message);
       console.error("[INVITE] Error stack:", error.stack);
-    } else if (typeof error === 'object' && error !== null) {
+    } else if (typeof error === "object" && error !== null) {
       const err = error as Record<string, unknown>;
-      errorMessage = String(err.message || err.error || JSON.stringify(err) || errorMessage);
+      errorMessage = String(
+        err.message || err.error || JSON.stringify(err) || errorMessage,
+      );
       console.error("[INVITE] Error object:", err);
     } else {
       errorMessage = String(error || "An unknown error occurred");
     }
-    
+
     return {
       success: false,
       error: errorMessage,

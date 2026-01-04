@@ -54,38 +54,43 @@ export default function NewPipelinePage() {
 
   const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreatePipeline = async (collectorsOverride?: CollectorConfig[]) => {
+  const handleCreatePipeline = async (
+    collectorsOverride?: CollectorConfig[],
+  ) => {
     // Use the provided collectors if available, otherwise fall back to state
     // This fixes the issue where newly created transformers aren't detected on first save
     const collectorsToUse = collectorsOverride || config.collectors;
-    
+
     // Validate that at least one transformer with field mappings exists
     // Check all collectors and their transformers, ensuring fieldMappings is properly structured
     const hasValidTransformers = collectorsToUse.some((collector) => {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
-      
+
       return collector.transformers.some((t: any) => {
         // Check if fieldMappings exists and is a non-empty array
         const fieldMappings = t.fieldMappings;
         if (!fieldMappings) {
           return false;
         }
-        
+
         // Handle both array format and object format
         if (Array.isArray(fieldMappings)) {
-          return fieldMappings.length > 0 && fieldMappings.some((fm: any) => {
-            // Ensure each mapping has required fields
-            return fm && (fm.source || fm.destination);
-          });
+          return (
+            fieldMappings.length > 0 &&
+            fieldMappings.some((fm: any) => {
+              // Ensure each mapping has required fields
+              return fm && (fm.source || fm.destination);
+            })
+          );
         }
-        
+
         // If it's an object, check if it has any entries
-        if (typeof fieldMappings === 'object') {
+        if (typeof fieldMappings === "object") {
           return Object.keys(fieldMappings).length > 0;
         }
-        
+
         return false;
       });
     });
@@ -100,12 +105,17 @@ export default function NewPipelinePage() {
 
     // Prevent double submission
     if (isCreating) {
-      console.warn("Pipeline creation already in progress, ignoring duplicate request");
+      console.warn(
+        "Pipeline creation already in progress, ignoring duplicate request",
+      );
       return;
     }
 
     if (!orgId) {
-      toast.error("No organization selected", "Please select an organization from the sidebar.");
+      toast.error(
+        "No organization selected",
+        "Please select an organization from the sidebar.",
+      );
       return;
     }
 
@@ -118,15 +128,15 @@ export default function NewPipelinePage() {
 
     // Get all unique source IDs and destination IDs
     const allSourceIds = [...new Set(collectorsToUse.map((c) => c.sourceId))];
-    
+
     // Extract emitters from collectors (emitters are now stored at collector level, not transformer level)
-    const allEmitters = collectorsToUse.flatMap((c) => 
+    const allEmitters = collectorsToUse.flatMap((c) =>
       ((c as any).emitters || []).map((e: any) => ({
         ...e,
         collectorId: c.id,
-      }))
+      })),
     );
-    
+
     const allDestinationIds = [
       ...new Set(allEmitters.map((e) => e.destinationId)),
     ];
@@ -135,17 +145,19 @@ export default function NewPipelinePage() {
     if (allEmitters.length === 0) {
       toast.error(
         "No emitters configured",
-        "Please add at least one emitter before creating the pipeline."
+        "Please add at least one emitter before creating the pipeline.",
       );
       return;
     }
 
     // Validate that all emitters have destination IDs
-    const emittersWithoutDestination = allEmitters.filter((e) => !e.destinationId);
+    const emittersWithoutDestination = allEmitters.filter(
+      (e) => !e.destinationId,
+    );
     if (emittersWithoutDestination.length > 0) {
       toast.error(
         "Invalid emitter configuration",
-        "Some emitters are missing destination connections. Please check your emitter configuration."
+        "Some emitters are missing destination connections. Please check your emitter configuration.",
       );
       return;
     }
@@ -154,7 +166,7 @@ export default function NewPipelinePage() {
     if (allDestinationIds.length === 0) {
       toast.error(
         "No destination connections",
-        "Please ensure emitters have valid destination connections."
+        "Please ensure emitters have valid destination connections.",
       );
       return;
     }
@@ -165,7 +177,7 @@ export default function NewPipelinePage() {
         ...t,
         collectorId: t.collectorId || c.id,
         emitterId: t.emitterId || "",
-      }))
+      })),
     );
 
     // Map emitters to the format expected by the API
@@ -173,14 +185,14 @@ export default function NewPipelinePage() {
     const emitters = allEmitters.map((e: any) => {
       // Find transformer that references this emitter
       const transformer = transformersWithEmitters.find(
-        (t: any) => t.emitterId === e.id
+        (t: any) => t.emitterId === e.id,
       );
       return {
-          id: e.id,
+        id: e.id,
         transformId: transformer?.id || "", // Set transformId if transformer references this emitter
-          destinationId: e.destinationId,
-          destinationName: e.destinationName,
-          destinationType: e.destinationType,
+        destinationId: e.destinationId,
+        destinationName: e.destinationName,
+        destinationType: e.destinationType,
         // connectionConfig is not needed - connection is referenced by destinationId
       };
     });
@@ -197,17 +209,18 @@ export default function NewPipelinePage() {
       // Format: "schema.table" or just "table" (defaults to "public")
       let destinationTable = `pipeline_${Date.now()}`;
       let destinationSchema = "public";
-      
+
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
         .find((t: any) => t.destinationTable);
-      
+
       if (firstTransformer?.destinationTable) {
-        const tableParts = firstTransformer.destinationTable.includes('.')
-          ? firstTransformer.destinationTable.split('.')
-          : ['public', firstTransformer.destinationTable];
-        destinationSchema = tableParts[0] || 'public';
-        destinationTable = tableParts[1] || tableParts[0] || `pipeline_${Date.now()}`;
+        const tableParts = firstTransformer.destinationTable.includes(".")
+          ? firstTransformer.destinationTable.split(".")
+          : ["public", firstTransformer.destinationTable];
+        destinationSchema = tableParts[0] || "public";
+        destinationTable =
+          tableParts[1] || tableParts[0] || `pipeline_${Date.now()}`;
       }
 
       await createPipelineMutation.mutateAsync({
@@ -233,22 +246,25 @@ export default function NewPipelinePage() {
                 if (!fieldMappings) {
                   return false;
                 }
-                
+
                 // Ensure it's an array with at least one valid mapping
                 if (Array.isArray(fieldMappings)) {
-                  return fieldMappings.length > 0 && fieldMappings.some((fm: any) => {
-                    return fm && (fm.source || fm.destination);
-                  });
+                  return (
+                    fieldMappings.length > 0 &&
+                    fieldMappings.some((fm: any) => {
+                      return fm && (fm.source || fm.destination);
+                    })
+                  );
                 }
-                
+
                 return false;
               })
               .map((t) => {
                 // Ensure fieldMappings is always a valid array
-                const fieldMappings = Array.isArray(t.fieldMappings) 
-                  ? t.fieldMappings 
+                const fieldMappings = Array.isArray(t.fieldMappings)
+                  ? t.fieldMappings
                   : [];
-                
+
                 return {
                   id: t.id,
                   name: t.name,
@@ -265,7 +281,10 @@ export default function NewPipelinePage() {
         orgId,
       });
 
-      toast.success("Pipeline created", "Your pipeline has been created successfully.");
+      toast.success(
+        "Pipeline created",
+        "Your pipeline has been created successfully.",
+      );
       router.push("/workspace/data-pipelines");
     } catch (error) {
       console.error("Failed to create pipeline:", error);

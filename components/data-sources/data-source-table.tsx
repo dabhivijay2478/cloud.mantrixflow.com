@@ -265,22 +265,27 @@ export function DataSourceTable({
                 {getFilteredAndSortedDataSources().map((dataSource) => {
                   // When showing connections, dataSource is already a connection
                   // When showing all data sources, check if it's connected
-                  const connected = showOnlyConnected && connections.length > 0 
-                    ? true 
-                    : isConnected(dataSource.id);
-                  const connectedData = showOnlyConnected && connections.length > 0
-                    ? dataSource
-                    : getConnectedDataSource(dataSource.id);
+                  const connected =
+                    showOnlyConnected && connections.length > 0
+                      ? true
+                      : isConnected(dataSource.id);
+                  const connectedData =
+                    showOnlyConnected && connections.length > 0
+                      ? dataSource
+                      : getConnectedDataSource(dataSource.id);
                   const selectedTables =
                     connectedData?.selectedTables ||
                     (connectedData?.selectedTable
                       ? [connectedData.selectedTable]
                       : []);
-                  
+
                   // Get icon type - use dataSource.type if available, otherwise infer from connection
-                  const iconType = 'iconType' in dataSource 
-                    ? dataSource.iconType 
-                    : dataSource.type === 'postgres' ? 'postgres' : dataSource.type;
+                  const iconType =
+                    "iconType" in dataSource
+                      ? dataSource.iconType
+                      : dataSource.type === "postgres"
+                        ? "postgres"
+                        : dataSource.type;
 
                   return (
                     <TableRow

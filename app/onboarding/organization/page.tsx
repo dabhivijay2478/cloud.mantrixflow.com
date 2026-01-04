@@ -88,12 +88,15 @@ export default function OrganizationPage() {
 
       // Update onboarding step
       await updateOnboardingStep.mutateAsync("data-source");
-      
+
       setOnboardingStep("data-source");
       toast.success("Organization created successfully");
       router.push("/onboarding/data-source");
     } catch (error: any) {
-      toast.error("Failed to create organization", error?.message || "Please try again");
+      toast.error(
+        "Failed to create organization",
+        error?.message || "Please try again",
+      );
       console.error(error);
     } finally {
       setLoading(false);

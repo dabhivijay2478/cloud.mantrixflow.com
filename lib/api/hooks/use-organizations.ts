@@ -3,23 +3,22 @@
  * Reusable hooks for organization API endpoints
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { OrganizationsService } from '../services/organizations.service';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { OrganizationsService } from "../services/organizations.service";
 import type {
   CreateOrganizationDto,
   UpdateOrganizationDto,
-} from '../types/organizations';
+} from "../types/organizations";
 
 // Query Keys
 export const organizationsKeys = {
-  all: ['organizations'] as const,
-  lists: () => [...organizationsKeys.all, 'list'] as const,
+  all: ["organizations"] as const,
+  lists: () => [...organizationsKeys.all, "list"] as const,
   list: (filters?: Record<string, unknown>) =>
     [...organizationsKeys.lists(), filters] as const,
-  details: () => [...organizationsKeys.all, 'detail'] as const,
-  detail: (id: string) =>
-    [...organizationsKeys.details(), id] as const,
-  current: () => [...organizationsKeys.all, 'current'] as const,
+  details: () => [...organizationsKeys.all, "detail"] as const,
+  detail: (id: string) => [...organizationsKeys.details(), id] as const,
+  current: () => [...organizationsKeys.all, "current"] as const,
 };
 
 // Organization Management Hooks

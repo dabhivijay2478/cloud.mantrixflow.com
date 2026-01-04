@@ -2,12 +2,16 @@
  * Users TanStack Query Hooks
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UsersService, type UpdateUserDto, type CreateUserDto } from '../services/users.service';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  UsersService,
+  type UpdateUserDto,
+  type CreateUserDto,
+} from "../services/users.service";
 
 export const usersKeys = {
-  all: ['users'] as const,
-  current: () => [...usersKeys.all, 'current'] as const,
+  all: ["users"] as const,
+  current: () => [...usersKeys.all, "current"] as const,
   detail: (id: string) => [...usersKeys.all, id] as const,
 };
 
@@ -54,7 +58,7 @@ export function useUpdateOnboarding() {
       UsersService.updateOnboarding(completed, step),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: usersKeys.current() });
-      queryClient.invalidateQueries({ queryKey: ['onboarding'] });
+      queryClient.invalidateQueries({ queryKey: ["onboarding"] });
     },
   });
 }

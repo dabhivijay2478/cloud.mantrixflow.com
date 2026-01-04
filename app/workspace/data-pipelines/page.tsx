@@ -16,7 +16,13 @@ import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { usePipelines, useDeletePipeline, useRunPipeline, usePausePipeline, useResumePipeline } from "@/lib/api/hooks/use-data-pipelines";
+import {
+  usePipelines,
+  useDeletePipeline,
+  useRunPipeline,
+  usePausePipeline,
+  useResumePipeline,
+} from "@/lib/api/hooks/use-data-pipelines";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -27,7 +33,7 @@ type PipelineType = "bulk" | "stream" | "emit";
 export default function DataPipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-  
+
   // Use real API hooks instead of workspace store
   const { data: pipelines, isLoading: pipelinesLoading } = usePipelines(orgId);
   const { data: connections } = useConnections(orgId);
@@ -68,11 +74,14 @@ export default function DataPipelinesPage() {
 
   const getStatusBadge = (pipeline: Pipeline) => {
     // Priority order: paused status > migrationState > lastRunStatus > status
-    
+
     // Check if pipeline is paused first (highest priority)
     if (pipeline.status === "paused") {
       return (
-        <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+        <Badge
+          variant="outline"
+          className="text-muted-foreground border-amber-300 dark:border-amber-700"
+        >
           <div className="flex items-center gap-1.5">
             <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
             Paused
@@ -80,10 +89,10 @@ export default function DataPipelinesPage() {
         </Badge>
       );
     }
-    
+
     // Get migration state (default to pending if not set)
-    const migrationState = pipeline.migrationState || 'pending';
-    
+    const migrationState = pipeline.migrationState || "pending";
+
     // Migration state badges (second priority)
     switch (migrationState) {
       case "running":
@@ -126,7 +135,10 @@ export default function DataPipelinesPage() {
         // Check if pipeline is paused
         if (pipeline.status === "paused") {
           return (
-            <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+            <Badge
+              variant="outline"
+              className="text-muted-foreground border-amber-300 dark:border-amber-700"
+            >
               <div className="flex items-center gap-1.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 Paused
@@ -176,10 +188,13 @@ export default function DataPipelinesPage() {
         );
       case "paused":
         return (
-          <Badge variant="outline" className="text-muted-foreground border-amber-300 dark:border-amber-700">
+          <Badge
+            variant="outline"
+            className="text-muted-foreground border-amber-300 dark:border-amber-700"
+          >
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            Paused
+              Paused
             </div>
           </Badge>
         );
@@ -188,7 +203,7 @@ export default function DataPipelinesPage() {
           <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
-            Error
+              Error
             </div>
           </Badge>
         );
@@ -222,7 +237,10 @@ export default function DataPipelinesPage() {
     }
   };
 
-  const handleRunPipeline = async (pipelineId: string, pipelineName: string) => {
+  const handleRunPipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       await runPipeline.mutateAsync(pipelineId);
       toast.success(
@@ -237,7 +255,10 @@ export default function DataPipelinesPage() {
     }
   };
 
-  const handlePausePipeline = async (pipelineId: string, pipelineName: string) => {
+  const handlePausePipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       await pausePipeline.mutateAsync(pipelineId);
       toast.success(
@@ -252,7 +273,10 @@ export default function DataPipelinesPage() {
     }
   };
 
-  const handleResumePipeline = async (pipelineId: string, pipelineName: string) => {
+  const handleResumePipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       await resumePipeline.mutateAsync(pipelineId);
       toast.success(
@@ -299,7 +323,7 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => {
         // Try to get sourceConnectionId from pipeline object first
         let sourceConnectionId = (row.original as any).sourceConnectionId;
-        
+
         // If not found, extract from transformations.collectors
         if (!sourceConnectionId && row.original.transformations) {
           const transformations = row.original.transformations as any;
@@ -308,7 +332,7 @@ export default function DataPipelinesPage() {
             sourceConnectionId = collectors[0].sourceId;
           }
         }
-        
+
         const source = connections?.find(
           (conn) => conn.id === sourceConnectionId,
         );
@@ -329,9 +353,7 @@ export default function DataPipelinesPage() {
       header: "Destination",
       cell: ({ row }) => {
         const destConnectionId = row.original.destinationConnectionId;
-        const dest = connections?.find(
-          (conn) => conn.id === destConnectionId,
-        );
+        const dest = connections?.find((conn) => conn.id === destConnectionId);
         return (
           <div className="text-sm text-muted-foreground">
             {dest?.name || destConnectionId || "Unknown destination"}
@@ -353,12 +375,17 @@ export default function DataPipelinesPage() {
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const pipeline = row.original;
-        const migrationState = pipeline.migrationState || 'pending';
-        const isRunning = migrationState === "running" || migrationState === "listing" || pipeline.lastRunStatus === "running";
+        const migrationState = pipeline.migrationState || "pending";
+        const isRunning =
+          migrationState === "running" ||
+          migrationState === "listing" ||
+          pipeline.lastRunStatus === "running";
         const isPaused = pipeline.status === "paused";
         // Only show pause button when running/listing AND not paused
-        const canPause = (migrationState === "running" || migrationState === "listing") && !isPaused;
-        
+        const canPause =
+          (migrationState === "running" || migrationState === "listing") &&
+          !isPaused;
+
         // Get button text based on actual migration state (matching status badge logic)
         const getButtonText = () => {
           if (migrationState === "running") return "Running...";
@@ -370,7 +397,7 @@ export default function DataPipelinesPage() {
           if (migrationState === "error") return "Run";
           return "Run";
         };
-        
+
         return (
           <div className="flex items-center justify-end gap-2">
             {canPause && (
@@ -410,16 +437,13 @@ export default function DataPipelinesPage() {
                   e.stopPropagation();
                   handleRunPipeline(pipeline.id, pipeline.name);
                 }}
-                disabled={
-                  runPipeline.isPending || 
-                  isRunning
-                }
+                disabled={runPipeline.isPending || isRunning}
                 title={
                   runPipeline.isPending
                     ? "Pipeline execution in progress..."
                     : isRunning
-                    ? "Pipeline is currently running. Please wait for it to complete."
-                    : "Run pipeline"
+                      ? "Pipeline is currently running. Please wait for it to complete."
+                      : "Run pipeline"
                 }
               >
                 <Zap className="h-4 w-4 mr-2" />
@@ -470,7 +494,11 @@ export default function DataPipelinesPage() {
       ) : pipelines && pipelines.length > 0 ? (
         <Card>
           <CardContent className="p-6">
-            <DataTable columns={columns} data={pipelines} enableSorting={true} />
+            <DataTable
+              columns={columns}
+              data={pipelines}
+              enableSorting={true}
+            />
           </CardContent>
         </Card>
       ) : (

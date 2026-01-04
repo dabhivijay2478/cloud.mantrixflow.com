@@ -2,12 +2,12 @@
  * Onboarding TanStack Query Hooks
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { OnboardingService } from '../services/onboarding.service';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { OnboardingService } from "../services/onboarding.service";
 
 export const onboardingKeys = {
-  all: ['onboarding'] as const,
-  status: () => [...onboardingKeys.all, 'status'] as const,
+  all: ["onboarding"] as const,
+  status: () => [...onboardingKeys.all, "status"] as const,
 };
 
 export function useOnboardingStatus() {

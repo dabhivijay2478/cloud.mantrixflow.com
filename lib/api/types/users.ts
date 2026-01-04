@@ -20,7 +20,7 @@ export interface User {
   fullName?: string;
   avatarUrl?: string;
   emailVerified: boolean;
-  status: 'active' | 'inactive' | 'suspended';
+  status: "active" | "inactive" | "suspended";
   currentOrgId?: string;
   onboardingCompleted: boolean;
   onboardingStep?: string;

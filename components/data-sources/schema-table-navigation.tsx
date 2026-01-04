@@ -1,6 +1,15 @@
 "use client";
 
-import { ChevronDown, ChevronRight, ChevronLeft, Database, Folder, Search, Table as TableIcon, CheckCircle2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  Database,
+  Folder,
+  Search,
+  Table as TableIcon,
+  CheckCircle2,
+} from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +43,7 @@ export function SchemaTableNavigation({
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [expandedSchemas, setExpandedSchemas] = React.useState<Set<string>>(
-    new Set(schemas.length > 0 ? [schemas[0].name] : [])
+    new Set(schemas.length > 0 ? [schemas[0].name] : []),
   );
 
   // Expand first schema by default when schemas change
@@ -73,7 +82,7 @@ export function SchemaTableNavigation({
         const filteredTables = schema.tables?.filter(
           (table) =>
             table.name.toLowerCase().includes(query) ||
-            `${schema.name}.${table.name}`.toLowerCase().includes(query)
+            `${schema.name}.${table.name}`.toLowerCase().includes(query),
         );
 
         if (matchesSchema || (filteredTables && filteredTables.length > 0)) {
@@ -102,15 +111,21 @@ export function SchemaTableNavigation({
     );
   }
 
-  const totalTables = schemas.reduce((sum, schema) => sum + (schema.tables?.length || 0), 0);
+  const totalTables = schemas.reduce(
+    (sum, schema) => sum + (schema.tables?.length || 0),
+    0,
+  );
 
   return (
     <div className="h-full border-r bg-muted/30 flex flex-col overflow-hidden">
       <div className="p-3 sm:p-4 border-b flex items-center justify-between gap-2 shrink-0">
         <div className="flex flex-col min-w-0 flex-1">
-          <h3 className="font-semibold text-xs sm:text-sm truncate">Schemas & Tables</h3>
+          <h3 className="font-semibold text-xs sm:text-sm truncate">
+            Schemas & Tables
+          </h3>
           <p className="text-xs text-muted-foreground truncate">
-            {schemas.length} schema{schemas.length !== 1 ? 's' : ''} • {totalTables} table{totalTables !== 1 ? 's' : ''}
+            {schemas.length} schema{schemas.length !== 1 ? "s" : ""} •{" "}
+            {totalTables} table{totalTables !== 1 ? "s" : ""}
           </p>
         </div>
         <Button
@@ -158,7 +173,7 @@ export function SchemaTableNavigation({
                     variant="ghost"
                     className={cn(
                       "w-full justify-between text-left h-auto py-1.5 sm:py-2 px-1.5 sm:px-2",
-                      isSelected && "bg-primary/10"
+                      isSelected && "bg-primary/10",
                     )}
                     onClick={() => toggleSchema(schema.name)}
                   >
@@ -169,7 +184,9 @@ export function SchemaTableNavigation({
                         <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-muted-foreground" />
                       )}
                       <Folder className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-primary" />
-                      <span className="font-medium text-xs sm:text-sm truncate">{schema.name}</span>
+                      <span className="font-medium text-xs sm:text-sm truncate">
+                        {schema.name}
+                      </span>
                       <span className="text-xs text-muted-foreground ml-auto shrink-0">
                         {tables.length}
                       </span>
@@ -191,7 +208,8 @@ export function SchemaTableNavigation({
                               : `${schema.name}.${table.name}`;
                           const isTableSelected = selectedTables
                             ? selectedTables.has(fullTableName)
-                            : selectedTable === table.name && selectedSchema === schema.name;
+                            : selectedTable === table.name &&
+                              selectedSchema === schema.name;
 
                           return (
                             <Button
@@ -199,12 +217,16 @@ export function SchemaTableNavigation({
                               variant={isTableSelected ? "secondary" : "ghost"}
                               className={cn(
                                 "w-full justify-start text-left h-7 sm:h-8 px-1.5 sm:px-2",
-                                isTableSelected && "bg-primary/10 font-medium"
+                                isTableSelected && "bg-primary/10 font-medium",
                               )}
-                              onClick={() => onTableSelect(table.name, schema.name)}
+                              onClick={() =>
+                                onTableSelect(table.name, schema.name)
+                              }
                             >
                               <TableIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1.5 sm:mr-2 shrink-0 text-muted-foreground" />
-                              <span className="truncate text-xs sm:text-sm">{table.name}</span>
+                              <span className="truncate text-xs sm:text-sm">
+                                {table.name}
+                              </span>
                               {isTableSelected && (
                                 <CheckCircle2 className="h-3.5 w-3.5 ml-auto text-primary shrink-0" />
                               )}
@@ -228,4 +250,3 @@ export function SchemaTableNavigation({
     </div>
   );
 }
-

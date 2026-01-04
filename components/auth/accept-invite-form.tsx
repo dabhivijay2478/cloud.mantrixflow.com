@@ -50,18 +50,22 @@ function AcceptInviteFormContent({
 
         // Handle tokens in URL hash (Supabase redirects with tokens in hash fragment)
         // Extract from window.location.hash
-        if (typeof window !== 'undefined' && window.location.hash) {
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        if (typeof window !== "undefined" && window.location.hash) {
+          const hashParams = new URLSearchParams(
+            window.location.hash.substring(1),
+          );
           const hashAccessToken = hashParams.get("access_token");
           const hashRefreshToken = hashParams.get("refresh_token");
           const hashType = hashParams.get("type");
 
           if (hashAccessToken && hashRefreshToken) {
             console.log("Found tokens in URL hash, setting session...");
-            const { data: sessionData, error } = await supabase.auth.setSession({
-              access_token: hashAccessToken,
-              refresh_token: hashRefreshToken,
-            });
+            const { data: sessionData, error } = await supabase.auth.setSession(
+              {
+                access_token: hashAccessToken,
+                refresh_token: hashRefreshToken,
+              },
+            );
 
             if (error) {
               console.error("Error setting session from hash:", error);
@@ -89,20 +93,25 @@ function AcceptInviteFormContent({
               return;
             }
 
-            console.log("Session set successfully, user ID:", sessionData.session.user.id);
+            console.log(
+              "Session set successfully, user ID:",
+              sessionData.session.user.id,
+            );
 
             // Clear the hash from URL
-            window.history.replaceState(null, '', window.location.pathname);
-            
+            window.history.replaceState(null, "", window.location.pathname);
+
             // IMPORTANT: The session is now in localStorage
             // For server actions to work, we need to reload the page
             // This will trigger the middleware which will sync the session to cookies
             // The middleware reads from localStorage and writes to cookies
-            console.log("Reloading page to sync session to cookies via middleware...");
-            
+            console.log(
+              "Reloading page to sync session to cookies via middleware...",
+            );
+
             // Small delay to ensure session is persisted
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
             // Reload the page - middleware will sync session to cookies
             window.location.reload();
             return;
@@ -111,13 +120,15 @@ function AcceptInviteFormContent({
 
         // Handle code-based flow (Supabase OAuth/invite flow)
         if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          
+          const { data, error } =
+            await supabase.auth.exchangeCodeForSession(code);
+
           if (error) {
             console.error("Error exchanging code for session:", error);
             toast.error(
               "Invalid invite link",
-              error.message || "This invitation link is invalid or has expired.",
+              error.message ||
+                "This invitation link is invalid or has expired.",
             );
             setTimeout(() => {
               router.push("/auth/login");
@@ -170,7 +181,9 @@ function AcceptInviteFormContent({
         }
 
         // Check if user already has a valid session (might have been set by callback or previous verification)
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session) {
           console.log("Found existing session, allowing password setup");
           setIsValidToken(true);
@@ -182,21 +195,26 @@ function AcceptInviteFormContent({
         // Supabase verify endpoint redirects with token in URL, but we need to handle it server-side
         // For now, redirect to callback route which will handle the verification
         if (token) {
-          console.log("Found token parameter, redirecting to callback for verification");
+          console.log(
+            "Found token parameter, redirecting to callback for verification",
+          );
           // Redirect to callback route which will handle token verification
           router.push(`/auth/callback?token=${token}&type=invite`);
           return;
         }
 
         // No valid tokens or code found
-        console.error("No valid tokens or code found in URL. Available params:", {
-          code: !!code,
-          token: !!token,
-          accessToken: !!accessToken,
-          refreshToken: !!refreshToken,
-          type,
-          allParams: Object.fromEntries(searchParams.entries()),
-        });
+        console.error(
+          "No valid tokens or code found in URL. Available params:",
+          {
+            code: !!code,
+            token: !!token,
+            accessToken: !!accessToken,
+            refreshToken: !!refreshToken,
+            type,
+            allParams: Object.fromEntries(searchParams.entries()),
+          },
+        );
         toast.error(
           "Invalid invite link",
           "This invitation link is invalid or has expired. Please contact the person who invited you.",
@@ -229,7 +247,7 @@ function AcceptInviteFormContent({
     } else if (state && !state.success) {
       // Don't show error if it's a redirect (NEXT_REDIRECT)
       // Redirects throw errors but they're not actual failures
-      if (state.error && !state.error.includes('NEXT_REDIRECT')) {
+      if (state.error && !state.error.includes("NEXT_REDIRECT")) {
         setError(state.error);
         toast.error("Failed to set password", state.error);
       }
@@ -253,9 +271,7 @@ function AcceptInviteFormContent({
             person who invited you for a new invitation.
           </p>
         </div>
-        <Button onClick={() => router.push("/auth/login")}>
-          Go to Login
-        </Button>
+        <Button onClick={() => router.push("/auth/login")}>Go to Login</Button>
       </div>
     );
   }
@@ -357,4 +373,3 @@ export function AcceptInviteForm(props: React.ComponentProps<"form">) {
     </Suspense>
   );
 }
-

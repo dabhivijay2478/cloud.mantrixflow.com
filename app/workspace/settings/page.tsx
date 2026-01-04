@@ -133,7 +133,9 @@ export default function SettingsPage() {
     } catch (error) {
       toast.error(
         "Failed to update profile",
-        error instanceof Error ? error.message : "Unable to update profile. Please try again.",
+        error instanceof Error
+          ? error.message
+          : "Unable to update profile. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -243,11 +245,16 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="border-t pt-6 space-y-4">
-                    <h3 className="text-sm font-semibold">Editable Information</h3>
+                    <h3 className="text-sm font-semibold">
+                      Editable Information
+                    </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-3">
-                        <Label htmlFor="first-name" className="text-sm font-medium">
+                        <Label
+                          htmlFor="first-name"
+                          className="text-sm font-medium"
+                        >
                           First Name
                           <span className="text-muted-foreground font-normal ml-2 text-xs">
                             (Optional)
@@ -264,7 +271,10 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="space-y-3">
-                        <Label htmlFor="last-name" className="text-sm font-medium">
+                        <Label
+                          htmlFor="last-name"
+                          className="text-sm font-medium"
+                        >
                           Last Name
                           <span className="text-muted-foreground font-normal ml-2 text-xs">
                             (Optional)
@@ -282,7 +292,10 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-3">
-                      <Label htmlFor="full-name" className="text-sm font-medium">
+                      <Label
+                        htmlFor="full-name"
+                        className="text-sm font-medium"
+                      >
                         Full Name
                         <span className="text-muted-foreground font-normal ml-2 text-xs">
                           (Optional)
@@ -297,12 +310,16 @@ export default function SettingsPage() {
                         disabled={loading}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Your display name (will be used if first/last name are not provided)
+                        Your display name (will be used if first/last name are
+                        not provided)
                       </p>
                     </div>
 
                     <div className="space-y-3">
-                      <Label htmlFor="avatar-url" className="text-sm font-medium">
+                      <Label
+                        htmlFor="avatar-url"
+                        className="text-sm font-medium"
+                      >
                         Avatar URL
                         <span className="text-muted-foreground font-normal ml-2 text-xs">
                           (Optional)
@@ -327,7 +344,8 @@ export default function SettingsPage() {
                               alt="Avatar preview"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
                               }}
                             />
                           </div>

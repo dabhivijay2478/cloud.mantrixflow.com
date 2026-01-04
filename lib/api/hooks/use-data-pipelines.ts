@@ -3,39 +3,44 @@
  * Reusable hooks for data pipeline API endpoints
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DataPipelinesService } from '../services/data-pipelines.service';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DataPipelinesService } from "../services/data-pipelines.service";
 import type {
   CreatePipelineDto,
   UpdatePipelineDto,
-} from '../types/data-pipelines';
+} from "../types/data-pipelines";
 
 // Query Keys
 export const dataPipelinesKeys = {
-  all: ['data-pipelines'] as const,
+  all: ["data-pipelines"] as const,
   pipelines: {
-    all: ['data-pipelines', 'pipelines'] as const,
-    lists: () => [...dataPipelinesKeys.pipelines.all, 'list'] as const,
+    all: ["data-pipelines", "pipelines"] as const,
+    lists: () => [...dataPipelinesKeys.pipelines.all, "list"] as const,
     list: (filters?: Record<string, unknown>) =>
       [...dataPipelinesKeys.pipelines.lists(), filters] as const,
-    details: () => [...dataPipelinesKeys.pipelines.all, 'detail'] as const,
+    details: () => [...dataPipelinesKeys.pipelines.all, "detail"] as const,
     detail: (id: string) =>
       [...dataPipelinesKeys.pipelines.details(), id] as const,
   },
   runs: (pipelineId: string, limit?: number, offset?: number) =>
-    [...dataPipelinesKeys.all, 'runs', pipelineId, limit, offset] as const,
+    [...dataPipelinesKeys.all, "runs", pipelineId, limit, offset] as const,
   run: (pipelineId: string, runId: string) =>
-    [...dataPipelinesKeys.all, 'runs', pipelineId, runId] as const,
+    [...dataPipelinesKeys.all, "runs", pipelineId, runId] as const,
   stats: (pipelineId: string) =>
-    [...dataPipelinesKeys.all, 'stats', pipelineId] as const,
+    [...dataPipelinesKeys.all, "stats", pipelineId] as const,
 };
 
 // Pipeline Management Hooks
 export function useCreatePipeline() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ data, orgId }: { data: CreatePipelineDto; orgId?: string }) =>
-      DataPipelinesService.createPipeline(data, orgId),
+    mutationFn: ({
+      data,
+      orgId,
+    }: {
+      data: CreatePipelineDto;
+      orgId?: string;
+    }) => DataPipelinesService.createPipeline(data, orgId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.pipelines.lists(),

@@ -53,31 +53,35 @@ export interface EmitterConfig {
 export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-  
-  // Fetch connections from API instead of workspace store
-  const { data: connections, isLoading: connectionsLoading } = useConnections(orgId);
-  
-      // Convert API connections to destination format
-      // All connections from the PostgreSQL endpoint are PostgreSQL connections
-      // Emitters don't need connection config fields - they use existing connections
-      const availableDestinations = (connections || [])
-        .map((conn) => ({
-          id: conn.id,
-          name: conn.name,
-      type: "database",
-      icon: Database,
-        }));
 
-  // Convert API connections to DataSource format for compatibility
-  const dataSources = connections?.map((conn) => ({
+  // Fetch connections from API instead of workspace store
+  const { data: connections, isLoading: connectionsLoading } =
+    useConnections(orgId);
+
+  // Convert API connections to destination format
+  // All connections from the PostgreSQL endpoint are PostgreSQL connections
+  // Emitters don't need connection config fields - they use existing connections
+  const availableDestinations = (connections || []).map((conn) => ({
     id: conn.id,
     name: conn.name,
-    type: "postgres" as const,
-    status: conn.status === "active" ? ("connected" as const) : ("disconnected" as const),
-    organizationId: conn.orgId,
-    connectedAt: conn.lastConnectedAt || undefined,
-    tables: [],
-  })) || [];
+    type: "database",
+    icon: Database,
+  }));
+
+  // Convert API connections to DataSource format for compatibility
+  const dataSources =
+    connections?.map((conn) => ({
+      id: conn.id,
+      name: conn.name,
+      type: "postgres" as const,
+      status:
+        conn.status === "active"
+          ? ("connected" as const)
+          : ("disconnected" as const),
+      organizationId: conn.orgId,
+      connectedAt: conn.lastConnectedAt || undefined,
+      tables: [],
+    })) || [];
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEmitter, setEditingEmitter] = useState<string | null>(null);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
@@ -87,17 +91,19 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
-  const allEmitters: Array<EmitterConfig & { collectorName: string; collectorId: string }> =
-    collectors.flatMap((collector) => {
-      const source = dataSources.find((ds) => ds.id === collector.sourceId);
-      const collectorName = source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
-      // Emitters are stored directly on collectors, not on transformers
-      return ((collector as any).emitters || []).map((e: EmitterConfig) => ({
-        ...e,
-        collectorId: collector.id,
-        collectorName,
-      }));
-    });
+  const allEmitters: Array<
+    EmitterConfig & { collectorName: string; collectorId: string }
+  > = collectors.flatMap((collector) => {
+    const source = dataSources.find((ds) => ds.id === collector.sourceId);
+    const collectorName =
+      source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
+    // Emitters are stored directly on collectors, not on transformers
+    return ((collector as any).emitters || []).map((e: EmitterConfig) => ({
+      ...e,
+      collectorId: collector.id,
+      collectorName,
+    }));
+  });
 
   const selectedDestination = availableDestinations.find(
     (d) => d.id === selectedDestinationId,
@@ -123,13 +129,13 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === selectedCollectorId) {
-          const emitters = editingEmitter
+        const emitters = editingEmitter
           ? ((collector as any).emitters || []).map((e: EmitterConfig) =>
-                e.id === editingEmitter ? newEmitter : e,
+              e.id === editingEmitter ? newEmitter : e,
             )
           : [...((collector as any).emitters || []), newEmitter];
         return { ...collector, emitters };
-        }
+      }
       return collector;
     });
 
@@ -145,16 +151,18 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === collectorId) {
         const emitters = ((collector as any).emitters || []).filter(
-            (e: EmitterConfig) => e.id !== emitterId,
-          );
+          (e: EmitterConfig) => e.id !== emitterId,
+        );
         return { ...collector, emitters };
-        }
+      }
       return collector;
     });
     onComplete(updatedCollectors);
   };
 
-  const handleEditEmitter = (emitter: EmitterConfig & { collectorId: string }) => {
+  const handleEditEmitter = (
+    emitter: EmitterConfig & { collectorId: string },
+  ) => {
     setEditingEmitter(emitter.id);
     setSelectedCollectorId(emitter.collectorId);
     setSelectedDestinationId(emitter.destinationId);
@@ -171,7 +179,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     return !!selectedCollectorId && !!selectedDestination;
   };
 
-  type EmitterTableRow = EmitterConfig & { collectorName: string; collectorId: string };
+  type EmitterTableRow = EmitterConfig & {
+    collectorName: string;
+    collectorId: string;
+  };
 
   const columns: ColumnDef<EmitterTableRow>[] = [
     {
@@ -496,18 +507,22 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                     const source = dataSources.find(
                       (ds) => ds.id === collector.sourceId,
                     );
-                    const selectedTablesCount = collector.selectedTables?.length || 0;
-                    const displayName = source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
+                    const selectedTablesCount =
+                      collector.selectedTables?.length || 0;
+                    const displayName =
+                      source?.name ||
+                      `Data Source ${collector.sourceId.slice(-6)}`;
                     return (
                       <SelectItem key={collector.id} value={collector.id}>
                         <div className="flex items-center gap-2 w-full">
                           <Database className="h-4 w-4 shrink-0" />
                           <span className="truncate flex-1">{displayName}</span>
                           <Badge variant="outline" className="text-xs shrink-0">
-                            {selectedTablesCount} table{selectedTablesCount !== 1 ? "s" : ""}
+                            {selectedTablesCount} table
+                            {selectedTablesCount !== 1 ? "s" : ""}
                           </Badge>
                         </div>
-                  </SelectItem>
+                      </SelectItem>
                     );
                   })
                 )}
@@ -520,7 +535,8 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
               <Label>Destination</Label>
               {!orgId ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  No organization selected. Please select an organization from the sidebar.
+                  No organization selected. Please select an organization from
+                  the sidebar.
                 </div>
               ) : connectionsLoading ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
@@ -528,58 +544,59 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                 </div>
               ) : availableDestinations.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  No PostgreSQL data sources available. Please connect a PostgreSQL data source first.
+                  No PostgreSQL data sources available. Please connect a
+                  PostgreSQL data source first.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {availableDestinations.map((destination) => {
-                  const Icon = destination.icon;
-                  const isSelected = selectedDestinationId === destination.id;
-                  return (
-                    <Card
-                      key={destination.id}
-                      className={cn(
-                        "cursor-pointer transition-all hover:shadow-md",
-                        isSelected && "ring-2 ring-primary border-primary",
-                      )}
-                      onClick={() => {
-                        setSelectedDestinationId(destination.id);
-                        setConfigValues({});
-                      }}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "h-10 w-10 rounded-lg flex items-center justify-center",
-                              isSelected ? "bg-primary/10" : "bg-muted",
-                            )}
-                          >
-                            <Icon
+                    const Icon = destination.icon;
+                    const isSelected = selectedDestinationId === destination.id;
+                    return (
+                      <Card
+                        key={destination.id}
+                        className={cn(
+                          "cursor-pointer transition-all hover:shadow-md",
+                          isSelected && "ring-2 ring-primary border-primary",
+                        )}
+                        onClick={() => {
+                          setSelectedDestinationId(destination.id);
+                          setConfigValues({});
+                        }}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div
                               className={cn(
-                                "h-5 w-5",
-                                isSelected
-                                  ? "text-primary"
-                                  : "text-muted-foreground",
+                                "h-10 w-10 rounded-lg flex items-center justify-center",
+                                isSelected ? "bg-primary/10" : "bg-muted",
                               )}
-                            />
+                            >
+                              <Icon
+                                className={cn(
+                                  "h-5 w-5",
+                                  isSelected
+                                    ? "text-primary"
+                                    : "text-muted-foreground",
+                                )}
+                              />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">
+                                {destination.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {destination.type}
+                              </p>
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 ml-auto" />
+                            )}
                           </div>
-                          <div>
-                            <p className="font-medium text-sm">
-                              {destination.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {destination.type}
-                            </p>
-                          </div>
-                          {isSelected && (
-                            <CheckCircle2 className="h-5 w-5 text-primary shrink-0 ml-auto" />
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -591,10 +608,11 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
               <div className="space-y-4">
                 <div className="rounded-lg bg-muted p-4">
                   <p className="text-sm text-muted-foreground">
-                    This emitter will use the connection "{selectedDestination.name}" 
-                    that you've already configured. No additional connection settings are needed.
+                    This emitter will use the connection "
+                    {selectedDestination.name}" that you've already configured.
+                    No additional connection settings are needed.
                   </p>
-                  </div>
+                </div>
               </div>
             </>
           )}

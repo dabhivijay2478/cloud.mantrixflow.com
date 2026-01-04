@@ -3,10 +3,9 @@
  * Centralized configuration for API requests
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from "@/lib/supabase/client";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /**
  * Get API base URL
@@ -18,7 +17,7 @@ export const getApiBaseUrl = () => API_BASE_URL;
  */
 export const getApiUrl = (endpoint: string) => {
   // Remove leading slash if present
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 
@@ -27,9 +26,9 @@ export const getApiUrl = (endpoint: string) => {
  */
 export const defaultFetchOptions: RequestInit = {
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
-  credentials: 'include',
+  credentials: "include",
 };
 
 /**
@@ -37,20 +36,22 @@ export const defaultFetchOptions: RequestInit = {
  * For server-side, use getServerAuthToken() instead
  */
 export const getAuthToken = async (): Promise<string | null> => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     // Server-side: return null - token should be passed explicitly
     return null;
   }
-  
+
   try {
     // Client-side: use browser session
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (session?.access_token) {
-      console.log('[API Config] Got token from browser session');
+      console.log("[API Config] Got token from browser session");
     }
     return session?.access_token || null;
   } catch (error) {
-    console.error('[API Config] Error getting Supabase session:', error);
+    console.error("[API Config] Error getting Supabase session:", error);
     return null;
   }
 };
@@ -67,23 +68,29 @@ export const createFetchOptions = async (
   // If token is provided, use it; otherwise try to get from session
   const authToken = token !== undefined ? token : await getAuthToken();
   const headers = new Headers(defaultFetchOptions.headers);
-  
-  console.log('[API Config] createFetchOptions called:', {
+
+  console.log("[API Config] createFetchOptions called:", {
     tokenProvided: token !== undefined,
     tokenValue: token ? `${token.substring(0, 20)}...` : null,
     authTokenResult: authToken ? `${authToken.substring(0, 20)}...` : null,
-    isServer: typeof window === 'undefined',
+    isServer: typeof window === "undefined",
   });
-  
+
   if (authToken) {
-    headers.set('Authorization', `Bearer ${authToken}`);
-    console.log('[API Config] Authorization header added to request');
+    headers.set("Authorization", `Bearer ${authToken}`);
+    console.log("[API Config] Authorization header added to request");
   } else {
-    console.warn('[API Config] No auth token available - request will be unauthenticated');
+    console.warn(
+      "[API Config] No auth token available - request will be unauthenticated",
+    );
     if (token === null) {
-      console.warn('[API Config] Token was explicitly null (server action may have failed to get token)');
+      console.warn(
+        "[API Config] Token was explicitly null (server action may have failed to get token)",
+      );
     } else if (token === undefined) {
-      console.warn('[API Config] No token provided, tried to get from session but failed');
+      console.warn(
+        "[API Config] No token provided, tried to get from session but failed",
+      );
     }
   }
 

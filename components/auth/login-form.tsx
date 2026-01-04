@@ -64,7 +64,10 @@ function LoginFormContent({
   useEffect(() => {
     if (state && !state.success) {
       // Ignore NEXT_REDIRECT errors as they are expected behavior for redirects
-      if (typeof state.error === 'string' && state.error.includes('NEXT_REDIRECT')) {
+      if (
+        typeof state.error === "string" &&
+        state.error.includes("NEXT_REDIRECT")
+      ) {
         console.log("Ignoring expected NEXT_REDIRECT error in login form.");
         return;
       }
