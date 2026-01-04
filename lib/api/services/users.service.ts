@@ -39,8 +39,8 @@ export class UsersService {
     return ApiClient.post<User>(`${this.BASE_PATH}/sync`, data);
   }
 
-  static async getCurrentUser(): Promise<User> {
-    return ApiClient.get<User>(`${this.BASE_PATH}/me`);
+  static async getCurrentUser(options?: { token?: string | null }): Promise<User> {
+    return ApiClient.get<User>(`${this.BASE_PATH}/me`, { token: options?.token });
   }
 
   static async getUser(id: string): Promise<User> {

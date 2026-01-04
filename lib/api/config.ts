@@ -33,31 +33,58 @@ export const defaultFetchOptions: RequestInit = {
 };
 
 /**
- * Get auth token from Supabase session
+ * Get auth token from Supabase session (client-side only)
+ * For server-side, use getServerAuthToken() instead
  */
 export const getAuthToken = async (): Promise<string | null> => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') {
+    // Server-side: return null - token should be passed explicitly
+    return null;
+  }
   
   try {
+    // Client-side: use browser session
     const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      console.log('[API Config] Got token from browser session');
+    }
     return session?.access_token || null;
   } catch (error) {
-    console.error('Error getting Supabase session:', error);
+    console.error('[API Config] Error getting Supabase session:', error);
     return null;
   }
 };
 
 /**
  * Create fetch options with authentication
+ * @param options - Fetch options
+ * @param token - Optional auth token (for server-side use)
  */
 export const createFetchOptions = async (
   options: RequestInit = {},
+  token?: string | null,
 ): Promise<RequestInit> => {
-  const token = await getAuthToken();
+  // If token is provided, use it; otherwise try to get from session
+  const authToken = token !== undefined ? token : await getAuthToken();
   const headers = new Headers(defaultFetchOptions.headers);
   
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+  console.log('[API Config] createFetchOptions called:', {
+    tokenProvided: token !== undefined,
+    tokenValue: token ? `${token.substring(0, 20)}...` : null,
+    authTokenResult: authToken ? `${authToken.substring(0, 20)}...` : null,
+    isServer: typeof window === 'undefined',
+  });
+  
+  if (authToken) {
+    headers.set('Authorization', `Bearer ${authToken}`);
+    console.log('[API Config] Authorization header added to request');
+  } else {
+    console.warn('[API Config] No auth token available - request will be unauthenticated');
+    if (token === null) {
+      console.warn('[API Config] Token was explicitly null (server action may have failed to get token)');
+    } else if (token === undefined) {
+      console.warn('[API Config] No token provided, tried to get from session but failed');
+    }
   }
 
   // Merge custom headers

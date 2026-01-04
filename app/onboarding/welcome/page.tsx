@@ -30,8 +30,10 @@ export default function WelcomePage() {
   useEffect(() => {
     if (!loading && !user) {
       router.push("/auth/login");
+      return;
     }
-    if (onboardingStatus?.completed) {
+    // Only redirect if onboarding is actually completed (avoid redirect loop)
+    if (!loading && user && onboardingStatus?.completed) {
       router.push("/workspace");
     }
   }, [user, loading, onboardingStatus?.completed, router]);

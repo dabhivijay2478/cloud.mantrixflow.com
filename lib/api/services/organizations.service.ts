@@ -42,9 +42,9 @@ export class OrganizationsService {
     return ApiClient.delete<{ deletedId: string }>(`${this.BASE_PATH}/${id}`);
   }
 
-  static async getCurrentOrganization(): Promise<Organization | null> {
+  static async getCurrentOrganization(options?: { token?: string | null }): Promise<Organization | null> {
     try {
-      return ApiClient.get<Organization>(`${this.BASE_PATH}/current`);
+      return ApiClient.get<Organization>(`${this.BASE_PATH}/current`, { token: options?.token });
     } catch {
       return null;
     }
@@ -60,10 +60,17 @@ export class OrganizationsService {
   static async inviteMember(
     organizationId: string,
     data: InviteMemberDto,
+    options?: { token?: string | null },
   ): Promise<OrganizationMember> {
+    console.log('[OrganizationsService] inviteMember called:', {
+      organizationId,
+      hasToken: !!options?.token,
+      tokenLength: options?.token?.length || 0,
+    });
     return ApiClient.post<OrganizationMember>(
       `${this.BASE_PATH}/${organizationId}/members/invite`,
       data,
+      { token: options?.token },
     );
   }
 
