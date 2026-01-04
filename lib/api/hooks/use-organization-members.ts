@@ -24,7 +24,10 @@ export const organizationMembersKeys = {
 export function useOrganizationMembers(organizationId: string | undefined) {
   return useQuery({
     queryKey: organizationMembersKeys.list(organizationId || ""),
-    queryFn: () => OrganizationsService.listMembers(organizationId!),
+    queryFn: () => {
+      if (!organizationId) throw new Error("Organization ID is required");
+      return OrganizationsService.listMembers(organizationId);
+    },
     enabled: !!organizationId,
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -42,7 +45,12 @@ export function useOrganizationMember(
       organizationId || "",
       memberId || "",
     ),
-    queryFn: () => OrganizationsService.getMember(organizationId!, memberId!),
+    queryFn: () => {
+      if (!organizationId || !memberId) {
+        throw new Error("Organization ID and Member ID are required");
+      }
+      return OrganizationsService.getMember(organizationId, memberId);
+    },
     enabled: !!organizationId && !!memberId,
   });
 }

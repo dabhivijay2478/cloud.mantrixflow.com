@@ -59,8 +59,11 @@ export function usePipelines(orgId?: string) {
 
 export function usePipeline(id: string | undefined, orgId?: string) {
   return useQuery({
-    queryKey: [...dataPipelinesKeys.pipelines.detail(id!), orgId],
-    queryFn: () => DataPipelinesService.getPipeline(id!, orgId),
+    queryKey: [...dataPipelinesKeys.pipelines.detail(id || ""), orgId],
+    queryFn: () => {
+      if (!id) throw new Error("Pipeline ID is required");
+      return DataPipelinesService.getPipeline(id, orgId);
+    },
     enabled: !!id,
   });
 }
@@ -122,7 +125,7 @@ export function usePausePipeline() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => DataPipelinesService.pausePipeline(id),
-    onSuccess: (updatedPipeline, pipelineId) => {
+    onSuccess: (updatedPipeline, _pipelineId) => {
       // ApiClient already extracts data from response, so updatedPipeline is the Pipeline object
       // Update the cache with the returned pipeline data
       if (updatedPipeline?.id) {
@@ -143,7 +146,7 @@ export function useResumePipeline() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => DataPipelinesService.resumePipeline(id),
-    onSuccess: (updatedPipeline, pipelineId) => {
+    onSuccess: (updatedPipeline, _pipelineId) => {
       // ApiClient already extracts data from response, so updatedPipeline is the Pipeline object
       // Update the cache with the returned pipeline data
       if (updatedPipeline?.id) {
@@ -186,9 +189,11 @@ export function usePipelineRuns(
   offset?: number,
 ) {
   return useQuery({
-    queryKey: dataPipelinesKeys.runs(pipelineId!, limit, offset),
-    queryFn: () =>
-      DataPipelinesService.getPipelineRuns(pipelineId!, limit, offset),
+    queryKey: dataPipelinesKeys.runs(pipelineId || "", limit, offset),
+    queryFn: () => {
+      if (!pipelineId) throw new Error("Pipeline ID is required");
+      return DataPipelinesService.getPipelineRuns(pipelineId, limit, offset);
+    },
     enabled: !!pipelineId,
   });
 }
@@ -198,16 +203,24 @@ export function usePipelineRun(
   runId: string | undefined,
 ) {
   return useQuery({
-    queryKey: dataPipelinesKeys.run(pipelineId!, runId!),
-    queryFn: () => DataPipelinesService.getPipelineRun(pipelineId!, runId!),
+    queryKey: dataPipelinesKeys.run(pipelineId || "", runId || ""),
+    queryFn: () => {
+      if (!pipelineId || !runId) {
+        throw new Error("Pipeline ID and Run ID are required");
+      }
+      return DataPipelinesService.getPipelineRun(pipelineId, runId);
+    },
     enabled: !!pipelineId && !!runId,
   });
 }
 
 export function usePipelineStats(pipelineId: string | undefined) {
   return useQuery({
-    queryKey: dataPipelinesKeys.stats(pipelineId!),
-    queryFn: () => DataPipelinesService.getPipelineStats(pipelineId!),
+    queryKey: dataPipelinesKeys.stats(pipelineId || ""),
+    queryFn: () => {
+      if (!pipelineId) throw new Error("Pipeline ID is required");
+      return DataPipelinesService.getPipelineStats(pipelineId);
+    },
     enabled: !!pipelineId,
     refetchInterval: 30000, // Refetch every 30 seconds
   });

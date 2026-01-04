@@ -25,8 +25,11 @@ export function useCurrentUser() {
 
 export function useUser(id: string | undefined) {
   return useQuery({
-    queryKey: usersKeys.detail(id!),
-    queryFn: () => UsersService.getUser(id!),
+    queryKey: usersKeys.detail(id || ""),
+    queryFn: () => {
+      if (!id) throw new Error("User ID is required");
+      return UsersService.getUser(id);
+    },
     enabled: !!id,
   });
 }

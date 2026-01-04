@@ -47,8 +47,11 @@ export function useOrganizations() {
 
 export function useOrganization(id: string | undefined) {
   return useQuery({
-    queryKey: organizationsKeys.detail(id!),
-    queryFn: () => OrganizationsService.getOrganization(id!),
+    queryKey: organizationsKeys.detail(id || ""),
+    queryFn: () => {
+      if (!id) throw new Error("Organization ID is required");
+      return OrganizationsService.getOrganization(id);
+    },
     enabled: !!id,
   });
 }

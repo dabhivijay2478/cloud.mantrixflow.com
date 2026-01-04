@@ -89,8 +89,11 @@ export function useConnections(orgId?: string) {
 
 export function useConnection(id: string | undefined) {
   return useQuery({
-    queryKey: dataSourcesKeys.connections.detail(id!),
-    queryFn: () => DataSourcesService.getConnection(id!),
+    queryKey: dataSourcesKeys.connections.detail(id || ""),
+    queryFn: () => {
+      if (!id) throw new Error("Connection ID is required");
+      return DataSourcesService.getConnection(id);
+    },
     enabled: !!id,
   });
 }
@@ -126,16 +129,26 @@ export function useDeleteConnection() {
 // Schema Discovery Hooks
 export function useDatabases(connectionId: string | undefined, orgId?: string) {
   return useQuery({
-    queryKey: dataSourcesKeys.databases(connectionId!),
-    queryFn: () => DataSourcesService.listDatabases(connectionId!, orgId),
+    queryKey: dataSourcesKeys.databases(connectionId || ""),
+    queryFn: () => {
+      if (!connectionId || !orgId) {
+        throw new Error("Connection ID and Organization ID are required");
+      }
+      return DataSourcesService.listDatabases(connectionId, orgId);
+    },
     enabled: !!connectionId && !!orgId,
   });
 }
 
 export function useSchemas(connectionId: string | undefined, orgId?: string) {
   return useQuery({
-    queryKey: dataSourcesKeys.schemas(connectionId!),
-    queryFn: () => DataSourcesService.listSchemas(connectionId!, orgId),
+    queryKey: dataSourcesKeys.schemas(connectionId || ""),
+    queryFn: () => {
+      if (!connectionId || !orgId) {
+        throw new Error("Connection ID and Organization ID are required");
+      }
+      return DataSourcesService.listSchemas(connectionId, orgId);
+    },
     enabled: !!connectionId && !!orgId,
   });
 }
@@ -145,9 +158,13 @@ export function useSchemasWithTables(
   orgId?: string,
 ) {
   return useQuery({
-    queryKey: [...dataSourcesKeys.schemas(connectionId!), "with-tables"],
-    queryFn: () =>
-      DataSourcesService.listSchemasWithTables(connectionId!, orgId),
+    queryKey: [...dataSourcesKeys.schemas(connectionId || ""), "with-tables"],
+    queryFn: () => {
+      if (!connectionId || !orgId) {
+        throw new Error("Connection ID and Organization ID are required");
+      }
+      return DataSourcesService.listSchemasWithTables(connectionId, orgId);
+    },
     enabled: !!connectionId && !!orgId,
   });
 }
@@ -158,8 +175,13 @@ export function useTables(
   orgId?: string,
 ) {
   return useQuery({
-    queryKey: dataSourcesKeys.tables(connectionId!, schema),
-    queryFn: () => DataSourcesService.listTables(connectionId!, schema, orgId),
+    queryKey: dataSourcesKeys.tables(connectionId || "", schema),
+    queryFn: () => {
+      if (!connectionId || !orgId) {
+        throw new Error("Connection ID and Organization ID are required");
+      }
+      return DataSourcesService.listTables(connectionId, schema, orgId);
+    },
     enabled: !!connectionId && !!orgId,
   });
 }
@@ -171,9 +193,24 @@ export function useTableSchema(
   orgId?: string,
 ) {
   return useQuery({
-    queryKey: dataSourcesKeys.tableSchema(connectionId!, table!, schema),
-    queryFn: () =>
-      DataSourcesService.getTableSchema(connectionId!, table!, schema, orgId),
+    queryKey: dataSourcesKeys.tableSchema(
+      connectionId || "",
+      table || "",
+      schema,
+    ),
+    queryFn: () => {
+      if (!connectionId || !table || !orgId) {
+        throw new Error(
+          "Connection ID, Table, and Organization ID are required",
+        );
+      }
+      return DataSourcesService.getTableSchema(
+        connectionId,
+        table,
+        schema,
+        orgId,
+      );
+    },
     enabled: !!connectionId && !!table && !!orgId,
   });
 }
@@ -240,8 +277,11 @@ export function useCreateSyncJob() {
 
 export function useSyncJobs(connectionId: string | undefined) {
   return useQuery({
-    queryKey: dataSourcesKeys.syncJobs(connectionId!),
-    queryFn: () => DataSourcesService.listSyncJobs(connectionId!),
+    queryKey: dataSourcesKeys.syncJobs(connectionId || ""),
+    queryFn: () => {
+      if (!connectionId) throw new Error("Connection ID is required");
+      return DataSourcesService.listSyncJobs(connectionId);
+    },
     enabled: !!connectionId,
   });
 }
@@ -251,8 +291,13 @@ export function useSyncJob(
   jobId: string | undefined,
 ) {
   return useQuery({
-    queryKey: dataSourcesKeys.syncJob(connectionId!, jobId!),
-    queryFn: () => DataSourcesService.getSyncJob(connectionId!, jobId!),
+    queryKey: dataSourcesKeys.syncJob(connectionId || "", jobId || ""),
+    queryFn: () => {
+      if (!connectionId || !jobId) {
+        throw new Error("Connection ID and Job ID are required");
+      }
+      return DataSourcesService.getSyncJob(connectionId, jobId);
+    },
     enabled: !!connectionId && !!jobId,
   });
 }
@@ -310,8 +355,11 @@ export function useUpdateSyncJobSchedule() {
 // Monitoring Hooks
 export function useConnectionHealth(connectionId: string | undefined) {
   return useQuery({
-    queryKey: dataSourcesKeys.health(connectionId!),
-    queryFn: () => DataSourcesService.getConnectionHealth(connectionId!),
+    queryKey: dataSourcesKeys.health(connectionId || ""),
+    queryFn: () => {
+      if (!connectionId) throw new Error("Connection ID is required");
+      return DataSourcesService.getConnectionHealth(connectionId);
+    },
     enabled: !!connectionId,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -323,17 +371,22 @@ export function useQueryLogs(
   offset?: number,
 ) {
   return useQuery({
-    queryKey: dataSourcesKeys.queryLogs(connectionId!, limit, offset),
-    queryFn: () =>
-      DataSourcesService.getQueryLogs(connectionId!, limit, offset),
+    queryKey: dataSourcesKeys.queryLogs(connectionId || "", limit, offset),
+    queryFn: () => {
+      if (!connectionId) throw new Error("Connection ID is required");
+      return DataSourcesService.getQueryLogs(connectionId, limit, offset);
+    },
     enabled: !!connectionId,
   });
 }
 
 export function useConnectionMetrics(connectionId: string | undefined) {
   return useQuery({
-    queryKey: dataSourcesKeys.metrics(connectionId!),
-    queryFn: () => DataSourcesService.getConnectionMetrics(connectionId!),
+    queryKey: dataSourcesKeys.metrics(connectionId || ""),
+    queryFn: () => {
+      if (!connectionId) throw new Error("Connection ID is required");
+      return DataSourcesService.getConnectionMetrics(connectionId);
+    },
     enabled: !!connectionId,
     refetchInterval: 60000, // Refetch every minute
   });
