@@ -7,7 +7,6 @@ import {
   Key,
   Map as MapIcon,
   Pause,
-  Play,
   Plus,
   Search,
   Trash2,
@@ -413,16 +412,28 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     )
       return;
 
+    // Validate that field mappings exist and are not empty
+    if (!fieldMappings || !Array.isArray(fieldMappings) || fieldMappings.length === 0) {
+      // Show error - field mappings are required
+      alert("Please configure at least one field mapping before saving the transformer.");
+      return;
+    }
+
+    // Ensure fieldMappings is always an array and not empty
+    const validFieldMappings = Array.isArray(fieldMappings) && fieldMappings.length > 0
+      ? fieldMappings
+      : [];
+
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings,
+      fieldMappings: validFieldMappings, // Always ensure it's a valid array
       destinationTable: selectedDestinationTable, // Store selected destination table
       primaryKeyField:
         primaryKeyField ||
-        fieldMappings.find(
+        validFieldMappings.find(
           (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id"
         )?.destination ||
         "",
@@ -457,23 +468,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           ...collector,
           transformers: collector.transformers.filter(
             (t) => (t as any).id !== transformId
-          ),
-        };
-      }
-      return collector;
-    });
-    onComplete(updatedCollectors);
-  };
-
-  const handlePublishTransform = (collectorId: string, transformId: string) => {
-    const updatedCollectors = collectors.map((collector) => {
-      if (collector.id === collectorId) {
-        return {
-          ...collector,
-          transformers: collector.transformers.map((t) =>
-            (t as any).id === transformId
-              ? { ...t, status: "published" as const }
-              : t
           ),
         };
       }
@@ -597,22 +591,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const transform = row.original;
+        const isPaused = transform.status === "paused";
         return (
           <div className="flex items-center justify-end gap-2">
-            {transform.status === "paused" || !transform.status ? (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePublishTransform(transform.collectorId, transform.id);
-                }}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Publish</span>
-                <span className="sm:hidden">Publish</span>
-              </Button>
-            ) : (
+            {isPaused && (
               <Button
                 variant="outline"
                 size="sm"
@@ -620,10 +602,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   e.stopPropagation();
                   handlePauseTransform(transform.collectorId, transform.id);
                 }}
+                title="Pause transformer"
               >
                 <Pause className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Pause</span>
-                <span className="sm:hidden">Pause</span>
+                <span className="hidden sm:inline">Paused</span>
               </Button>
             )}
             <Button

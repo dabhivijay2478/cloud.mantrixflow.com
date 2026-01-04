@@ -55,18 +55,34 @@ export default function NewPipelinePage() {
 
   const handleCreatePipeline = async () => {
     // Validate that at least one transformer with field mappings exists
+    // Check all collectors and their transformers, ensuring fieldMappings is properly structured
     const hasValidTransformers = config.collectors.some((collector) => {
-      return (
-        collector.transformers &&
-        collector.transformers.length > 0 &&
-        collector.transformers.some((t: any) => {
-          return (
-            t.fieldMappings &&
-            Array.isArray(t.fieldMappings) &&
-            t.fieldMappings.length > 0
-          );
-        })
-      );
+      if (!collector.transformers || collector.transformers.length === 0) {
+        return false;
+      }
+      
+      return collector.transformers.some((t: any) => {
+        // Check if fieldMappings exists and is a non-empty array
+        const fieldMappings = t.fieldMappings;
+        if (!fieldMappings) {
+          return false;
+        }
+        
+        // Handle both array format and object format
+        if (Array.isArray(fieldMappings)) {
+          return fieldMappings.length > 0 && fieldMappings.some((fm: any) => {
+            // Ensure each mapping has required fields
+            return fm && (fm.source || fm.destination);
+          });
+        }
+        
+        // If it's an object, check if it has any entries
+        if (typeof fieldMappings === 'object') {
+          return Object.keys(fieldMappings).length > 0;
+        }
+        
+        return false;
+      });
     });
 
     if (!hasValidTransformers) {
@@ -205,24 +221,39 @@ export default function NewPipelinePage() {
             id: c.id,
             sourceId: c.sourceId,
             selectedTables: c.selectedTables,
-            transformers: c.transformers
-              ?.filter((t: any) => {
-                // Only include transformers that have field mappings
-                return (
-                  t.fieldMappings &&
-                  Array.isArray(t.fieldMappings) &&
-                  t.fieldMappings.length > 0
-                );
+            transformers: (c.transformers || [])
+              .filter((t: any) => {
+                // Only include transformers that have valid field mappings
+                const fieldMappings = t.fieldMappings;
+                if (!fieldMappings) {
+                  return false;
+                }
+                
+                // Ensure it's an array with at least one valid mapping
+                if (Array.isArray(fieldMappings)) {
+                  return fieldMappings.length > 0 && fieldMappings.some((fm: any) => {
+                    return fm && (fm.source || fm.destination);
+                  });
+                }
+                
+                return false;
               })
-              .map((t) => ({
-                id: t.id,
-                name: t.name,
-                collectorId: (t as any).collectorId || c.id,
-                emitterId: (t as any).emitterId || "", // Reference to emitter
-                fieldMappings: (t as any).fieldMappings || [], // JSON array format - already filtered above
-                primaryKeyField: (t as any).primaryKeyField, // Include primary key field
-                destinationTable: (t as any).destinationTable, // Include destination table
-              })),
+              .map((t) => {
+                // Ensure fieldMappings is always a valid array
+                const fieldMappings = Array.isArray(t.fieldMappings) 
+                  ? t.fieldMappings 
+                  : [];
+                
+                return {
+                  id: t.id,
+                  name: t.name,
+                  collectorId: (t as any).collectorId || c.id,
+                  emitterId: (t as any).emitterId || "", // Reference to emitter
+                  fieldMappings: fieldMappings, // Always an array
+                  primaryKeyField: (t as any).primaryKeyField, // Include primary key field
+                  destinationTable: (t as any).destinationTable, // Include destination table
+                };
+              }),
           })),
           emitters: emitters,
         },
