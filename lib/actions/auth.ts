@@ -303,6 +303,101 @@ export async function forgotPasswordAction(
 }
 
 /**
+ * Server Action for accepting invite and setting password
+ * Updates user password and syncs with backend to link to organization
+ */
+export async function acceptInviteAction(
+  _prevState: AuthActionResult | null,
+  formData: FormData,
+): Promise<AuthActionResult> {
+  try {
+    // Extract and validate form data
+    const rawData = {
+      password: formData.get("password")?.toString() ?? "",
+      confirmPassword: formData.get("confirmPassword")?.toString() ?? "",
+    };
+
+    const validation = resetPasswordSchema.safeParse(rawData);
+
+    if (!validation.success) {
+      const fieldErrors: Record<string, string[]> = {};
+      validation.error.issues.forEach((issue) => {
+        const path = issue.path[0]?.toString() ?? "root";
+        if (!fieldErrors[path]) {
+          fieldErrors[path] = [];
+        }
+        fieldErrors[path].push(issue.message);
+      });
+
+      return {
+        success: false,
+        error: "Validation failed. Please check your input.",
+        fieldErrors,
+      };
+    }
+
+    const { password } = validation.data;
+    const supabase = await createClient();
+
+    // Verify user has a valid session (from invite link)
+    const {
+      data: { session, user },
+    } = await supabase.auth.getSession();
+
+    if (!session || !user) {
+      return {
+        success: false,
+        error:
+          "Invalid or expired invite link. Please contact the person who invited you.",
+      };
+    }
+
+    // Update password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (updateError) {
+      return {
+        success: false,
+        error: updateError.message || "Failed to set password. Please try again.",
+      };
+    }
+
+    // Sync user with backend (this will link them to organization_members)
+    try {
+      await UsersService.syncUser({
+        supabaseUserId: user.id,
+        email: user.email || '',
+        firstName: user.user_metadata?.first_name || user.user_metadata?.firstName,
+        lastName: user.user_metadata?.last_name || user.user_metadata?.lastName,
+        fullName: user.user_metadata?.full_name || user.user_metadata?.fullName,
+        avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.avatarUrl,
+        metadata: {
+          ...user.user_metadata,
+          ...user.app_metadata,
+        },
+      });
+    } catch (syncError) {
+      console.error('Failed to sync user after invite acceptance:', syncError);
+      // Continue even if sync fails - password is set
+    }
+
+    // Revalidate and redirect to workspace
+    revalidatePath("/", "layout");
+    redirect("/workspace");
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred. Please try again.",
+    };
+  }
+}
+
+/**
  * Server Action for reset password
  * Updates user password after email confirmation
  */
