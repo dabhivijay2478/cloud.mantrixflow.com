@@ -8,6 +8,8 @@ import {
   Palette,
   Save,
   Shield,
+  User,
+  Lock,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
@@ -28,14 +30,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useCurrentUser, useUpdateUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 
 export default function SettingsPage() {
   const { currentOrganization, updateOrganization } = useWorkspaceStore();
-  const { user } = useAuthStore();
+  const { user: authUser } = useAuthStore();
+  const { data: user, isLoading: userLoading } = useCurrentUser();
+  const updateUser = useUpdateUser();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("organization");
+  const [activeTab, setActiveTab] = useState("profile");
+
+  // Profile form state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   // Organization settings
   const [orgName, setOrgName] = useState(currentOrganization?.name || "");
@@ -44,6 +55,16 @@ export default function SettingsPage() {
 
   // Appearance
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+
+  // Initialize profile form with user data
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+      setFullName(user.fullName || "");
+      setAvatarUrl(user.avatarUrl || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     if (currentOrganization) {
@@ -94,6 +115,31 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      await updateUser.mutateAsync({
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+        fullName: fullName.trim() || undefined,
+        avatarUrl: avatarUrl.trim() || undefined,
+      });
+      toast.success(
+        "Profile updated successfully",
+        "Your profile information has been updated.",
+      );
+    } catch (error) {
+      toast.error(
+        "Failed to update profile",
+        error instanceof Error ? error.message : "Unable to update profile. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -117,6 +163,13 @@ export default function SettingsPage() {
         <div className="border-b">
           <TabsList className="inline-flex h-auto w-full sm:w-auto bg-transparent p-0 space-x-1 sm:space-x-2">
             <TabsTrigger
+              value="profile"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger
               value="organization"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
@@ -139,6 +192,191 @@ export default function SettingsPage() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        {/* Profile Settings */}
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                Update your personal information and profile details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {userLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : user ? (
+                <>
+                  {/* Read-only fields */}
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        Email Address
+                      </Label>
+                      <Input
+                        value={user.email}
+                        disabled
+                        className="h-10 bg-muted/50 cursor-not-allowed"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Email address cannot be changed
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        User ID
+                      </Label>
+                      <Input
+                        value={user.id}
+                        disabled
+                        className="h-10 bg-muted/50 cursor-not-allowed font-mono text-xs"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your unique user identifier
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-6 space-y-4">
+                    <h3 className="text-sm font-semibold">Editable Information</h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <Label htmlFor="first-name" className="text-sm font-medium">
+                          First Name
+                          <span className="text-muted-foreground font-normal ml-2 text-xs">
+                            (Optional)
+                          </span>
+                        </Label>
+                        <Input
+                          id="first-name"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          placeholder="John"
+                          className="h-10"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label htmlFor="last-name" className="text-sm font-medium">
+                          Last Name
+                          <span className="text-muted-foreground font-normal ml-2 text-xs">
+                            (Optional)
+                          </span>
+                        </Label>
+                        <Input
+                          id="last-name"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          placeholder="Doe"
+                          className="h-10"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="full-name" className="text-sm font-medium">
+                        Full Name
+                        <span className="text-muted-foreground font-normal ml-2 text-xs">
+                          (Optional)
+                        </span>
+                      </Label>
+                      <Input
+                        id="full-name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="John Doe"
+                        className="h-10"
+                        disabled={loading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your display name (will be used if first/last name are not provided)
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="avatar-url" className="text-sm font-medium">
+                        Avatar URL
+                        <span className="text-muted-foreground font-normal ml-2 text-xs">
+                          (Optional)
+                        </span>
+                      </Label>
+                      <Input
+                        id="avatar-url"
+                        value={avatarUrl}
+                        onChange={(e) => setAvatarUrl(e.target.value)}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="h-10"
+                        disabled={loading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        URL to your profile picture
+                      </p>
+                      {avatarUrl && (
+                        <div className="mt-2">
+                          <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-border">
+                            <img
+                              src={avatarUrl}
+                              alt="Avatar preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFirstName(user.firstName || "");
+                        setLastName(user.lastName || "");
+                        setFullName(user.fullName || "");
+                        setAvatarUrl(user.avatarUrl || "");
+                      }}
+                      disabled={loading}
+                      className="w-full sm:w-auto"
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      onClick={handleSaveProfile}
+                      disabled={loading}
+                      className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Unable to load user information
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Organization Settings */}
         <TabsContent value="organization" className="space-y-6">
@@ -312,7 +550,7 @@ export default function SettingsPage() {
         {/* Security */}
         <TabsContent value="security" className="space-y-6">
           {/* Account Security Section */}
-          {user && (
+          {authUser && (
             <Card>
               <CardHeader>
                 <CardTitle>Account Security</CardTitle>
@@ -329,7 +567,7 @@ export default function SettingsPage() {
                     <div>
                       <p className="font-medium text-sm">Email Address</p>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {user.email}
+                        {authUser.email}
                       </p>
                     </div>
                   </div>
