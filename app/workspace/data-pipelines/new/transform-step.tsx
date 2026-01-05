@@ -125,8 +125,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const source = dataSources.find((ds) => ds.id === collector.sourceId);
     const collectorName =
       source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
-    return (collector.emitters || []).map((e: EmitterConfig) => ({
+    return (collector.emitters || []).map((e) => ({
       ...e,
+      connectionConfig: e.connectionConfig || {},
       collectorId: collector.id,
       collectorName,
     }));

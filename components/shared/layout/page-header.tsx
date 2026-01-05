@@ -13,7 +13,7 @@ import { ProgressSteps } from "../navigation/progress-steps";
  * @description Standardized page header component with title, description, and optional action button.
  * Used across workspace pages, onboarding pages, and other page-level components.
  * @param {PageHeaderProps} props - Component properties
- * @param {string} props.title - Page title
+ * @param {React.ReactNode} props.title - Page title
  * @param {string} [props.description] - Page description/subtitle
  * @param {React.ReactNode} [props.action] - Action element (e.g., button) displayed on the right
  * @param {React.ReactNode} [props.breadcrumbs] - Breadcrumb navigation component
@@ -28,7 +28,7 @@ import { ProgressSteps } from "../navigation/progress-steps";
  * />
  */
 export interface PageHeaderProps {
-  title: string;
+  title: React.ReactNode;
   description?: string;
   action?: React.ReactNode;
   breadcrumbs?: React.ReactNode;

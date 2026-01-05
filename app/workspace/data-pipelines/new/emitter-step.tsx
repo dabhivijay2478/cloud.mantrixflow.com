@@ -93,8 +93,9 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     const collectorName =
       source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
     // Emitters are stored directly on collectors, not on transformers
-    return (collector.emitters || []).map((e: EmitterConfig) => ({
+    return (collector.emitters || []).map((e) => ({
       ...e,
+      connectionConfig: e.connectionConfig || {},
       collectorId: collector.id,
       collectorName,
     }));

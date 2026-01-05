@@ -95,7 +95,7 @@ export default function OrganizationPage() {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Please try again";
-      toast.error("Failed to create organization", errorMessage);
+      toast.error("Failed to create organization", { description: errorMessage });
       console.error(error);
     } finally {
       setLoading(false);

@@ -374,14 +374,13 @@ export function CollectorStep({
           <div className="space-y-2">
             <Label htmlFor="data-source-select">Data Source</Label>
             <Select
-              id="data-source-select"
               value={selectedSourceId}
               onValueChange={(value) => {
                 setSelectedSourceId(value);
                 setSelectedTables([]);
               }}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="data-source-select" className="w-full">
                 <SelectValue placeholder="Select a data source">
                   {selectedSource && (
                     <div className="flex items-center gap-2">
