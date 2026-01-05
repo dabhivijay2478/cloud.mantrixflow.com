@@ -424,12 +424,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 ### Styling
 All components accept `className` prop for custom styling:
 
-```tsx
-<KPICard
-  className="bg-gradient-to-r from-blue-500 to-purple-600"
-  value="$45K"
-  label="Revenue"
-/>
 ```
 
 ## 🔒 Security
