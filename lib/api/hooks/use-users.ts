@@ -3,11 +3,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  type CreateUserDto,
-  type UpdateUserDto,
-  UsersService,
-} from "../services/users.service";
+import { UsersService, type UpdateUserDto } from "../services/users.service";
+import type { CreateUserDto } from "../types/users";
 
 export const usersKeys = {
   all: ["users"] as const,

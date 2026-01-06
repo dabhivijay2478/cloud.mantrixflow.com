@@ -300,7 +300,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         ],
         queryFn: () => {
           if (!destinationTableQuery) {
-            return Promise.resolve({ columns: [] } as { columns: string[] });
+            return Promise.resolve({ columns: [], table: "", schema: "", primaryKeys: [] });
           }
           return DataSourcesService.getTableSchema(
             destinationTableQuery.connectionId,
@@ -323,13 +323,21 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const queryResult = destinationSchemaQuery[0];
     if (!queryResult?.data?.columns) return [];
 
-    return queryResult.data.columns.map(
-      (col: { name: string; dataType?: string }) => ({
+    return queryResult.data.columns.map((col) => {
+      // Handle both Column objects and string arrays
+      if (typeof col === "string") {
+        return {
+          name: col,
+          type: "unknown",
+          table: destinationTableQuery.tableName || "",
+        };
+      }
+      return {
         name: col.name,
         type: col.dataType || "unknown",
         table: destinationTableQuery.tableName || "",
-      }),
-    );
+      };
+    });
   }, [destinationSchemaQuery, destinationTableQuery]);
 
   const handleFieldMapping = (

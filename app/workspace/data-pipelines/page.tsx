@@ -132,21 +132,7 @@ export default function DataPipelinesPage() {
           </Badge>
         );
       case "pending":
-        // Check if pipeline is paused
-        if (pipeline.status === "paused") {
-          return (
-            <Badge
-              variant="outline"
-              className="text-muted-foreground border-amber-300 dark:border-amber-700"
-            >
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Paused
-              </div>
-            </Badge>
-          );
-        }
-        // Show pending state
+        // Show pending state (paused status is already handled at the top of the function)
         return (
           <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
             <div className="flex items-center gap-1.5">
@@ -169,7 +155,7 @@ export default function DataPipelinesPage() {
       );
     }
 
-    // Fallback to pipeline status
+    // Fallback to pipeline status (paused status is already handled at the top of the function)
     switch (pipeline.status) {
       case "active": {
         // Show sync mode if available
@@ -187,18 +173,6 @@ export default function DataPipelinesPage() {
           </Badge>
         );
       }
-      case "paused":
-        return (
-          <Badge
-            variant="outline"
-            className="text-muted-foreground border-amber-300 dark:border-amber-700"
-          >
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Paused
-            </div>
-          </Badge>
-        );
       case "error":
         return (
           <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">

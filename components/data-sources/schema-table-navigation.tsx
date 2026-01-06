@@ -88,7 +88,7 @@ export function SchemaTableNavigation({
           return {
             ...schema,
             tables: matchesSchema ? schema.tables : filteredTables,
-          };
+          } as Schema;
         }
         return null;
       })

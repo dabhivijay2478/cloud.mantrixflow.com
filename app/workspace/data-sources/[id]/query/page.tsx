@@ -204,7 +204,7 @@ export default function DataSourceQueryPage() {
     if (dataSource && !query && shouldShowSQLEditor) {
       const defaultQuery = getDefaultQuery(
         dataSource.type,
-        dataSource.selectedTable || dataSource.tables?.[0],
+        dataSource.tables?.[0],
       );
       setQuery(defaultQuery);
     }
@@ -313,25 +313,28 @@ export default function DataSourceQueryPage() {
 
       console.log("[QueryPage] Query result:", result);
       console.log("[QueryPage] Result type check:", {
-        hasRows: !!result?.rows,
-        rowsIsArray: Array.isArray(result?.rows),
-        rowsLength: result?.rows?.length,
-        firstRowType: result?.rows?.[0] ? typeof result.rows[0] : "none",
-        firstRowIsArray: Array.isArray(result?.rows?.[0]),
-        firstRowKeys: result?.rows?.[0] ? Object.keys(result.rows[0]) : [],
-        hasColumns: !!result?.columns,
-        columnsIsArray: Array.isArray(result?.columns),
+        hasRows: !!result?.result?.rows,
+        rowsIsArray: Array.isArray(result?.result?.rows),
+        rowsLength: result?.result?.rows?.length,
+        firstRowType: result?.result?.rows?.[0] ? typeof result.result.rows[0] : "none",
+        firstRowIsArray: Array.isArray(result?.result?.rows?.[0]),
+        firstRowKeys: result?.result?.rows?.[0] ? Object.keys(result.result.rows[0]) : [],
+        hasColumns: !!result?.result?.columns,
+        columnsIsArray: Array.isArray(result?.result?.columns),
       });
 
-      // API client extracts data.data, so result is QueryExecutionResult directly
-      // Format: { rows: Record<string, any>[] (from pg library), columns: Array<{name: string, dataType: string}>, rowCount: number, executionTimeMs: number }
+      // QueryExecutionResponse has a result property containing QueryResult
+      // Format: { success: boolean, result?: { rows: unknown[][], columns: string[], rowCount: number, executionTimeMs: number }, error?: string }
       if (
         result &&
-        Array.isArray(result.rows) &&
-        Array.isArray(result.columns)
+        result.success &&
+        result.result &&
+        Array.isArray(result.result.rows) &&
+        Array.isArray(result.result.columns)
       ) {
+        const queryResult = result.result;
         // Extract column names - columns can be strings or objects with name property
-        const columnNames = result.columns.map(
+        const columnNames = queryResult.columns.map(
           (col: string | { name?: string; column?: string } | unknown) =>
             typeof col === "string"
               ? col
@@ -348,7 +351,7 @@ export default function DataSourceQueryPage() {
         // Each row is already an object like {column1: value1, column2: value2}
         const convertedResult = {
           columns: columnNames,
-          rows: result.rows.map((row: unknown) => {
+          rows: queryResult.rows.map((row: unknown) => {
             // If row is already an object, use it directly
             if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;
@@ -378,7 +381,7 @@ export default function DataSourceQueryPage() {
         setResults(convertedResult);
         toast.success(
           "Query executed successfully",
-          `Returned ${convertedResult.rows.length} rows in ${result.executionTimeMs || 0}ms`,
+          `Returned ${convertedResult.rows.length} rows in ${queryResult.executionTimeMs || 0}ms`,
         );
       } else if (result && "error" in result) {
         throw new Error(result.error || "Query execution failed");
@@ -444,14 +447,16 @@ export default function DataSourceQueryPage() {
         },
       });
 
-      // Handle the result format - API client extracts data.data
-      // PostgreSQL returns rows as array of objects, not arrays
+      // QueryExecutionResponse has a result property containing QueryResult
       if (
         result &&
-        Array.isArray(result.rows) &&
-        Array.isArray(result.columns)
+        result.success &&
+        result.result &&
+        Array.isArray(result.result.rows) &&
+        Array.isArray(result.result.columns)
       ) {
-        const columnNames = result.columns.map(
+        const queryResult = result.result;
+        const columnNames = queryResult.columns.map(
           (col: string | { name?: string } | unknown) =>
             typeof col === "string"
               ? col
@@ -462,7 +467,7 @@ export default function DataSourceQueryPage() {
 
         const convertedData = {
           columns: columnNames,
-          rows: result.rows.map((row: unknown) => {
+          rows: queryResult.rows.map((row: unknown) => {
             // If row is already an object, use it directly
             if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;

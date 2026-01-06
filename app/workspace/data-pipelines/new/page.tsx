@@ -199,7 +199,7 @@ export default function NewPipelinePage() {
         destinationId: e.destinationId,
         destinationName: e.destinationName,
         destinationType: e.destinationType,
-        // connectionConfig is not needed - connection is referenced by destinationId
+        connectionConfig: e.connectionConfig || {}, // Include connectionConfig (required by API)
       };
     });
 
@@ -274,23 +274,22 @@ export default function NewPipelinePage() {
               })
               .map((t) => {
                 // Ensure fieldMappings is always a valid array
-                const fieldMappings = Array.isArray(t.fieldMappings)
+                const fieldMappingsArray = Array.isArray(t.fieldMappings)
                   ? t.fieldMappings
                   : [];
 
-                const transformerWithExtras = t as Transformer & {
-                  primaryKeyField?: string;
-                  destinationTable?: string;
-                };
+                // Convert array format to Record format for API
+                const fieldMappingsRecord: Record<string, string> = {};
+                fieldMappingsArray.forEach((fm) => {
+                  if (fm && typeof fm === "object" && "source" in fm && "destination" in fm) {
+                    fieldMappingsRecord[fm.source] = fm.destination;
+                  }
+                });
 
                 return {
                   id: t.id,
                   name: t.name,
-                  collectorId: t.collectorId || c.id,
-                  emitterId: t.emitterId || "", // Reference to emitter
-                  fieldMappings: fieldMappings, // Always an array
-                  primaryKeyField: transformerWithExtras.primaryKeyField, // Include primary key field
-                  destinationTable: transformerWithExtras.destinationTable, // Include destination table
+                  fieldMappings: Object.keys(fieldMappingsRecord).length > 0 ? fieldMappingsRecord : undefined,
                 };
               }),
           })),

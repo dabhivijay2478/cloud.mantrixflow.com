@@ -98,6 +98,13 @@ export function PipelineConfigurationForm({
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(orgId);
 
+  // Convert API connections to data sources format
+  const dataSources = (connections || []).map((conn) => ({
+    id: conn.id,
+    name: conn.name,
+    type: "postgres" as const,
+  }));
+
   // Convert API connections to destination format
   // All connections from the PostgreSQL endpoint are PostgreSQL connections
   const availableDestinations = (connections || []).map((conn) => ({

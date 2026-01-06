@@ -227,6 +227,9 @@ export async function signupAction(
     // Session exists - user is immediately authenticated
     // Sync user with backend
     try {
+      if (!data.user) {
+        throw new Error("User data is missing");
+      }
       await UsersService.syncUser({
         supabaseUserId: data.user.id,
         email: data.user.email || "",
@@ -411,7 +414,7 @@ export async function acceptInviteAction(
 
     // Verify user has a valid session (from invite link)
     // Try getUser() first as it's more reliable for server-side
-    let user: { id: string; email?: string } | null = null;
+    let user: { id: string; email?: string; user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown> } | null = null;
     const {
       data: { user: userData },
       error: userError,
@@ -427,17 +430,17 @@ export async function acceptInviteAction(
       console.error("[acceptInviteAction] Error getting user:", userError);
       // Fallback to getSession
       const {
-        data: { session, user: sessionUser },
+        data: { session },
         error: sessionError,
       } = await supabase.auth.getSession();
 
       console.log("[acceptInviteAction] getSession result:", {
         hasSession: !!session,
-        hasUser: !!sessionUser,
+        hasUser: !!session?.user,
         error: sessionError?.message,
       });
 
-      if (!session || !sessionUser) {
+      if (!session || !session.user) {
         console.error("[acceptInviteAction] No session or user found");
         console.error("[acceptInviteAction] User error:", userError);
         console.error("[acceptInviteAction] Session error:", sessionError);
@@ -458,9 +461,16 @@ export async function acceptInviteAction(
         };
       }
 
-      user = sessionUser;
+      user = session.user;
     } else {
       user = userData;
+    }
+
+    if (!user) {
+      return {
+        success: false,
+        error: "User not found",
+      };
     }
 
     console.log("[acceptInviteAction] User found:", user.id, user.email);
@@ -496,13 +506,13 @@ export async function acceptInviteAction(
           supabaseUserId: user.id,
           email: user.email || "",
           firstName:
-            user.user_metadata?.first_name || user.user_metadata?.firstName,
+            (user.user_metadata?.first_name as string | undefined) || (user.user_metadata?.firstName as string | undefined),
           lastName:
-            user.user_metadata?.last_name || user.user_metadata?.lastName,
+            (user.user_metadata?.last_name as string | undefined) || (user.user_metadata?.lastName as string | undefined),
           fullName:
-            user.user_metadata?.full_name || user.user_metadata?.fullName,
+            (user.user_metadata?.full_name as string | undefined) || (user.user_metadata?.fullName as string | undefined),
           avatarUrl:
-            user.user_metadata?.avatar_url || user.user_metadata?.avatarUrl,
+            (user.user_metadata?.avatar_url as string | undefined) || (user.user_metadata?.avatarUrl as string | undefined),
           metadata: {
             ...user.user_metadata,
             ...user.app_metadata,

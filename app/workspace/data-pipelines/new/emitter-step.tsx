@@ -126,8 +126,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === selectedCollectorId) {
         const emitters = editingEmitter
-          ? (collector.emitters || []).map((e: EmitterConfig) =>
-              e.id === editingEmitter ? newEmitter : e,
+          ? (collector.emitters || []).map((e) =>
+              e.id === editingEmitter
+                ? newEmitter
+                : { ...e, connectionConfig: e.connectionConfig || {} },
             )
           : [...(collector.emitters || []), newEmitter];
         return { ...collector, emitters };
@@ -147,7 +149,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     const updatedCollectors = collectors.map((collector) => {
       if (collector.id === collectorId) {
         const emitters = (collector.emitters || []).filter(
-          (e: EmitterConfig) => e.id !== emitterId,
+          (e) => e.id !== emitterId,
         );
         return { ...collector, emitters };
       }

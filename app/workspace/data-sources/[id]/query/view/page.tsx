@@ -176,10 +176,13 @@ export default function QueryResultsViewPage() {
 
         if (
           result &&
-          Array.isArray(result.rows) &&
-          Array.isArray(result.columns)
+          result.success &&
+          result.result &&
+          Array.isArray(result.result.rows) &&
+          Array.isArray(result.result.columns)
         ) {
-          const columnNames = result.columns.map(
+          const queryResult = result.result;
+          const columnNames = queryResult.columns.map(
             (col: string | { name?: string; column?: string } | unknown) =>
               typeof col === "string"
                 ? col
@@ -194,7 +197,7 @@ export default function QueryResultsViewPage() {
 
           newResults = {
             columns: columnNames,
-            rows: result.rows.map((row: unknown) => {
+            rows: queryResult.rows.map((row: unknown) => {
               if (row && typeof row === "object" && !Array.isArray(row)) {
                 return row as Record<string, unknown>;
               }
@@ -209,7 +212,7 @@ export default function QueryResultsViewPage() {
             }),
           };
         } else {
-          throw new Error("Invalid response format");
+          throw new Error(result.error || "Invalid response format");
         }
       } else if (viewType === "table" && tableName) {
         // Fetch table data using API
@@ -222,10 +225,13 @@ export default function QueryResultsViewPage() {
 
         if (
           result &&
-          Array.isArray(result.rows) &&
-          Array.isArray(result.columns)
+          result.success &&
+          result.result &&
+          Array.isArray(result.result.rows) &&
+          Array.isArray(result.result.columns)
         ) {
-          const columnNames = result.columns.map(
+          const queryResult = result.result;
+          const columnNames = queryResult.columns.map(
             (col: string | { name?: string; column?: string } | unknown) =>
               typeof col === "string"
                 ? col
@@ -240,7 +246,7 @@ export default function QueryResultsViewPage() {
 
           newResults = {
             columns: columnNames,
-            rows: result.rows.map((row: unknown) => {
+            rows: queryResult.rows.map((row: unknown) => {
               if (row && typeof row === "object" && !Array.isArray(row)) {
                 return row as Record<string, unknown>;
               }
@@ -306,13 +312,16 @@ export default function QueryResultsViewPage() {
         },
       });
 
-      // Handle the result format
+      // QueryExecutionResponse has a result property containing QueryResult
       if (
         result &&
-        Array.isArray(result.rows) &&
-        Array.isArray(result.columns)
+        result.success &&
+        result.result &&
+        Array.isArray(result.result.rows) &&
+        Array.isArray(result.result.columns)
       ) {
-        const columnNames = result.columns.map(
+        const queryResult = result.result;
+        const columnNames = queryResult.columns.map(
           (col: string | { name?: string; column?: string } | unknown) =>
             typeof col === "string"
               ? col
@@ -327,7 +336,7 @@ export default function QueryResultsViewPage() {
 
         const convertedResult = {
           columns: columnNames,
-          rows: result.rows.map((row: unknown) => {
+          rows: queryResult.rows.map((row: unknown) => {
             if (row && typeof row === "object" && !Array.isArray(row)) {
               return row as Record<string, unknown>;
             }

@@ -165,13 +165,24 @@ export function WorkspaceSidebar() {
             "[WorkspaceSidebar] Syncing current org from API:",
             apiCurrentOrg.id,
           );
-          setCurrentOrganization(apiCurrentOrg);
+          setCurrentOrganization({
+            id: apiCurrentOrg.id,
+            name: apiCurrentOrg.name,
+            slug: apiCurrentOrg.slug,
+            createdAt: typeof apiCurrentOrg.createdAt === "string" ? apiCurrentOrg.createdAt : apiCurrentOrg.createdAt.toISOString(),
+          });
         } else if (apiOrganizations.length > 0) {
           console.log(
             "[WorkspaceSidebar] Setting first org as current:",
             apiOrganizations[0].id,
           );
-          setCurrentOrganization(apiOrganizations[0]);
+          const firstOrg = apiOrganizations[0];
+          setCurrentOrganization({
+            id: firstOrg.id,
+            name: firstOrg.name,
+            slug: firstOrg.slug,
+            createdAt: typeof firstOrg.createdAt === "string" ? firstOrg.createdAt : firstOrg.createdAt.toISOString(),
+          });
         }
       }
     }
@@ -183,13 +194,24 @@ export function WorkspaceSidebar() {
           "[WorkspaceSidebar] Setting current org from API (store was empty):",
           apiCurrentOrg.id,
         );
-        setCurrentOrganization(apiCurrentOrg);
+        setCurrentOrganization({
+          id: apiCurrentOrg.id,
+          name: apiCurrentOrg.name,
+          slug: apiCurrentOrg.slug,
+          createdAt: typeof apiCurrentOrg.createdAt === "string" ? apiCurrentOrg.createdAt : apiCurrentOrg.createdAt.toISOString(),
+        });
       } else if (apiOrganizations && apiOrganizations.length > 0) {
         console.log(
           "[WorkspaceSidebar] Setting first org as current (no API current org):",
           apiOrganizations[0].id,
         );
-        setCurrentOrganization(apiOrganizations[0]);
+        const firstOrg = apiOrganizations[0];
+        setCurrentOrganization({
+          id: firstOrg.id,
+          name: firstOrg.name,
+          slug: firstOrg.slug,
+          createdAt: typeof firstOrg.createdAt === "string" ? firstOrg.createdAt : firstOrg.createdAt.toISOString(),
+        });
       }
     }
   }, [

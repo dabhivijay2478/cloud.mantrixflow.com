@@ -81,7 +81,7 @@ export function useCreateConnection(orgId?: string) {
 
 export function useConnections(orgId?: string) {
   return useQuery({
-    queryKey: dataSourcesKeys.connections.lists({ orgId }),
+    queryKey: dataSourcesKeys.connections.list({ orgId }),
     queryFn: () => DataSourcesService.listConnections(orgId),
     enabled: !!orgId, // Only fetch if orgId is provided
   });
