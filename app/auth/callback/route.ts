@@ -81,79 +81,78 @@ export async function GET(request: Request) {
       data.user.app_metadata?.organizationId ||
       data.user.user_metadata?.organizationId;
 
-      // If this is an invite, redirect to accept-invite page for password setup
-      // The session is already set via exchangeCodeForSession, so they can proceed
-      if (isInvite) {
-        const forwardedHost = request.headers.get("x-forwarded-host");
-        const isLocalEnv = process.env.NODE_ENV === "development";
-        const redirectPath = "/auth/accept-invite";
-        if (isLocalEnv) {
-          return NextResponse.redirect(`${origin}${redirectPath}`);
-        } else if (forwardedHost) {
-          return NextResponse.redirect(
-            `https://${forwardedHost}${redirectPath}`,
-          );
-        } else {
-          return NextResponse.redirect(`${origin}${redirectPath}`);
-        }
-      }
-
-      // Sync user with backend (this will link them to organization_members if invited)
-      try {
-        await UsersService.syncUser({
-          supabaseUserId: data.user.id,
-          email: data.user.email || "",
-          firstName:
-            data.user.user_metadata?.first_name ||
-            data.user.user_metadata?.firstName,
-          lastName:
-            data.user.user_metadata?.last_name ||
-            data.user.user_metadata?.lastName,
-          fullName:
-            data.user.user_metadata?.full_name ||
-            data.user.user_metadata?.fullName,
-          avatarUrl:
-            data.user.user_metadata?.avatar_url ||
-            data.user.user_metadata?.avatarUrl,
-          metadata: {
-            ...data.user.user_metadata,
-            ...data.user.app_metadata,
-          },
-        });
-      } catch (error) {
-        console.error("Failed to sync user in callback:", error);
-        // Continue even if sync fails
-      }
-
-      // Check onboarding status
-      let redirectPath = next;
-      try {
-        const backendUser = await UsersService.getCurrentUser();
-        // If user was invited and just accepted, go to workspace (skip onboarding)
-        if (isInvite && backendUser.onboardingCompleted === true) {
-          redirectPath = "/workspace";
-        } else if (backendUser.onboardingCompleted === false || backendUser.onboardingCompleted === undefined || backendUser.onboardingCompleted === null) {
-          // New users or users who haven't completed onboarding should go to onboarding
-          redirectPath = "/onboarding/welcome";
-        } else {
-          redirectPath = "/workspace";
-        }
-      } catch (error) {
-        // If user doesn't exist or error occurs, redirect based on invite status
-        // New users should always go to onboarding
-        console.error("[auth/callback] Error getting user:", error);
-        redirectPath = isInvite ? "/workspace" : "/onboarding/welcome";
-      }
-
+    // If this is an invite, redirect to accept-invite page for password setup
+    // The session is already set via exchangeCodeForSession, so they can proceed
+    if (isInvite) {
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
+      const redirectPath = "/auth/accept-invite";
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+        return NextResponse.redirect(
+          `https://${forwardedHost}${redirectPath}`,
+        );
       } else {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       }
+    }
+
+    // Sync user with backend (this will link them to organization_members if invited)
+    try {
+      await UsersService.syncUser({
+        supabaseUserId: data.user.id,
+        email: data.user.email || "",
+        firstName:
+          data.user.user_metadata?.first_name ||
+          data.user.user_metadata?.firstName,
+        lastName:
+          data.user.user_metadata?.last_name ||
+          data.user.user_metadata?.lastName,
+        fullName:
+          data.user.user_metadata?.full_name ||
+          data.user.user_metadata?.fullName,
+        avatarUrl:
+          data.user.user_metadata?.avatar_url ||
+          data.user.user_metadata?.avatarUrl,
+        metadata: {
+          ...data.user.user_metadata,
+          ...data.user.app_metadata,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to sync user in callback:", error);
+      // Continue even if sync fails
+    }
+
+    // Check onboarding status
+    let redirectPath = next;
+    try {
+      const backendUser = await UsersService.getCurrentUser();
+      // If user was invited and just accepted, go to workspace (skip onboarding)
+      if (isInvite && backendUser.onboardingCompleted === true) {
+        redirectPath = "/workspace";
+      } else if (backendUser.onboardingCompleted === false || backendUser.onboardingCompleted === undefined || backendUser.onboardingCompleted === null) {
+        // New users or users who haven't completed onboarding should go to onboarding
+        redirectPath = "/onboarding/welcome";
+      } else {
+        redirectPath = "/workspace";
+      }
+    } catch (error) {
+      // If user doesn't exist or error occurs, redirect based on invite status
+      // New users should always go to onboarding
+      console.error("[auth/callback] Error getting user:", error);
+      redirectPath = isInvite ? "/workspace" : "/onboarding/welcome";
+    }
+
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const isLocalEnv = process.env.NODE_ENV === "development";
+    if (isLocalEnv) {
+      return NextResponse.redirect(`${origin}${redirectPath}`);
+    } else if (forwardedHost) {
+      return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+    } else {
+      return NextResponse.redirect(`${origin}${redirectPath}`);
     }
   }
 
