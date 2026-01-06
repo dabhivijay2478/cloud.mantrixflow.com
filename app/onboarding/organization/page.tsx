@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useCreateOrganization, useUpdateOnboardingStep } from "@/lib/api";
+import { useSetCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 const organizationSchema = z.object({
@@ -46,8 +47,9 @@ type OrganizationFormValues = z.infer<typeof organizationSchema>;
 
 export default function OrganizationPage() {
   const router = useRouter();
-  const { setOnboardingStep, completeOnboarding } = useWorkspaceStore();
+  const { setOnboardingStep, completeOnboarding, addOrganization } = useWorkspaceStore();
   const createOrganization = useCreateOrganization();
+  const setCurrentOrganization = useSetCurrentOrganization();
   const updateOnboardingStep = useUpdateOnboardingStep();
   const [loading, setLoading] = useState(false);
 
@@ -81,9 +83,22 @@ export default function OrganizationPage() {
     setLoading(true);
     try {
       // Create organization via API
-      await createOrganization.mutateAsync({
+      const newOrganization = await createOrganization.mutateAsync({
         name: data.name,
         slug: data.slug,
+      });
+
+      // Set the created organization as current
+      await setCurrentOrganization.mutateAsync(newOrganization.id);
+
+      // Update workspace store with the new organization
+      addOrganization({
+        id: newOrganization.id,
+        name: newOrganization.name,
+        slug: newOrganization.slug,
+        createdAt: typeof newOrganization.createdAt === "string" 
+          ? newOrganization.createdAt 
+          : newOrganization.createdAt.toISOString(),
       });
 
       // Update onboarding step

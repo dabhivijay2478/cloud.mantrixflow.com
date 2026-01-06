@@ -124,6 +124,7 @@ Create a `.env.local` file in the root directory:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 # Backend API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:8000
@@ -480,6 +481,7 @@ Update your `.env.local` with production values:
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_production_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_production_anon_key
+NEXT_PUBLIC_SITE_URL=https://mantrixflow.com
 
 # Backend API
 NEXT_PUBLIC_API_URL=https://api.your-domain.com

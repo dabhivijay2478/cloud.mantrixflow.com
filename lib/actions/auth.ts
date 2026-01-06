@@ -110,9 +110,12 @@ export async function loginAction(
       const backendUser = await UsersService.getCurrentUser({
         token: authToken,
       });
-      needsOnboarding = !backendUser.onboardingCompleted;
-    } catch {
+      // Only skip onboarding if explicitly completed (true)
+      // undefined, null, or false means onboarding is needed
+      needsOnboarding = backendUser.onboardingCompleted !== true;
+    } catch (error) {
       // If user doesn't exist yet, they need onboarding
+      console.error("[loginAction] Error getting user:", error);
       needsOnboarding = true;
     }
 
@@ -193,10 +196,21 @@ export async function signupAction(
     const { email, password, firstName, lastName } = validation.data;
     const supabase = await createClient();
 
+    // Get the site URL for redirect after email confirmation
+    // Priority: NEXT_PUBLIC_SITE_URL > VERCEL_URL > localhost
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || "http://localhost:3000";
+    
+    // Redirect to callback route after email confirmation
+    // The callback route will handle onboarding redirect
+    const redirectTo = `${siteUrl}/auth/callback?type=signup`;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: redirectTo,
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -258,8 +272,12 @@ export async function signupAction(
     let needsOnboarding = true;
     try {
       const backendUser = await UsersService.getCurrentUser();
-      needsOnboarding = !backendUser.onboardingCompleted;
-    } catch {
+      // Only skip onboarding if explicitly completed (true)
+      // undefined, null, or false means onboarding is needed
+      needsOnboarding = backendUser.onboardingCompleted !== true;
+    } catch (error) {
+      // If user doesn't exist yet, they need onboarding
+      console.error("[signupAction] Error getting user:", error);
       needsOnboarding = true;
     }
 

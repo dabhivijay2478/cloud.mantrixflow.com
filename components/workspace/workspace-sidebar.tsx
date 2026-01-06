@@ -151,85 +151,126 @@ export function WorkspaceSidebar() {
     // Only sync if API data is loaded
     if (orgsLoading || currentOrgLoading) return;
 
-    // Sync organizations list - update store with API organizations
+    // Sync organizations list from API to store
     if (apiOrganizations && apiOrganizations.length > 0) {
-      // Check if we need to update the organizations list
-      // For now, we'll trust the store, but ensure current org is valid
-      const orgIds = new Set(apiOrganizations.map((org) => org.id));
+      const { addOrganization, updateOrganization } = useWorkspaceStore.getState();
+      
+      // Convert API organizations to store format and sync
+      const apiOrgMap = new Map(
+        apiOrganizations.map((org) => [
+          org.id,
+          {
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+            createdAt:
+              typeof org.createdAt === "string"
+                ? org.createdAt
+                : org.createdAt.toISOString(),
+          },
+        ])
+      );
 
-      // If current organization doesn't exist in API orgs, update it
-      if (currentOrganization && !orgIds.has(currentOrganization.id)) {
-        // Current org is invalid, switch to API current org or first org
-        if (apiCurrentOrg) {
-          console.log(
-            "[WorkspaceSidebar] Syncing current org from API:",
-            apiCurrentOrg.id,
-          );
-          setCurrentOrganization({
-            id: apiCurrentOrg.id,
-            name: apiCurrentOrg.name,
-            slug: apiCurrentOrg.slug,
-            createdAt:
-              typeof apiCurrentOrg.createdAt === "string"
-                ? apiCurrentOrg.createdAt
-                : apiCurrentOrg.createdAt.toISOString(),
-          });
-        } else if (apiOrganizations.length > 0) {
-          console.log(
-            "[WorkspaceSidebar] Setting first org as current:",
-            apiOrganizations[0].id,
-          );
-          const firstOrg = apiOrganizations[0];
-          setCurrentOrganization({
-            id: firstOrg.id,
-            name: firstOrg.name,
-            slug: firstOrg.slug,
-            createdAt:
-              typeof firstOrg.createdAt === "string"
-                ? firstOrg.createdAt
-                : firstOrg.createdAt.toISOString(),
-          });
+      // Update or add organizations from API
+      apiOrganizations.forEach((apiOrg) => {
+        const storeOrg = organizations.find((o) => o.id === apiOrg.id);
+        const orgData = {
+          id: apiOrg.id,
+          name: apiOrg.name,
+          slug: apiOrg.slug,
+          createdAt:
+            typeof apiOrg.createdAt === "string"
+              ? apiOrg.createdAt
+              : apiOrg.createdAt.toISOString(),
+        };
+
+        if (storeOrg) {
+          // Update existing organization if data changed
+          if (
+            storeOrg.name !== orgData.name ||
+            storeOrg.slug !== orgData.slug
+          ) {
+            updateOrganization(apiOrg.id, orgData);
+          }
+        } else {
+          // Add new organization
+          addOrganization(orgData);
         }
-      }
+      });
+
+      // Remove organizations from store that don't exist in API
+      const apiOrgIds = new Set(apiOrganizations.map((org) => org.id));
+      organizations.forEach((storeOrg) => {
+        if (!apiOrgIds.has(storeOrg.id)) {
+          // Organization was removed, update current org if needed
+          if (currentOrganization?.id === storeOrg.id) {
+            // Switch to API current org or first available org
+            if (apiCurrentOrg) {
+              setCurrentOrganization({
+                id: apiCurrentOrg.id,
+                name: apiCurrentOrg.name,
+                slug: apiCurrentOrg.slug,
+                createdAt:
+                  typeof apiCurrentOrg.createdAt === "string"
+                    ? apiCurrentOrg.createdAt
+                    : apiCurrentOrg.createdAt.toISOString(),
+              });
+            } else if (apiOrganizations.length > 0) {
+              const firstOrg = apiOrganizations[0];
+              setCurrentOrganization({
+                id: firstOrg.id,
+                name: firstOrg.name,
+                slug: firstOrg.slug,
+                createdAt:
+                  typeof firstOrg.createdAt === "string"
+                    ? firstOrg.createdAt
+                    : firstOrg.createdAt.toISOString(),
+              });
+            } else {
+              setCurrentOrganization(null);
+            }
+          }
+        }
+      });
     }
 
-    // Sync current organization from API - only if store doesn't have one
-    if (!currentOrganization) {
-      if (apiCurrentOrg) {
-        console.log(
-          "[WorkspaceSidebar] Setting current org from API (store was empty):",
-          apiCurrentOrg.id,
-        );
-        setCurrentOrganization({
-          id: apiCurrentOrg.id,
-          name: apiCurrentOrg.name,
-          slug: apiCurrentOrg.slug,
-          createdAt:
-            typeof apiCurrentOrg.createdAt === "string"
-              ? apiCurrentOrg.createdAt
-              : apiCurrentOrg.createdAt.toISOString(),
-        });
-      } else if (apiOrganizations && apiOrganizations.length > 0) {
-        console.log(
-          "[WorkspaceSidebar] Setting first org as current (no API current org):",
-          apiOrganizations[0].id,
-        );
-        const firstOrg = apiOrganizations[0];
-        setCurrentOrganization({
-          id: firstOrg.id,
-          name: firstOrg.name,
-          slug: firstOrg.slug,
-          createdAt:
-            typeof firstOrg.createdAt === "string"
-              ? firstOrg.createdAt
-              : firstOrg.createdAt.toISOString(),
-        });
+    // Sync current organization from API
+    if (apiCurrentOrg) {
+      const currentOrgData = {
+        id: apiCurrentOrg.id,
+        name: apiCurrentOrg.name,
+        slug: apiCurrentOrg.slug,
+        createdAt:
+          typeof apiCurrentOrg.createdAt === "string"
+            ? apiCurrentOrg.createdAt
+            : apiCurrentOrg.createdAt.toISOString(),
+      };
+
+      // Update current org if it's different
+      if (
+        !currentOrganization ||
+        currentOrganization.id !== apiCurrentOrg.id
+      ) {
+        setCurrentOrganization(currentOrgData);
       }
+    } else if (apiOrganizations && apiOrganizations.length > 0 && !currentOrganization) {
+      // No current org from API, but we have organizations - set first one
+      const firstOrg = apiOrganizations[0];
+      setCurrentOrganization({
+        id: firstOrg.id,
+        name: firstOrg.name,
+        slug: firstOrg.slug,
+        createdAt:
+          typeof firstOrg.createdAt === "string"
+            ? firstOrg.createdAt
+            : firstOrg.createdAt.toISOString(),
+      });
     }
   }, [
     apiOrganizations,
     apiCurrentOrg,
     currentOrganization,
+    organizations,
     orgsLoading,
     currentOrgLoading,
     setCurrentOrganization,

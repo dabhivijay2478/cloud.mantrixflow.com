@@ -45,12 +45,41 @@ export async function GET(request: Request) {
 
   if (code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error && data?.user) {
-      // Check if this is from an invite (check type parameter and user metadata)
-      const isInvite =
-        type === "invite" ||
-        data.user.app_metadata?.organizationId ||
-        data.user.user_metadata?.organizationId;
+    if (error) {
+      // If there's an error exchanging the code, redirect to login with error
+      console.error("[auth/callback] Error exchanging code for session:", error);
+      const forwardedHost = request.headers.get("x-forwarded-host");
+      const isLocalEnv = process.env.NODE_ENV === "development";
+      const redirectPath = `/auth/login?error=${encodeURIComponent(error.message || "Authentication failed")}`;
+      if (isLocalEnv) {
+        return NextResponse.redirect(`${origin}${redirectPath}`);
+      } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+      } else {
+        return NextResponse.redirect(`${origin}${redirectPath}`);
+      }
+    }
+    
+    if (!data?.user) {
+      // No user data after code exchange, redirect to login
+      console.error("[auth/callback] No user data after code exchange");
+      const forwardedHost = request.headers.get("x-forwarded-host");
+      const isLocalEnv = process.env.NODE_ENV === "development";
+      const redirectPath = "/auth/login?error=Authentication failed";
+      if (isLocalEnv) {
+        return NextResponse.redirect(`${origin}${redirectPath}`);
+      } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+      } else {
+        return NextResponse.redirect(`${origin}${redirectPath}`);
+      }
+    }
+
+    // Check if this is from an invite (check type parameter and user metadata)
+    const isInvite =
+      type === "invite" ||
+      data.user.app_metadata?.organizationId ||
+      data.user.user_metadata?.organizationId;
 
       // If this is an invite, redirect to accept-invite page for password setup
       // The session is already set via exchangeCodeForSession, so they can proceed
@@ -101,15 +130,18 @@ export async function GET(request: Request) {
       try {
         const backendUser = await UsersService.getCurrentUser();
         // If user was invited and just accepted, go to workspace (skip onboarding)
-        if (isInvite && backendUser.onboardingCompleted !== undefined) {
+        if (isInvite && backendUser.onboardingCompleted === true) {
           redirectPath = "/workspace";
-        } else if (!backendUser.onboardingCompleted) {
+        } else if (backendUser.onboardingCompleted === false || backendUser.onboardingCompleted === undefined || backendUser.onboardingCompleted === null) {
+          // New users or users who haven't completed onboarding should go to onboarding
           redirectPath = "/onboarding/welcome";
         } else {
           redirectPath = "/workspace";
         }
-      } catch {
-        // If user doesn't exist, redirect based on invite status
+      } catch (error) {
+        // If user doesn't exist or error occurs, redirect based on invite status
+        // New users should always go to onboarding
+        console.error("[auth/callback] Error getting user:", error);
         redirectPath = isInvite ? "/workspace" : "/onboarding/welcome";
       }
 

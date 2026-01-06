@@ -16,6 +16,7 @@ Create a `.env.local` file in the root directory with the following variables:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 # Optional: NextAuth Configuration (for additional providers)
 NEXTAUTH_SECRET=your_nextauth_secret
@@ -36,10 +37,14 @@ In your Supabase dashboard:
 
 1. **Go to Authentication > Settings**
 2. **Enable Email Authentication**
-3. **Configure Site URL**: Set to `http://localhost:3000` for development
-4. **Configure Redirect URLs**: Add the following URLs:
-   - `http://localhost:3000/auth/callback`
-   - `http://localhost:3000/auth/reset-password`
+3. **Configure Site URL**: Set to your production URL (e.g., `https://mantrixflow.com`) or `http://localhost:3000` for development
+4. **Configure Redirect URLs**: Add the following URLs (for both development and production):
+   - `http://localhost:3000/auth/callback` (development)
+   - `https://mantrixflow.com/auth/callback` (production - replace with your domain)
+   - `http://localhost:3000/auth/reset-password` (development)
+   - `https://mantrixflow.com/auth/reset-password` (production)
+   
+   **Important**: The redirect URLs must match exactly what you configure. After signup, users will receive an email confirmation link that redirects to `/auth/callback?type=signup`, which then handles the onboarding flow.
 
 ### 3. Enable OAuth Providers (Optional)
 
