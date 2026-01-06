@@ -25,9 +25,19 @@ export default function WorkspaceLayout({
   // Sync store with API response
   useEffect(() => {
     if (onboardingStatus) {
-      const validSteps = ["welcome", "organization", "data-source", "connect", "select", "importing", "complete"] as const;
-      const step = validSteps.includes(onboardingStatus.step as typeof validSteps[number])
-        ? (onboardingStatus.step as typeof validSteps[number])
+      const validSteps = [
+        "welcome",
+        "organization",
+        "data-source",
+        "connect",
+        "select",
+        "importing",
+        "complete",
+      ] as const;
+      const step = validSteps.includes(
+        onboardingStatus.step as (typeof validSteps)[number],
+      )
+        ? (onboardingStatus.step as (typeof validSteps)[number])
         : "welcome";
       updateOnboarding({
         completed: onboardingStatus.completed,

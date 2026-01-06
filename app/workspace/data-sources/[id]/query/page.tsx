@@ -316,9 +316,13 @@ export default function DataSourceQueryPage() {
         hasRows: !!result?.result?.rows,
         rowsIsArray: Array.isArray(result?.result?.rows),
         rowsLength: result?.result?.rows?.length,
-        firstRowType: result?.result?.rows?.[0] ? typeof result.result.rows[0] : "none",
+        firstRowType: result?.result?.rows?.[0]
+          ? typeof result.result.rows[0]
+          : "none",
         firstRowIsArray: Array.isArray(result?.result?.rows?.[0]),
-        firstRowKeys: result?.result?.rows?.[0] ? Object.keys(result.result.rows[0]) : [],
+        firstRowKeys: result?.result?.rows?.[0]
+          ? Object.keys(result.result.rows[0])
+          : [],
         hasColumns: !!result?.result?.columns,
         columnsIsArray: Array.isArray(result?.result?.columns),
       });
@@ -326,8 +330,7 @@ export default function DataSourceQueryPage() {
       // QueryExecutionResponse has a result property containing QueryResult
       // Format: { success: boolean, result?: { rows: unknown[][], columns: string[], rowCount: number, executionTimeMs: number }, error?: string }
       if (
-        result &&
-        result.success &&
+        result?.success &&
         result.result &&
         Array.isArray(result.result.rows) &&
         Array.isArray(result.result.columns)
@@ -449,8 +452,7 @@ export default function DataSourceQueryPage() {
 
       // QueryExecutionResponse has a result property containing QueryResult
       if (
-        result &&
-        result.success &&
+        result?.success &&
         result.result &&
         Array.isArray(result.result.rows) &&
         Array.isArray(result.result.columns)

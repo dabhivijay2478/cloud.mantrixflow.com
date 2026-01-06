@@ -414,7 +414,12 @@ export async function acceptInviteAction(
 
     // Verify user has a valid session (from invite link)
     // Try getUser() first as it's more reliable for server-side
-    let user: { id: string; email?: string; user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown> } | null = null;
+    let user: {
+      id: string;
+      email?: string;
+      user_metadata?: Record<string, unknown>;
+      app_metadata?: Record<string, unknown>;
+    } | null = null;
     const {
       data: { user: userData },
       error: userError,
@@ -506,13 +511,17 @@ export async function acceptInviteAction(
           supabaseUserId: user.id,
           email: user.email || "",
           firstName:
-            (user.user_metadata?.first_name as string | undefined) || (user.user_metadata?.firstName as string | undefined),
+            (user.user_metadata?.first_name as string | undefined) ||
+            (user.user_metadata?.firstName as string | undefined),
           lastName:
-            (user.user_metadata?.last_name as string | undefined) || (user.user_metadata?.lastName as string | undefined),
+            (user.user_metadata?.last_name as string | undefined) ||
+            (user.user_metadata?.lastName as string | undefined),
           fullName:
-            (user.user_metadata?.full_name as string | undefined) || (user.user_metadata?.fullName as string | undefined),
+            (user.user_metadata?.full_name as string | undefined) ||
+            (user.user_metadata?.fullName as string | undefined),
           avatarUrl:
-            (user.user_metadata?.avatar_url as string | undefined) || (user.user_metadata?.avatarUrl as string | undefined),
+            (user.user_metadata?.avatar_url as string | undefined) ||
+            (user.user_metadata?.avatarUrl as string | undefined),
           metadata: {
             ...user.user_metadata,
             ...user.app_metadata,

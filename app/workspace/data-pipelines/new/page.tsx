@@ -281,7 +281,12 @@ export default function NewPipelinePage() {
                 // Convert array format to Record format for API
                 const fieldMappingsRecord: Record<string, string> = {};
                 fieldMappingsArray.forEach((fm) => {
-                  if (fm && typeof fm === "object" && "source" in fm && "destination" in fm) {
+                  if (
+                    fm &&
+                    typeof fm === "object" &&
+                    "source" in fm &&
+                    "destination" in fm
+                  ) {
                     fieldMappingsRecord[fm.source] = fm.destination;
                   }
                 });
@@ -289,7 +294,10 @@ export default function NewPipelinePage() {
                 return {
                   id: t.id,
                   name: t.name,
-                  fieldMappings: Object.keys(fieldMappingsRecord).length > 0 ? fieldMappingsRecord : undefined,
+                  fieldMappings:
+                    Object.keys(fieldMappingsRecord).length > 0
+                      ? fieldMappingsRecord
+                      : undefined,
                 };
               }),
           })),

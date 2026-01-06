@@ -300,7 +300,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         ],
         queryFn: () => {
           if (!destinationTableQuery) {
-            return Promise.resolve({ columns: [], table: "", schema: "", primaryKeys: [] });
+            return Promise.resolve({
+              columns: [],
+              table: "",
+              schema: "",
+              primaryKeys: [],
+            });
           }
           return DataSourcesService.getTableSchema(
             destinationTableQuery.connectionId,

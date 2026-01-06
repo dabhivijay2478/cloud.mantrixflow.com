@@ -175,8 +175,7 @@ export default function QueryResultsViewPage() {
         });
 
         if (
-          result &&
-          result.success &&
+          result?.success &&
           result.result &&
           Array.isArray(result.result.rows) &&
           Array.isArray(result.result.columns)
@@ -224,8 +223,7 @@ export default function QueryResultsViewPage() {
         });
 
         if (
-          result &&
-          result.success &&
+          result?.success &&
           result.result &&
           Array.isArray(result.result.rows) &&
           Array.isArray(result.result.columns)
@@ -314,8 +312,7 @@ export default function QueryResultsViewPage() {
 
       // QueryExecutionResponse has a result property containing QueryResult
       if (
-        result &&
-        result.success &&
+        result?.success &&
         result.result &&
         Array.isArray(result.result.rows) &&
         Array.isArray(result.result.columns)

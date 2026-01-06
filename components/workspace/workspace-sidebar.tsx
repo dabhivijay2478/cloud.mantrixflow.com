@@ -169,7 +169,10 @@ export function WorkspaceSidebar() {
             id: apiCurrentOrg.id,
             name: apiCurrentOrg.name,
             slug: apiCurrentOrg.slug,
-            createdAt: typeof apiCurrentOrg.createdAt === "string" ? apiCurrentOrg.createdAt : apiCurrentOrg.createdAt.toISOString(),
+            createdAt:
+              typeof apiCurrentOrg.createdAt === "string"
+                ? apiCurrentOrg.createdAt
+                : apiCurrentOrg.createdAt.toISOString(),
           });
         } else if (apiOrganizations.length > 0) {
           console.log(
@@ -181,7 +184,10 @@ export function WorkspaceSidebar() {
             id: firstOrg.id,
             name: firstOrg.name,
             slug: firstOrg.slug,
-            createdAt: typeof firstOrg.createdAt === "string" ? firstOrg.createdAt : firstOrg.createdAt.toISOString(),
+            createdAt:
+              typeof firstOrg.createdAt === "string"
+                ? firstOrg.createdAt
+                : firstOrg.createdAt.toISOString(),
           });
         }
       }
@@ -198,7 +204,10 @@ export function WorkspaceSidebar() {
           id: apiCurrentOrg.id,
           name: apiCurrentOrg.name,
           slug: apiCurrentOrg.slug,
-          createdAt: typeof apiCurrentOrg.createdAt === "string" ? apiCurrentOrg.createdAt : apiCurrentOrg.createdAt.toISOString(),
+          createdAt:
+            typeof apiCurrentOrg.createdAt === "string"
+              ? apiCurrentOrg.createdAt
+              : apiCurrentOrg.createdAt.toISOString(),
         });
       } else if (apiOrganizations && apiOrganizations.length > 0) {
         console.log(
@@ -210,7 +219,10 @@ export function WorkspaceSidebar() {
           id: firstOrg.id,
           name: firstOrg.name,
           slug: firstOrg.slug,
-          createdAt: typeof firstOrg.createdAt === "string" ? firstOrg.createdAt : firstOrg.createdAt.toISOString(),
+          createdAt:
+            typeof firstOrg.createdAt === "string"
+              ? firstOrg.createdAt
+              : firstOrg.createdAt.toISOString(),
         });
       }
     }

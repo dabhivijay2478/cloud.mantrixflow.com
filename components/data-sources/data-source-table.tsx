@@ -94,7 +94,9 @@ export function DataSourceTable({
       // Map allDataSources to DataSource format with default status
       filtered = allDataSources.map((ds) => ({
         ...ds,
-        status: isConnected(ds.id) ? ("connected" as const) : ("disconnected" as const),
+        status: isConnected(ds.id)
+          ? ("connected" as const)
+          : ("disconnected" as const),
       }));
       // If showOnlyConnected is true but no connections, filter by connected status
       if (showOnlyConnected) {
@@ -285,7 +287,8 @@ export function DataSourceTable({
 
                   // Get icon type - use dataSource.type if available, otherwise infer from connection
                   const iconType: string =
-                    "iconType" in dataSource && typeof dataSource.iconType === "string"
+                    "iconType" in dataSource &&
+                    typeof dataSource.iconType === "string"
                       ? dataSource.iconType
                       : dataSource.type === "postgres"
                         ? "postgres"
