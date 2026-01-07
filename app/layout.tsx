@@ -1,54 +1,45 @@
-import type React from "react"
-import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
-import "./globals.css"
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/lib/providers/query-provider";
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+// Using CSS-based font loading to avoid Turbopack issues
+// Fonts are loaded via @import in globals.css instead
 
 export const metadata: Metadata = {
-  title: "LUMERA — AI Support That Actually Works",
-  description:
-    "Deflect 98% of support tickets with AI that understands your customers. Built for scale, designed for simplicity.",
-  generator: "v0.app",
-  icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
-  },
-}
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  themeColor: "#0B0C0F",
-}
+  title: "MantrixFlow - AI BI Platform",
+  description: "Advanced AI-powered Business Intelligence platform",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-[#0B0C0F]">
-      <body className={`font-sans antialiased bg-[#0B0C0F]`}>
-        {children}
-        <Analytics />
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        {/* Skip to content link for accessibility */}
+        <Link
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          Skip to main content
+        </Link>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            enableColorScheme
+          >
+            {children}
+          </ThemeProvider>
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
-  )
+  );
 }
