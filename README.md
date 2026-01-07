@@ -1,10 +1,17 @@
-# MantrixFlow - AI-Powered Business Intelligence Platform
+# MantrixFlow - AI-Powered Data Pipeline & Analytics Platform
 
-A modern, full-featured Business Intelligence platform built with Next.js, featuring AI-driven analytics, comprehensive data visualization, and intuitive dashboard creation.
+A modern data platform focused on **data pipelines, PostgreSQL connectivity, and operational analytics** – with BI components available as a first-class surface, not the whole product.
 
 ## 🚀 Overview
 
-MantrixFlow is an AI-powered Business Intelligence platform that transforms your data into actionable insights. It provides a comprehensive suite of tools for data visualization, dashboard creation, data source management, and AI-assisted analytics. The frontend is built with Next.js 16 and React 19, providing a modern, responsive user experience.
+MantrixFlow is an **AI-powered data pipeline and observability platform** that turns raw data into reliable datasets and analytics. The primary focus is:
+
+- Connecting and managing **PostgreSQL data sources**
+- Defining and orchestrating **data pipelines and sync jobs**
+- Monitoring pipeline runs, incidents, and SLAs
+- Exposing trusted datasets to **BI and dashboard surfaces** when needed
+
+The frontend is built with Next.js 16 and React 19, providing a modern, responsive experience for data and platform teams.
 
 ## ✨ Key Features
 
@@ -15,8 +22,16 @@ MantrixFlow is an AI-powered Business Intelligence platform that transforms your
 - **Email Verification**: Secure email confirmation
 - **Session Management**: Secure session handling with middleware protection
 
-### 📊 Business Intelligence Components
-- **37+ Production-Ready BI Components**:
+### 🔌 Data Sources & Pipelines (Core Focus)
+- **PostgreSQL Connectors**: Secure connections with schema discovery and health checks
+- **Data Pipelines**: Define and manage source→destination pipelines
+- **Run Monitoring**: Track run history, incidents, and SLAs
+- **Schema Discovery**: Introspect Postgres schemas and tables
+- **Query Execution**: Safe query runner with audit logging
+- **Datasets**: Curate and expose modeled datasets to downstream tools
+
+### 📊 Analytics & BI Components (Surface Layer)
+- **37+ Production-Ready BI Components** (optional surface for your pipelines):
   - **Charts**: Line, Bar, Area, Pie, Donut charts
   - **Metrics**: KPI Cards, Metric Cards, Sparklines, Progress Bars
   - **Advanced Analytics**: Forecast lines, Funnel charts, Heatmaps, Sankey diagrams, TreeMaps, Radar charts, Gauges, Bullet charts
@@ -70,9 +85,9 @@ MantrixFlow is an AI-powered Business Intelligence platform that transforms your
 - **Monaco Editor** - Code editor component
 
 ### Backend & Database
-- **Supabase** - Backend-as-a-Service (Auth, Database)
+- **Supabase** - Authentication and session management
 - **Supabase SSR** - Server-side rendering support
-- **MantrixFlow API** - NestJS backend API for data management
+- **MantrixFlow API** - NestJS backend API for data sources, pipelines, and jobs
 - **React Query** - Data fetching and caching
 
 ### State Management
