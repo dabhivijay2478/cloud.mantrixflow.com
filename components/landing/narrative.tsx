@@ -9,8 +9,8 @@ interface NarrativeSectionProps {
 
 const FEATURES = [
   {
-    title: "PostgreSQL Connectors",
-    desc: "Securely connect production Postgres instances with schema discovery and health checks.",
+    title: "Multiple Connectors",
+    desc: "Connect to databases, warehouses, APIs, and unstructured sources with unified schema discovery and health checks.",
     icon: CustomDroneIcon,
     image: "/drone.png",
   },

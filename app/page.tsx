@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import type { Experience } from "@/lib/experience-data"
 import { HeroSection } from "@/components/landing/hero"
 import { LandingHeader } from "@/components/landing/header"
 import { MetricsSection } from "@/components/landing/metrics"
@@ -20,12 +19,11 @@ export default function LandingPage() {
   const [dynamicWordIndex, setDynamicWordIndex] = useState(0)
   const [wordFade, setWordFade] = useState(true)
   const [dashboardScrollOffset, setDashboardScrollOffset] = useState(0)
-  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null)
   const dashboardRef = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver>(null)
 
-  const dynamicWords = ["pipelines", "workloads", "jobs", "syncs", "models", "dashboards", "analytics"]
+  const dynamicWords = ["pipelines", "workloads", "jobs", "syncs", "models", "transformations", "datasets"]
 
   useEffect(() => {
     const wordInterval = setInterval(() => {
@@ -135,7 +133,7 @@ export default function LandingPage() {
 
       <PartnersSection />
       <MetricsSection />
-      <MapSection selectedExperience={selectedExperience} onSelectExperience={setSelectedExperience} />
+      <MapSection />
 
       <NarrativeSection
         selectedFeature={selectedFeature}

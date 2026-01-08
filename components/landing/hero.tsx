@@ -70,7 +70,7 @@ export function HeroSection({
             className="text-[#A7ABB3] text-base md:text-lg max-w-[620px] mx-auto mb-8 leading-relaxed stagger-reveal text-white"
             style={{ animationDelay: "180ms" }}
           >
-            MantrixFlow is your control plane for data pipelines. Connect PostgreSQL sources, orchestrate transformations,
+            MantrixFlow is your control plane for data pipelines. Connect databases, warehouses, and APIs, orchestrate transformations,
             monitor runs, and ship trusted data products with AI-assisted insights.
           </p>
           <div className="stagger-reveal" style={{ animationDelay: "270ms" }}>
@@ -92,7 +92,7 @@ export function HeroSection({
             >
               <img
                 src="/dashboard-screenshot.png"
-                alt="MantrixFlow pipeline and monitoring dashboard"
+                alt="MantrixFlow pipeline orchestration and monitoring platform"
                 className="object-cover dashboard-image w-full h-auto"
               />
             </div>

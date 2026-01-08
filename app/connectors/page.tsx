@@ -1,8 +1,17 @@
 "use client"
 
-import { Flame, ShieldCheck } from "lucide-react"
+import {
+  Database,
+  Flame,
+  ShieldCheck,
+  Cloud,
+  BarChart3,
+  FolderGit2,
+  Github,
+  GitBranch,
+  FileText,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getIconData } from "simple-icons"
 
 type ConnectorCategory = "Databases" | "Warehouses and Lakes" | "Marketing Analytics" | "Unstructured"
 
@@ -10,35 +19,36 @@ interface Connector {
   name: string
   category: ConnectorCategory
   popular?: boolean
-  iconSlug?: string // simple-icons slug
+  icon?: React.ComponentType<{ className?: string }>
+  iconColor?: string
 }
 
 const CONNECTORS: Connector[] = [
   // Databases
-  { name: "Postgres", category: "Databases", popular: true, iconSlug: "postgresql" },
-  { name: "Postgres destination", category: "Databases", popular: true, iconSlug: "postgresql" },
-  { name: "MySQL", category: "Databases", iconSlug: "mysql" },
-  { name: "MySQL destination", category: "Databases", iconSlug: "mysql" },
+  { name: "Postgres", category: "Databases", popular: true, icon: Database, iconColor: "#336791" },
+  { name: "Postgres destination", category: "Databases", popular: true, icon: Database, iconColor: "#336791" },
+  { name: "MySQL", category: "Databases", icon: Database, iconColor: "#4479A1" },
+  { name: "MySQL destination", category: "Databases", icon: Database, iconColor: "#4479A1" },
   // Warehouses and Lakes
-  { name: "BigQuery", category: "Warehouses and Lakes", popular: true, iconSlug: "googlebigquery" },
-  { name: "Redshift", category: "Warehouses and Lakes", iconSlug: "amazonaws" },
-  { name: "Azure Blob Storage", category: "Warehouses and Lakes", iconSlug: "microsoftazure" },
+  { name: "BigQuery", category: "Warehouses and Lakes", popular: true, icon: Cloud, iconColor: "#4285F4" },
+  { name: "Redshift", category: "Warehouses and Lakes", icon: Cloud, iconColor: "#FF9900" },
+  { name: "Azure Blob Storage", category: "Warehouses and Lakes", icon: Cloud, iconColor: "#0078D4" },
   // Marketing Analytics
-  { name: "Facebook Marketing", category: "Marketing Analytics", iconSlug: "facebook" },
-  { name: "Google Ads", category: "Marketing Analytics", popular: true, iconSlug: "googleads" },
-  { name: "Google Analytics", category: "Marketing Analytics", iconSlug: "googleanalytics" },
-  { name: "HubSpot", category: "Marketing Analytics", iconSlug: "hubspot" },
+  { name: "Facebook Marketing", category: "Marketing Analytics", icon: BarChart3, iconColor: "#1877F2" },
+  { name: "Google Ads", category: "Marketing Analytics", popular: true, icon: BarChart3, iconColor: "#4285F4" },
+  { name: "Google Analytics", category: "Marketing Analytics", icon: BarChart3, iconColor: "#FFC107" },
+  { name: "HubSpot", category: "Marketing Analytics", icon: BarChart3, iconColor: "#FF7A59" },
   // Unstructured
-  { name: "GitHub", category: "Unstructured", iconSlug: "github" },
-  { name: "GitLab", category: "Unstructured", iconSlug: "gitlab" },
-  { name: "Google Drive", category: "Unstructured", iconSlug: "googledrive" },
-  { name: "Microsoft OneDrive", category: "Unstructured", iconSlug: "microsoftonedrive" },
-  { name: "Microsoft SharePoint", category: "Unstructured", iconSlug: "microsoftsharepoint" },
-  { name: "Notion", category: "Unstructured", iconSlug: "notion" },
+  { name: "GitHub", category: "Unstructured", icon: Github, iconColor: "#181717" },
+  { name: "GitLab", category: "Unstructured", icon: GitBranch, iconColor: "#FC6D26" },
+  { name: "Google Drive", category: "Unstructured", icon: Cloud, iconColor: "#4285F4" },
+  { name: "Microsoft OneDrive", category: "Unstructured", icon: Cloud, iconColor: "#0078D4" },
+  { name: "Microsoft SharePoint", category: "Unstructured", icon: FolderGit2, iconColor: "#0078D4" },
+  { name: "Notion", category: "Unstructured", icon: FileText, iconColor: "#000000" },
 ]
 
-function ConnectorIcon({ slug }: { slug?: string }) {
-  if (!slug) {
+function ConnectorIcon({ icon: Icon, iconColor }: { icon?: React.ComponentType<{ className?: string }>; iconColor?: string }) {
+  if (!Icon) {
     return (
       <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center">
         <span className="text-[10px] text-[#A7ABB3]">?</span>
@@ -46,30 +56,14 @@ function ConnectorIcon({ slug }: { slug?: string }) {
     )
   }
 
-  try {
-    const iconData = getIconData(slug)
-    if (!iconData) {
-      return (
-        <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center">
-          <span className="text-[10px] text-[#A7ABB3]">?</span>
-        </div>
-      )
-    }
-
-    return (
-      <div
-        className="h-8 w-8 rounded flex items-center justify-center [&>svg]:h-6 [&>svg]:w-6"
-        style={{ backgroundColor: `#${iconData.hex}` }}
-        dangerouslySetInnerHTML={{ __html: iconData.svg }}
-      />
-    )
-  } catch {
-    return (
-      <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center">
-        <span className="text-[10px] text-[#A7ABB3]">?</span>
-      </div>
-    )
-  }
+  return (
+    <div
+      className="h-8 w-8 rounded flex items-center justify-center"
+      style={{ backgroundColor: iconColor || "rgba(255, 255, 255, 0.1)" }}
+    >
+      <Icon className="h-5 w-5 text-white" />
+    </div>
+  )
 }
 
 export default function ConnectorsPage() {
@@ -106,7 +100,7 @@ export default function ConnectorsPage() {
               className="flex flex-col justify-between rounded-2xl border border-white/12 bg-white/[0.02] px-4 py-4 md:px-5 md:py-5 hover:border-white/20 transition-colors cursor-pointer"
             >
               <div className="flex items-start gap-3">
-                <ConnectorIcon slug={connector.iconSlug} />
+                <ConnectorIcon icon={connector.icon} iconColor={connector.iconColor} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-sm md:text-base font-medium truncate">{connector.name}</h2>

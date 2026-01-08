@@ -23,7 +23,7 @@ export function CtaSection() {
           Bring order to your data pipelines
         </h2>
         <p className="text-[#A7ABB3] text-base md:text-lg mb-10 leading-relaxed max-w-[560px] mx-auto">
-          Connect PostgreSQL, define pipelines, and monitor every run from a single control plane. No more spreadsheets
+          Connect databases, warehouses, and APIs. Define pipelines, and monitor every run from a single control plane. No more spreadsheets
           and ad‑hoc scripts.
         </p>
 

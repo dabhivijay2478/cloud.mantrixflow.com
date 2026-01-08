@@ -3,7 +3,7 @@ import { AnimatedCounter } from "@/components/landing/animated-counter"
 export function MetricsSection() {
   const metrics = [
     { label: "PIPELINES ORCHESTRATED", value: "2.4K", desc: "active production pipelines", color: "pink" },
-    { label: "DATA SOURCES", value: "120+", desc: "PostgreSQL connections managed", color: "purple" },
+    { label: "DATA SOURCES", value: "120+", desc: "connectors across databases, warehouses, and APIs", color: "purple" },
     { label: "ROWS PROCESSED", value: "18M", desc: "rows per hour across workloads", color: "pink" },
     { label: "SUCCESS RATE", value: "99.9%", desc: "pipeline run reliability", color: "purple" },
   ]
@@ -28,8 +28,8 @@ export function MetricsSection() {
         </h2>
 
         <p className="text-[#A7ABB3] text-sm md:text-base mb-12 md:mb-16 text-center max-w-[600px] mx-auto leading-relaxed">
-          Built for data teams running mission‑critical PostgreSQL workloads. Monitor, orchestrate, and scale pipelines
-          with confidence.
+          Built for data teams running mission‑critical data workloads. Monitor, orchestrate, and scale pipelines
+          across all your connectors with confidence.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 max-w-[800px] mx-auto">
