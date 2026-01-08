@@ -332,7 +332,7 @@ export async function GET() {
       });
 
       if (response.ok) {
-        const data: GoogleFontsAPIResponse = await response.json();
+        const data = (await response.json()) as GoogleFontsAPIResponse;
 
         // Transform to our format
         const fonts: FontInfo[] = data.items.map((font: GoogleFont) => ({
