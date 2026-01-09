@@ -27,3 +27,6 @@ export { BackButton } from "./navigation/back-button";
 export { ProgressSteps } from "./navigation/progress-steps";
 // Navigation Components
 export { StepIndicator } from "./navigation/step-indicator";
+export type { FormSheetProps } from "./sheet";
+// Sheet Components
+export { FormSheet } from "./sheet";
