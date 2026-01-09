@@ -207,9 +207,30 @@ export default function TeamPage() {
     memberId: string,
     memberEmail: string,
     newRole: TeamMemberRole,
+    currentRole: TeamMemberRole,
   ) => {
     if (!organizationId) {
       showErrorToast("notFound", "Organization");
+      return;
+    }
+
+    // Prevent changing owner role
+    if (currentRole === "owner") {
+      showErrorToast(
+        "updateFailed",
+        "Member Role",
+        "Organization owners cannot have their role changed. Transfer ownership first.",
+      );
+      return;
+    }
+
+    // Prevent changing role to owner
+    if (newRole === "owner") {
+      showErrorToast(
+        "updateFailed",
+        "Member Role",
+        "Cannot assign owner role. Ownership must be transferred separately.",
+      );
       return;
     }
 
@@ -414,53 +435,59 @@ export default function TeamPage() {
                           {getStatusBadge(member.status)}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto p-0 hover:bg-transparent"
-                              >
-                                {getRoleBadge(member.role)}
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-56">
-                              <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {Object.entries(roleConfig).map(
-                                ([key, config]) => {
-                                  const Icon = roleIcons[key as TeamMemberRole];
-                                  return (
-                                    <DropdownMenuItem
-                                      key={key}
-                                      onClick={() =>
-                                        handleRoleChange(
-                                          member.id,
-                                          member.email,
-                                          key as TeamMemberRole,
-                                        )
-                                      }
-                                      className={cn(
-                                        "flex items-center gap-2",
-                                        member.role === key && "bg-accent",
-                                      )}
-                                    >
-                                      <Icon className="h-4 w-4" />
-                                      <div className="flex flex-col flex-1">
-                                        <span>{config.label}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {config.description}
-                                        </span>
-                                      </div>
-                                      {member.role === key && (
-                                        <Check className="h-4 w-4 ml-auto" />
-                                      )}
-                                    </DropdownMenuItem>
-                                  );
-                                },
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {member.role === "owner" ? (
+                            // Owners cannot have their role changed - show badge only
+                            getRoleBadge(member.role)
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-auto p-0 hover:bg-transparent"
+                                >
+                                  {getRoleBadge(member.role)}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-56">
+                                <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {Object.entries(roleConfig)
+                                  .filter(([key]) => key !== "owner") // Remove owner from options
+                                  .map(([key, config]) => {
+                                    const Icon = roleIcons[key as TeamMemberRole];
+                                    return (
+                                      <DropdownMenuItem
+                                        key={key}
+                                        onClick={() =>
+                                          handleRoleChange(
+                                            member.id,
+                                            member.email,
+                                            key as TeamMemberRole,
+                                            member.role,
+                                          )
+                                        }
+                                        className={cn(
+                                          "flex items-center gap-2",
+                                          member.role === key && "bg-accent",
+                                        )}
+                                      >
+                                        <Icon className="h-4 w-4" />
+                                        <div className="flex flex-col flex-1">
+                                          <span>{config.label}</span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {config.description}
+                                          </span>
+                                        </div>
+                                        {member.role === key && (
+                                          <Check className="h-4 w-4 ml-auto" />
+                                        )}
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-muted-foreground">
                           {member.joinedAt
@@ -497,16 +524,28 @@ export default function TeamPage() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => handleEditClick(member)}
+                                  disabled={member.role === "owner"}
                                 >
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Member
+                                  {member.role === "owner" && (
+                                    <span className="ml-auto text-xs text-muted-foreground">
+                                      (Owner)
+                                    </span>
+                                  )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleRemoveMember(member.id, member.email)}
                                   className="text-destructive"
+                                  disabled={member.role === "owner"}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Remove Member
+                                  {member.role === "owner" && (
+                                    <span className="ml-auto text-xs text-muted-foreground">
+                                      (Owner)
+                                    </span>
+                                  )}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

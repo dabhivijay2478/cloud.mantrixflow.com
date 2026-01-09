@@ -150,6 +150,26 @@ export default function EditTeamMemberPage() {
       return;
     }
 
+    // Prevent updating owner role
+    if (member.role === "owner") {
+      showErrorToast(
+        "updateFailed",
+        "Team Member",
+        "Organization owners cannot have their role changed. Transfer ownership first.",
+      );
+      return;
+    }
+
+    // Prevent changing role to owner
+    if (editRole === "owner") {
+      showErrorToast(
+        "updateFailed",
+        "Team Member",
+        "Cannot assign owner role. Ownership must be transferred separately.",
+      );
+      return;
+    }
+
     try {
       await updateMember.mutateAsync({
         organizationId,
@@ -168,6 +188,9 @@ export default function EditTeamMemberPage() {
       );
     }
   };
+
+  // Check if member is owner - owners cannot have their role changed
+  const isOwner = member.role === "owner";
 
   const handleRemoveMember = () => {
     if (!member) return;
@@ -318,7 +341,9 @@ export default function EditTeamMemberPage() {
           <CardHeader>
             <CardTitle>Role & Permissions</CardTitle>
             <CardDescription>
-              Assign a role to define access level and permissions
+              {isOwner
+                ? "Organization owners have full access and their role cannot be changed"
+                : "Assign a role to define access level and permissions"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -329,7 +354,7 @@ export default function EditTeamMemberPage() {
               <Select
                 value={editRole}
                 onValueChange={(value) => setEditRole(value as TeamMemberRole)}
-                disabled={updateMember.isPending}
+                disabled={updateMember.isPending || isOwner}
               >
                 <SelectTrigger id="role-select" className="w-full">
                   <SelectValue>
@@ -339,13 +364,20 @@ export default function EditTeamMemberPage() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(roleConfig).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.label} - {config.description}
-                    </SelectItem>
-                  ))}
+                  {Object.entries(roleConfig)
+                    .filter(([key]) => key !== "owner") // Remove owner from options
+                    .map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label} - {config.description}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
+              {isOwner && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  The owner role cannot be changed. To transfer ownership, use the organization settings.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -379,7 +411,7 @@ export default function EditTeamMemberPage() {
                   </Button>
                   <Button
                     onClick={handleSave}
-                    disabled={updateMember.isPending}
+                    disabled={updateMember.isPending || isOwner}
                     className="w-full sm:w-auto"
                   >
                     {updateMember.isPending ? (

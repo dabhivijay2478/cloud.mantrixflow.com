@@ -150,7 +150,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
+    <div className="space-y-6">
       <PageHeader
         title="Settings"
         description="Manage your workspace, preferences, and account settings"

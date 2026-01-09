@@ -139,13 +139,18 @@ export default function InviteTeamMemberPage() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(roleConfig).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.label} - {config.description}
-                    </SelectItem>
-                  ))}
+                  {Object.entries(roleConfig)
+                    .filter(([key]) => key !== "owner") // Remove owner from invite options
+                    .map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label} - {config.description}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Note: Owner role cannot be assigned through invitations. Ownership must be transferred separately in organization settings.
+              </p>
             </div>
           </CardContent>
         </Card>
