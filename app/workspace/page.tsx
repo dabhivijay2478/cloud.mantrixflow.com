@@ -115,7 +115,7 @@ export default function EventsDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <div className="space-y-6">
         {/* Header */}
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-3">
