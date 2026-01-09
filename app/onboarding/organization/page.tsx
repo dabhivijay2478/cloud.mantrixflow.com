@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowRight, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useCreateOrganization, useUpdateOnboardingStep } from "@/lib/api";
-import { useSetCurrentOrganization } from "@/lib/api/hooks/use-organizations";
+import { useCanCreateOrganization, useSetCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 const organizationSchema = z.object({
@@ -51,7 +51,18 @@ export default function OrganizationPage() {
   const createOrganization = useCreateOrganization();
   const setCurrentOrganization = useSetCurrentOrganization();
   const updateOnboardingStep = useUpdateOnboardingStep();
+  const { data: canCreateData, isLoading: canCreateLoading } = useCanCreateOrganization();
   const [loading, setLoading] = useState(false);
+
+  // Redirect invited-only users to workspace (they cannot create organizations)
+  useEffect(() => {
+    if (!canCreateLoading && canCreateData && !canCreateData.canCreate) {
+      // User is invited-only, redirect to workspace
+      toast.info("Invited users cannot create organizations. Redirecting to your organization...");
+      completeOnboarding();
+      router.push("/workspace");
+    }
+  }, [canCreateData, canCreateLoading, router, completeOnboarding]);
 
   const handleSkip = () => {
     completeOnboarding();
@@ -80,6 +91,13 @@ export default function OrganizationPage() {
   };
 
   const onSubmit = async (data: OrganizationFormValues) => {
+    // Double-check authorization before submitting
+    if (canCreateData && !canCreateData.canCreate) {
+      toast.error("You are not authorized to create organizations");
+      router.push("/workspace");
+      return;
+    }
+
     setLoading(true);
     try {
       // Create organization via API
@@ -110,6 +128,16 @@ export default function OrganizationPage() {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Please try again";
+      
+      // Check if it's a 403 Forbidden error (invited user trying to create)
+      if (error instanceof Error && errorMessage.includes("Invited users")) {
+        toast.error("Authorization Error", {
+          description: "Invited users are not allowed to create organizations. Redirecting...",
+        });
+        router.push("/workspace");
+        return;
+      }
+      
       toast.error("Failed to create organization", {
         description: errorMessage,
       });
@@ -118,6 +146,22 @@ export default function OrganizationPage() {
       setLoading(false);
     }
   };
+
+  // Show loading state while checking authorization
+  if (canCreateLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-muted-foreground">Checking permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render form if user cannot create organizations
+  if (canCreateData && !canCreateData.canCreate) {
+    return null; // Will redirect via useEffect
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

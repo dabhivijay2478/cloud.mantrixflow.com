@@ -45,12 +45,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  useCurrentOrganization,
   useOrganizationMembers,
   useRemoveMember,
   useUpdateMember,
 } from "@/lib/api";
 import type { OrganizationMember } from "@/lib/api/types/organizations";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 
 type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
@@ -106,11 +106,15 @@ const roleConfig: Record<
 export default function TeamPage() {
   const router = useRouter();
 
-  // Get current organization
-  const { data: currentOrg, isLoading: orgLoading } = useCurrentOrganization();
-  const organizationId = currentOrg?.id;
+  // Get current organization from workspace store (set by sidebar selector)
+  // This ensures team data updates when organization is switched
+  const { currentOrganization } = useWorkspaceStore();
+  const organizationId = currentOrganization?.id;
+  
+  // Show loading if no organization is selected
+  const isLoading = !organizationId;
 
-  // Fetch organization members
+  // Fetch organization members (only if organization is selected)
   const {
     data: members,
     isLoading: membersLoading,
@@ -298,7 +302,7 @@ export default function TeamPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orgLoading || membersLoading ? (
+                {isLoading || membersLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">

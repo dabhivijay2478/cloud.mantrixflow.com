@@ -38,24 +38,29 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
+  useCanCreateOrganization,
   useCurrentOrganization,
   useOrganizations,
+  useSetCurrentOrganization,
 } from "@/lib/api/hooks/use-organizations";
 import {
   type Organization,
   useWorkspaceStore,
 } from "@/lib/stores/workspace-store";
+import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 
 function OrganizationSwitcher({
   organizations,
   currentOrganization,
   onOrganizationChange,
   onCreateOrganization,
+  canCreateOrganization,
 }: {
   organizations: Organization[];
   currentOrganization: Organization | null;
   onOrganizationChange: (org: Organization | null) => void;
   onCreateOrganization: () => void;
+  canCreateOrganization: boolean;
 }) {
   const { isMobile } = useSidebar();
 
@@ -113,18 +118,23 @@ function OrganizationSwitcher({
                 No organizations
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="gap-2 p-2"
-              onClick={onCreateOrganization}
-            >
-              <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-                <Plus className="size-4" />
-              </div>
-              <div className="text-muted-foreground font-medium">
-                Add organization
-              </div>
-            </DropdownMenuItem>
+            {/* Only show "Add organization" option if user can create organizations */}
+            {canCreateOrganization && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="gap-2 p-2"
+                  onClick={onCreateOrganization}
+                >
+                  <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                    <Plus className="size-4" />
+                  </div>
+                  <div className="text-muted-foreground font-medium">
+                    Add organization
+                  </div>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
@@ -139,99 +149,106 @@ export function WorkspaceSidebar() {
     currentOrganization,
     organizations,
     dataSources,
-    setCurrentOrganization,
+    setCurrentOrganization: setStoreCurrentOrganization,
   } = useWorkspaceStore();
 
   // Sync organizations from API to workspace store
   const { data: apiOrganizations, isLoading: orgsLoading } = useOrganizations();
   const { data: apiCurrentOrg, isLoading: currentOrgLoading } =
     useCurrentOrganization();
+  const { data: canCreateData } = useCanCreateOrganization();
+  const canCreateOrganization = canCreateData?.canCreate ?? true; // Default to true for backwards compatibility
+  const setCurrentOrganizationAPI = useSetCurrentOrganization();
+
+  // Handle organization change from sidebar switcher
+  const handleOrganizationChange = async (org: Organization | null) => {
+    if (!org) {
+      setStoreCurrentOrganization(null);
+      return;
+    }
+
+    try {
+      // Update API first
+      await setCurrentOrganizationAPI.mutateAsync(org.id);
+      
+      // Update store
+      setStoreCurrentOrganization({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        createdAt:
+          typeof org.createdAt === "string"
+            ? org.createdAt
+            : org.createdAt.toISOString(),
+      });
+
+      showSuccessToast("switched", "Organization");
+      // Refresh to update all data across the app
+      router.refresh();
+    } catch (error) {
+      showErrorToast(
+        "switchFailed",
+        "Organization",
+        error instanceof Error ? error.message : undefined,
+      );
+    }
+  };
 
   useEffect(() => {
     // Only sync if API data is loaded
     if (orgsLoading || currentOrgLoading) return;
 
+    const { 
+      currentOrganization: storeCurrentOrg,
+      setOrganizations,
+      setCurrentOrganization: setStoreCurrentOrg 
+    } = useWorkspaceStore.getState();
+
     // Sync organizations list from API to store
+    // Set all organizations at once to ensure we have the complete list
     if (apiOrganizations && apiOrganizations.length > 0) {
-      const { addOrganization, updateOrganization } = useWorkspaceStore.getState();
-      
-      // Convert API organizations to store format and sync
-      const apiOrgMap = new Map(
-        apiOrganizations.map((org) => [
-          org.id,
-          {
-            id: org.id,
-            name: org.name,
-            slug: org.slug,
+      const orgsData = apiOrganizations.map((apiOrg) => ({
+        id: apiOrg.id,
+        name: apiOrg.name,
+        slug: apiOrg.slug,
+        createdAt:
+          typeof apiOrg.createdAt === "string"
+            ? apiOrg.createdAt
+            : apiOrg.createdAt.toISOString(),
+      }));
+
+      // Set all organizations at once
+      setOrganizations(orgsData);
+
+      // If current org is not in the list, or if we don't have a current org, set it
+      const currentOrgId = storeCurrentOrg?.id;
+      const hasCurrentOrgInList = orgsData.some((org) => org.id === currentOrgId);
+
+      if (!hasCurrentOrgInList) {
+        // Current org is not in the list, switch to API current org or first available
+        if (apiCurrentOrg) {
+          setStoreCurrentOrg({
+            id: apiCurrentOrg.id,
+            name: apiCurrentOrg.name,
+            slug: apiCurrentOrg.slug,
             createdAt:
-              typeof org.createdAt === "string"
-                ? org.createdAt
-                : org.createdAt.toISOString(),
-          },
-        ])
-      );
-
-      // Update or add organizations from API
-      apiOrganizations.forEach((apiOrg) => {
-        const storeOrg = organizations.find((o) => o.id === apiOrg.id);
-        const orgData = {
-          id: apiOrg.id,
-          name: apiOrg.name,
-          slug: apiOrg.slug,
-          createdAt:
-            typeof apiOrg.createdAt === "string"
-              ? apiOrg.createdAt
-              : apiOrg.createdAt.toISOString(),
-        };
-
-        if (storeOrg) {
-          // Update existing organization if data changed
-          if (
-            storeOrg.name !== orgData.name ||
-            storeOrg.slug !== orgData.slug
-          ) {
-            updateOrganization(apiOrg.id, orgData);
-          }
+              typeof apiCurrentOrg.createdAt === "string"
+                ? apiCurrentOrg.createdAt
+                : apiCurrentOrg.createdAt.toISOString(),
+          });
+        } else if (orgsData.length > 0) {
+          // Set first organization as current if no current org from API
+          setStoreCurrentOrg(orgsData[0]);
         } else {
-          // Add new organization
-          addOrganization(orgData);
+          setStoreCurrentOrg(null);
         }
-      });
-
-      // Remove organizations from store that don't exist in API
-      const apiOrgIds = new Set(apiOrganizations.map((org) => org.id));
-      organizations.forEach((storeOrg) => {
-        if (!apiOrgIds.has(storeOrg.id)) {
-          // Organization was removed, update current org if needed
-          if (currentOrganization?.id === storeOrg.id) {
-            // Switch to API current org or first available org
-            if (apiCurrentOrg) {
-              setCurrentOrganization({
-                id: apiCurrentOrg.id,
-                name: apiCurrentOrg.name,
-                slug: apiCurrentOrg.slug,
-                createdAt:
-                  typeof apiCurrentOrg.createdAt === "string"
-                    ? apiCurrentOrg.createdAt
-                    : apiCurrentOrg.createdAt.toISOString(),
-              });
-            } else if (apiOrganizations.length > 0) {
-              const firstOrg = apiOrganizations[0];
-              setCurrentOrganization({
-                id: firstOrg.id,
-                name: firstOrg.name,
-                slug: firstOrg.slug,
-                createdAt:
-                  typeof firstOrg.createdAt === "string"
-                    ? firstOrg.createdAt
-                    : firstOrg.createdAt.toISOString(),
-              });
-            } else {
-              setCurrentOrganization(null);
-            }
-          }
-        }
-      });
+      }
+    } else if (apiOrganizations && apiOrganizations.length === 0) {
+      // No organizations from API, clear the store
+      setOrganizations([]);
+      if (storeCurrentOrg) {
+        setStoreCurrentOrg(null);
+      }
     }
 
     // Sync current organization from API
@@ -246,34 +263,35 @@ export function WorkspaceSidebar() {
             : apiCurrentOrg.createdAt.toISOString(),
       };
 
-      // Update current org if it's different
+      // Update current org if it's different (using store state to avoid loop)
+      const currentStoreOrg = useWorkspaceStore.getState().currentOrganization;
       if (
-        !currentOrganization ||
-        currentOrganization.id !== apiCurrentOrg.id
+        !currentStoreOrg ||
+        currentStoreOrg.id !== apiCurrentOrg.id
       ) {
-        setCurrentOrganization(currentOrgData);
+        setStoreCurrentOrg(currentOrgData);
       }
-    } else if (apiOrganizations && apiOrganizations.length > 0 && !currentOrganization) {
-      // No current org from API, but we have organizations - set first one
-      const firstOrg = apiOrganizations[0];
-      setCurrentOrganization({
-        id: firstOrg.id,
-        name: firstOrg.name,
-        slug: firstOrg.slug,
-        createdAt:
-          typeof firstOrg.createdAt === "string"
-            ? firstOrg.createdAt
-            : firstOrg.createdAt.toISOString(),
-      });
+    } else if (apiOrganizations && apiOrganizations.length > 0) {
+      // No current org from API, but we have organizations - set first one if no current org
+      const currentStoreOrg = useWorkspaceStore.getState().currentOrganization;
+      if (!currentStoreOrg) {
+        const firstOrg = apiOrganizations[0];
+        setStoreCurrentOrg({
+          id: firstOrg.id,
+          name: firstOrg.name,
+          slug: firstOrg.slug,
+          createdAt:
+            typeof firstOrg.createdAt === "string"
+              ? firstOrg.createdAt
+              : firstOrg.createdAt.toISOString(),
+        });
+      }
     }
   }, [
     apiOrganizations,
     apiCurrentOrg,
-    currentOrganization,
-    organizations,
     orgsLoading,
     currentOrgLoading,
-    setCurrentOrganization,
   ]);
 
   // Filter data sources by current organization
@@ -380,8 +398,9 @@ export function WorkspaceSidebar() {
         <OrganizationSwitcher
           organizations={organizations}
           currentOrganization={currentOrganization}
-          onOrganizationChange={setCurrentOrganization}
-          onCreateOrganization={() => router.push("/onboarding/organization")}
+          onOrganizationChange={handleOrganizationChange}
+          onCreateOrganization={() => router.push("/organizations/new")}
+          canCreateOrganization={canCreateOrganization}
         />
       </SidebarFooter>
     </Sidebar>

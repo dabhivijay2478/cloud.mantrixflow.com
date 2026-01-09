@@ -70,6 +70,12 @@ export class OrganizationsService {
     );
   }
 
+  static async canCreateOrganization(): Promise<{ canCreate: boolean }> {
+    return ApiClient.get<{ canCreate: boolean }>(
+      `${OrganizationsService.BASE_PATH}/can-create`,
+    );
+  }
+
   // Organization Member Management
   static async inviteMember(
     organizationId: string,

@@ -19,6 +19,7 @@ export const organizationsKeys = {
   details: () => [...organizationsKeys.all, "detail"] as const,
   detail: (id: string) => [...organizationsKeys.details(), id] as const,
   current: () => [...organizationsKeys.all, "current"] as const,
+  canCreate: () => [...organizationsKeys.all, "can-create"] as const,
 };
 
 // Organization Management Hooks
@@ -103,12 +104,31 @@ export function useSetCurrentOrganization() {
   return useMutation({
     mutationFn: (id: string) => OrganizationsService.setCurrentOrganization(id),
     onSuccess: () => {
+      // Invalidate organization-related queries
       queryClient.invalidateQueries({
         queryKey: organizationsKeys.current(),
       });
       queryClient.invalidateQueries({
         queryKey: organizationsKeys.lists(),
       });
+      // Invalidate organization-dependent queries to refresh context
+      queryClient.invalidateQueries({
+        queryKey: ["organization-members"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["data-sources"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["data-pipelines"],
+      });
     },
+  });
+}
+
+export function useCanCreateOrganization() {
+  return useQuery({
+    queryKey: organizationsKeys.canCreate(),
+    queryFn: () => OrganizationsService.canCreateOrganization(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
