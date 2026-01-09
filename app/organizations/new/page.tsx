@@ -1,11 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Building2 } from "lucide-react";
+import { ArrowLeft, Building2, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,12 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useCreateOrganization, useUpdateOnboardingStep } from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  useCanCreateOrganization,
+  useCreateOrganization,
   useSetCurrentOrganization,
 } from "@/lib/api/hooks/use-organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 const organizationSchema = z.object({
   name: z
@@ -44,43 +45,24 @@ const organizationSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug must contain only lowercase letters, numbers, and hyphens",
     ),
+  description: z.string().optional(),
 });
 
 type OrganizationFormValues = z.infer<typeof organizationSchema>;
 
-export default function OrganizationPage() {
+export default function NewOrganizationPage() {
   const router = useRouter();
-  const { setOnboardingStep, completeOnboarding, addOrganization } =
-    useWorkspaceStore();
+  const { addOrganization } = useWorkspaceStore();
   const createOrganization = useCreateOrganization();
   const setCurrentOrganization = useSetCurrentOrganization();
-  const updateOnboardingStep = useUpdateOnboardingStep();
-  const { data: canCreateData, isLoading: canCreateLoading } =
-    useCanCreateOrganization();
   const [loading, setLoading] = useState(false);
-
-  // Redirect invited-only users to workspace (they cannot create organizations)
-  useEffect(() => {
-    if (!canCreateLoading && canCreateData && !canCreateData.canCreate) {
-      // User is invited-only, redirect to workspace
-      toast.info(
-        "Invited users cannot create organizations. Redirecting to your organization...",
-      );
-      completeOnboarding();
-      router.push("/workspace");
-    }
-  }, [canCreateData, canCreateLoading, router, completeOnboarding]);
-
-  const handleSkip = () => {
-    completeOnboarding();
-    router.push("/workspace");
-  };
 
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       name: "",
       slug: "",
+      description: "",
     },
   });
 
@@ -98,25 +80,19 @@ export default function OrganizationPage() {
   };
 
   const onSubmit = async (data: OrganizationFormValues) => {
-    // Double-check authorization before submitting
-    if (canCreateData && !canCreateData.canCreate) {
-      toast.error("You are not authorized to create organizations");
-      router.push("/workspace");
-      return;
-    }
-
     setLoading(true);
     try {
       // Create organization via API
       const newOrganization = await createOrganization.mutateAsync({
         name: data.name,
         slug: data.slug,
+        description: data.description,
       });
 
-      // Set the created organization as current
+      // Set the created organization as current via API
       await setCurrentOrganization.mutateAsync(newOrganization.id);
 
-      // Update workspace store with the new organization
+      // Update workspace store - this ensures the user is treated as owner
       addOrganization({
         id: newOrganization.id,
         name: newOrganization.name,
@@ -127,63 +103,65 @@ export default function OrganizationPage() {
             : newOrganization.createdAt.toISOString(),
       });
 
-      // Update onboarding step
-      await updateOnboardingStep.mutateAsync("data-source");
-
-      setOnboardingStep("data-source");
-      toast.success("Organization created successfully");
-      router.push("/onboarding/data-source");
+      showSuccessToast("created", "Organization");
+      // Refresh to update all context
+      router.refresh();
+      router.push("/organizations");
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Please try again";
+      const errorMessage = error instanceof Error ? error.message : undefined;
 
-      // Check if it's a 403 Forbidden error (invited user trying to create)
-      if (error instanceof Error && errorMessage.includes("Invited users")) {
-        toast.error("Authorization Error", {
-          description:
-            "Invited users are not allowed to create organizations. Redirecting...",
-        });
-        router.push("/workspace");
+      // Check if it's a 403 Forbidden error
+      if (error instanceof Error && errorMessage?.includes("Invited users")) {
+        showErrorToast(
+          "unauthorized",
+          undefined,
+          "Invited users are not allowed to create organizations.",
+        );
+        router.push("/organizations");
         return;
       }
 
-      toast.error("Failed to create organization", {
-        description: errorMessage,
-      });
+      showErrorToast("createFailed", "Organization", errorMessage);
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Show loading state while checking authorization
-  if (canCreateLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-muted-foreground">Checking permissions...</p>
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Simple header */}
+      <div className="border-b">
+        <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8 max-w-2xl">
+          <div className="flex items-center gap-4">
+            <Link href="/organizations">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-semibold">Create Organization</h1>
+              <p className="text-sm text-muted-foreground">
+                Create a new organization to manage your workspace and team
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-    );
-  }
 
-  // Don't render form if user cannot create organizations
-  if (canCreateData && !canCreateData.canCreate) {
-    return null; // Will redirect via useEffect
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        <Card>
+      {/* Main content */}
+      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-2xl">
+        <Card className="mt-6">
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Create Your Organization</CardTitle>
-                <CardDescription>Step 1 of 3</CardDescription>
+                <CardTitle>New Organization</CardTitle>
+                <CardDescription>
+                  Set up your organization details
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -204,6 +182,7 @@ export default function OrganizationPage() {
                           {...field}
                           onChange={(e) => handleNameChange(e.target.value)}
                           placeholder="Acme Inc."
+                          disabled={loading}
                         />
                       </FormControl>
                       <FormDescription>
@@ -225,6 +204,7 @@ export default function OrganizationPage() {
                           placeholder="acme-inc"
                           readOnly
                           className="bg-muted"
+                          disabled={loading}
                         />
                       </FormControl>
                       <FormDescription>
@@ -234,29 +214,42 @@ export default function OrganizationPage() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="A brief description of your organization"
+                          rows={4}
+                          disabled={loading}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Add a description to help identify this organization
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <div className="flex items-center justify-between pt-4">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.push("/onboarding/welcome")}
+                    onClick={() => router.push("/organizations")}
+                    disabled={loading}
                   >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
+                    Cancel
                   </Button>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={handleSkip}
-                      disabled={loading}
-                    >
-                      Skip for now
-                    </Button>
-                    <Button type="submit" disabled={loading}>
-                      Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button type="submit" disabled={loading}>
+                    {loading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Create Organization
+                  </Button>
                 </div>
               </form>
             </Form>

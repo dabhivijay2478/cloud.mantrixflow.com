@@ -1,50 +1,32 @@
 /**
- * Shared Components Barrel Export
- * @description Centralized exports for all shared components
+ * Shared Components
+ * Reusable components used across the application
  */
 
-// Data Display Components
-export { Timestamp, type TimestampProps } from "./data-display/timestamp";
+export type {
+  ConfirmationAction,
+  ConfirmationModalProps,
+} from "./confirmation-modal";
+// Confirmation Modal
+export { ConfirmationModal } from "./confirmation-modal";
+export type { DataTableProps } from "./data-table";
 // Data Table Components
-export { DataTable, type DataTableProps } from "./data-table";
-export {
-  DashboardCardSkeleton,
-  type DashboardCardSkeletonProps,
-} from "./feedback/dashboard-card-skeleton";
-export { EmptyState, type EmptyStateProps } from "./feedback/empty-state";
-export { ErrorState, type ErrorStateProps } from "./feedback/error-state";
+export { DataTable } from "./data-table";
+export { EmptyState } from "./feedback/empty-state";
+export { ErrorState } from "./feedback/error-state";
 // Feedback Components
-export { LoadingState, type LoadingStateProps } from "./feedback/loading-state";
-export { FormActions, type FormActionsProps } from "./forms/form-actions";
-export {
-  FormFieldWrapper,
-  type FormFieldWrapperProps,
-} from "./forms/form-field-wrapper";
-// Form Components
-export { FormSection, type FormSectionProps } from "./forms/form-section";
-export {
-  CenteredCardLayout,
-  type CenteredCardLayoutProps,
-} from "./layout/centered-card-layout";
-export {
-  PageContainer,
-  type PageContainerProps,
-} from "./layout/page-container";
+export { LoadingState } from "./feedback/loading-state";
+export type { CenteredCardLayoutProps } from "./layout/centered-card-layout";
 // Layout Components
-export { PageHeader, type PageHeaderProps } from "./layout/page-header";
-export { Section, type SectionProps } from "./layout/section";
-export { ThemeToggle, type ThemeToggleProps } from "./layout/theme-toggle";
+export { CenteredCardLayout } from "./layout/centered-card-layout";
+export { PageContainer } from "./layout/page-container";
+export { PageHeader } from "./layout/page-header";
+export { Section } from "./layout/section";
+export { ThemeToggle } from "./layout/theme-toggle";
+export { BackButton } from "./navigation/back-button";
+export { ProgressSteps } from "./navigation/progress-steps";
 // Navigation Components
-export { BackButton, type BackButtonProps } from "./navigation/back-button";
-export {
-  type ProgressStep,
-  ProgressSteps,
-  type ProgressStepsProps,
-} from "./navigation/progress-steps";
-export {
-  type Step,
-  StepIndicator,
-  type StepIndicatorProps,
-} from "./navigation/step-indicator";
+export { StepIndicator } from "./navigation/step-indicator";
+export type { FormSheetProps } from "./sheet";
 // Sheet Components
-export { FormSheet, type FormSheetProps } from "./sheet";
+export { FormSheet } from "./sheet";

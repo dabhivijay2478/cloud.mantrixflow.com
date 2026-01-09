@@ -134,6 +134,7 @@ interface WorkspaceState {
 interface WorkspaceActions {
   // Organization actions
   setCurrentOrganization: (org: Organization | null) => void;
+  setOrganizations: (orgs: Organization[]) => void;
   addOrganization: (org: Organization) => void;
   updateOrganization: (id: string, updates: Partial<Organization>) => void;
 
@@ -196,6 +197,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
 
       // Organization actions
       setCurrentOrganization: (org) => set({ currentOrganization: org }),
+      setOrganizations: (orgs) => set({ organizations: orgs }),
       addOrganization: (org) =>
         set((state) => ({
           organizations: [...state.organizations, org],

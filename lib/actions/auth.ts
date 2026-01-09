@@ -198,10 +198,11 @@ export async function signupAction(
 
     // Get the site URL for redirect after email confirmation
     // Priority: NEXT_PUBLIC_SITE_URL > VERCEL_URL > localhost
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL 
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-      || "http://localhost:3000";
-    
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+      "http://localhost:3000";
+
     // Redirect to callback route after email confirmation
     // The callback route will handle onboarding redirect
     const redirectTo = `${siteUrl}/auth/callback?type=signup`;

@@ -29,7 +29,8 @@ export function useOrganizationMembers(organizationId: string | undefined) {
       return OrganizationsService.listMembers(organizationId);
     },
     enabled: !!organizationId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 0, // Always refetch when organization changes
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
 }
 
