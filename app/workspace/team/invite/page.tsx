@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, Loader2, Mail, Shield } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Mail } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { PageHeader } from "@/components/shared";
+import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -27,66 +27,7 @@ import {
   inviteTeamMemberAction,
   type TeamActionResult,
 } from "@/lib/actions/team";
-import { cn } from "@/lib/utils";
-
-type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
-
-const roleConfig: Record<
-  TeamMemberRole,
-  {
-    label: string;
-    icon: typeof Shield;
-    color: string;
-    bgColor: string;
-    description: string;
-    permissions: string[];
-  }
-> = {
-  owner: {
-    label: "Owner",
-    icon: Shield,
-    color: "text-purple-600",
-    bgColor: "bg-purple-500",
-    description: "Full access to all features and settings",
-    permissions: [
-      "Manage billing",
-      "Delete organization",
-      "All admin permissions",
-    ],
-  },
-  admin: {
-    label: "Admin",
-    icon: Shield,
-    color: "text-blue-600",
-    bgColor: "bg-blue-500",
-    description: "Manage team members and organization settings",
-    permissions: ["Invite members", "Manage roles", "Organization settings"],
-  },
-  member: {
-    label: "Member",
-    icon: Shield,
-    color: "text-green-600",
-    bgColor: "bg-green-500",
-    description: "Create and edit dashboards and data sources",
-    permissions: ["Create dashboards", "Edit content", "Connect data sources"],
-  },
-  viewer: {
-    label: "Viewer",
-    icon: Shield,
-    color: "text-gray-600",
-    bgColor: "bg-gray-500",
-    description: "View-only access to dashboards",
-    permissions: ["View dashboards", "Export data", "Basic reporting"],
-  },
-  guest: {
-    label: "Guest",
-    icon: Shield,
-    color: "text-orange-600",
-    bgColor: "bg-orange-500",
-    description: "Limited access to specific resources",
-    permissions: ["View specific dashboards", "Limited time access"],
-  },
-};
+import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 
 export default function InviteTeamMemberPage() {
   const router = useRouter();
@@ -101,9 +42,7 @@ export default function InviteTeamMemberPage() {
   // Handle form state changes
   useEffect(() => {
     if (state?.success) {
-      toast.success("Invitation sent!", {
-        description: state.message || `Invitation sent to ${email}`,
-      });
+      showSuccessToast("created", "Invitation");
       // Reset form and redirect after a short delay
       setTimeout(() => {
         setEmail("");
@@ -111,7 +50,11 @@ export default function InviteTeamMemberPage() {
         router.push("/workspace/team");
       }, 1500);
     } else if (state && !state.success) {
-      toast.error("Failed to send invitation", { description: state.error });
+      showErrorToast(
+        "createFailed",
+        "Invitation",
+        state.error || "Failed to send invitation",
+      );
     }
   }, [state, email, router]);
 
@@ -124,36 +67,31 @@ export default function InviteTeamMemberPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/workspace/team")}
             className="-ml-2 hover:bg-accent"
+            asChild
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Team
+            <Link href="/workspace/team">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Team
+            </Link>
           </Button>
         }
       />
 
       <div className="space-y-6">
         {/* Basic Information Card */}
-        <Card className="border-2">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
-              Member Information
-            </CardTitle>
+            <CardTitle>Member Information</CardTitle>
             <CardDescription>
               Enter the email address and role for the new team member
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             {/* Email Input */}
-            <div className="space-y-3">
-              <Label
-                htmlFor="invite-email"
-                className="text-sm font-medium flex items-center gap-2"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="invite-email" className="text-sm font-medium">
                 Email Address
-                <span className="text-destructive text-xs">*</span>
               </Label>
               <Input
                 id="invite-email"
@@ -162,7 +100,6 @@ export default function InviteTeamMemberPage() {
                 placeholder="colleague@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 text-base"
                 required
                 disabled={isPending}
                 aria-invalid={
@@ -176,20 +113,15 @@ export default function InviteTeamMemberPage() {
                   {state.fieldErrors.email[0]}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Mail className="h-3 w-3" />
-                An invitation email will be sent to this address
-              </p>
             </div>
 
             {/* Role Selection */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Label
                 htmlFor="invite-role"
-                className="text-sm font-medium flex items-center gap-2"
+                className="text-sm font-medium"
               >
                 Role
-                <span className="text-destructive text-xs">*</span>
               </Label>
               <Select
                 value={selectedRole}
@@ -199,42 +131,19 @@ export default function InviteTeamMemberPage() {
                 disabled={isPending}
                 name="role"
               >
-                <SelectTrigger id="invite-role" className="h-12 border-2">
-                  <SelectValue />
+                <SelectTrigger id="invite-role" className="w-full">
+                  <SelectValue>
+                    {selectedRole
+                      ? `${roleConfig[selectedRole].label} - ${roleConfig[selectedRole].description}`
+                      : "Select a role"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <ScrollArea className="h-[400px]">
-                    {Object.entries(roleConfig).map(([key, config]) => {
-                      const RoleIcon = config.icon;
-                      return (
-                        <SelectItem
-                          key={key}
-                          value={key}
-                          className="py-3 cursor-pointer"
-                        >
-                          <div className="flex items-start gap-3 w-full">
-                            <div
-                              className={cn(
-                                "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm",
-                                config.bgColor,
-                                "text-white",
-                              )}
-                            >
-                              <RoleIcon className="h-5 w-5" />
-                            </div>
-                            <div className="flex flex-col flex-1 min-w-0">
-                              <span className="font-semibold">
-                                {config.label}
-                              </span>
-                              <span className="text-xs text-muted-foreground mt-0.5">
-                                {config.description}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </ScrollArea>
+                  {Object.entries(roleConfig).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      {config.label} - {config.description}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -242,7 +151,7 @@ export default function InviteTeamMemberPage() {
         </Card>
 
         {/* Action Buttons */}
-        <Card className="border-2 bg-muted/30">
+        <Card>
           <CardContent className="pt-6">
             <form action={formAction} noValidate>
               <input type="hidden" name="email" value={email} />
@@ -260,8 +169,7 @@ export default function InviteTeamMemberPage() {
                 <Button
                   type="submit"
                   disabled={isPending || !email.trim()}
-                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
-                  size="lg"
+                  className="w-full sm:w-auto"
                   aria-busy={isPending}
                 >
                   {isPending ? (
@@ -271,7 +179,7 @@ export default function InviteTeamMemberPage() {
                     </>
                   ) : (
                     <>
-                      <Mail className="mr-2 h-4 w-4" />
+                      <Check className="mr-2 h-4 w-4" />
                       Send Invitation
                     </>
                   )}
@@ -280,14 +188,6 @@ export default function InviteTeamMemberPage() {
             </form>
           </CardContent>
         </Card>
-
-        {/* Help Text */}
-        <div className="p-4 rounded-lg bg-muted/50 border">
-          <p className="text-xs text-muted-foreground text-center">
-            The invited member will receive an email with instructions to join
-            your organization. They can accept the invitation within 7 days.
-          </p>
-        </div>
       </div>
     </div>
   );

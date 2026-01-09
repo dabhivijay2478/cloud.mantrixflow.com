@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bot,
   Check,
   Crown,
   Edit,
@@ -12,7 +11,6 @@ import {
   Trash2,
   User,
   UserPlus,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -56,8 +54,7 @@ import {
 import type { OrganizationMember } from "@/lib/api/types/organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-
-type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
+import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 
 interface TeamMember {
   id: string;
@@ -67,44 +64,14 @@ interface TeamMember {
   avatar: string | null;
   status: "active" | "pending" | "inactive";
   joinedAt?: string;
-  agentPanelAccess?: boolean;
-  allowedModels?: string[];
 }
 
-const roleConfig: Record<
-  TeamMemberRole,
-  { label: string; icon: typeof Shield; color: string; description: string }
-> = {
-  owner: {
-    label: "Owner",
-    icon: Crown,
-    color: "bg-purple-500",
-    description: "Full access to all features and settings",
-  },
-  admin: {
-    label: "Admin",
-    icon: Shield,
-    color: "bg-blue-500",
-    description: "Manage team members and organization settings",
-  },
-  member: {
-    label: "Member",
-    icon: User,
-    color: "bg-green-500",
-    description: "Create and edit dashboards and data sources",
-  },
-  viewer: {
-    label: "Viewer",
-    icon: User,
-    color: "bg-gray-500",
-    description: "View-only access to dashboards",
-  },
-  guest: {
-    label: "Guest",
-    icon: User,
-    color: "bg-orange-500",
-    description: "Limited access to specific resources",
-  },
+const roleIcons: Record<TeamMemberRole, typeof Shield> = {
+  owner: Crown,
+  admin: Shield,
+  member: User,
+  viewer: User,
+  guest: User,
 };
 
 export default function TeamPage() {
@@ -232,8 +199,6 @@ export default function TeamPage() {
           : member.invitedAt
             ? new Date(member.invitedAt).toISOString().split("T")[0]
             : undefined,
-        agentPanelAccess: member.agentPanelAccess,
-        allowedModels: member.allowedModels || [],
       };
     });
   }, [members]);
@@ -270,7 +235,7 @@ export default function TeamPage() {
 
   const getRoleBadge = (role: TeamMemberRole) => {
     const config = roleConfig[role];
-    const Icon = config.icon;
+    const Icon = roleIcons[role];
     return (
       <Badge
         variant="outline"
@@ -373,9 +338,6 @@ export default function TeamPage() {
                   <TableHead className="w-[300px]">Member</TableHead>
                   <TableHead className="hidden md:table-cell">Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Role</TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    Agent Panel
-                  </TableHead>
                   <TableHead className="hidden lg:table-cell">Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -383,7 +345,7 @@ export default function TeamPage() {
               <TableBody>
                 {isLoading || membersLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={5} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         <p className="text-muted-foreground">
@@ -394,7 +356,7 @@ export default function TeamPage() {
                   </TableRow>
                 ) : membersError ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={5} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <p className="text-destructive">
                           Failed to load team members
@@ -409,7 +371,7 @@ export default function TeamPage() {
                   </TableRow>
                 ) : teamMembers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={5} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <User className="h-12 w-12 text-muted-foreground" />
                         <p className="text-muted-foreground">
@@ -467,7 +429,7 @@ export default function TeamPage() {
                               <DropdownMenuSeparator />
                               {Object.entries(roleConfig).map(
                                 ([key, config]) => {
-                                  const Icon = config.icon;
+                                  const Icon = roleIcons[key as TeamMemberRole];
                                   return (
                                     <DropdownMenuItem
                                       key={key}
@@ -499,36 +461,6 @@ export default function TeamPage() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <div className="flex items-center gap-2">
-                            {member.agentPanelAccess ? (
-                              <Badge
-                                variant="outline"
-                                className="border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950"
-                              >
-                                <Bot className="h-3 w-3 mr-1" />
-                                Enabled
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950"
-                              >
-                                <X className="h-3 w-3 mr-1" />
-                                Disabled
-                              </Badge>
-                            )}
-                            {member.agentPanelAccess &&
-                              member.allowedModels &&
-                              member.allowedModels.length > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({member.allowedModels.length} model
-                                  {member.allowedModels.length !== 1 ? "s" : ""}
-                                  )
-                                </span>
-                              )}
-                          </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-muted-foreground">
                           {member.joinedAt
