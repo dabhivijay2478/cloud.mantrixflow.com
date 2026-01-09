@@ -335,7 +335,20 @@ export function showErrorToast(
     const message = toastMessages.error[action](itemName, error);
     return toast.error(message.message, message.description);
   } else {
-    const message = toastMessages.error[action](error);
+    // For actions that don't require itemName
+    // Handle different function signatures based on action type
+    let message: { message: string; description: string };
+    if (action === "networkError") {
+      message = toastMessages.error.networkError();
+    } else if (action === "unauthorized") {
+      message = toastMessages.error.unauthorized(error);
+    } else {
+      // validationFailed, serverError, unknownError all accept optional error
+      const errorHandler = toastMessages.error[action] as (
+        error?: string
+      ) => { message: string; description: string };
+      message = errorHandler(error);
+    }
     return toast.error(message.message, message.description);
   }
 }

@@ -149,6 +149,11 @@ export default function EditTeamMemberPage() {
       return;
     }
 
+    if (!member) {
+      showErrorToast("notFound", "Team Member");
+      return;
+    }
+
     // Prevent updating owner role
     if (member.role === "owner") {
       showErrorToast(
@@ -189,7 +194,7 @@ export default function EditTeamMemberPage() {
   };
 
   // Check if member is owner - owners cannot have their role changed
-  const isOwner = member.role === "owner";
+  const isOwner = member?.role === "owner";
 
   const handleRemoveMember = () => {
     if (!member) return;

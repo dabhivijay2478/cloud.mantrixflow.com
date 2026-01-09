@@ -187,11 +187,13 @@ export function WorkspaceSidebar() {
       await setCurrentOrganizationAPI.mutateAsync(org.id);
 
       // Update store
+      // Handle createdAt which might be Date or string (API returns Date, store expects string)
+      const createdAtValue = org.createdAt as Date | string;
       const createdAtString =
-        typeof org.createdAt === "string"
-          ? org.createdAt
-          : org.createdAt instanceof Date
-            ? org.createdAt.toISOString()
+        createdAtValue instanceof Date
+          ? createdAtValue.toISOString()
+          : typeof createdAtValue === "string"
+            ? createdAtValue
             : new Date().toISOString();
 
       setStoreCurrentOrganization({
