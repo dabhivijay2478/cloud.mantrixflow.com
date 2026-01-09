@@ -1,7 +1,7 @@
 "use client";
 
+import { Calendar, CalendarClock, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Calendar, TrendingUp, Users, CalendarClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -49,7 +49,12 @@ function Gauge({
   const sizeClasses = size === "large" ? "w-32 h-32" : "w-24 h-24";
   return (
     <div className={`relative ${sizeClasses} flex items-center justify-center`}>
-      <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 100 100">
+      <svg
+        className="transform -rotate-90 w-full h-full"
+        viewBox="0 0 100 100"
+        role="img"
+        aria-label="Progress gauge"
+      >
         <circle
           cx="50"
           cy="50"
@@ -102,7 +107,7 @@ export default function EventsDashboard() {
 
   const GOAL = 5000000;
   const TARGET_DATE = new Date("2026-12-31");
-  const START_DATE = new Date("2025-11-25");
+  const _START_DATE = new Date("2025-11-25");
   const TODAY = new Date();
 
   const pastEvents = events.filter(

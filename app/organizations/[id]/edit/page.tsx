@@ -4,9 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Building2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +30,7 @@ import {
   useOrganization,
   useUpdateOrganization,
 } from "@/lib/api/hooks/use-organizations";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 const organizationEditSchema = z.object({
   description: z.string().optional(),
@@ -175,10 +175,14 @@ export default function EditOrganizationPage() {
               {/* Read-only fields */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <label
+                    htmlFor="org-name"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
                     Organization Name
                   </label>
                   <Input
+                    id="org-name"
                     value={organization.name}
                     disabled
                     className="bg-muted cursor-not-allowed"
@@ -188,10 +192,14 @@ export default function EditOrganizationPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <label
+                    htmlFor="org-slug"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
                     Organization Slug
                   </label>
                   <Input
+                    id="org-slug"
                     value={organization.slug}
                     disabled
                     className="bg-muted cursor-not-allowed font-mono"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { ConfirmationAction } from "@/components/shared/confirmation-modal";
 
 export interface UseConfirmationOptions {

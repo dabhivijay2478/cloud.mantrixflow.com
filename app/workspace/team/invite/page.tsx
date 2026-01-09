@@ -1,11 +1,10 @@
 "use client";
 
-import { ArrowLeft, Check, Loader2, Mail } from "lucide-react";
+import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
-import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,6 +27,7 @@ import {
   type TeamActionResult,
 } from "@/lib/actions/team";
 import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function InviteTeamMemberPage() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function InviteTeamMemberPage() {
         state.error || "Failed to send invitation",
       );
     }
-  }, [state, email, router]);
+  }, [state, router]);
 
   return (
     <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-4xl">

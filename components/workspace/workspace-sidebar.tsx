@@ -48,7 +48,7 @@ import {
   type Organization,
   useWorkspaceStore,
 } from "@/lib/stores/workspace-store";
-import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 function OrganizationSwitcher({
   organizations,

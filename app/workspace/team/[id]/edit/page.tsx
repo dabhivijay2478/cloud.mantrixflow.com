@@ -12,10 +12,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ConfirmationModal } from "@/components/shared";
-import { PageHeader } from "@/components/shared";
-import { useConfirmation } from "@/hooks/use-confirmation";
-import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
+import { ConfirmationModal, PageHeader } from "@/components/shared";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,15 +31,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useConfirmation } from "@/hooks/use-confirmation";
 import {
   useOrganizationMember,
   useRemoveMember,
   useUpdateMember,
 } from "@/lib/api";
 import type { OrganizationMember } from "@/lib/api/types/organizations";
+import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function EditTeamMemberPage() {
   const router = useRouter();

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Check,
   Crown,
@@ -14,11 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ConfirmationModal } from "@/components/shared";
-import { PageHeader } from "@/components/shared";
-import { useConfirmation } from "@/hooks/use-confirmation";
-import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { ConfirmationModal, PageHeader } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,16 +42,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useConfirmation } from "@/hooks/use-confirmation";
 import {
+  organizationMembersKeys,
   useOrganizationMembers,
   useRemoveMember,
   useUpdateMember,
-  organizationMembersKeys,
 } from "@/lib/api";
 import type { OrganizationMember } from "@/lib/api/types/organizations";
+import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 interface TeamMember {
   id: string;
@@ -104,7 +103,7 @@ export default function TeamPage() {
     data: members,
     isLoading: membersLoading,
     error: membersError,
-    refetch: refetchMembers,
+    refetch: _refetchMembers,
   } = useOrganizationMembers(organizationId);
 
   // Refetch members when organization changes

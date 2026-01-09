@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +31,7 @@ import {
   useSetCurrentOrganization,
 } from "@/lib/api/hooks/use-organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 const organizationSchema = z.object({
   name: z

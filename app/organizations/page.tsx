@@ -1,17 +1,16 @@
 "use client";
 
 import {
+  ArrowLeft,
   Building2,
   Check,
   Crown,
   Edit,
   Loader2,
   Plus,
-  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +37,7 @@ import {
 } from "@/lib/api/hooks/use-organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function OrganizationsPage() {
   const router = useRouter();
