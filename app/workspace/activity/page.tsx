@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDistanceToNow } from "date-fns";
 import { Filter, Loader2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,6 @@ import {
 } from "@/components/ui/table";
 import { useActivityLogs } from "@/lib/api/hooks/use-activity-logs";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { formatDistanceToNow } from "date-fns";
 
 // Entity type options for filtering
 const ENTITY_TYPE_OPTIONS = [
@@ -154,11 +154,17 @@ export default function ActivityLogPage() {
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">
+              <label
+                htmlFor="entity-type-select"
+                className="text-sm font-medium mb-2 block"
+              >
                 Entity Type
               </label>
-              <Select value={selectedEntityType} onValueChange={handleEntityTypeChange}>
-                <SelectTrigger>
+              <Select
+                value={selectedEntityType}
+                onValueChange={handleEntityTypeChange}
+              >
+                <SelectTrigger id="entity-type-select">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
@@ -230,8 +236,8 @@ export default function ActivityLogPage() {
               </p>
               <p className="text-sm text-muted-foreground mt-2 text-center max-w-md">
                 Activity logs will appear here as actions are performed in the
-                organization, such as creating pipelines, inviting team members, or
-                running migrations.
+                organization, such as creating pipelines, inviting team members,
+                or running migrations.
               </p>
             </div>
           ) : (
@@ -254,7 +260,9 @@ export default function ActivityLogPage() {
                           <TableCell className="text-sm text-muted-foreground">
                             <div className="flex flex-col">
                               <span>
-                                {formatDistanceToNow(createdAt, { addSuffix: true })}
+                                {formatDistanceToNow(createdAt, {
+                                  addSuffix: true,
+                                })}
                               </span>
                               <span className="text-xs text-muted-foreground/70">
                                 {createdAt.toLocaleString()}
@@ -262,7 +270,9 @@ export default function ActivityLogPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getActionBadgeVariant(log.actionType)}>
+                            <Badge
+                              variant={getActionBadgeVariant(log.actionType)}
+                            >
                               {formatActionType(log.actionType)}
                             </Badge>
                           </TableCell>
@@ -277,10 +287,11 @@ export default function ActivityLogPage() {
                               {log.metadata &&
                                 Object.keys(log.metadata).length > 0 && (
                                   <span className="text-xs text-muted-foreground">
-                                    {JSON.stringify(log.metadata, null, 2).slice(
-                                      0,
-                                      100,
-                                    )}
+                                    {JSON.stringify(
+                                      log.metadata,
+                                      null,
+                                      2,
+                                    ).slice(0, 100)}
                                     {JSON.stringify(log.metadata).length > 100
                                       ? "..."
                                       : ""}

@@ -3,14 +3,14 @@
  * Reusable hooks for activity log API endpoints
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { ActivityLogsService } from '../services/activity-logs.service';
-import type { ActivityLogFilters } from '../types/activity-logs';
+import { useQuery } from "@tanstack/react-query";
+import { ActivityLogsService } from "../services/activity-logs.service";
+import type { ActivityLogFilters } from "../types/activity-logs";
 
 // Query Keys
 export const activityLogsKeys = {
-  all: ['activity-logs'] as const,
-  lists: () => [...activityLogsKeys.all, 'list'] as const,
+  all: ["activity-logs"] as const,
+  lists: () => [...activityLogsKeys.all, "list"] as const,
   list: (filters: ActivityLogFilters) =>
     [...activityLogsKeys.lists(), filters] as const,
 };
