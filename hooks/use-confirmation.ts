@@ -35,7 +35,13 @@ export interface UseConfirmationOptions {
   /**
    * Variant for the confirm button
    */
-  confirmVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  confirmVariant?:
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | "link";
   /**
    * Whether to show the cancel button
    */
@@ -59,9 +65,9 @@ export interface ConfirmationState {
 
 /**
  * Hook for managing confirmation modals
- * 
+ *
  * Provides a simple way to show confirmation dialogs with consistent behavior.
- * 
+ *
  * @example
  * ```tsx
  * const { showConfirm, confirmProps } = useConfirmation({
@@ -72,7 +78,7 @@ export interface ConfirmationState {
  *     toast.success("Organization deleted successfully");
  *   },
  * });
- * 
+ *
  * // In JSX:
  * <Button onClick={() => showConfirm("My Org")}>Delete</Button>
  * <ConfirmationModal {...confirmProps} />
@@ -85,16 +91,13 @@ export function useConfirmation(options: UseConfirmationOptions) {
     isLoading: false,
   });
 
-  const showConfirm = useCallback(
-    (itemValue?: string) => {
-      setState({
-        isOpen: true,
-        itemValue,
-        isLoading: false,
-      });
-    },
-    []
-  );
+  const showConfirm = useCallback((itemValue?: string) => {
+    setState({
+      isOpen: true,
+      itemValue,
+      isLoading: false,
+    });
+  }, []);
 
   const hideConfirm = useCallback(() => {
     if (!state.isLoading) {

@@ -41,8 +41,7 @@ import { cn } from "@/lib/utils";
 
 export default function OrganizationsPage() {
   const router = useRouter();
-  const { data: apiOrganizations, isLoading: orgsLoading } =
-    useOrganizations();
+  const { data: apiOrganizations, isLoading: orgsLoading } = useOrganizations();
   const { data: currentOrg } = useCurrentOrganization();
   const { data: canCreateData } = useCanCreateOrganization();
   const canCreateOrganization = canCreateData?.canCreate ?? true;
@@ -62,7 +61,8 @@ export default function OrganizationsPage() {
       await setCurrentOrganization.mutateAsync(orgId);
 
       // Update workspace store
-      const { setCurrentOrganization: setStoreCurrentOrg } = useWorkspaceStore.getState();
+      const { setCurrentOrganization: setStoreCurrentOrg } =
+        useWorkspaceStore.getState();
       setStoreCurrentOrg({
         id: orgToSwitch.id,
         name: orgToSwitch.name,
@@ -169,14 +169,22 @@ export default function OrganizationsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[300px]">Organization</TableHead>
-                        <TableHead className="hidden md:table-cell">Slug</TableHead>
+                        <TableHead className="w-[300px]">
+                          Organization
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Slug
+                        </TableHead>
                         <TableHead className="hidden lg:table-cell">
                           Description
                         </TableHead>
-                        <TableHead className="hidden lg:table-cell">Created</TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          Created
+                        </TableHead>
                         <TableHead className="w-[100px]">Status</TableHead>
-                        <TableHead className="text-right w-[200px]">Actions</TableHead>
+                        <TableHead className="text-right w-[200px]">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -248,7 +256,9 @@ export default function OrganizationsPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleSwitchOrganization(org.id)}
+                                    onClick={() =>
+                                      handleSwitchOrganization(org.id)
+                                    }
                                   >
                                     Switch
                                   </Button>
@@ -278,11 +288,13 @@ export default function OrganizationsPage() {
                   <div className="flex items-start gap-3">
                     <Crown className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold mb-1">Invited User</h4>
+                      <h4 className="text-sm font-semibold mb-1">
+                        Invited User
+                      </h4>
                       <p className="text-sm text-muted-foreground">
                         As an invited user, you can view and work within
-                        organizations you've been added to, but you cannot create
-                        new organizations.
+                        organizations you've been added to, but you cannot
+                        create new organizations.
                       </p>
                     </div>
                   </div>

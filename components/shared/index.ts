@@ -5,7 +5,10 @@
 
 // Confirmation Modal
 export { ConfirmationModal } from "./confirmation-modal";
-export type { ConfirmationAction, ConfirmationModalProps } from "./confirmation-modal";
+export type {
+  ConfirmationAction,
+  ConfirmationModalProps,
+} from "./confirmation-modal";
 
 // Layout Components
 export { CenteredCardLayout } from "./layout/centered-card-layout";

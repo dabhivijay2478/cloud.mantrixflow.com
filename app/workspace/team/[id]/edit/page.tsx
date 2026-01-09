@@ -375,7 +375,8 @@ export default function EditTeamMemberPage() {
               </Select>
               {isOwner && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  The owner role cannot be changed. To transfer ownership, use the organization settings.
+                  The owner role cannot be changed. To transfer ownership, use
+                  the organization settings.
                 </p>
               )}
             </div>

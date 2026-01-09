@@ -14,7 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
-export type ConfirmationAction = "delete" | "update" | "remove" | "archive" | "custom";
+export type ConfirmationAction =
+  | "delete"
+  | "update"
+  | "remove"
+  | "archive"
+  | "custom";
 
 export interface ConfirmationModalProps {
   /**
@@ -68,7 +73,13 @@ export interface ConfirmationModalProps {
   /**
    * Variant for the confirm button (default: "destructive" for delete, "default" for others)
    */
-  confirmVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  confirmVariant?:
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | "link";
   /**
    * Whether to show the cancel button (default: true)
    */
@@ -77,14 +88,14 @@ export interface ConfirmationModalProps {
 
 /**
  * Shared Confirmation Modal Component
- * 
+ *
  * A reusable confirmation dialog for delete, update, and other destructive actions.
  * Provides consistent UI and messaging across the application.
- * 
+ *
  * @example
  * ```tsx
  * const [showConfirm, setShowConfirm] = useState(false);
- * 
+ *
  * <ConfirmationModal
  *   open={showConfirm}
  *   onOpenChange={setShowConfirm}
@@ -149,13 +160,14 @@ export function ConfirmationModal({
   };
 
   // Default button variants (destructive for delete/remove, default for others)
-  const defaultVariants: Record<ConfirmationAction, "default" | "destructive"> = {
-    delete: "destructive",
-    update: "default",
-    remove: "destructive",
-    archive: "default",
-    custom: "default",
-  };
+  const defaultVariants: Record<ConfirmationAction, "default" | "destructive"> =
+    {
+      delete: "destructive",
+      update: "default",
+      remove: "destructive",
+      archive: "default",
+      custom: "default",
+    };
 
   const finalTitle = title ?? defaultTitles[action];
   const finalDescription = description ?? defaultDescriptions[action];
@@ -180,12 +192,18 @@ export function ConfirmationModal({
         </AlertDialogHeader>
         <AlertDialogFooter>
           {showCancel && (
-            <AlertDialogCancel disabled={isLoading}>{cancelLabel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLoading}>
+              {cancelLabel}
+            </AlertDialogCancel>
           )}
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isLoading}
-            className={finalVariant === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            className={
+              finalVariant === "destructive"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : ""
+            }
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {finalConfirmLabel}

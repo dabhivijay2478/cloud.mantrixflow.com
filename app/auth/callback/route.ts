@@ -47,7 +47,10 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       // If there's an error exchanging the code, redirect to login with error
-      console.error("[auth/callback] Error exchanging code for session:", error);
+      console.error(
+        "[auth/callback] Error exchanging code for session:",
+        error,
+      );
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
       const redirectPath = `/auth/login?error=${encodeURIComponent(error.message || "Authentication failed")}`;
@@ -59,7 +62,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       }
     }
-    
+
     if (!data?.user) {
       // No user data after code exchange, redirect to login
       console.error("[auth/callback] No user data after code exchange");
@@ -90,9 +93,7 @@ export async function GET(request: Request) {
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       } else if (forwardedHost) {
-        return NextResponse.redirect(
-          `https://${forwardedHost}${redirectPath}`,
-        );
+        return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
       } else {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       }
@@ -132,7 +133,11 @@ export async function GET(request: Request) {
       // If user was invited and just accepted, go to workspace (skip onboarding)
       if (isInvite && backendUser.onboardingCompleted === true) {
         redirectPath = "/workspace";
-      } else if (backendUser.onboardingCompleted === false || backendUser.onboardingCompleted === undefined || backendUser.onboardingCompleted === null) {
+      } else if (
+        backendUser.onboardingCompleted === false ||
+        backendUser.onboardingCompleted === undefined ||
+        backendUser.onboardingCompleted === null
+      ) {
         // New users or users who haven't completed onboarding should go to onboarding
         redirectPath = "/onboarding/welcome";
       } else {

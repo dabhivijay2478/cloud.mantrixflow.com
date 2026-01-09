@@ -150,39 +150,56 @@ export const toastMessages = {
   error: {
     createFailed: (itemName: string, error?: string) => ({
       message: `Failed to create ${itemName.toLowerCase()}`,
-      description: error || `Unable to create ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to create ${itemName.toLowerCase()}. Please try again.`,
     }),
     updateFailed: (itemName: string, error?: string) => ({
       message: `Failed to update ${itemName.toLowerCase()}`,
-      description: error || `Unable to update ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to update ${itemName.toLowerCase()}. Please try again.`,
     }),
     deleteFailed: (itemName: string, error?: string) => ({
       message: `Failed to delete ${itemName.toLowerCase()}`,
-      description: error || `Unable to delete ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to delete ${itemName.toLowerCase()}. Please try again.`,
     }),
     removeFailed: (itemName: string, error?: string) => ({
       message: `Failed to remove ${itemName.toLowerCase()}`,
-      description: error || `Unable to remove ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to remove ${itemName.toLowerCase()}. Please try again.`,
     }),
     archiveFailed: (itemName: string, error?: string) => ({
       message: `Failed to archive ${itemName.toLowerCase()}`,
-      description: error || `Unable to archive ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to archive ${itemName.toLowerCase()}. Please try again.`,
     }),
     saveFailed: (itemName: string, error?: string) => ({
       message: `Failed to save ${itemName.toLowerCase()}`,
-      description: error || `Unable to save ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error || `Unable to save ${itemName.toLowerCase()}. Please try again.`,
     }),
     connectFailed: (itemName: string, error?: string) => ({
       message: `Failed to connect to ${itemName.toLowerCase()}`,
-      description: error || `Unable to connect to ${itemName.toLowerCase()}. Please check your settings and try again.`,
+      description:
+        error ||
+        `Unable to connect to ${itemName.toLowerCase()}. Please check your settings and try again.`,
     }),
     disconnectFailed: (itemName: string, error?: string) => ({
       message: `Failed to disconnect from ${itemName.toLowerCase()}`,
-      description: error || `Unable to disconnect from ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to disconnect from ${itemName.toLowerCase()}. Please try again.`,
     }),
     switchFailed: (itemName: string, error?: string) => ({
       message: `Failed to switch ${itemName.toLowerCase()}`,
-      description: error || `Unable to switch ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to switch ${itemName.toLowerCase()}. Please try again.`,
     }),
     inviteFailed: (itemName: string, error?: string) => ({
       message: `Failed to invite ${itemName.toLowerCase()}`,
@@ -190,15 +207,21 @@ export const toastMessages = {
     }),
     acceptFailed: (itemName: string, error?: string) => ({
       message: `Failed to accept ${itemName.toLowerCase()}`,
-      description: error || `Unable to accept ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to accept ${itemName.toLowerCase()}. Please try again.`,
     }),
     rejectFailed: (itemName: string, error?: string) => ({
       message: `Failed to reject ${itemName.toLowerCase()}`,
-      description: error || `Unable to reject ${itemName.toLowerCase()}. Please try again.`,
+      description:
+        error ||
+        `Unable to reject ${itemName.toLowerCase()}. Please try again.`,
     }),
     loadFailed: (itemName: string, error?: string) => ({
       message: `Failed to load ${itemName.toLowerCase()}`,
-      description: error || `Unable to load ${itemName.toLowerCase()}. Please refresh and try again.`,
+      description:
+        error ||
+        `Unable to load ${itemName.toLowerCase()}. Please refresh and try again.`,
     }),
     notFound: (itemName: string) => ({
       message: `${itemName} not found`,
@@ -216,11 +239,13 @@ export const toastMessages = {
     }),
     networkError: () => ({
       message: "Network error",
-      description: "Unable to connect to the server. Please check your internet connection.",
+      description:
+        "Unable to connect to the server. Please check your internet connection.",
     }),
     serverError: (error?: string) => ({
       message: "Server error",
-      description: error || "An error occurred on the server. Please try again later.",
+      description:
+        error || "An error occurred on the server. Please try again later.",
     }),
     unknownError: (error?: string) => ({
       message: "An error occurred",
@@ -257,7 +282,22 @@ export const toastMessages = {
  * Helper function to show success toast with common message
  */
 export function showSuccessToast(
-  action: "created" | "updated" | "deleted" | "removed" | "archived" | "saved" | "connected" | "disconnected" | "switched" | "invited" | "accepted" | "rejected" | "copied" | "exported" | "imported",
+  action:
+    | "created"
+    | "updated"
+    | "deleted"
+    | "removed"
+    | "archived"
+    | "saved"
+    | "connected"
+    | "disconnected"
+    | "switched"
+    | "invited"
+    | "accepted"
+    | "rejected"
+    | "copied"
+    | "exported"
+    | "imported",
   itemName: string,
 ) {
   const message = toastMessages.success[action](itemName);
@@ -268,7 +308,26 @@ export function showSuccessToast(
  * Helper function to show error toast with common message
  */
 export function showErrorToast(
-  action: "createFailed" | "updateFailed" | "deleteFailed" | "removeFailed" | "archiveFailed" | "saveFailed" | "connectFailed" | "disconnectFailed" | "switchFailed" | "inviteFailed" | "acceptFailed" | "rejectFailed" | "loadFailed" | "notFound" | "unauthorized" | "validationFailed" | "networkError" | "serverError" | "unknownError",
+  action:
+    | "createFailed"
+    | "updateFailed"
+    | "deleteFailed"
+    | "removeFailed"
+    | "archiveFailed"
+    | "saveFailed"
+    | "connectFailed"
+    | "disconnectFailed"
+    | "switchFailed"
+    | "inviteFailed"
+    | "acceptFailed"
+    | "rejectFailed"
+    | "loadFailed"
+    | "notFound"
+    | "unauthorized"
+    | "validationFailed"
+    | "networkError"
+    | "serverError"
+    | "unknownError",
   itemName?: string,
   error?: string,
 ) {

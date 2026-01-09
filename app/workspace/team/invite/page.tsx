@@ -117,10 +117,7 @@ export default function InviteTeamMemberPage() {
 
             {/* Role Selection */}
             <div className="space-y-2">
-              <Label
-                htmlFor="invite-role"
-                className="text-sm font-medium"
-              >
+              <Label htmlFor="invite-role" className="text-sm font-medium">
                 Role
               </Label>
               <Select
@@ -149,7 +146,9 @@ export default function InviteTeamMemberPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Note: Owner role cannot be assigned through invitations. Ownership must be transferred separately in organization settings.
+                Note: Owner role cannot be assigned through invitations.
+                Ownership must be transferred separately in organization
+                settings.
               </p>
             </div>
           </CardContent>

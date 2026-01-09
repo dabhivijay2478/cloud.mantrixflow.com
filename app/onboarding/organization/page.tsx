@@ -26,7 +26,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useCreateOrganization, useUpdateOnboardingStep } from "@/lib/api";
-import { useCanCreateOrganization, useSetCurrentOrganization } from "@/lib/api/hooks/use-organizations";
+import {
+  useCanCreateOrganization,
+  useSetCurrentOrganization,
+} from "@/lib/api/hooks/use-organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 const organizationSchema = z.object({
@@ -47,18 +50,22 @@ type OrganizationFormValues = z.infer<typeof organizationSchema>;
 
 export default function OrganizationPage() {
   const router = useRouter();
-  const { setOnboardingStep, completeOnboarding, addOrganization } = useWorkspaceStore();
+  const { setOnboardingStep, completeOnboarding, addOrganization } =
+    useWorkspaceStore();
   const createOrganization = useCreateOrganization();
   const setCurrentOrganization = useSetCurrentOrganization();
   const updateOnboardingStep = useUpdateOnboardingStep();
-  const { data: canCreateData, isLoading: canCreateLoading } = useCanCreateOrganization();
+  const { data: canCreateData, isLoading: canCreateLoading } =
+    useCanCreateOrganization();
   const [loading, setLoading] = useState(false);
 
   // Redirect invited-only users to workspace (they cannot create organizations)
   useEffect(() => {
     if (!canCreateLoading && canCreateData && !canCreateData.canCreate) {
       // User is invited-only, redirect to workspace
-      toast.info("Invited users cannot create organizations. Redirecting to your organization...");
+      toast.info(
+        "Invited users cannot create organizations. Redirecting to your organization...",
+      );
       completeOnboarding();
       router.push("/workspace");
     }
@@ -114,9 +121,10 @@ export default function OrganizationPage() {
         id: newOrganization.id,
         name: newOrganization.name,
         slug: newOrganization.slug,
-        createdAt: typeof newOrganization.createdAt === "string" 
-          ? newOrganization.createdAt 
-          : newOrganization.createdAt.toISOString(),
+        createdAt:
+          typeof newOrganization.createdAt === "string"
+            ? newOrganization.createdAt
+            : newOrganization.createdAt.toISOString(),
       });
 
       // Update onboarding step
@@ -128,16 +136,17 @@ export default function OrganizationPage() {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Please try again";
-      
+
       // Check if it's a 403 Forbidden error (invited user trying to create)
       if (error instanceof Error && errorMessage.includes("Invited users")) {
         toast.error("Authorization Error", {
-          description: "Invited users are not allowed to create organizations. Redirecting...",
+          description:
+            "Invited users are not allowed to create organizations. Redirecting...",
         });
         router.push("/workspace");
         return;
       }
-      
+
       toast.error("Failed to create organization", {
         description: errorMessage,
       });

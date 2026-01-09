@@ -82,7 +82,7 @@ export default function TeamPage() {
   // This ensures team data updates when organization is switched
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
-  
+
   // Show loading if no organization is selected
   const isLoading = !organizationId;
 
@@ -312,9 +312,12 @@ export default function TeamPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <User className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Organization Selected</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              No Organization Selected
+            </h3>
             <p className="text-sm text-muted-foreground text-center">
-              Please select an organization from the sidebar to view and manage team members.
+              Please select an organization from the sidebar to view and manage
+              team members.
             </p>
           </CardContent>
         </Card>
@@ -449,13 +452,19 @@ export default function TeamPage() {
                                   {getRoleBadge(member.role)}
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-56">
-                                <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                              <DropdownMenuContent
+                                align="start"
+                                className="w-56"
+                              >
+                                <DropdownMenuLabel>
+                                  Change Role
+                                </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {Object.entries(roleConfig)
                                   .filter(([key]) => key !== "owner") // Remove owner from options
                                   .map(([key, config]) => {
-                                    const Icon = roleIcons[key as TeamMemberRole];
+                                    const Icon =
+                                      roleIcons[key as TeamMemberRole];
                                     return (
                                       <DropdownMenuItem
                                         key={key}
@@ -535,7 +544,9 @@ export default function TeamPage() {
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleRemoveMember(member.id, member.email)}
+                                  onClick={() =>
+                                    handleRemoveMember(member.id, member.email)
+                                  }
                                   className="text-destructive"
                                   disabled={member.role === "owner"}
                                 >

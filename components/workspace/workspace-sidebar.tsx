@@ -138,7 +138,10 @@ function OrganizationSwitcher({
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/organizations" className="gap-2 p-2 flex items-center cursor-pointer">
+              <Link
+                href="/organizations"
+                className="gap-2 p-2 flex items-center cursor-pointer"
+              >
                 <div className="flex size-6 items-center justify-center ">
                   <List className="size-4" />
                 </div>
@@ -205,7 +208,7 @@ export function WorkspaceSidebar() {
       showErrorToast(
         "switchFailed",
         "Organization",
-        error instanceof Error ? error.message : undefined
+        error instanceof Error ? error.message : undefined,
       );
     }
   };
@@ -239,7 +242,7 @@ export function WorkspaceSidebar() {
       // If current org is not in the list, or if we don't have a current org, set it
       const currentOrgId = storeCurrentOrg?.id;
       const hasCurrentOrgInList = orgsData.some(
-        (org) => org.id === currentOrgId
+        (org) => org.id === currentOrgId,
       );
 
       if (!hasCurrentOrgInList) {
@@ -308,7 +311,7 @@ export function WorkspaceSidebar() {
   const filteredDataSources = currentOrganization
     ? dataSources.filter(
         (ds) =>
-          !ds.organizationId || ds.organizationId === currentOrganization.id
+          !ds.organizationId || ds.organizationId === currentOrganization.id,
       )
     : dataSources.filter((ds) => !ds.organizationId);
 

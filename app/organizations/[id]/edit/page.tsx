@@ -76,8 +76,7 @@ export default function EditOrganizationPage() {
       showSuccessToast("updated", "Organization");
       router.push("/organizations");
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : undefined;
+      const errorMessage = error instanceof Error ? error.message : undefined;
 
       showErrorToast("updateFailed", "Organization", errorMessage);
       console.error(error);
@@ -106,7 +105,9 @@ export default function EditOrganizationPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-semibold">Organization not found</h1>
+                <h1 className="text-2xl font-semibold">
+                  Organization not found
+                </h1>
               </div>
             </div>
           </div>
@@ -119,8 +120,8 @@ export default function EditOrganizationPage() {
                 Organization not found
               </h3>
               <p className="text-sm text-muted-foreground text-center mb-4">
-                The organization you're looking for doesn't exist or you don't have
-                access to it.
+                The organization you're looking for doesn't exist or you don't
+                have access to it.
               </p>
               <Button onClick={() => router.push("/organizations")}>
                 Back to Organizations
@@ -156,98 +157,98 @@ export default function EditOrganizationPage() {
       {/* Main content */}
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-2xl">
         <Card className="mt-6">
-        <CardHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle>{organization.name}</CardTitle>
-              <CardDescription>
-                Update organization description
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6 mb-6">
-            {/* Read-only fields */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Organization Name
-                </label>
-                <Input
-                  value={organization.name}
-                  disabled
-                  className="bg-muted cursor-not-allowed"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Organization name cannot be changed
-                </p>
+          <CardHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-primary" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Organization Slug
-                </label>
-                <Input
-                  value={organization.slug}
-                  disabled
-                  className="bg-muted cursor-not-allowed font-mono"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Organization slug cannot be changed
-                </p>
+              <div>
+                <CardTitle>{organization.name}</CardTitle>
+                <CardDescription>
+                  Update organization description
+                </CardDescription>
               </div>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6 mb-6">
+              {/* Read-only fields */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Organization Name
+                  </label>
+                  <Input
+                    value={organization.name}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Organization name cannot be changed
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Organization Slug
+                  </label>
+                  <Input
+                    value={organization.slug}
+                    disabled
+                    className="bg-muted cursor-not-allowed font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Organization slug cannot be changed
+                  </p>
+                </div>
+              </div>
+            </div>
 
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-6"
-            >
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="A brief description of your organization"
-                        rows={4}
-                        disabled={loading}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Update the description for this organization
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex items-center justify-between pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/organizations")}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="A brief description of your organization"
+                          rows={4}
+                          disabled={loading}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Update the description for this organization
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  Save Changes
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                />
+                <div className="flex items-center justify-between pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/organizations")}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
