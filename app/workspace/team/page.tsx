@@ -15,9 +15,12 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
-import { toast } from "sonner";
+import { useEffect, useMemo, useState } from "react";
+import { ConfirmationModal } from "@/components/shared";
 import { PageHeader } from "@/components/shared";
+import { useConfirmation } from "@/hooks/use-confirmation";
+import { showSuccessToast, showErrorToast } from "@/lib/utils/toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +51,7 @@ import {
   useOrganizationMembers,
   useRemoveMember,
   useUpdateMember,
+  organizationMembersKeys,
 } from "@/lib/api";
 import type { OrganizationMember } from "@/lib/api/types/organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -105,6 +109,7 @@ const roleConfig: Record<
 
 export default function TeamPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Get current organization from workspace store (set by sidebar selector)
   // This ensures team data updates when organization is switched
@@ -114,16 +119,93 @@ export default function TeamPage() {
   // Show loading if no organization is selected
   const isLoading = !organizationId;
 
+  // State for role update confirmation
+  const [roleUpdateState, setRoleUpdateState] = useState<{
+    memberId: string;
+    memberEmail: string;
+    newRole: TeamMemberRole;
+  } | null>(null);
+
+  // State for member removal
+  const [memberToRemove, setMemberToRemove] = useState<{
+    memberId: string;
+    memberEmail: string;
+  } | null>(null);
+
   // Fetch organization members (only if organization is selected)
   const {
     data: members,
     isLoading: membersLoading,
     error: membersError,
+    refetch: refetchMembers,
   } = useOrganizationMembers(organizationId);
+
+  // Refetch members when organization changes
+  useEffect(() => {
+    if (organizationId) {
+      // Invalidate all member queries for the new organization to ensure fresh data
+      queryClient.invalidateQueries({
+        queryKey: organizationMembersKeys.list(organizationId),
+      });
+      // Also invalidate all member queries to clear old organization's data
+      queryClient.invalidateQueries({
+        queryKey: organizationMembersKeys.lists(),
+      });
+    }
+  }, [organizationId, queryClient]);
 
   // Mutations
   const updateMember = useUpdateMember();
   const removeMember = useRemoveMember();
+
+  // Confirmation modal for removing member
+  const removeMemberConfirm = useConfirmation({
+    action: "remove",
+    itemName: "Team Member",
+    onConfirm: async () => {
+      if (!organizationId || !memberToRemove) return;
+      try {
+        await removeMember.mutateAsync({
+          organizationId,
+          memberId: memberToRemove.memberId,
+        });
+        showSuccessToast("removed", "Team Member");
+        setMemberToRemove(null);
+      } catch (error) {
+        showErrorToast(
+          "removeFailed",
+          "Team Member",
+          error instanceof Error ? error.message : undefined,
+        );
+        throw error;
+      }
+    },
+  });
+
+  // Confirmation modal for updating role
+  const updateRoleConfirm = useConfirmation({
+    action: "update",
+    itemName: "Member Role",
+    onConfirm: async () => {
+      if (!organizationId || !roleUpdateState) return;
+      try {
+        await updateMember.mutateAsync({
+          organizationId,
+          memberId: roleUpdateState.memberId,
+          data: { role: roleUpdateState.newRole },
+        });
+        showSuccessToast("updated", "Member Role");
+        setRoleUpdateState(null);
+      } catch (error) {
+        showErrorToast(
+          "updateFailed",
+          "Member Role",
+          error instanceof Error ? error.message : undefined,
+        );
+        throw error;
+      }
+    },
+  });
 
   // Transform API members to TeamMember format
   const teamMembers: TeamMember[] = useMemo(() => {
@@ -156,54 +238,30 @@ export default function TeamPage() {
     });
   }, [members]);
 
-  const handleRoleChange = async (
+  const handleRoleChange = (
     memberId: string,
+    memberEmail: string,
     newRole: TeamMemberRole,
   ) => {
     if (!organizationId) {
-      toast.error("No organization selected");
+      showErrorToast("notFound", "Organization");
       return;
     }
 
-    try {
-      await updateMember.mutateAsync({
-        organizationId,
-        memberId,
-        data: { role: newRole },
-      });
-      toast.success("Role updated successfully");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update role. Please try again.",
-      );
-    }
+    // Set state and show confirmation modal
+    setRoleUpdateState({ memberId, memberEmail, newRole });
+    updateRoleConfirm.showConfirm(memberEmail);
   };
 
-  const handleRemoveMember = async (memberId: string) => {
+  const handleRemoveMember = (memberId: string, memberEmail: string) => {
     if (!organizationId) {
-      toast.error("No organization selected");
+      showErrorToast("notFound", "Organization");
       return;
     }
 
-    if (!confirm("Are you sure you want to remove this team member?")) {
-      return;
-    }
-
-    try {
-      await removeMember.mutateAsync({
-        organizationId,
-        memberId,
-      });
-      toast.success("Team member removed");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to remove member. Please try again.",
-      );
-    }
+    // Set state and show confirmation modal
+    setMemberToRemove({ memberId, memberEmail });
+    removeMemberConfirm.showConfirm(memberEmail);
   };
 
   const handleEditClick = (member: TeamMember) => {
@@ -257,11 +315,32 @@ export default function TeamPage() {
     );
   };
 
+  // Show message if no organization is selected
+  if (!organizationId) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Team"
+          description="Manage your team members and permissions"
+        />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <User className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Organization Selected</h3>
+            <p className="text-sm text-muted-foreground text-center">
+              Please select an organization from the sidebar to view and manage team members.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Team"
-        description="Manage your team members and permissions"
+        description={`Manage team members for ${currentOrganization?.name || "your organization"}`}
         action={
           <Button
             onClick={() => router.push("/workspace/team/invite")}
@@ -280,8 +359,8 @@ export default function TeamPage() {
               <CardTitle>Team Members</CardTitle>
               <CardDescription>
                 {teamMembers.length}{" "}
-                {teamMembers.length === 1 ? "member" : "members"} in your
-                organization
+                {teamMembers.length === 1 ? "member" : "members"} in{" "}
+                {currentOrganization?.name || "this organization"}
               </CardDescription>
             </div>
           </div>
@@ -395,6 +474,7 @@ export default function TeamPage() {
                                       onClick={() =>
                                         handleRoleChange(
                                           member.id,
+                                          member.email,
                                           key as TeamMemberRole,
                                         )
                                       }
@@ -490,7 +570,7 @@ export default function TeamPage() {
                                   Edit Member
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleRemoveMember(member.id)}
+                                  onClick={() => handleRemoveMember(member.id, member.email)}
                                   className="text-destructive"
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -509,6 +589,27 @@ export default function TeamPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        {...removeMemberConfirm.confirmProps}
+        isLoading={removeMember.isPending}
+      />
+      <ConfirmationModal
+        {...updateRoleConfirm.confirmProps}
+        title={
+          roleUpdateState
+            ? `Change Role to ${roleConfig[roleUpdateState.newRole].label}`
+            : "Update Member Role"
+        }
+        description={
+          roleUpdateState
+            ? `Are you sure you want to change ${roleUpdateState.memberEmail}'s role to ${roleConfig[roleUpdateState.newRole].label}? This will update their permissions in the organization.`
+            : "Are you sure you want to update this member's role?"
+        }
+        confirmLabel="Update Role"
+        isLoading={updateMember.isPending}
+      />
     </div>
   );
 }

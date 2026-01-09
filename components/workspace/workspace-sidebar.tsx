@@ -6,6 +6,7 @@ import {
   Database,
   GitBranch,
   LayoutDashboard,
+  List,
   Plus,
   Settings,
   Users,
@@ -71,7 +72,7 @@ function OrganizationSwitcher({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                 <Building2 className="size-4" />
@@ -101,9 +102,9 @@ function OrganizationSwitcher({
                 <DropdownMenuItem
                   key={org.id}
                   onClick={() => onOrganizationChange(org)}
-                  className="gap-2 p-2"
+                  className="gap-2 p-2 cursor-pointer"
                 >
-                  <div className="flex size-6 items-center justify-center rounded-md border">
+                  <div className="flex size-6 items-center justify-center ">
                     <Building2 className="size-3.5 shrink-0" />
                   </div>
                   {org.name}
@@ -111,8 +112,8 @@ function OrganizationSwitcher({
                 </DropdownMenuItem>
               ))
             ) : (
-              <DropdownMenuItem disabled className="gap-2 p-2">
-                <div className="flex size-6 items-center justify-center rounded-md border">
+              <DropdownMenuItem disabled className="gap-2 p-2 cursor-pointer">
+                <div className="flex size-6 items-center justify-center ">
                   <Building2 className="size-3.5 shrink-0" />
                 </div>
                 No organizations
@@ -123,10 +124,10 @@ function OrganizationSwitcher({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="gap-2 p-2"
+                  className="gap-2 p-2 cursor-pointer"
                   onClick={onCreateOrganization}
                 >
-                  <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <div className="flex size-6 items-center justify-center ">
                     <Plus className="size-4" />
                   </div>
                   <div className="text-muted-foreground font-medium">
@@ -135,6 +136,17 @@ function OrganizationSwitcher({
                 </DropdownMenuItem>
               </>
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/organizations" className="gap-2 p-2 flex items-center cursor-pointer">
+                <div className="flex size-6 items-center justify-center ">
+                  <List className="size-4" />
+                </div>
+                <div className="text-muted-foreground font-medium">
+                  View all organizations
+                </div>
+              </Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
@@ -170,16 +182,20 @@ export function WorkspaceSidebar() {
     try {
       // Update API first
       await setCurrentOrganizationAPI.mutateAsync(org.id);
-      
+
       // Update store
+      const createdAtString =
+        typeof org.createdAt === "string"
+          ? org.createdAt
+          : org.createdAt instanceof Date
+            ? org.createdAt.toISOString()
+            : new Date().toISOString();
+
       setStoreCurrentOrganization({
         id: org.id,
         name: org.name,
         slug: org.slug,
-        createdAt:
-          typeof org.createdAt === "string"
-            ? org.createdAt
-            : org.createdAt.toISOString(),
+        createdAt: createdAtString,
       });
 
       showSuccessToast("switched", "Organization");
@@ -189,7 +205,7 @@ export function WorkspaceSidebar() {
       showErrorToast(
         "switchFailed",
         "Organization",
-        error instanceof Error ? error.message : undefined,
+        error instanceof Error ? error.message : undefined
       );
     }
   };
@@ -198,10 +214,10 @@ export function WorkspaceSidebar() {
     // Only sync if API data is loaded
     if (orgsLoading || currentOrgLoading) return;
 
-    const { 
+    const {
       currentOrganization: storeCurrentOrg,
       setOrganizations,
-      setCurrentOrganization: setStoreCurrentOrg 
+      setCurrentOrganization: setStoreCurrentOrg,
     } = useWorkspaceStore.getState();
 
     // Sync organizations list from API to store
@@ -222,7 +238,9 @@ export function WorkspaceSidebar() {
 
       // If current org is not in the list, or if we don't have a current org, set it
       const currentOrgId = storeCurrentOrg?.id;
-      const hasCurrentOrgInList = orgsData.some((org) => org.id === currentOrgId);
+      const hasCurrentOrgInList = orgsData.some(
+        (org) => org.id === currentOrgId
+      );
 
       if (!hasCurrentOrgInList) {
         // Current org is not in the list, switch to API current org or first available
@@ -265,10 +283,7 @@ export function WorkspaceSidebar() {
 
       // Update current org if it's different (using store state to avoid loop)
       const currentStoreOrg = useWorkspaceStore.getState().currentOrganization;
-      if (
-        !currentStoreOrg ||
-        currentStoreOrg.id !== apiCurrentOrg.id
-      ) {
+      if (!currentStoreOrg || currentStoreOrg.id !== apiCurrentOrg.id) {
         setStoreCurrentOrg(currentOrgData);
       }
     } else if (apiOrganizations && apiOrganizations.length > 0) {
@@ -287,18 +302,13 @@ export function WorkspaceSidebar() {
         });
       }
     }
-  }, [
-    apiOrganizations,
-    apiCurrentOrg,
-    orgsLoading,
-    currentOrgLoading,
-  ]);
+  }, [apiOrganizations, apiCurrentOrg, orgsLoading, currentOrgLoading]);
 
   // Filter data sources by current organization
   const filteredDataSources = currentOrganization
     ? dataSources.filter(
         (ds) =>
-          !ds.organizationId || ds.organizationId === currentOrganization.id,
+          !ds.organizationId || ds.organizationId === currentOrganization.id
       )
     : dataSources.filter((ds) => !ds.organizationId);
 
