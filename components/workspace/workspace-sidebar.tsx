@@ -3,6 +3,7 @@
 import {
   Building2,
   ChevronsUpDown,
+  CreditCard,
   Database,
   FileText,
   GitBranch,
@@ -415,6 +416,18 @@ export function WorkspaceSidebar() {
                   <Link href="/workspace/activity">
                     <FileText className="h-4 w-4" />
                     <span>Activity Log</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/workspace/billing"}
+                  tooltip="Billing"
+                >
+                  <Link href="/workspace/billing">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Billing</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

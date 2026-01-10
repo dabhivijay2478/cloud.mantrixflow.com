@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Building2,
   Check,
+  CreditCard,
   Crown,
   Edit,
   Loader2,
@@ -98,27 +99,36 @@ export default function OrganizationsPage() {
       {/* Simple header */}
       <div className="border-b">
         <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/workspace">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-4 w-4" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/workspace">
+                  <Button variant="ghost" size="icon">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <div>
+                  <h1 className="text-2xl font-semibold">Organizations</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Manage your organizations
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/workspace/billing")}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Billing
                 </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-semibold">Organizations</h1>
-                <p className="text-sm text-muted-foreground">
-                  Manage your organizations
-                </p>
+                {canCreateOrganization && (
+                  <Button onClick={() => router.push("/organizations/new")}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Organization
+                  </Button>
+                )}
               </div>
             </div>
-            {canCreateOrganization && (
-              <Button onClick={() => router.push("/organizations/new")}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Organization
-              </Button>
-            )}
-          </div>
         </div>
       </div>
 
