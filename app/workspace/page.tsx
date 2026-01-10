@@ -1,10 +1,12 @@
 "use client";
 
-import { Calendar, CalendarClock, TrendingUp, Users, Database, Activity } from "lucide-react";
+import { RefreshCw, Calendar, CalendarClock, TrendingUp, Users, Database, Activity } from "lucide-react";
 import { useDashboardOverview } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared";
 import {
   Table,
   TableBody,
@@ -13,21 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-function StatusDot({
-  variant,
-}: {
-  variant: "positive" | "warning" | "negative";
-}) {
-  const colors = {
-    positive: "bg-emerald-500",
-    warning: "bg-amber-500",
-    negative: "bg-red-500",
-  };
-  return (
-    <span className={`inline-block w-2 h-2 rounded-full ${colors[variant]}`} />
-  );
-}
 
 function Gauge({
   value,
@@ -80,7 +67,11 @@ function Gauge({
 export default function Dashboard() {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-  const { data: dashboard, isLoading, error } = useDashboardOverview(orgId);
+  const { data: dashboard, isLoading, error, refetch, isRefetching } = useDashboardOverview(orgId);
+
+  const handleRefresh = () => {
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -140,29 +131,33 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <div className="space-y-6">
         {/* Header */}
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground">
-              <Database className="w-5 h-5" />
+        <PageHeader
+          title={
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground">
+                <Database className="w-5 h-5" />
+              </div>
+              <span>{organization.name} Dashboard</span>
             </div>
-            <h1 className="text-3xl font-semibold text-foreground">
-              {organization.name} Dashboard
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <StatusDot variant="positive" />
-            <span>Live</span>
-            <span className="text-muted-foreground/50">•</span>
-            <span>
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-        </div>
+          }
+          description={`Last updated: ${new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}`}
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          }
+        />
 
         {/* Weekly Update */}
         <section className="mb-12">
