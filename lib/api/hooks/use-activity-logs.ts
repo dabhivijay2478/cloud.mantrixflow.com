@@ -17,6 +17,7 @@ export const activityLogsKeys = {
 
 /**
  * Get activity logs with filters and pagination
+ * Returns logs array and pagination metadata
  */
 export function useActivityLogs(
   filters: ActivityLogFilters,
@@ -24,7 +25,13 @@ export function useActivityLogs(
 ) {
   return useQuery({
     queryKey: activityLogsKeys.list(filters),
-    queryFn: () => ActivityLogsService.getActivityLogs(filters),
+    queryFn: async () => {
+      const response = await ActivityLogsService.getActivityLogs(filters);
+      return {
+        logs: response.data,
+        pagination: response.pagination,
+      };
+    },
     enabled: (options?.enabled ?? true) && !!filters.organizationId,
     staleTime: 30000, // Consider data fresh for 30 seconds
     retry: 1, // Only retry once on failure

@@ -27,6 +27,17 @@ export interface ActivityLogFilters {
 
 export interface ActivityLogResponse {
   data: ActivityLog[];
-  message: string;
-  success: boolean;
+  meta: {
+    statusCode: number;
+    message: string;
+    status: 'success' | 'error' | 'warning';
+    timestamp: string;
+  };
+  pagination?: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+    nextCursor?: string | null; // Cursor for next page
+  };
 }

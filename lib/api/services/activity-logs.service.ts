@@ -3,18 +3,21 @@
  * Service layer for activity log endpoints
  */
 
-import { ApiClient } from "../client";
-import type { ActivityLog, ActivityLogFilters } from "../types/activity-logs";
+import { getApiUrl, createFetchOptions } from "../config";
+import type { ActivityLogFilters, ActivityLogResponse } from "../types/activity-logs";
 
 export class ActivityLogsService {
   private static readonly BASE_PATH = "api/activity-logs";
 
   /**
    * Get activity logs with optional filters and pagination
+   * Returns the full response including pagination metadata
+   * Note: We fetch directly to get the full response with pagination
+   * since the API client extracts data.data for standard responses
    */
   static async getActivityLogs(
     filters: ActivityLogFilters,
-  ): Promise<ActivityLog[]> {
+  ): Promise<ActivityLogResponse> {
     const params = new URLSearchParams();
     params.append("organizationId", filters.organizationId);
 
@@ -37,8 +40,23 @@ export class ActivityLogsService {
       params.append("cursor", filters.cursor);
     }
 
-    return ApiClient.get<ActivityLog[]>(
-      `${ActivityLogsService.BASE_PATH}?${params.toString()}`,
-    );
+    // Fetch directly to get full response with pagination
+    const url = getApiUrl(`${ActivityLogsService.BASE_PATH}?${params.toString()}`);
+    const fetchOptions = await createFetchOptions({
+      method: "GET",
+    });
+
+    const response = await fetch(url, fetchOptions);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error?.message || 
+        errorData.meta?.message || 
+        `HTTP ${response.status}: ${response.statusText}`
+      );
+    }
+
+    return response.json() as Promise<ActivityLogResponse>;
   }
 }

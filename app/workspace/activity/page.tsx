@@ -135,7 +135,7 @@ export default function ActivityLogPage() {
   }, [selectedTimeRange]);
 
   const {
-    data: logs,
+    data: response,
     isLoading,
     error,
     refetch,
@@ -154,6 +154,9 @@ export default function ActivityLogPage() {
       enabled: !!organizationId, // Only fetch if organizationId exists
     },
   );
+
+  const logs = response?.logs ?? [];
+  const nextCursor = response?.pagination?.nextCursor;
 
   const handleEntityTypeChange = (value: string) => {
     setSelectedEntityType(value);
@@ -177,9 +180,10 @@ export default function ActivityLogPage() {
   };
 
   const handleLoadMore = () => {
-    if (logs && logs.length > 0) {
-      const lastLog = logs[logs.length - 1];
-      setCursor(lastLog.id);
+    // Use nextCursor from API response instead of constructing from last log
+    // This ensures we use the correct cursor format (encoded with createdAt + id)
+    if (nextCursor) {
+      setCursor(nextCursor);
     }
   };
 
@@ -522,12 +526,13 @@ export default function ActivityLogPage() {
                         </div>
                       );
                     })}
-                    {logs && logs.length >= 50 && (
+                    {nextCursor && (
                       <div className="pt-4 mt-4 border-t border-border flex justify-center">
                         <Button
                           variant="ghost"
                           onClick={handleLoadMore}
                           className="font-mono"
+                          disabled={!nextCursor}
                         >
                           [LOAD MORE]
                         </Button>
