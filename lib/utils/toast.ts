@@ -344,9 +344,10 @@ export function showErrorToast(
       message = toastMessages.error.unauthorized(error);
     } else {
       // validationFailed, serverError, unknownError all accept optional error
-      const errorHandler = toastMessages.error[action] as (
-        error?: string
-      ) => { message: string; description: string };
+      const errorHandler = toastMessages.error[action] as (error?: string) => {
+        message: string;
+        description: string;
+      };
       message = errorHandler(error);
     }
     return toast.error(message.message, message.description);

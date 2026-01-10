@@ -4,6 +4,7 @@ import {
   Building2,
   ChevronsUpDown,
   Database,
+  FileText,
   GitBranch,
   LayoutDashboard,
   List,
@@ -402,6 +403,18 @@ export function WorkspaceSidebar() {
                   <Link href="/workspace/team">
                     <Users className="h-4 w-4" />
                     <span>Team</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname?.startsWith("/workspace/activity")}
+                  tooltip="Activity Log"
+                >
+                  <Link href="/workspace/activity">
+                    <FileText className="h-4 w-4" />
+                    <span>Activity Log</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
