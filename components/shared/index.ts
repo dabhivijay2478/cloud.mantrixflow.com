@@ -23,6 +23,9 @@ export { PageContainer } from "./layout/page-container";
 export { PageHeader } from "./layout/page-header";
 export { Section } from "./layout/section";
 export { ThemeToggle } from "./layout/theme-toggle";
+// Metric Components
+export type { MetricCardProps } from "./metric-card";
+export { MetricCard } from "./metric-card";
 export { BackButton } from "./navigation/back-button";
 export { ProgressSteps } from "./navigation/progress-steps";
 // Navigation Components
