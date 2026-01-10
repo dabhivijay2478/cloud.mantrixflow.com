@@ -1,6 +1,5 @@
 "use client";
 
-import type * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -46,9 +45,7 @@ export function MetricCard({
             {label}
           </span>
         </div>
-        <div className={cn("text-2xl font-semibold", valueColor)}>
-          {value}
-        </div>
+        <div className={cn("text-2xl font-semibold", valueColor)}>{value}</div>
       </CardContent>
     </Card>
   );

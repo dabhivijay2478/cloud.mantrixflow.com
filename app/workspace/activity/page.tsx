@@ -1,13 +1,10 @@
 "use client";
 
 import { format, subDays } from "date-fns";
-import {
-  Loader2,
-  RefreshCw,
-  Search,
-  Terminal,
-} from "lucide-react";
+import { Loader2, RefreshCw, Search, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/shared/layout/page-header";
+import { MetricCard } from "@/components/shared/metric-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,8 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PageHeader } from "@/components/shared/layout/page-header";
-import { MetricCard } from "@/components/shared/metric-card";
 import { useActivityLogs } from "@/lib/api/hooks/use-activity-logs";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
@@ -101,18 +96,13 @@ function formatLogMessage(log: {
   message: string;
   metadata: Record<string, unknown> | null;
 }): string {
-  const action = log.actionType
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (l) => l.toUpperCase());
-  
   let fullMessage = log.message;
-  
+
   if (log.metadata && Object.keys(log.metadata).length > 0) {
     const metadataStr = JSON.stringify(log.metadata, null, 2);
     fullMessage += ` | Metadata: ${metadataStr}`;
   }
-  
+
   return fullMessage;
 }
 
@@ -130,7 +120,8 @@ export default function ActivityLogPage() {
   // Calculate start date based on time range
   const startDate = useMemo(() => {
     if (selectedTimeRange === "all") return undefined;
-    const days = selectedTimeRange === "7d" ? 7 : selectedTimeRange === "30d" ? 30 : 90;
+    const days =
+      selectedTimeRange === "7d" ? 7 : selectedTimeRange === "30d" ? 30 : 90;
     return subDays(new Date(), days).toISOString();
   }, [selectedTimeRange]);
 
@@ -216,8 +207,7 @@ export default function ActivityLogPage() {
           log.actionType.includes("REMOVED"),
       ).length,
       created: logs.filter((log) => log.actionType.includes("CREATED")).length,
-      updated: logs.filter((log) => log.actionType.includes("UPDATED"))
-        .length,
+      updated: logs.filter((log) => log.actionType.includes("UPDATED")).length,
       deleted: logs.filter(
         (log) =>
           log.actionType.includes("DELETED") ||
@@ -290,13 +280,7 @@ export default function ActivityLogPage() {
     }
 
     return filtered;
-  }, [
-    logs,
-    selectedActionType,
-    searchQuery,
-    selectedStatus,
-    startDate,
-  ]);
+  }, [logs, selectedActionType, searchQuery, selectedStatus, startDate]);
 
   if (!organizationId) {
     return (
@@ -370,7 +354,8 @@ export default function ActivityLogPage() {
           <div>
             <h2 className="text-xl font-semibold">Activity Logs</h2>
             <p className="text-sm text-muted-foreground">
-              All activity across your data pipelines, data sources, and organization
+              All activity across your data pipelines, data sources, and
+              organization
             </p>
           </div>
 
@@ -472,7 +457,9 @@ export default function ActivityLogPage() {
                   </div>
                 ) : error ? (
                   <div className="text-destructive">
-                    <div className="mb-2">[ERROR] Failed to load activity logs</div>
+                    <div className="mb-2">
+                      [ERROR] Failed to load activity logs
+                    </div>
                     <div className="text-sm text-destructive/70 mb-4">
                       {error instanceof Error
                         ? error.message.includes("UUID")
@@ -499,7 +486,9 @@ export default function ActivityLogPage() {
                       [INFO] No logs found
                     </div>
                     <div className="text-muted-foreground/70 font-mono text-sm max-w-md">
-                      Activity logs will appear here as you create pipelines, connect data sources, run migrations, and perform other actions in your organization.
+                      Activity logs will appear here as you create pipelines,
+                      connect data sources, run migrations, and perform other
+                      actions in your organization.
                     </div>
                   </div>
                 ) : (

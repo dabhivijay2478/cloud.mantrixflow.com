@@ -30,7 +30,7 @@ export interface ActivityLogResponse {
   meta: {
     statusCode: number;
     message: string;
-    status: 'success' | 'error' | 'warning';
+    status: "success" | "error" | "warning";
     timestamp: string;
   };
   pagination?: {
