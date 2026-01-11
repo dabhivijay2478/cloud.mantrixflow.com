@@ -472,6 +472,8 @@ export default function DataPipelinesPage() {
             data={pipelines || []}
             isLoading={pipelinesLoading}
             enableSorting
+            enableFiltering
+            filterPlaceholder="Filter pipelines ..."
             defaultVisibleColumns={[
               "name",
               "sourceType",

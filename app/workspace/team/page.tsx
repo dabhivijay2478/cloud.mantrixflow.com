@@ -503,6 +503,8 @@ export default function TeamPage() {
         isLoading={isLoading || membersLoading}
         error={membersError || undefined}
         enableSorting
+        enableFiltering
+        filterPlaceholder="Filter team members..."
         defaultVisibleColumns={[
           "name",
           "status",
