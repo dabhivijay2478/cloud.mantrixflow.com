@@ -48,7 +48,78 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+/**
+ * localStorage key for storing column visibility preferences
+ */
+const COLUMN_VISIBILITY_STORAGE_KEY = "visibleColumnIdsMap";
+
+/**
+ * Type for the column visibility map stored in localStorage
+ */
+type ColumnVisibilityMap = Record<string, string[]>;
+
+/**
+ * Get column visibility preferences from localStorage for a specific table
+ * @param tableId - Unique identifier for the table
+ * @returns Array of visible column IDs, or null if not found/invalid
+ */
+function getStoredColumnVisibility(tableId: string): string[] | null {
+  if (typeof window === "undefined") {
+    return null; // SSR safety
+  }
+
+  try {
+    const stored = localStorage.getItem(COLUMN_VISIBILITY_STORAGE_KEY);
+    if (!stored) return null;
+
+    const map: ColumnVisibilityMap = JSON.parse(stored);
+    const visibleIds = map[tableId];
+
+    // Validate: must be an array of strings
+    if (Array.isArray(visibleIds) && visibleIds.every((id) => typeof id === "string")) {
+      return visibleIds;
+    }
+
+    return null;
+  } catch {
+    // Invalid JSON or other error - return null to use defaults
+    return null;
+  }
+}
+
+/**
+ * Save column visibility preferences to localStorage for a specific table
+ * @param tableId - Unique identifier for the table
+ * @param visibleColumnIds - Array of visible column IDs
+ */
+function saveColumnVisibility(tableId: string, visibleColumnIds: string[]): void {
+  if (typeof window === "undefined") {
+    return; // SSR safety
+  }
+
+  try {
+    // Read existing map or create new one
+    const stored = localStorage.getItem(COLUMN_VISIBILITY_STORAGE_KEY);
+    const map: ColumnVisibilityMap = stored ? JSON.parse(stored) : {};
+
+    // Update only this table's entry, preserving others
+    map[tableId] = visibleColumnIds;
+
+    // Save back to localStorage
+    localStorage.setItem(COLUMN_VISIBILITY_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Silently fail if localStorage is unavailable or quota exceeded
+    // User experience degrades gracefully
+  }
+}
+
 export interface DataTableProps<TData, TValue> {
+  /**
+   * Unique identifier for this table instance.
+   * Used to persist column visibility preferences in localStorage.
+   * Required for column visibility persistence.
+   */
+  tableId: string;
   /**
    * Column definitions for the table
    */
@@ -173,6 +244,7 @@ export interface DataTableProps<TData, TValue> {
  * @example
  * ```tsx
  * <DataTable
+ *   tableId="admin-users-table"
  *   columns={columns}
  *   data={data}
  *   isLoading={isLoading}
@@ -183,6 +255,7 @@ export interface DataTableProps<TData, TValue> {
  * ```
  */
 export function DataTable<TData, TValue>({
+  tableId,
   columns,
   data,
   isLoading = false,
@@ -212,33 +285,74 @@ export function DataTable<TData, TValue>({
   pageSizeOptions: _pageSizeOptions = [10, 20, 50, 100],
   defaultPageSize = 10,
 }: DataTableProps<TData, TValue>) {
+  // Helper function to get column ID from column definition
+  const getColumnId = React.useCallback((col: ColumnDef<TData, TValue>): string | undefined => {
+    if (col.id) return col.id;
+    if ("accessorKey" in col) {
+      const accessorKey = (col as { accessorKey?: string }).accessorKey;
+      if (typeof accessorKey === "string") {
+        return accessorKey;
+      }
+    }
+    return undefined;
+  }, []);
+
+  // Get all available column IDs from column definitions
+  const allColumnIds = React.useMemo(() => {
+    return columns
+      .map(getColumnId)
+      .filter((id): id is string => Boolean(id));
+  }, [columns, getColumnId]);
+
+  // Initialize column visibility from localStorage or defaults
+  const [internalColumnVisibility, setInternalColumnVisibility] =
+    React.useState<VisibilityState>(() => {
+      // Compute column IDs inline for initializer
+      const columnIds = columns
+        .map((col) => {
+          if (col.id) return col.id;
+          if ("accessorKey" in col) {
+            const accessorKey = (col as { accessorKey?: string }).accessorKey;
+            if (typeof accessorKey === "string") {
+              return accessorKey;
+            }
+          }
+          return undefined;
+        })
+        .filter((id): id is string => Boolean(id));
+
+      // Try to load from localStorage first
+      const storedVisibleIds = getStoredColumnVisibility(tableId);
+
+      if (storedVisibleIds && storedVisibleIds.length > 0) {
+        // Build visibility state from stored IDs
+        // Only include columns that still exist (handle removed columns gracefully)
+        const visibility: VisibilityState = {};
+        columnIds.forEach((colId) => {
+          visibility[colId] = storedVisibleIds.includes(colId);
+        });
+        return visibility;
+      }
+
+      // Fallback to defaultVisibleColumns if provided
+      if (defaultVisibleColumns) {
+        const visibility: VisibilityState = {};
+        columnIds.forEach((colId) => {
+          visibility[colId] = defaultVisibleColumns.includes(colId);
+        });
+        return visibility;
+      }
+
+      // Default: all columns visible
+      return {};
+    });
+
   // Internal state for client-side features
   const [internalSorting, setInternalSorting] =
     React.useState<SortingState>(initialSorting);
   const [internalColumnFilters, setInternalColumnFilters] =
     React.useState<ColumnFiltersState>([]);
   const [internalGlobalFilter, setInternalGlobalFilter] = React.useState("");
-  const [internalColumnVisibility, setInternalColumnVisibility] =
-    React.useState<VisibilityState>(() => {
-      if (defaultVisibleColumns) {
-        const visibility: VisibilityState = {};
-        columns.forEach((col) => {
-          // Get column ID - prefer id, fallback to accessorKey if it exists
-          let colId: string | undefined = col.id;
-          if (!colId && "accessorKey" in col) {
-            const accessorKey = (col as { accessorKey?: string }).accessorKey;
-            if (typeof accessorKey === "string") {
-              colId = accessorKey;
-            }
-          }
-          if (colId) {
-            visibility[colId] = defaultVisibleColumns.includes(colId);
-          }
-        });
-        return visibility;
-      }
-      return {};
-    });
   const [internalRowSelection, setInternalRowSelection] = React.useState({});
   const [internalPagination, setInternalPagination] =
     React.useState<PaginationState>({
@@ -305,6 +419,28 @@ export function DataTable<TData, TValue>({
       }
     : setInternalPagination;
 
+  // Wrapper for column visibility setter that also persists to localStorage
+  const setColumnVisibility = React.useCallback(
+    (updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
+      setInternalColumnVisibility((prev) => {
+        const newVisibility =
+          typeof updater === "function" ? updater(prev) : updater;
+
+        // Persist visible column IDs to localStorage
+        // Only store IDs of columns that are currently visible
+        const visibleColumnIds = allColumnIds.filter(
+          (colId) => newVisibility[colId] !== false,
+        );
+
+        // Save to localStorage (async, non-blocking)
+        saveColumnVisibility(tableId, visibleColumnIds);
+
+        return newVisibility;
+      });
+    },
+    [tableId, allColumnIds],
+  );
+
   // Global filter function - searches across all cell values
   const globalFilterFn = React.useCallback(
     (row: Row<TData>, _columnId: string, filterValue: string) => {
@@ -351,7 +487,7 @@ export function DataTable<TData, TValue>({
       : {
           getPaginationRowModel: getPaginationRowModel(),
         }),
-    onColumnVisibilityChange: setInternalColumnVisibility,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       columnFilters: filters,

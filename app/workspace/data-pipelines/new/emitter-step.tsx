@@ -303,6 +303,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       </div>
 
       <DataTable
+        tableId="pipeline-emitter-step-table"
         columns={columns}
         data={allEmitters}
         enableSorting

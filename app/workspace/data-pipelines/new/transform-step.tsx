@@ -654,6 +654,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       </div>
 
       <DataTable
+        tableId="pipeline-transform-step-table"
         columns={columns}
         data={allTransforms}
         enableSorting

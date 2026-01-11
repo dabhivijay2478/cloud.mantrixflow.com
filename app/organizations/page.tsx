@@ -236,6 +236,7 @@ export default function OrganizationsPage() {
       {/* Main content */}
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
         <DataTable
+          tableId="organizations-table"
           columns={columns}
           data={displayOrganizations}
           isLoading={isLoading}

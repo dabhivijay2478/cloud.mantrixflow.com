@@ -510,6 +510,7 @@ export default function Dashboard() {
                 Recent Pipeline Runs
               </h4>
               <DataTable
+                tableId="dashboard-recent-migrations-table"
                 columns={migrationColumns}
                 data={recentMigrations.slice(0, 10)}
                 isLoading={false}

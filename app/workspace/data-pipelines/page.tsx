@@ -489,6 +489,7 @@ export default function DataPipelinesPage() {
       />
 
       <DataTable
+        tableId={orgId ? `data-pipelines-table-${orgId}` : "data-pipelines-table"}
         columns={columns}
         data={pipelines || []}
         isLoading={pipelinesLoading}

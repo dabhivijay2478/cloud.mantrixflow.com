@@ -303,6 +303,7 @@ export function CollectorStep({
       </div>
 
       <DataTable
+        tableId="pipeline-collector-step-table"
         columns={columns}
         data={collectors}
         isLoading={false}

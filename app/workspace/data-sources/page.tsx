@@ -640,6 +640,7 @@ export default function DataSourcesPage() {
         />
       ) : (
         <DataTable
+          tableId={orgId ? `data-sources-table-${orgId}` : "data-sources-table"}
           columns={columns}
           data={filteredDataSources}
           isLoading={false}
