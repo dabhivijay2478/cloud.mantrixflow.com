@@ -3,7 +3,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { SearchService, type SearchRequest } from "../services/search.service";
+import { type SearchRequest, SearchService } from "../services/search.service";
 
 export const globalSearchKeys = {
   all: ["global-search"] as const,
@@ -16,9 +16,7 @@ export function useGlobalSearch(
   options?: { enabled?: boolean },
 ) {
   return useQuery({
-    queryKey: request
-      ? globalSearchKeys.search(request)
-      : globalSearchKeys.all,
+    queryKey: request ? globalSearchKeys.search(request) : globalSearchKeys.all,
     queryFn: () => {
       if (!request) {
         throw new Error("Search request is required");

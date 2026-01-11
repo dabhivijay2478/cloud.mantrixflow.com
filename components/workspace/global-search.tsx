@@ -3,10 +3,6 @@
 import { Database, Loader2, Plug, Search, User, Workflow } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { useGlobalSearch } from "@/lib/api";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { useDebounce } from "@/hooks/use-debounce";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -17,6 +13,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useGlobalSearch } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { cn } from "@/lib/utils";
 
 const ENTITY_ICONS: Record<string, typeof User> = {
   user: User,
@@ -58,29 +58,30 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   });
 
   // Group results by entity type, filtering out connectors (they're in progress)
-  const groupedResults = searchResults?.results
-    .filter((result) => result.type !== "connector") // Filter out connectors
-    .reduce(
-      (acc, result) => {
-        if (!acc[result.type]) {
-          acc[result.type] = [];
-        }
-        acc[result.type].push(result);
-        return acc;
-      },
-      {} as Record<
-        string,
-        Array<{
-          type: string;
-          id: string;
-          title: string;
-          subtitle?: string;
-          redirect: string;
-          filterKey: string;
-          filterValue: string;
-        }>
-      >,
-    ) || {};
+  const groupedResults =
+    searchResults?.results
+      .filter((result) => result.type !== "connector") // Filter out connectors
+      .reduce(
+        (acc, result) => {
+          if (!acc[result.type]) {
+            acc[result.type] = [];
+          }
+          acc[result.type].push(result);
+          return acc;
+        },
+        {} as Record<
+          string,
+          Array<{
+            type: string;
+            id: string;
+            title: string;
+            subtitle?: string;
+            redirect: string;
+            filterKey: string;
+            filterValue: string;
+          }>
+        >,
+      ) || {};
 
   const handleResultClick = useCallback(
     (result: {
@@ -130,25 +131,21 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   return (
     <>
       {/* Search Input Trigger */}
-      <div
-        className={cn(
-          "relative w-full cursor-pointer group",
-          className,
-        )}
+      <button
+        type="button"
+        className={cn("relative w-full cursor-pointer group", className)}
         onClick={() => setOpen(true)}
       >
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none group-hover:text-foreground transition-colors" />
         <div className="w-full pl-9 pr-20 h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background flex items-center text-muted-foreground group-hover:border-ring transition-colors">
-          <span className="truncate">
-            Run a command or search...
-          </span>
+          <span className="truncate">Run a command or search...</span>
         </div>
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
           <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
             <span className="text-xs">⌘</span>K
           </kbd>
         </div>
-      </div>
+      </button>
 
       {/* Command Dialog - Styled like the image */}
       <CommandDialog
@@ -227,12 +224,13 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                       <div className="text-sm">
                         <span className="font-medium">Data Sources:</span>
                         <span className="text-muted-foreground ml-1">
-                          Search by connection name, host, or database
+                          Search by connection name, connectors, host, or
+                          database
                         </span>
                       </div>
                     </div>
                   </CommandItem>
-                  <CommandItem
+                  {/* <CommandItem
                     value="tip-connectors"
                     disabled
                     className="cursor-default opacity-60"
@@ -246,10 +244,10 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                         </Badge>
                       </div>
                       <span className="text-xs text-muted-foreground mt-0.5">
-                        Search PostgreSQL connectors by name or host
+                        Search connectors by name or host
                       </span>
                     </div>
-                  </CommandItem>
+                  </CommandItem> */}
                 </CommandGroup>
                 <div className="border-t px-3 py-2 mt-2">
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -293,7 +291,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                       const isDisabled = isConnector;
                       // Create a unique value for keyboard navigation
                       const itemValue = `${result.type}-${result.id}-${index}-${result.title.toLowerCase().replace(/\s+/g, "-")}`;
-                      
+
                       return (
                         <CommandItem
                           key={`${result.type}-${result.id}`}
@@ -319,7 +317,10 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                             <div className="font-medium text-sm truncate flex items-center gap-2">
                               {result.title}
                               {isDisabled && (
-                                <Badge variant="outline" className="text-xs shrink-0">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs shrink-0"
+                                >
                                   Coming Soon
                                 </Badge>
                               )}

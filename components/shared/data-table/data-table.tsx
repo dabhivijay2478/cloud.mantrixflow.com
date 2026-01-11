@@ -293,7 +293,7 @@ export function DataTable<TData, TValue>({
   globalFilter,
   onGlobalFilterChange,
   externalFilter,
-  externalFilterColumnKey,
+  externalFilterColumnKey: _externalFilterColumnKey,
   filterPlaceholder = "Filter...",
   onRowClick,
   emptyMessage = "No results found",
@@ -416,8 +416,8 @@ export function DataTable<TData, TValue>({
 
   const currentGlobalFilter =
     onGlobalFilterChange !== undefined
-      ? globalFilter ?? externalFilter ?? ""
-      : internalGlobalFilter ?? externalFilter ?? "";
+      ? (globalFilter ?? externalFilter ?? "")
+      : (internalGlobalFilter ?? externalFilter ?? "");
   const setCurrentGlobalFilter = onGlobalFilterChange
     ? (value: string) => {
         onGlobalFilterChange(value);
