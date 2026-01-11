@@ -2,7 +2,6 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
-  ArrowRightLeft,
   Database,
   Pause,
   Play,
@@ -15,7 +14,6 @@ import { useRouter } from "next/navigation";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   useDeletePipeline,
   usePausePipeline,

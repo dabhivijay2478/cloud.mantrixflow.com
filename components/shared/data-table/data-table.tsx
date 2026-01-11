@@ -9,6 +9,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   type PaginationState,
+  type Row,
   type SortingState,
   useReactTable,
   type VisibilityState,
@@ -23,6 +24,9 @@ import {
   Search,
 } from "lucide-react";
 import * as React from "react";
+import { EmptyState } from "@/components/shared/feedback/empty-state";
+import { ErrorState } from "@/components/shared/feedback/error-state";
+import { TableSkeleton } from "@/components/shared/skeletons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -42,9 +46,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState } from "@/components/shared/feedback/empty-state";
-import { ErrorState } from "@/components/shared/feedback/error-state";
-import { TableSkeleton } from "@/components/shared/skeletons";
 import { cn } from "@/lib/utils";
 
 export interface DataTableProps<TData, TValue> {
@@ -208,7 +209,7 @@ export function DataTable<TData, TValue>({
   emptyMessage = "No results found",
   emptyDescription,
   className,
-  pageSizeOptions = [10, 20, 50, 100],
+  pageSizeOptions: _pageSizeOptions = [10, 20, 50, 100],
   defaultPageSize = 10,
 }: DataTableProps<TData, TValue>) {
   // Internal state for client-side features
@@ -294,7 +295,7 @@ export function DataTable<TData, TValue>({
     : setInternalRowSelection;
 
   const paginationState = pagination || internalPagination;
-  const setPaginationState = onPaginationChange
+  const _setPaginationState = onPaginationChange
     ? (
         updater: PaginationState | ((prev: PaginationState) => PaginationState),
       ) => {
@@ -306,7 +307,7 @@ export function DataTable<TData, TValue>({
 
   // Global filter function - searches across all cell values
   const globalFilterFn = React.useCallback(
-    (row: any, columnId: string, filterValue: string) => {
+    (row: Row<TData>, _columnId: string, filterValue: string) => {
       if (!filterValue) return true;
       const searchValue = filterValue.toLowerCase();
 
@@ -486,33 +487,33 @@ export function DataTable<TData, TValue>({
                   const sortDirection = header.column.getIsSorted();
                   return (
                     <TableHead key={header.id} className="relative">
-                      {header.isPlaceholder ? null : (
-                        <div
+                      {header.isPlaceholder ? null : canSort ? (
+                        <button
+                          type="button"
                           className={cn(
-                            "flex items-center gap-2",
-                            canSort &&
-                              "cursor-pointer select-none hover:text-foreground",
+                            "flex items-center gap-2 w-full text-left cursor-pointer select-none hover:text-foreground",
                           )}
-                          onClick={
-                            canSort
-                              ? header.column.getToggleSortingHandler()
-                              : undefined
-                          }
+                          onClick={header.column.getToggleSortingHandler()}
                         >
                           {flexRender(
                             header.column.columnDef.header,
                             header.getContext(),
                           )}
-                          {canSort && (
-                            <span className="ml-1">
-                              {sortDirection === "asc" ? (
-                                <ArrowUp className="h-4 w-4 opacity-70" />
-                              ) : sortDirection === "desc" ? (
-                                <ArrowDown className="h-4 w-4 opacity-70" />
-                              ) : (
-                                <ArrowUpDown className="h-4 w-4 opacity-50" />
-                              )}
-                            </span>
+                          {sortDirection === "asc" && (
+                            <ArrowUp className="h-4 w-4" />
+                          )}
+                          {sortDirection === "desc" && (
+                            <ArrowDown className="h-4 w-4" />
+                          )}
+                          {!sortDirection && canSort && (
+                            <ArrowUpDown className="h-4 w-4 opacity-50" />
+                          )}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
                           )}
                         </div>
                       )}

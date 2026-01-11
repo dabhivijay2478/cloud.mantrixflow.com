@@ -1,9 +1,9 @@
 "use client";
 
-import { PageHeaderSkeleton } from "./page-header-skeleton";
-import { TableSkeleton } from "./table-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { PageHeaderSkeleton } from "./page-header-skeleton";
+import { TableSkeleton } from "./table-skeleton";
 
 /**
  * LogsSkeleton

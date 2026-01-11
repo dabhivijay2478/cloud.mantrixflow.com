@@ -14,18 +14,12 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConfirmationModal, DataTable, PageHeader } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -193,58 +187,67 @@ export default function TeamPage() {
     });
   }, [members]);
 
-  const handleRoleChange = (
-    memberId: string,
-    memberEmail: string,
-    newRole: TeamMemberRole,
-    currentRole: TeamMemberRole,
-  ) => {
-    if (!organizationId) {
-      showErrorToast("notFound", "Organization");
-      return;
-    }
+  const handleRoleChange = useCallback(
+    (
+      memberId: string,
+      memberEmail: string,
+      newRole: TeamMemberRole,
+      currentRole: TeamMemberRole,
+    ) => {
+      if (!organizationId) {
+        showErrorToast("notFound", "Organization");
+        return;
+      }
 
-    // Prevent changing OWNER role
-    if (currentRole === "OWNER") {
-      showErrorToast(
-        "updateFailed",
-        "Member Role",
-        "Organization owners cannot have their role changed. Transfer ownership first.",
-      );
-      return;
-    }
+      // Prevent changing OWNER role
+      if (currentRole === "OWNER") {
+        showErrorToast(
+          "updateFailed",
+          "Member Role",
+          "Organization owners cannot have their role changed. Transfer ownership first.",
+        );
+        return;
+      }
 
-    // Prevent changing role to OWNER
-    if (newRole === "OWNER") {
-      showErrorToast(
-        "updateFailed",
-        "Member Role",
-        "Cannot assign OWNER role. Ownership must be transferred separately.",
-      );
-      return;
-    }
+      // Prevent changing role to OWNER
+      if (newRole === "OWNER") {
+        showErrorToast(
+          "updateFailed",
+          "Member Role",
+          "Cannot assign OWNER role. Ownership must be transferred separately.",
+        );
+        return;
+      }
 
-    // Set state and show confirmation modal
-    setRoleUpdateState({ memberId, memberEmail, newRole });
-    updateRoleConfirm.showConfirm(memberEmail);
-  };
+      // Set state and show confirmation modal
+      setRoleUpdateState({ memberId, memberEmail, newRole });
+      updateRoleConfirm.showConfirm(memberEmail);
+    },
+    [organizationId, updateRoleConfirm],
+  );
 
-  const handleRemoveMember = (memberId: string, memberEmail: string) => {
-    if (!organizationId) {
-      showErrorToast("notFound", "Organization");
-      return;
-    }
+  const handleRemoveMember = useCallback(
+    (memberId: string, memberEmail: string) => {
+      if (!organizationId) {
+        showErrorToast("notFound", "Organization");
+        return;
+      }
 
-    // Set state and show confirmation modal
-    setMemberToRemove({ memberId, memberEmail });
-    removeMemberConfirm.showConfirm(memberEmail);
-  };
+      // Set state and show confirmation modal
+      setMemberToRemove({ memberId, memberEmail });
+      removeMemberConfirm.showConfirm(memberEmail);
+    },
+    [organizationId, removeMemberConfirm],
+  );
 
-  const handleEditClick = (member: TeamMember) => {
-    router.push(`/workspace/team/${member.id}/edit`);
-  };
+  const handleEditClick = useCallback(
+    (member: TeamMember) => {
+      router.push(`/workspace/team/${member.id}/edit`);
+    },
+    [router],
+  );
 
-  const getRoleBadge = (role: TeamMemberRole) => {
+  const getRoleBadge = useCallback((role: TeamMemberRole) => {
     const config = roleConfig[role];
     const Icon = roleIcons[role];
     return (
@@ -266,9 +269,9 @@ export default function TeamPage() {
         {config.label}
       </Badge>
     );
-  };
+  }, []);
 
-  const getStatusBadge = (status: TeamMember["status"]) => {
+  const getStatusBadge = useCallback((status: TeamMember["status"]) => {
     return (
       <Badge
         variant="outline"
@@ -287,7 +290,7 @@ export default function TeamPage() {
         {status === "inactive" && "Inactive"}
       </Badge>
     );
-  };
+  }, []);
 
   // Column definitions for DataTable
   const columns: ColumnDef<TeamMember>[] = useMemo(
@@ -452,7 +455,13 @@ export default function TeamPage() {
         enableHiding: false,
       },
     ],
-    [handleRoleChange, handleEditClick, handleRemoveMember],
+    [
+      handleRoleChange,
+      handleEditClick,
+      handleRemoveMember,
+      getRoleBadge,
+      getStatusBadge,
+    ],
   );
 
   // Show message if no organization is selected

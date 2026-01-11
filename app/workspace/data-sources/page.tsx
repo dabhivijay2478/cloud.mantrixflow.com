@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   allDataSources,
   ConnectionSheet,
@@ -26,7 +26,6 @@ import {
 } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -163,17 +162,21 @@ export default function DataSourcesPage() {
     previousHasConnections.current = nowHasConnections;
   }, [hasConnections, showGridView]);
 
-  const isConnected = (dataSourceId: string) => {
-    return filteredDataSources.some(
-      (ds) => ds.id === dataSourceId && ds.status === "connected",
-    );
-  };
+  const isConnected = useCallback(
+    (dataSourceId: string) => {
+      return filteredDataSources.some(
+        (ds) => ds.id === dataSourceId && ds.status === "connected",
+      );
+    },
+    [filteredDataSources],
+  );
 
-  const getConnectedDataSource = (
-    dataSourceId: string,
-  ): DataSource | undefined => {
-    return filteredDataSources.find((ds) => ds.id === dataSourceId);
-  };
+  const getConnectedDataSource = useCallback(
+    (dataSourceId: string): DataSource | undefined => {
+      return filteredDataSources.find((ds) => ds.id === dataSourceId);
+    },
+    [filteredDataSources],
+  );
 
   const handleDataSourceClick = (dataSourceId: string) => {
     setSelectedDataSource(dataSourceId);

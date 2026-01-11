@@ -7,7 +7,6 @@ import {
   Database,
   Edit,
   Plus,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -288,17 +287,6 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       },
     },
   ];
-
-  const filteredEmitters = allEmitters.filter((emitter) => {
-    if (!searchQuery) return true;
-    return (
-      emitter.destinationName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      emitter.collectorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emitter.destinationType.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
 
   return (
     <div className="space-y-6">

@@ -1,9 +1,9 @@
 "use client";
 
 import { format, subDays } from "date-fns";
-import { Loader2, RefreshCw, Search, Terminal } from "lucide-react";
+import { RefreshCw, Search, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
-import { PageHeader, LogsSkeleton } from "@/components/shared";
+import { LogsSkeleton, PageHeader } from "@/components/shared";
 import { MetricCard } from "@/components/shared/metric-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,7 +170,7 @@ export default function ActivityLogPage() {
     setCursor(undefined); // Reset cursor when filter changes
   };
 
-  const handleLoadMore = () => {
+  const _handleLoadMore = () => {
     // Use nextCursor from API response instead of constructing from last log
     // This ensures we use the correct cursor format (encoded with createdAt + id)
     if (nextCursor) {

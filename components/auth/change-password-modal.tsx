@@ -1,6 +1,9 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,15 +19,12 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Button } from "@/components/ui/button";
 import {
   type AuthActionResult,
   changePasswordAction,
 } from "@/lib/actions/auth";
-import { toast } from "@/lib/utils/toast";
-import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "@/lib/utils/toast";
 
 interface ChangePasswordModalProps {
   open: boolean;

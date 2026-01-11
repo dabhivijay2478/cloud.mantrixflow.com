@@ -31,7 +31,7 @@ export interface LoadingStateProps {
 
 export function LoadingState({
   message = "Loading...",
-  logoSize = 48,
+  logoSize: _logoSize = 48,
   fullScreen = false,
   className,
   children,

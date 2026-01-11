@@ -41,15 +41,19 @@ export function AppHeaderSkeleton({
       {/* Sidebar Navigation Items */}
       {showSidebar && (
         <div className="hidden md:flex items-center gap-2">
-          {Array.from({ length: sidebarItemCount }, (_, index) => (
-            <Skeleton
-              key={`nav-${index}`}
-              className="h-9 w-20"
-              style={{
-                animationDelay: `${index * 50}ms`,
-              }}
-            />
-          ))}
+          {Array.from({ length: sidebarItemCount }, (_, index) => {
+            // Generate stable key using component instance and index
+            const stableKey = `nav-skeleton-${sidebarItemCount}-${index}`;
+            return (
+              <Skeleton
+                key={stableKey}
+                className="h-9 w-20"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                }}
+              />
+            );
+          })}
         </div>
       )}
 

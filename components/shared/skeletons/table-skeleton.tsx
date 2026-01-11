@@ -42,42 +42,53 @@ export function TableSkeleton({
       <div className="border-b bg-muted/50">
         <div className="flex items-center gap-4 px-4 py-3">
           {showCheckbox && <Skeleton className="h-4 w-4 rounded shrink-0" />}
-          {Array.from({ length: columnCount }, (_, index) => (
-            <Skeleton
-              key={`header-${index}`}
-              className="h-4 flex-1"
-              style={{
-                maxWidth: `${100 / totalColumns}%`,
-              }}
-            />
-          ))}
+          {Array.from({ length: columnCount }, (_, index) => {
+            const headerKey = `header-skeleton-${columnCount}-${index}`;
+            return (
+              <Skeleton
+                key={headerKey}
+                className="h-4 flex-1"
+                style={{
+                  maxWidth: `${100 / totalColumns}%`,
+                }}
+              />
+            );
+          })}
           {showAction && <Skeleton className="h-4 w-16 rounded shrink-0" />}
         </div>
       </div>
 
       {/* Table Rows */}
       <div className="divide-y">
-        {Array.from({ length: rowCount }, (_, rowIndex) => (
-          <div
-            key={`row-${rowIndex}`}
-            className="flex items-center gap-4 px-4 py-3"
-            style={{
-              animationDelay: `${rowIndex * 50}ms`,
-            }}
-          >
-            {showCheckbox && <Skeleton className="h-4 w-4 rounded shrink-0" />}
-            {Array.from({ length: columnCount }, (_, colIndex) => (
-              <Skeleton
-                key={`cell-${rowIndex}-${colIndex}`}
-                className="h-4 flex-1"
-                style={{
-                  maxWidth: `${100 / totalColumns}%`,
-                }}
-              />
-            ))}
-            {showAction && <Skeleton className="h-8 w-8 rounded shrink-0" />}
-          </div>
-        ))}
+        {Array.from({ length: rowCount }, (_, rowIndex) => {
+          const rowKey = `row-skeleton-${rowCount}-${rowIndex}`;
+          return (
+            <div
+              key={rowKey}
+              className="flex items-center gap-4 px-4 py-3"
+              style={{
+                animationDelay: `${rowIndex * 50}ms`,
+              }}
+            >
+              {showCheckbox && (
+                <Skeleton className="h-4 w-4 rounded shrink-0" />
+              )}
+              {Array.from({ length: columnCount }, (_, colIndex) => {
+                const cellKey = `cell-skeleton-${rowCount}-${rowIndex}-${columnCount}-${colIndex}`;
+                return (
+                  <Skeleton
+                    key={cellKey}
+                    className="h-4 flex-1"
+                    style={{
+                      maxWidth: `${100 / totalColumns}%`,
+                    }}
+                  />
+                );
+              })}
+              {showAction && <Skeleton className="h-8 w-8 rounded shrink-0" />}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -57,19 +57,22 @@ export function InlineSkeleton({
 
   return (
     <div className={cn("space-y-2", className)}>
-      {Array.from({ length: count }, (_, index) => (
-        <Skeleton
-          key={`inline-${index}`}
-          className={cn(
-            heightClass,
-            index === count - 1 ? "w-3/4" : "w-full",
-            shapeClass,
-          )}
-          style={{
-            animationDelay: `${index * 50}ms`,
-          }}
-        />
-      ))}
+      {Array.from({ length: count }, (_, index) => {
+        const stableKey = `inline-skeleton-${count}-${index}`;
+        return (
+          <Skeleton
+            key={stableKey}
+            className={cn(
+              heightClass,
+              index === count - 1 ? "w-3/4" : "w-full",
+              shapeClass,
+            )}
+            style={{
+              animationDelay: `${index * 50}ms`,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -3,19 +3,13 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, Building2, Check, Crown, Edit, Plus } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/shared";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   useCanCreateOrganization,
   useCurrentOrganization,
@@ -24,7 +18,6 @@ import {
 } from "@/lib/api/hooks/use-organizations";
 import type { Organization } from "@/lib/api/types/organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { cn } from "@/lib/utils";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function OrganizationsPage() {
@@ -36,50 +29,58 @@ export default function OrganizationsPage() {
 
   const setCurrentOrganization = useSetCurrentOrganization();
 
-  const handleSwitchOrganization = async (orgId: string) => {
-    try {
-      // Find the organization in the list
-      const orgToSwitch = displayOrganizations.find((org) => org.id === orgId);
-      if (!orgToSwitch) {
-        showErrorToast("notFound", "Organization");
-        return;
-      }
-
-      // Set current organization via API
-      await setCurrentOrganization.mutateAsync(orgId);
-
-      // Update workspace store
-      const { setCurrentOrganization: setStoreCurrentOrg } =
-        useWorkspaceStore.getState();
-      setStoreCurrentOrg({
-        id: orgToSwitch.id,
-        name: orgToSwitch.name,
-        slug: orgToSwitch.slug,
-        createdAt:
-          typeof orgToSwitch.createdAt === "string"
-            ? orgToSwitch.createdAt
-            : orgToSwitch.createdAt.toISOString(),
-      });
-
-      showSuccessToast("switched", "Organization");
-      // Redirect to workspace to see updated data
-      router.push("/workspace");
-    } catch (error) {
-      showErrorToast(
-        "switchFailed",
-        "Organization",
-        error instanceof Error ? error.message : undefined,
-      );
-    }
-  };
-
-  const handleEditOrganization = (orgId: string) => {
-    router.push(`/organizations/${orgId}/edit`);
-  };
-
   // Only use API organizations (which are filtered by membership)
   const displayOrganizations = apiOrganizations || [];
   const isLoading = orgsLoading;
+
+  const handleSwitchOrganization = useCallback(
+    async (orgId: string) => {
+      try {
+        // Find the organization in the list
+        const orgToSwitch = displayOrganizations.find(
+          (org) => org.id === orgId,
+        );
+        if (!orgToSwitch) {
+          showErrorToast("notFound", "Organization");
+          return;
+        }
+
+        // Set current organization via API
+        await setCurrentOrganization.mutateAsync(orgId);
+
+        // Update workspace store
+        const { setCurrentOrganization: setStoreCurrentOrg } =
+          useWorkspaceStore.getState();
+        setStoreCurrentOrg({
+          id: orgToSwitch.id,
+          name: orgToSwitch.name,
+          slug: orgToSwitch.slug,
+          createdAt:
+            typeof orgToSwitch.createdAt === "string"
+              ? orgToSwitch.createdAt
+              : orgToSwitch.createdAt.toISOString(),
+        });
+
+        showSuccessToast("switched", "Organization");
+        // Redirect to workspace to see updated data
+        router.push("/workspace");
+      } catch (error) {
+        showErrorToast(
+          "switchFailed",
+          "Organization",
+          error instanceof Error ? error.message : undefined,
+        );
+      }
+    },
+    [displayOrganizations, setCurrentOrganization, router],
+  );
+
+  const handleEditOrganization = useCallback(
+    (orgId: string) => {
+      router.push(`/organizations/${orgId}/edit`);
+    },
+    [router],
+  );
 
   // Column definitions for DataTable
   const columns: ColumnDef<Organization>[] = useMemo(

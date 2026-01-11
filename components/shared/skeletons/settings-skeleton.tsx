@@ -32,34 +32,37 @@ export function SettingsSkeleton({
 }: SettingsSkeletonProps) {
   return (
     <div className={cn("space-y-6", className)}>
-      {Array.from({ length: sectionCount }, (_, sectionIndex) => (
-        <Card
-          key={`section-${sectionIndex}`}
-          className="overflow-hidden border"
-          style={{
-            animationDelay: `${sectionIndex * 100}ms`,
-          }}
-        >
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="mt-2 h-4 w-96" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Array.from({ length: fieldCountPerSection }, (_, fieldIndex) => (
-              <div
-                key={`field-${sectionIndex}-${fieldIndex}`}
-                className="space-y-2"
-              >
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-10 w-full" />
-                {fieldIndex === fieldCountPerSection - 1 && (
-                  <Skeleton className="h-3 w-64" />
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ))}
+      {Array.from({ length: sectionCount }, (_, sectionIndex) => {
+        const sectionKey = `section-skeleton-${sectionCount}-${sectionIndex}`;
+        return (
+          <Card
+            key={sectionKey}
+            className="overflow-hidden border"
+            style={{
+              animationDelay: `${sectionIndex * 100}ms`,
+            }}
+          >
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="mt-2 h-4 w-96" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Array.from({ length: fieldCountPerSection }, (_, fieldIndex) => {
+                const fieldKey = `field-skeleton-${sectionCount}-${sectionIndex}-${fieldCountPerSection}-${fieldIndex}`;
+                return (
+                  <div key={fieldKey} className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-10 w-full" />
+                    {fieldIndex === fieldCountPerSection - 1 && (
+                      <Skeleton className="h-3 w-64" />
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Save Button */}
       {showSaveButton && (

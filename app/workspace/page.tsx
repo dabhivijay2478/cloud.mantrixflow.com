@@ -2,20 +2,20 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
-  RefreshCw,
+  Activity,
   Calendar,
   CalendarClock,
+  Database,
+  RefreshCw,
   TrendingUp,
   Users,
-  Database,
-  Activity,
 } from "lucide-react";
 import { useMemo } from "react";
-import { useDashboardOverview } from "@/lib/api";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { DashboardSkeleton, DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, PageHeader, DashboardSkeleton } from "@/components/shared";
+import { useDashboardOverview } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 function Gauge({
   value,
@@ -195,8 +195,7 @@ export default function Dashboard() {
     );
   }
 
-  const { organization, pipelines, recentMigrations, recentActivity } =
-    dashboard;
+  const { organization, pipelines, recentMigrations } = dashboard;
 
   // Calculate pipeline success rate
   const totalRuns = pipelines.byStatus.completed + pipelines.byStatus.failed;
