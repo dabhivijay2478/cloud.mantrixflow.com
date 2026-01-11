@@ -233,21 +233,7 @@ export default function OrganizationsPage() {
 
       {/* Main content */}
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
-        <Card className="mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Organizations</CardTitle>
-                <CardDescription>
-                  {displayOrganizations.length}{" "}
-                  {displayOrganizations.length === 1
-                    ? "organization"
-                    : "organizations"}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6">
+ 
             <DataTable
               columns={columns}
               data={displayOrganizations}
@@ -269,8 +255,7 @@ export default function OrganizationsPage() {
                   : "You haven't been added to any organizations yet."
               }
             />
-          </CardContent>
-        </Card>
+          
 
         {!canCreateOrganization && (
           <Card className="mt-6 border-muted">

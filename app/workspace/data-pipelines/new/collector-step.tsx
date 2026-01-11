@@ -302,9 +302,6 @@ export function CollectorStep({
         </Button>
       </div>
 
-      {/* Collectors Table */}
-      <Card>
-        <CardContent className="p-6">
           <DataTable
             columns={columns}
             data={collectors}
@@ -317,8 +314,6 @@ export function CollectorStep({
             emptyMessage="No collectors configured"
             emptyDescription="Add at least one collector to start your pipeline"
           />
-        </CardContent>
-      </Card>
 
       {/* Add/Edit Collector Sheet */}
       <FormSheet

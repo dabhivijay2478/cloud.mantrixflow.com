@@ -132,7 +132,7 @@ export default function TeamPage() {
         showErrorToast(
           "removeFailed",
           "Team Member",
-          error instanceof Error ? error.message : undefined,
+          error instanceof Error ? error.message : undefined
         );
         throw error;
       }
@@ -157,7 +157,7 @@ export default function TeamPage() {
         showErrorToast(
           "updateFailed",
           "Member Role",
-          error instanceof Error ? error.message : undefined,
+          error instanceof Error ? error.message : undefined
         );
         throw error;
       }
@@ -174,8 +174,8 @@ export default function TeamPage() {
         member.status === "invited"
           ? "pending"
           : member.status === "active" || member.status === "accepted"
-            ? "active"
-            : "inactive";
+          ? "active"
+          : "inactive";
 
       return {
         id: member.id,
@@ -187,8 +187,8 @@ export default function TeamPage() {
         joinedAt: member.acceptedAt
           ? new Date(member.acceptedAt).toISOString().split("T")[0]
           : member.invitedAt
-            ? new Date(member.invitedAt).toISOString().split("T")[0]
-            : undefined,
+          ? new Date(member.invitedAt).toISOString().split("T")[0]
+          : undefined,
       };
     });
   }, [members]);
@@ -197,7 +197,7 @@ export default function TeamPage() {
     memberId: string,
     memberEmail: string,
     newRole: TeamMemberRole,
-    currentRole: TeamMemberRole,
+    currentRole: TeamMemberRole
   ) => {
     if (!organizationId) {
       showErrorToast("notFound", "Organization");
@@ -209,7 +209,7 @@ export default function TeamPage() {
       showErrorToast(
         "updateFailed",
         "Member Role",
-        "Organization owners cannot have their role changed. Transfer ownership first.",
+        "Organization owners cannot have their role changed. Transfer ownership first."
       );
       return;
     }
@@ -219,7 +219,7 @@ export default function TeamPage() {
       showErrorToast(
         "updateFailed",
         "Member Role",
-        "Cannot assign OWNER role. Ownership must be transferred separately.",
+        "Cannot assign OWNER role. Ownership must be transferred separately."
       );
       return;
     }
@@ -259,7 +259,7 @@ export default function TeamPage() {
           role === "EDITOR" &&
             "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
           role === "VIEWER" &&
-            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
+            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950"
         )}
       >
         <Icon className="h-3 w-3" />
@@ -279,7 +279,7 @@ export default function TeamPage() {
           status === "pending" &&
             "border-yellow-500/50 text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950",
           status === "inactive" &&
-            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
+            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950"
         )}
       >
         {status === "active" && "Active"}
@@ -359,12 +359,12 @@ export default function TeamPage() {
                             member.id,
                             member.email,
                             key as TeamMemberRole,
-                            member.role,
+                            member.role
                           )
                         }
                         className={cn(
                           "flex items-center gap-2",
-                          member.role === key && "bg-accent",
+                          member.role === key && "bg-accent"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -432,9 +432,7 @@ export default function TeamPage() {
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() =>
-                      handleRemoveMember(member.id, member.email)
-                    }
+                    onClick={() => handleRemoveMember(member.id, member.email)}
                     className="text-destructive"
                     disabled={member.role === "OWNER"}
                   >
@@ -454,7 +452,7 @@ export default function TeamPage() {
         enableHiding: false,
       },
     ],
-    [handleRoleChange, handleEditClick, handleRemoveMember],
+    [handleRoleChange, handleEditClick, handleRemoveMember]
   );
 
   // Show message if no organization is selected
@@ -485,7 +483,9 @@ export default function TeamPage() {
     <div className="space-y-6">
       <PageHeader
         title="Team"
-        description={`Manage team members for ${currentOrganization?.name || "your organization"}`}
+        description={`Manage team members for ${
+          currentOrganization?.name || "your organization"
+        }`}
         action={
           <Button
             onClick={() => router.push("/workspace/team/invite")}
@@ -497,33 +497,23 @@ export default function TeamPage() {
         }
       />
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>
-                {teamMembers.length}{" "}
-                {teamMembers.length === 1 ? "member" : "members"} in{" "}
-                {currentOrganization?.name || "this organization"}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          <DataTable
-            columns={columns}
-            data={teamMembers}
-            isLoading={isLoading || membersLoading}
-            error={membersError || undefined}
-            enableSorting
-            defaultVisibleColumns={["name", "status", "role", "joinedAt", "actions"]}
-            fixedColumns={["name", "actions"]}
-            emptyMessage="No team members yet"
-            emptyDescription="Invite team members to get started"
-          />
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={teamMembers}
+        isLoading={isLoading || membersLoading}
+        error={membersError || undefined}
+        enableSorting
+        defaultVisibleColumns={[
+          "name",
+          "status",
+          "role",
+          "joinedAt",
+          "actions",
+        ]}
+        fixedColumns={["name", "actions"]}
+        emptyMessage="No team members yet"
+        emptyDescription="Invite team members to get started"
+      />
 
       {/* Confirmation Modals */}
       <ConfirmationModal
@@ -539,7 +529,11 @@ export default function TeamPage() {
         }
         description={
           roleUpdateState
-            ? `Are you sure you want to change ${roleUpdateState.memberEmail}'s role to ${roleConfig[roleUpdateState.newRole].label}? This will update their permissions in the organization.`
+            ? `Are you sure you want to change ${
+                roleUpdateState.memberEmail
+              }'s role to ${
+                roleConfig[roleUpdateState.newRole].label
+              }? This will update their permissions in the organization.`
             : "Are you sure you want to update this member's role?"
         }
         confirmLabel="Update Role"

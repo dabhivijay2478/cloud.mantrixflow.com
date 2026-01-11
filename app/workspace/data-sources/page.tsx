@@ -582,8 +582,6 @@ export default function DataSourcesPage() {
           onDataSourceClick={handleDataSourceClick}
         />
       ) : (
-        <Card>
-          <CardContent className="p-6">
             <DataTable
               columns={columns}
               data={filteredDataSources}
@@ -604,8 +602,6 @@ export default function DataSourcesPage() {
               emptyMessage="No data sources found"
               emptyDescription="Get started by connecting a data source"
             />
-          </CardContent>
-        </Card>
       )}
 
       {/* Connection Sheet */}

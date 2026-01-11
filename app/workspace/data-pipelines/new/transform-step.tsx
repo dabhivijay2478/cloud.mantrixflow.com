@@ -17,6 +17,7 @@ import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -551,17 +552,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     onComplete(collectors);
   };
 
-  const filteredTransforms = allTransforms.filter((transform) => {
-    if (!searchQuery) return true;
-    return (
-      transform.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transform.collectorName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      transform.emitterName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
   const columns: ColumnDef<
     TransformConfig & { collectorName: string; emitterName: string }
   >[] = [
@@ -664,9 +654,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         </Button>
       </div>
 
-      {/* Transforms Table */}
-      <Card>
-        <CardContent className="p-6">
+
           <DataTable
             columns={columns}
             data={allTransforms}
@@ -684,8 +672,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             emptyMessage="No transformers configured"
             emptyDescription="Add transformers to map fields from collectors to emitters"
           />
-        </CardContent>
-      </Card>
+        
 
       {/* Add/Edit Transform Sheet */}
       <FormSheet
@@ -852,8 +839,11 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                         No tables available in destination
                       </div>
                     ) : (
-                      destinationTables.map((table) => (
-                        <SelectItem key={table.fullName} value={table.fullName}>
+                      destinationTables.map((table, index) => (
+                        <SelectItem
+                          key={`${table.fullName}-${index}`}
+                          value={table.fullName}
+                        >
                           <div className="flex items-center gap-2 w-full">
                             <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
                             <span className="truncate flex-1 font-medium">

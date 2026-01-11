@@ -314,9 +314,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         </Button>
       </div>
 
-      {/* Emitters Table */}
-      <Card>
-        <CardContent className="p-6">
+    
           <DataTable
             columns={columns}
             data={allEmitters}
@@ -334,112 +332,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
             emptyMessage="No emitters configured"
             emptyDescription="Add emitters to send transformed data to destinations"
           />
-          {/* Mobile Card View - Keep for backward compatibility */}
-          <div className="md:hidden space-y-3 p-4 hidden">
-            {allEmitters.map((emitter) => {
-                const destination = availableDestinations.find(
-                  (d) => d.id === emitter.destinationId,
-                );
-                const Icon = destination?.icon || Database;
-                return (
-                  <Card
-                    key={emitter.id}
-                    className="border shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                            <Icon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {emitter.destinationName}
-                            </p>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs mt-1 font-normal"
-                            >
-                              {emitter.destinationType}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditEmitter(emitter)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() =>
-                              handleDeleteEmitter(
-                                emitter.collectorId,
-                                emitter.id,
-                              )
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">
-                            Collector:
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {emitter.collectorName}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {Object.entries(emitter.connectionConfig)
-                            .filter(
-                              ([key]) =>
-                                key !== "password" &&
-                                key !== "secretAccessKey" &&
-                                key !== "apiKey" &&
-                                key !== "credentials",
-                            )
-                            .slice(0, 2)
-                            .map(([key, value]) => (
-                              <Badge
-                                key={key}
-                                variant="outline"
-                                className="text-xs font-normal"
-                              >
-                                {key}: {value?.toString().slice(0, 8)}
-                                {value && value.length > 8 ? "..." : ""}
-                              </Badge>
-                            ))}
-                          {Object.keys(emitter.connectionConfig).filter(
-                            (k) =>
-                              k !== "password" &&
-                              k !== "secretAccessKey" &&
-                              k !== "apiKey" &&
-                              k !== "credentials",
-                          ).length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +
-                              {Object.keys(emitter.connectionConfig).length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
+         
       {/* Add/Edit Emitter Sheet */}
       <FormSheet
         open={showAddDialog}

@@ -467,9 +467,6 @@ export default function DataPipelinesPage() {
         }
       />
 
-      {/* Existing Pipelines */}
-      <Card>
-        <CardContent className="p-6">
           <DataTable
             columns={columns}
             data={pipelines || []}
@@ -488,8 +485,6 @@ export default function DataPipelinesPage() {
             emptyMessage="No pipelines yet"
             emptyDescription="Create your first data pipeline to start moving data from source to destination. Configure transformations, set up real-time streaming, or bulk load your data."
           />
-        </CardContent>
-      </Card>
     </div>
   );
 }
