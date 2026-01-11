@@ -191,6 +191,7 @@ export function SignupForm({
               id="password"
               name="password"
               className="h-8 text-sm"
+              placeholder="Enter your password"
               autoComplete="new-password"
               required
               aria-invalid={
@@ -219,6 +220,7 @@ export function SignupForm({
               id="confirm-password"
               name="confirmPassword"
               className="h-8 text-sm"
+              placeholder="Confirm your password"
               autoComplete="new-password"
               required
               aria-invalid={

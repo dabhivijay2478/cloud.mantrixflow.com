@@ -12,24 +12,25 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
 
-  // Handle Supabase verify token (from invite email)
-  if (token && type === "invite") {
+  // Handle Supabase verify token (from invite email or password reset)
+  if (token && (type === "invite" || type === "recovery")) {
     try {
       // Verify the token using verifyOtp
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: token,
-        type: "invite",
+        type: type === "invite" ? "invite" : "recovery",
       });
 
       if (error || !data.session || !data.user) {
-        console.error("Error verifying invite token:", error);
+        console.error(`Error verifying ${type} token:`, error);
         return NextResponse.redirect(`${origin}/auth/auth-code-error`);
       }
 
-      // Redirect to accept-invite page - session is now set
+      // Redirect based on type
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
-      const redirectPath = "/auth/accept-invite";
+      const redirectPath =
+        type === "invite" ? "/auth/accept-invite" : "/auth/reset-password";
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       } else if (forwardedHost) {
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       }
     } catch (error) {
-      console.error("Error in token verification:", error);
+      console.error(`Error in ${type} token verification:`, error);
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
   }
@@ -69,6 +70,21 @@ export async function GET(request: Request) {
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
       const redirectPath = "/auth/login?error=Authentication failed";
+      if (isLocalEnv) {
+        return NextResponse.redirect(`${origin}${redirectPath}`);
+      } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+      } else {
+        return NextResponse.redirect(`${origin}${redirectPath}`);
+      }
+    }
+
+    // Handle recovery type (password reset) - redirect to reset-password page
+    // The session is already set via exchangeCodeForSession
+    if (type === "recovery") {
+      const forwardedHost = request.headers.get("x-forwarded-host");
+      const isLocalEnv = process.env.NODE_ENV === "development";
+      const redirectPath = "/auth/reset-password";
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       } else if (forwardedHost) {
@@ -167,6 +183,21 @@ export async function GET(request: Request) {
     const forwardedHost = request.headers.get("x-forwarded-host");
     const isLocalEnv = process.env.NODE_ENV === "development";
     const redirectPath = "/auth/accept-invite";
+    if (isLocalEnv) {
+      return NextResponse.redirect(`${origin}${redirectPath}`);
+    } else if (forwardedHost) {
+      return NextResponse.redirect(`https://${forwardedHost}${redirectPath}`);
+    } else {
+      return NextResponse.redirect(`${origin}${redirectPath}`);
+    }
+  }
+
+  // If we reach here and it's a recovery type but no token/code, redirect to reset-password
+  // The client-side form will handle checking for session or tokens in URL hash
+  if (type === "recovery") {
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const isLocalEnv = process.env.NODE_ENV === "development";
+    const redirectPath = "/auth/reset-password";
     if (isLocalEnv) {
       return NextResponse.redirect(`${origin}${redirectPath}`);
     } else if (forwardedHost) {

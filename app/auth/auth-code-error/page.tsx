@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function AuthCodeErrorPage() {
   return (
@@ -41,7 +42,12 @@ export default function AuthCodeErrorPage() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 to-destructive/5" />
+        <Image
+          src="/p1.jpg"
+          alt="Login Background"
+          fill
+          className="object-cover"
+        />
       </div>
     </div>
   );

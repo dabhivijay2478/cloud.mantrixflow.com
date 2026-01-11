@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 import { Logo } from "@/components/logo";
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
@@ -19,7 +20,12 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5" />
+        <Image
+          src="/p1.jpg"
+          alt="Login Background"
+          fill
+          className="object-cover"
+        />
       </div>
     </div>
   );

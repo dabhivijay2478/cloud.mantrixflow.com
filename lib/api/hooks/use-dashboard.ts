@@ -23,7 +23,8 @@ export function useDashboardOverview(organizationId: string | undefined) {
       if (!organizationId) {
         throw new Error("Organization ID is required");
       }
-      const result = await DashboardService.getDashboardOverview(organizationId);
+      const result =
+        await DashboardService.getDashboardOverview(organizationId);
       if (!result) {
         throw new Error("Dashboard data is undefined");
       }

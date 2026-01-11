@@ -1,6 +1,14 @@
 "use client";
 
-import { RefreshCw, Calendar, CalendarClock, TrendingUp, Users, Database, Activity } from "lucide-react";
+import {
+  RefreshCw,
+  Calendar,
+  CalendarClock,
+  TrendingUp,
+  Users,
+  Database,
+  Activity,
+} from "lucide-react";
 import { useDashboardOverview } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +75,13 @@ function Gauge({
 export default function Dashboard() {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
-  const { data: dashboard, isLoading, error, refetch, isRefetching } = useDashboardOverview(orgId);
+  const {
+    data: dashboard,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+  } = useDashboardOverview(orgId);
 
   const handleRefresh = () => {
     refetch();
@@ -85,7 +99,9 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-semibold text-foreground mb-2">Error loading dashboard</p>
+          <p className="text-lg font-semibold text-foreground mb-2">
+            Error loading dashboard
+          </p>
           <p className="text-sm text-muted-foreground">
             {error instanceof Error ? error.message : "Unknown error occurred"}
           </p>
@@ -98,20 +114,26 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-semibold text-foreground mb-2">No data available</p>
-          <p className="text-sm text-muted-foreground">Dashboard data could not be loaded</p>
+          <p className="text-lg font-semibold text-foreground mb-2">
+            No data available
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Dashboard data could not be loaded
+          </p>
         </div>
       </div>
     );
   }
 
-  const { organization, pipelines, recentMigrations, recentActivity } = dashboard;
+  const { organization, pipelines, recentMigrations, recentActivity } =
+    dashboard;
 
   // Calculate pipeline success rate
   const totalRuns = pipelines.byStatus.completed + pipelines.byStatus.failed;
-  const successRate = totalRuns > 0 
-    ? ((pipelines.byStatus.completed / totalRuns) * 100).toFixed(1)
-    : "0.0";
+  const successRate =
+    totalRuns > 0
+      ? ((pipelines.byStatus.completed / totalRuns) * 100).toFixed(1)
+      : "0.0";
 
   // Get recent migrations for this week
   const now = new Date();
@@ -153,7 +175,9 @@ export default function Dashboard() {
               onClick={handleRefresh}
               disabled={isRefetching}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           }
@@ -161,9 +185,7 @@ export default function Dashboard() {
 
         {/* Weekly Update */}
         <section className="mb-12">
-          <h2 className="text-lg font-medium mb-6 text-foreground">
-            Overview
-          </h2>
+          <h2 className="text-lg font-medium mb-6 text-foreground">Overview</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="border border-border rounded-lg p-6 bg-card hover:border-border/80 transition-colors">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
@@ -186,9 +208,7 @@ export default function Dashboard() {
               <div className="text-4xl font-semibold mb-2 text-foreground">
                 {migrationsThisWeek.length}
               </div>
-              <div className="text-sm text-muted-foreground">
-                Last 7 days
-              </div>
+              <div className="text-sm text-muted-foreground">Last 7 days</div>
             </div>
 
             <div className="border border-border rounded-lg p-6 bg-card hover:border-border/80 transition-colors">
@@ -234,7 +254,8 @@ export default function Dashboard() {
                 {successRate}%
               </div>
               <div className="text-sm text-muted-foreground">
-                {pipelines.byStatus.completed} completed, {pipelines.byStatus.failed} failed
+                {pipelines.byStatus.completed} completed,{" "}
+                {pipelines.byStatus.failed} failed
               </div>
             </div>
           </div>
@@ -298,7 +319,13 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-foreground">
-                      {pipelines.total > 0 ? ((pipelines.byStatus.running / pipelines.total) * 100).toFixed(1) : 0}%
+                      {pipelines.total > 0
+                        ? (
+                            (pipelines.byStatus.running / pipelines.total) *
+                            100
+                          ).toFixed(1)
+                        : 0}
+                      %
                     </span>
                     <span className="text-muted-foreground">
                       of total pipelines
@@ -339,7 +366,8 @@ export default function Dashboard() {
                 />
                 <div className="text-center mt-4">
                   <div className="font-medium text-foreground">
-                    {pipelines.byStatus.completed} of {totalRuns || 1} runs successful
+                    {pipelines.byStatus.completed} of {totalRuns || 1} runs
+                    successful
                   </div>
                 </div>
               </div>
@@ -436,9 +464,11 @@ export default function Dashboard() {
                           <TableCell>
                             <Badge
                               variant={
-                                migration.status === "completed" || migration.status === "success"
+                                migration.status === "completed" ||
+                                migration.status === "success"
                                   ? "default"
-                                  : migration.status === "failed" || migration.status === "error"
+                                  : migration.status === "failed" ||
+                                      migration.status === "error"
                                     ? "destructive"
                                     : "secondary"
                               }
@@ -449,7 +479,9 @@ export default function Dashboard() {
                           <TableCell>
                             <span className="text-sm text-muted-foreground">
                               {migration.startedAt
-                                ? new Date(migration.startedAt).toLocaleDateString("en-US", {
+                                ? new Date(
+                                    migration.startedAt,
+                                  ).toLocaleDateString("en-US", {
                                     month: "short",
                                     day: "numeric",
                                     year: "numeric",

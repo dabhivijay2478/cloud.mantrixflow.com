@@ -15,6 +15,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { ThemeCustomizer } from "@/components/theme/theme-customizer";
+import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const updateUser = useUpdateUser();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // Profile form state
   const [firstName, setFirstName] = useState("");
@@ -178,13 +180,13 @@ export default function SettingsPage() {
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Organization</span>
             </TabsTrigger>
-            <TabsTrigger
+            {/* <TabsTrigger
               value="appearance"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger
               value="security"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
@@ -514,9 +516,7 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Appearance */}
-        <TabsContent value="appearance" className="space-y-6">
-          {/* Theme Mode Selection */}
+        {/* <TabsContent value="appearance" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Theme Mode</CardTitle>
@@ -562,10 +562,8 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Theme Customization */}
           <ThemeCustomizer />
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Security */}
         <TabsContent value="security" className="space-y-6">
@@ -599,7 +597,11 @@ export default function SettingsPage() {
                     Verified
                   </Badge>
                 </div>
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => setChangePasswordOpen(true)}
+                >
                   Change Password
                 </Button>
               </CardContent>
@@ -607,6 +609,11 @@ export default function SettingsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+      />
     </div>
   );
 }
