@@ -1,50 +1,54 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 /**
  * LoadingState
- * @description Standardized loading skeleton component.
- * Uses skeleton loaders instead of spinners for a more professional loading experience.
+ * @description Standardized loading component with logo and message.
+ * Uses the application logo with loading text for a branded loading experience.
  * @param {LoadingStateProps} props - Component properties
- * @param {string} [props.message] - Loading message text
- * @param {"sm" | "md" | "lg"} [props.size] - Skeleton size (default: "md")
+ * @param {string} [props.message] - Loading message text (default: "Loading...")
+ * @param {number} [props.logoSize] - Logo size in pixels (default: 48)
  * @param {boolean} [props.fullScreen] - Full screen overlay (default: false)
  * @param {string} [props.className] - Additional CSS classes
- * @param {React.ReactNode} [props.children] - Custom skeleton content
+ * @param {React.ReactNode} [props.children] - Custom loading content (overrides default)
  * @returns {JSX.Element} LoadingState component
  * @example
  * <LoadingState message="Loading dashboard..." />
- * <LoadingState fullScreen>
- *   <Skeleton className="h-20 w-full" />
+ * <LoadingState fullScreen logoSize={64} />
+ * <LoadingState>
+ *   <CustomLoadingContent />
  * </LoadingState>
  */
 export interface LoadingStateProps {
   message?: string;
-  size?: "sm" | "md" | "lg";
+  logoSize?: number;
   fullScreen?: boolean;
   className?: string;
   children?: React.ReactNode;
 }
 
-const sizeClasses = {
-  sm: "h-4 w-16",
-  md: "h-6 w-24",
-  lg: "h-8 w-32",
-};
-
 export function LoadingState({
   message = "Loading...",
-  size = "md",
+  logoSize = 48,
   fullScreen = false,
   className,
   children,
 }: LoadingStateProps) {
   const content = children || (
-    <div className="flex flex-col items-center justify-center gap-3">
-      <Skeleton className={cn(sizeClasses[size], "rounded-full")} />
-      {message && <Skeleton className="h-4 w-32" />}
+    <div className="flex flex-col items-center justify-center gap-4">
+      <div className="flex items-center gap-2 px-2 animate-pulse ">
+        <Logo className="h-6 w-6 shrink-0" />
+        <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
+          MantrixFlow
+        </span>
+      </div>
+      {message && (
+        <p className="text-sm text-muted-foreground font-medium animate-pulse">
+          {message}
+        </p>
+      )}
     </div>
   );
 
@@ -53,7 +57,7 @@ export function LoadingState({
       <div
         className={cn(
           "flex items-center justify-center w-full h-screen",
-          className,
+          className
         )}
       >
         {content}
