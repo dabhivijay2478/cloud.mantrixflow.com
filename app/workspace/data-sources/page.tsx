@@ -8,8 +8,12 @@ import {
   DataSourceGrid,
   DataSourceTable,
 } from "@/components/data-sources";
-import { PageHeader } from "@/components/shared";
+import {
+  ConfirmationModal,
+  PageHeader,
+} from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { useConfirmation } from "@/hooks/use-confirmation";
 import {
   type CreateConnectionDto,
   type TestConnectionDto,
@@ -20,7 +24,10 @@ import {
 } from "@/lib/api";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { toast } from "@/lib/utils/toast";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
@@ -223,8 +230,9 @@ export default function DataSourcesPage() {
       });
 
       if (!orgId) {
-        toast.error(
-          "No organization selected",
+        showErrorToast(
+          "notFound",
+          "Organization",
           "Please select an organization from the sidebar before creating a connection.",
         );
         return;
@@ -236,10 +244,7 @@ export default function DataSourcesPage() {
       setShowConnectionSheet(false);
       setConnectingDataSourceId(null);
 
-      toast.success(
-        `${dataSource.name} connected successfully`,
-        "Your data source has been connected and is ready to use.",
-      );
+      showSuccessToast("connected", dataSource.name);
 
       // The useEffect will automatically switch to table view when connections update
     } catch (error) {
@@ -247,7 +252,7 @@ export default function DataSourcesPage() {
         error instanceof Error
           ? error.message
           : "Unable to connect the data source. Please try again.";
-      toast.error("Failed to connect data source", errorMessage);
+      showErrorToast("connectFailed", "Data Source", errorMessage);
       console.error(error);
     }
   };
@@ -308,48 +313,61 @@ export default function DataSourcesPage() {
 
   const handleDisconnect = async (dataSourceId: string) => {
     const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) return;
+    if (!dataSource) {
+      showErrorToast("notFound", "Data Source");
+      return;
+    }
 
     try {
       // Update connection status to inactive
       // Note: You may need to add an updateConnection hook call here
       // For now, we'll just show a message
-      toast.success(
-        "Data source disconnected",
-        `${dataSource.name} has been disconnected successfully.`,
-      );
+      showSuccessToast("disconnected", dataSource.name);
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Unable to disconnect the data source.";
-      toast.error("Failed to disconnect data source", errorMessage);
+      showErrorToast("disconnectFailed", "Data Source", errorMessage);
     }
   };
 
-  const handleDelete = async (dataSourceId: string) => {
-    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) return;
+  // State to track which data source is being deleted
+  const [dataSourceToDelete, setDataSourceToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-    if (
-      confirm(
-        `Are you sure you want to delete "${dataSource.name}"? This action cannot be undone.`,
-      )
-    ) {
+  // Confirmation modal for deleting data source
+  const deleteConfirm = useConfirmation({
+    action: "delete",
+    itemName: "Data Source",
+    onConfirm: async () => {
+      if (!dataSourceToDelete) return;
       try {
-        await deleteConnection.mutateAsync(dataSourceId);
-        toast.success(
-          "Data source deleted",
-          `${dataSource.name} has been deleted successfully.`,
-        );
+        await deleteConnection.mutateAsync(dataSourceToDelete.id);
+        showSuccessToast("deleted", "Data Source");
+        setDataSourceToDelete(null);
       } catch (error) {
         const errorMessage =
           error instanceof Error
             ? error.message
             : "Unable to delete the data source.";
-        toast.error("Failed to delete data source", errorMessage);
+        showErrorToast("deleteFailed", "Data Source", errorMessage);
+        throw error; // Re-throw to prevent modal from closing on error
       }
+    },
+  });
+
+  const handleDelete = (dataSourceId: string) => {
+    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
+    if (!dataSource) {
+      showErrorToast("notFound", "Data Source");
+      return;
     }
+    // Store the data source to delete and show confirmation modal
+    setDataSourceToDelete({ id: dataSourceId, name: dataSource.name });
+    deleteConfirm.showConfirm(dataSource.name);
   };
 
   return (
@@ -434,6 +452,19 @@ export default function DataSourcesPage() {
         dataSourceId={connectingDataSourceId}
         onConnect={handleConnect}
         onTestConnection={handleTestConnection}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        {...deleteConfirm.confirmProps}
+        isLoading={deleteConnection.isPending}
+        onOpenChange={(open) => {
+          deleteConfirm.confirmProps.onOpenChange(open);
+          if (!open) {
+            // Clear the data source to delete when modal closes
+            setDataSourceToDelete(null);
+          }
+        }}
       />
     </div>
   );
