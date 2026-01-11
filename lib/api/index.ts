@@ -37,6 +37,9 @@ export { organizationsKeys } from "./hooks/use-organizations";
 // Hooks - Users
 export * from "./hooks/use-users";
 export { usersKeys } from "./hooks/use-users";
+// Hooks - Global Search
+export * from "./hooks/use-global-search";
+export { globalSearchKeys } from "./hooks/use-global-search";
 // Services
 export { ActivityLogsService } from "./services/activity-logs.service";
 export { DashboardService } from "./services/dashboard.service";
@@ -46,6 +49,7 @@ export { OnboardingService } from "./services/onboarding.service";
 export { OrganizationsService } from "./services/organizations.service";
 // Services
 export { UsersService } from "./services/users.service";
+export { SearchService } from "./services/search.service";
 export type * from "./types/activity-logs";
 export type * from "./types/dashboard";
 export type * from "./types/data-pipelines";

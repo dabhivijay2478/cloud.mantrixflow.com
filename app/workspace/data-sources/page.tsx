@@ -10,7 +10,7 @@ import {
   Unlink,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   allDataSources,
@@ -53,6 +53,8 @@ export default function DataSourcesPage() {
   // Get current organization from workspace store (set by sidebar selector)
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get("search") || undefined;
 
   // Debug logging
   useEffect(() => {
@@ -649,6 +651,8 @@ export default function DataSourcesPage() {
           isLoading={false}
           enableSorting
           enableFiltering
+          externalFilter={urlSearch}
+          externalFilterColumnKey="name"
           filterPlaceholder="Filter data sources..."
           defaultVisibleColumns={[
             "name",

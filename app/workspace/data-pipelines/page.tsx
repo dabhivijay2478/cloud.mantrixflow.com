@@ -10,7 +10,7 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ type PipelineType = "bulk" | "stream" | "emit";
 export default function DataPipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get("search") || undefined;
 
   // Use real API hooks instead of workspace store
   const { data: pipelines, isLoading: pipelinesLoading } = usePipelines(orgId);
@@ -499,6 +501,8 @@ export default function DataPipelinesPage() {
         isLoading={pipelinesLoading}
         enableSorting
         enableFiltering
+        externalFilter={urlSearch}
+        externalFilterColumnKey="name"
         filterPlaceholder="Filter pipelines ..."
         defaultVisibleColumns={[
           "name",
