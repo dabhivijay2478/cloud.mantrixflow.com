@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser, useUpdateUser } from "@/lib/api";
+import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
@@ -39,10 +40,20 @@ export default function SettingsPage() {
   const { currentOrganization, updateOrganization } = useWorkspaceStore();
   const { user: authUser } = useAuthStore();
   const { data: user, isLoading: userLoading } = useCurrentUser();
+  const { data: currentOrg } = useCurrentOrganization();
   const updateUser = useUpdateUser();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
+  // Get current user's role in the organization
+  const currentUserRole = currentOrg?.role as
+    | "OWNER"
+    | "ADMIN"
+    | "EDITOR"
+    | "VIEWER"
+    | undefined;
+  const isOwner = currentUserRole === "OWNER";
 
   // Profile form state
   const [firstName, setFirstName] = useState("");
@@ -406,22 +417,35 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Organization Details</CardTitle>
               <CardDescription>
-                Update your organization information and settings
+                {isOwner
+                  ? "Update your organization information and settings"
+                  : "View your organization information (read-only)"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {!isOwner && (
+                <div className="mb-4 p-3 bg-muted/50 border border-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Only organization owners can edit organization details. You have
+                    view-only access.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <Label
                   htmlFor="org-name"
                   className="text-sm font-medium flex items-center gap-2"
                 >
                   Organization Name
-                  <span className="text-destructive text-xs">*</span>
+                  {isOwner && <span className="text-destructive text-xs">*</span>}
                 </Label>
                 <Input
                   id="org-name"
                   value={orgName}
                   onChange={(e) => {
+                    if (!isOwner) return;
                     setOrgName(e.target.value);
                     if (
                       !orgSlug ||
@@ -432,7 +456,8 @@ export default function SettingsPage() {
                   }}
                   placeholder="Acme Corporation"
                   className="h-10"
-                  disabled={loading}
+                  disabled={loading || !isOwner}
+                  readOnly={!isOwner}
                 />
                 <p className="text-xs text-muted-foreground">
                   This is your organization's display name
@@ -450,10 +475,14 @@ export default function SettingsPage() {
                   <Input
                     id="org-slug"
                     value={orgSlug}
-                    onChange={(e) => setOrgSlug(e.target.value)}
+                    onChange={(e) => {
+                      if (!isOwner) return;
+                      setOrgSlug(e.target.value);
+                    }}
                     placeholder="acme-corp"
                     className="h-10 flex-1"
-                    disabled={loading}
+                    disabled={loading || !isOwner}
+                    readOnly={!isOwner}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -475,43 +504,49 @@ export default function SettingsPage() {
                 <Textarea
                   id="org-description"
                   value={orgDescription}
-                  onChange={(e) => setOrgDescription(e.target.value)}
+                  onChange={(e) => {
+                    if (!isOwner) return;
+                    setOrgDescription(e.target.value);
+                  }}
                   placeholder="A brief description of your organization..."
                   className="min-h-[100px] resize-none"
-                  disabled={loading}
+                  disabled={loading || !isOwner}
+                  readOnly={!isOwner}
                 />
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setOrgName(currentOrganization?.name || "");
-                    setOrgSlug(currentOrganization?.slug || "");
-                  }}
-                  disabled={loading}
-                  className="w-full sm:w-auto cursor-pointer"
-                >
-                  Reset
-                </Button>
-                <Button
-                  onClick={handleSaveOrganization}
-                  disabled={loading || !orgName.trim()}
-                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
+              {isOwner && (
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setOrgName(currentOrganization?.name || "");
+                      setOrgSlug(currentOrganization?.slug || "");
+                    }}
+                    disabled={loading}
+                    className="w-full sm:w-auto cursor-pointer"
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    onClick={handleSaveOrganization}
+                    disabled={loading || !orgName.trim()}
+                    className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

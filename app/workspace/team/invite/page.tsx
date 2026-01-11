@@ -32,7 +32,7 @@ import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 export default function InviteTeamMemberPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("member");
+  const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("EDITOR");
 
   const [state, formAction, isPending] = useActionState<
     TeamActionResult | null,
@@ -46,7 +46,7 @@ export default function InviteTeamMemberPage() {
       // Reset form and redirect after a short delay
       setTimeout(() => {
         setEmail("");
-        setSelectedRole("member");
+        setSelectedRole("EDITOR");
         router.push("/workspace/team");
       }, 1500);
     } else if (state && !state.success) {

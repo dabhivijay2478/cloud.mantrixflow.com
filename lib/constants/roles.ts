@@ -1,4 +1,8 @@
-export type TeamMemberRole = "owner" | "admin" | "member" | "viewer" | "guest";
+/**
+ * AUTHORITATIVE ROLES - Must match backend enum
+ * These roles are enforced server-side and are the single source of truth
+ */
+export type TeamMemberRole = "OWNER" | "ADMIN" | "EDITOR" | "VIEWER";
 
 export const roleConfig: Record<
   TeamMemberRole,
@@ -7,24 +11,20 @@ export const roleConfig: Record<
     description: string;
   }
 > = {
-  owner: {
+  OWNER: {
     label: "Owner",
-    description: "Full access to all features and settings",
+    description: "Full access: Update org details, invite/remove users, change roles, manage all data",
   },
-  admin: {
+  ADMIN: {
     label: "Admin",
-    description: "Can manage workspace settings",
+    description: "Can manage workspace data, data sources, pipelines, and users. Cannot update org details or change ownership",
   },
-  member: {
-    label: "Member",
-    description: "Can view and send emails",
+  EDITOR: {
+    label: "Editor",
+    description: "Can edit workspace data, manage data sources and pipelines. Cannot manage users or org settings",
   },
-  viewer: {
+  VIEWER: {
     label: "Viewer",
-    description: "Can view dashboards only",
-  },
-  guest: {
-    label: "Guest",
-    description: "Limited access to specific resources",
+    description: "Read-only access. Can view all data but cannot edit anything",
   },
 };

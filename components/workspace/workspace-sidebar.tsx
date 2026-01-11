@@ -176,6 +176,14 @@ export function WorkspaceSidebar() {
   const canCreateOrganization = canCreateData?.canCreate ?? true; // Default to true for backwards compatibility
   const setCurrentOrganizationAPI = useSetCurrentOrganization();
 
+  // Get current user's role in the current organization
+  const currentUserRole = apiCurrentOrg?.role as
+    | "OWNER"
+    | "ADMIN"
+    | "EDITOR"
+    | "VIEWER"
+    | undefined;
+
   // Handle organization change from sidebar switcher
   const handleOrganizationChange = async (org: Organization | null) => {
     if (!org) {
@@ -346,37 +354,49 @@ export function WorkspaceSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname?.startsWith("/workspace/data-sources")}
-                  tooltip="Data Sources"
-                  className="cursor-pointer"
-                >
-                  <Link href="/workspace/data-sources">
-                    <Database className="h-4 w-4" />
-                    <span>Data Sources</span>
-                    {filteredDataSources.length > 0 && (
-                      <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                        {filteredDataSources.length}
-                      </span>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname?.startsWith("/workspace/data-pipelines")}
-                  tooltip="Data Pipelines"
-                  className="cursor-pointer"
-                >
-                  <Link href="/workspace/data-pipelines">
-                    <GitBranch className="h-4 w-4" />
-                    <span>Data Pipelines</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {/* Data Sources - Visible to OWNER, ADMIN, EDITOR, VIEWER */}
+              {(currentUserRole === "OWNER" ||
+                currentUserRole === "ADMIN" ||
+                currentUserRole === "EDITOR" ||
+                currentUserRole === "VIEWER") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname?.startsWith("/workspace/data-sources")}
+                    tooltip="Data Sources"
+                    className="cursor-pointer"
+                  >
+                    <Link href="/workspace/data-sources">
+                      <Database className="h-4 w-4" />
+                      <span>Data Sources</span>
+                      {filteredDataSources.length > 0 && (
+                        <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                          {filteredDataSources.length}
+                        </span>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {/* Data Pipelines - Visible to OWNER, ADMIN, EDITOR, VIEWER */}
+              {(currentUserRole === "OWNER" ||
+                currentUserRole === "ADMIN" ||
+                currentUserRole === "EDITOR" ||
+                currentUserRole === "VIEWER") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname?.startsWith("/workspace/data-pipelines")}
+                    tooltip="Data Pipelines"
+                    className="cursor-pointer"
+                  >
+                    <Link href="/workspace/data-pipelines">
+                      <GitBranch className="h-4 w-4" />
+                      <span>Data Pipelines</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -398,6 +418,7 @@ export function WorkspaceSidebar() {
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {/* Settings - Visible to all users (for profile and password management) */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -411,19 +432,22 @@ export function WorkspaceSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname?.startsWith("/workspace/team")}
-                  tooltip="Team"
-                  className="cursor-pointer"
-                >
-                  <Link href="/workspace/team">
-                    <Users className="h-4 w-4" />
-                    <span>Team</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {/* Team - Visible to OWNER and ADMIN (for inviting/managing users) */}
+              {(currentUserRole === "OWNER" || currentUserRole === "ADMIN") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname?.startsWith("/workspace/team")}
+                    tooltip="Team"
+                    className="cursor-pointer"
+                  >
+                    <Link href="/workspace/team">
+                      <Users className="h-4 w-4" />
+                      <span>Team</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

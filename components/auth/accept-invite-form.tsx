@@ -297,6 +297,7 @@ function AcceptInviteFormContent({
             id="password"
             name="password"
             autoComplete="new-password"
+            placeholder="Enter your password"
             required
             aria-invalid={
               state && !state.success && state.fieldErrors?.password
@@ -323,6 +324,7 @@ function AcceptInviteFormContent({
             id="confirm-password"
             name="confirmPassword"
             autoComplete="new-password"
+            placeholder="Confirm your password"
             required
             aria-invalid={
               state && !state.success && state.fieldErrors?.confirmPassword

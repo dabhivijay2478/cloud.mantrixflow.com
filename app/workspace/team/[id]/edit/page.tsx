@@ -64,7 +64,7 @@ export default function EditTeamMemberPage() {
   const removeMember = useRemoveMember();
 
   // Form state - only role is editable
-  const [editRole, setEditRole] = useState<TeamMemberRole>("member");
+  const [editRole, setEditRole] = useState<TeamMemberRole>("EDITOR");
 
   // Initialize form when member data loads
   useEffect(() => {
@@ -154,8 +154,8 @@ export default function EditTeamMemberPage() {
       return;
     }
 
-    // Prevent updating owner role
-    if (member.role === "owner") {
+    // Prevent updating OWNER role
+    if (member.role === "OWNER") {
       showErrorToast(
         "updateFailed",
         "Team Member",
@@ -164,12 +164,12 @@ export default function EditTeamMemberPage() {
       return;
     }
 
-    // Prevent changing role to owner
-    if (editRole === "owner") {
+    // Prevent changing role to OWNER
+    if (editRole === "OWNER") {
       showErrorToast(
         "updateFailed",
         "Team Member",
-        "Cannot assign owner role. Ownership must be transferred separately.",
+        "Cannot assign OWNER role. Ownership must be transferred separately.",
       );
       return;
     }
@@ -193,8 +193,8 @@ export default function EditTeamMemberPage() {
     }
   };
 
-  // Check if member is owner - owners cannot have their role changed
-  const isOwner = member?.role === "owner";
+  // Check if member is OWNER - OWNERs cannot have their role changed
+  const isOwner = member?.role === "OWNER";
 
   const handleRemoveMember = () => {
     if (!member) return;
@@ -369,7 +369,7 @@ export default function EditTeamMemberPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(roleConfig)
-                    .filter(([key]) => key !== "owner") // Remove owner from options
+                    .filter(([key]) => key !== "OWNER") // Remove OWNER from options
                     .map(([key, config]) => (
                       <SelectItem key={key} value={key} className="cursor-pointer">
                         {config.label} - {config.description}
@@ -398,7 +398,7 @@ export default function EditTeamMemberPage() {
                   disabled={
                     updateMember.isPending ||
                     removeMember.isPending ||
-                    member.role === "owner"
+                    member.role === "OWNER"
                   }
                   className="w-full sm:w-auto cursor-pointer" 
                 >
@@ -433,7 +433,7 @@ export default function EditTeamMemberPage() {
                   </Button>
                 </div>
               </div>
-              {member.role === "owner" && (
+              {member.role === "OWNER" && (
                 <p className="text-xs text-muted-foreground text-center sm:text-right">
                   Organization owners cannot be removed. Transfer ownership
                   first.

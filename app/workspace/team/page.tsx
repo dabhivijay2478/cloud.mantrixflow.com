@@ -66,11 +66,10 @@ interface TeamMember {
 }
 
 const roleIcons: Record<TeamMemberRole, typeof Shield> = {
-  owner: Crown,
-  admin: Shield,
-  member: User,
-  viewer: User,
-  guest: User,
+  OWNER: Crown,
+  ADMIN: Shield,
+  EDITOR: User,
+  VIEWER: User,
 };
 
 export default function TeamPage() {
@@ -213,8 +212,8 @@ export default function TeamPage() {
       return;
     }
 
-    // Prevent changing owner role
-    if (currentRole === "owner") {
+    // Prevent changing OWNER role
+    if (currentRole === "OWNER") {
       showErrorToast(
         "updateFailed",
         "Member Role",
@@ -223,12 +222,12 @@ export default function TeamPage() {
       return;
     }
 
-    // Prevent changing role to owner
-    if (newRole === "owner") {
+    // Prevent changing role to OWNER
+    if (newRole === "OWNER") {
       showErrorToast(
         "updateFailed",
         "Member Role",
-        "Cannot assign owner role. Ownership must be transferred separately.",
+        "Cannot assign OWNER role. Ownership must be transferred separately.",
       );
       return;
     }
@@ -261,16 +260,14 @@ export default function TeamPage() {
         variant="outline"
         className={cn(
           "flex items-center gap-1.5 px-2 py-1",
-          role === "owner" &&
+          role === "OWNER" &&
             "border-purple-500/50 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950",
-          role === "admin" &&
+          role === "ADMIN" &&
             "border-blue-500/50 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950",
-          role === "member" &&
+          role === "EDITOR" &&
             "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
-          role === "viewer" &&
+          role === "VIEWER" &&
             "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
-          role === "guest" &&
-            "border-orange-500/50 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950",
         )}
       >
         <Icon className="h-3 w-3" />
@@ -437,8 +434,8 @@ export default function TeamPage() {
                           {getStatusBadge(member.status)}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
-                          {member.role === "owner" ? (
-                            // Owners cannot have their role changed - show badge only
+                          {member.role === "OWNER" ? (
+                            // OWNERs cannot have their role changed - show badge only
                             getRoleBadge(member.role)
                           ) : (
                             <DropdownMenu>
@@ -460,7 +457,7 @@ export default function TeamPage() {
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {Object.entries(roleConfig)
-                                  .filter(([key]) => key !== "owner") // Remove owner from options
+                                  .filter(([key]) => key !== "OWNER") // Remove OWNER from options
                                   .map(([key, config]) => {
                                     const Icon =
                                       roleIcons[key as TeamMemberRole];
@@ -532,11 +529,11 @@ export default function TeamPage() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => handleEditClick(member)}
-                                  disabled={member.role === "owner"}
+                                  disabled={member.role === "OWNER"}
                                 >
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Member
-                                  {member.role === "owner" && (
+                                  {member.role === "OWNER" && (
                                     <span className="ml-auto text-xs text-muted-foreground">
                                       (Owner)
                                     </span>
@@ -547,11 +544,11 @@ export default function TeamPage() {
                                     handleRemoveMember(member.id, member.email)
                                   }
                                   className="text-destructive"
-                                  disabled={member.role === "owner"}
+                                  disabled={member.role === "OWNER"}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Remove Member
-                                  {member.role === "owner" && (
+                                  {member.role === "OWNER" && (
                                     <span className="ml-auto text-xs text-muted-foreground">
                                       (Owner)
                                     </span>

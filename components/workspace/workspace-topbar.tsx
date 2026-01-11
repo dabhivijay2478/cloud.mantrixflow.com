@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,14 +18,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
+import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { cn } from "@/lib/utils";
 import { toast as toastUtil } from "@/lib/utils/toast";
 
 export function WorkspaceTopbar() {
   const router = useRouter();
   const { user, signOut } = useAuthStore();
+  const { data: currentOrg } = useCurrentOrganization();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMac, setIsMac] = useState(false);
+
+  // Get current user's role in the organization
+  const currentUserRole = currentOrg?.role as
+    | "OWNER"
+    | "ADMIN"
+    | "EDITOR"
+    | "VIEWER"
+    | undefined;
 
   useEffect(() => {
     setIsMac(/Mac|iPhone|iPod|iPad/i.test(navigator.platform));
@@ -107,6 +120,26 @@ export function WorkspaceTopbar() {
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
                   </p>
+                  {currentUserRole && (
+                    <div className="pt-1">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs font-normal",
+                          currentUserRole === "OWNER" &&
+                            "border-purple-500/50 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950",
+                          currentUserRole === "ADMIN" &&
+                            "border-blue-500/50 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950",
+                          currentUserRole === "EDITOR" &&
+                            "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
+                          currentUserRole === "VIEWER" &&
+                            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
+                        )}
+                      >
+                        {roleConfig[currentUserRole as TeamMemberRole].label}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
