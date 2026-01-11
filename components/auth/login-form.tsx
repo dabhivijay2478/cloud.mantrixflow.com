@@ -32,7 +32,7 @@ function LoginFormContent({
   const { signInWithGitHub, signInWithGoogle, setError } = useAuthStore();
 
   const [state, formAction, isPending] = useActionState<
-    AuthActionResult | null,
+    AuthActionResult<{ redirectTo: string }> | null,
     FormData
   >(loginAction, null);
 
@@ -40,7 +40,6 @@ function LoginFormContent({
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
     const confirmEmail = searchParams.get("confirmEmail");
-    const reset = searchParams.get("reset");
 
     if (confirmed === "true") {
       toast.success(
@@ -52,25 +51,19 @@ function LoginFormContent({
         "Check your email",
         "Please check your email to confirm your account before signing in.",
       );
-    } else if (reset === "success") {
-      toast.success(
-        "Password reset successful!",
-        "Your password has been updated. You can now sign in.",
-      );
     }
   }, [searchParams]);
 
-  // Handle form errors
+  // Handle form state changes
   useEffect(() => {
-    if (state && !state.success) {
-      // Ignore NEXT_REDIRECT errors as they are expected behavior for redirects
-      if (
-        typeof state.error === "string" &&
-        state.error.includes("NEXT_REDIRECT")
-      ) {
-        console.log("Ignoring expected NEXT_REDIRECT error in login form.");
-        return;
-      }
+    if (state?.success) {
+      // Get redirect path from server action result
+      const redirectTo = state.data?.redirectTo || "/workspace";
+      
+      // Use window.location.href for full page reload to ensure session sync
+      // This is important for cross-browser compatibility
+      window.location.href = redirectTo;
+    } else if (state && !state.success) {
       setError(state.error);
       toast.error("Login failed", state.error);
     }

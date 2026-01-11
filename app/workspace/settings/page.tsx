@@ -15,6 +15,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { ThemeCustomizer } from "@/components/theme/theme-customizer";
+import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const updateUser = useUpdateUser();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // Profile form state
   const [firstName, setFirstName] = useState("");
@@ -599,7 +601,11 @@ export default function SettingsPage() {
                     Verified
                   </Badge>
                 </div>
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => setChangePasswordOpen(true)}
+                >
                   Change Password
                 </Button>
               </CardContent>
@@ -607,6 +613,11 @@ export default function SettingsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+      />
     </div>
   );
 }

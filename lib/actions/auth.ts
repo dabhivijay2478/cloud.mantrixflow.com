@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { UsersService } from "@/lib/api";
 import { createClient } from "@/lib/supabase/server";
 import {
+  changePasswordSchema,
   forgotPasswordSchema,
   loginSchema,
   resetPasswordSchema,
@@ -15,14 +16,16 @@ export type AuthActionResult<T = void> =
   | { success: true; data?: T; message?: string }
   | { success: false; error: string; fieldErrors?: Record<string, string[]> };
 
+export type LoginActionResult = AuthActionResult<{ redirectTo: string }>;
+
 /**
  * Server Action for user login
  * Validates input, authenticates user, and handles session management
  */
 export async function loginAction(
-  _prevState: AuthActionResult | null,
+  _prevState: AuthActionResult<{ redirectTo: string }> | null,
   formData: FormData,
-): Promise<AuthActionResult> {
+): Promise<AuthActionResult<{ redirectTo: string }>> {
   try {
     // Extract and validate form data
     const rawData = {
@@ -122,13 +125,20 @@ export async function loginAction(
     // Revalidate paths
     revalidatePath("/", "layout");
 
-    // Redirect based on onboarding status
-    // IMPORTANT: redirect() throws a NEXT_REDIRECT error which is expected
-    // This error should be re-thrown so Next.js can handle the redirect properly
+    // Return success with redirect path - client will handle redirect
+    // This ensures session is properly synced across browsers
     if (needsOnboarding) {
-      redirect("/onboarding/welcome");
+      return {
+        success: true,
+        data: { redirectTo: "/onboarding/welcome" },
+        message: "Login successful",
+      };
     } else {
-      redirect("/workspace");
+      return {
+        success: true,
+        data: { redirectTo: "/workspace" },
+        message: "Login successful",
+      };
     }
   } catch (error) {
     // Check if it's a Next.js redirect error - if so, re-throw it
@@ -654,6 +664,101 @@ export async function resetPasswordAction(
     return {
       success: true,
       message: "Password updated successfully! Redirecting to login...",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred. Please try again.",
+    };
+  }
+}
+
+/**
+ * Server Action for change password
+ * Verifies old password and updates to new password
+ */
+export async function changePasswordAction(
+  _prevState: AuthActionResult | null,
+  formData: FormData,
+): Promise<AuthActionResult> {
+  try {
+    // Extract and validate form data
+    const rawData = {
+      oldPassword: formData.get("oldPassword")?.toString() ?? "",
+      password: formData.get("password")?.toString() ?? "",
+      confirmPassword: formData.get("confirmPassword")?.toString() ?? "",
+    };
+
+    const validation = changePasswordSchema.safeParse(rawData);
+
+    if (!validation.success) {
+      const fieldErrors: Record<string, string[]> = {};
+      validation.error.issues.forEach((issue) => {
+        const path = issue.path[0]?.toString() ?? "root";
+        if (!fieldErrors[path]) {
+          fieldErrors[path] = [];
+        }
+        fieldErrors[path].push(issue.message);
+      });
+
+      return {
+        success: false,
+        error: "Validation failed. Please check your input.",
+        fieldErrors,
+      };
+    }
+
+    const { oldPassword, password } = validation.data;
+    const supabase = await createClient();
+
+    // Get current user email from session
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session || !session.user?.email) {
+      return {
+        success: false,
+        error: "You must be logged in to change your password.",
+      };
+    }
+
+    // Verify old password by attempting to sign in
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password: oldPassword,
+    });
+
+    if (verifyError) {
+      return {
+        success: false,
+        error: "Current password is incorrect.",
+        fieldErrors: {
+          oldPassword: ["Current password is incorrect"],
+        },
+      };
+    }
+
+    // Update to new password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (updateError) {
+      return {
+        success: false,
+        error: updateError.message || "Failed to update password. Please try again.",
+      };
+    }
+
+    // Revalidate
+    revalidatePath("/", "layout");
+    return {
+      success: true,
+      message: "Password changed successfully! You will be logged out.",
     };
   } catch (error) {
     return {
