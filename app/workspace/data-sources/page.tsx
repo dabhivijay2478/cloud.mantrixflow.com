@@ -41,6 +41,7 @@ import {
   useCreateConnection,
   useDeleteConnection,
   useTestConnection,
+  useUsers,
 } from "@/lib/api";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -91,6 +92,13 @@ export default function DataSourcesPage() {
   const enabledDataSources = allDataSources.filter(
     (ds) => ds.type === "postgres",
   );
+
+  // Get all unique user IDs from connections for fetching user names
+  const userIds = useMemo(
+    () => connections?.map((conn) => conn.userId).filter(Boolean) || [],
+    [connections],
+  );
+  const { usersMap } = useUsers(userIds);
 
   // Convert API connections to component format
   const filteredDataSources: DataSource[] = (connections?.map((conn) => {
@@ -458,6 +466,26 @@ export default function DataSourcesPage() {
         },
       },
       {
+        accessorKey: "createdBy",
+        header: "Created By",
+        cell: ({ row }) => {
+          const dataSource = row.original;
+          // Find the connection to get userId
+          const connection = connections?.find((conn) => conn.id === dataSource.id);
+          if (!connection?.userId) {
+            return <span className="text-muted-foreground text-sm">-</span>;
+          }
+          const creator = usersMap.get(connection.userId);
+          const displayName = creator?.fullName || 
+            (creator?.firstName && creator?.lastName 
+              ? `${creator.firstName} ${creator.lastName}` 
+              : creator?.email?.split("@")[0] || "Unknown");
+          return (
+            <span className="text-sm text-muted-foreground">{displayName}</span>
+          );
+        },
+      },
+      {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
@@ -544,6 +572,8 @@ export default function DataSourcesPage() {
       router,
       handleDisconnect,
       handleDelete,
+      connections,
+      usersMap,
     ],
   );
 

@@ -22,6 +22,7 @@ import {
   useRunPipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
+import { useUsers } from "@/lib/api/hooks/use-users";
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -40,6 +41,10 @@ export default function DataPipelinesPage() {
   const pausePipeline = usePausePipeline();
   const resumePipeline = useResumePipeline();
   const router = useRouter();
+
+  // Get all unique user IDs from pipelines for fetching user names
+  const userIds = pipelines?.map((pipeline) => pipeline.userId).filter(Boolean) || [];
+  const { usersMap } = useUsers(userIds);
 
   const getPipelineTypeInfo = (type: PipelineType) => {
     switch (type) {
@@ -350,6 +355,24 @@ export default function DataPipelinesPage() {
           {new Date(row.original.createdAt).toLocaleDateString()}
         </div>
       ),
+    },
+    {
+      accessorKey: "createdBy",
+      header: "Created By",
+      cell: ({ row }) => {
+        const pipeline = row.original;
+        if (!pipeline.userId) {
+          return <span className="text-muted-foreground text-sm">-</span>;
+        }
+        const creator = usersMap.get(pipeline.userId);
+        const displayName = creator?.fullName || 
+          (creator?.firstName && creator?.lastName 
+            ? `${creator.firstName} ${creator.lastName}` 
+            : creator?.email?.split("@")[0] || "Unknown");
+        return (
+          <span className="text-sm text-muted-foreground">{displayName}</span>
+        );
+      },
     },
     {
       id: "actions",
