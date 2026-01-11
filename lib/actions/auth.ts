@@ -338,7 +338,7 @@ export async function forgotPasswordAction(
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/auth/reset-password`,
+      redirectTo: `${siteUrl}/auth/callback?type=recovery`,
     });
 
     if (error) {
@@ -649,9 +649,12 @@ export async function resetPasswordAction(
       };
     }
 
-    // Revalidate and redirect to login
+    // Revalidate and return success - redirect will be handled client-side
     revalidatePath("/", "layout");
-    redirect("/auth/login?reset=success");
+    return {
+      success: true,
+      message: "Password updated successfully! Redirecting to login...",
+    };
   } catch (error) {
     return {
       success: false,

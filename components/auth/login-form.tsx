@@ -152,6 +152,7 @@ function LoginFormContent({
             id="password"
             name="password"
             autoComplete="current-password"
+            placeholder="Enter your password"
             required
             aria-invalid={
               state && !state.success && state.fieldErrors?.password

@@ -36,15 +36,51 @@ function ResetPasswordFormContent({
     FormData
   >(resetPasswordAction, null);
 
-  // Check for access token in URL and set session
+  // Check for access token in URL and set session, or check for existing session
   useEffect(() => {
     const checkToken = async () => {
-      const accessToken = searchParams.get("access_token");
-      const refreshToken = searchParams.get("refresh_token");
+      try {
+        const { supabase } = await import("@/lib/supabase/client");
+        
+        // First, check if there's already a valid session (set by callback route)
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
 
-      if (accessToken && refreshToken) {
-        try {
-          const { supabase } = await import("@/lib/supabase/client");
+        if (existingSession) {
+          setIsValidToken(true);
+          setIsCheckingToken(false);
+          return;
+        }
+
+        // If no session, check for tokens in URL params
+        const accessToken = searchParams.get("access_token");
+        const refreshToken = searchParams.get("refresh_token");
+        const code = searchParams.get("code");
+
+        // Handle code exchange (from Supabase redirect)
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error || !data.session) {
+            toast.error(
+              "Invalid reset link",
+              "This password reset link is invalid or has expired.",
+            );
+            setTimeout(() => {
+              router.push("/auth/forgot-password");
+            }, 3000);
+            setIsCheckingToken(false);
+            return;
+          }
+
+          setIsValidToken(true);
+          setIsCheckingToken(false);
+          return;
+        }
+
+        // Handle direct token params (legacy support)
+        if (accessToken && refreshToken) {
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -63,16 +99,11 @@ function ResetPasswordFormContent({
           }
 
           setIsValidToken(true);
-        } catch (_error) {
-          toast.error(
-            "Invalid reset link",
-            "This password reset link is invalid or has expired.",
-          );
-          setTimeout(() => {
-            router.push("/auth/forgot-password");
-          }, 3000);
+          setIsCheckingToken(false);
+          return;
         }
-      } else {
+
+        // No valid tokens or session found
         toast.error(
           "Invalid reset link",
           "This password reset link is invalid or has expired.",
@@ -80,8 +111,17 @@ function ResetPasswordFormContent({
         setTimeout(() => {
           router.push("/auth/forgot-password");
         }, 3000);
+        setIsCheckingToken(false);
+      } catch (_error) {
+        toast.error(
+          "Invalid reset link",
+          "This password reset link is invalid or has expired.",
+        );
+        setTimeout(() => {
+          router.push("/auth/forgot-password");
+        }, 3000);
+        setIsCheckingToken(false);
       }
-      setIsCheckingToken(false);
     };
 
     checkToken();
@@ -91,12 +131,15 @@ function ResetPasswordFormContent({
   useEffect(() => {
     if (state?.success) {
       toast.success("Password updated!", state.message);
-      // Redirect handled by Server Action
+      // Redirect to login after successful password update
+      setTimeout(() => {
+        router.push("/auth/login?reset=success");
+      }, 1500);
     } else if (state && !state.success) {
       setError(state.error);
       toast.error("Password update failed", state.error);
     }
-  }, [state, setError]);
+  }, [state, setError, router]);
 
   if (isCheckingToken) {
     return (
@@ -142,6 +185,7 @@ function ResetPasswordFormContent({
             id="password"
             name="password"
             autoComplete="new-password"
+            placeholder="Enter your new password"
             required
             aria-invalid={
               state && !state.success && state.fieldErrors?.password
@@ -170,6 +214,7 @@ function ResetPasswordFormContent({
             id="confirm-password"
             name="confirmPassword"
             autoComplete="new-password"
+            placeholder="Confirm your new password"
             required
             aria-invalid={
               state && !state.success && state.fieldErrors?.confirmPassword
