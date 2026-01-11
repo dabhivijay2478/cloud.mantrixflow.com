@@ -14,9 +14,8 @@ import { useMemo } from "react";
 import { useDashboardOverview } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { DataTable, PageHeader } from "@/components/shared";
+import { DataTable, PageHeader, DashboardSkeleton } from "@/components/shared";
 
 function Gauge({
   value,
@@ -156,8 +155,14 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Skeleton className="w-[300px] h-10" />
+      <div className="min-h-screen bg-background">
+        <div className="space-y-6">
+          <PageHeader
+            title="Dashboard"
+            description="Loading dashboard data..."
+          />
+          <DashboardSkeleton />
+        </div>
       </div>
     );
   }

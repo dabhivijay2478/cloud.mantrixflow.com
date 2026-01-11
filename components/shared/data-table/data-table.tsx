@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/feedback/empty-state";
 import { ErrorState } from "@/components/shared/feedback/error-state";
-import { LoadingState } from "@/components/shared/feedback/loading-state";
+import { TableSkeleton } from "@/components/shared/skeletons";
 import { cn } from "@/lib/utils";
 
 export interface DataTableProps<TData, TValue> {
@@ -368,11 +368,12 @@ export function DataTable<TData, TValue>({
   if (isLoading) {
     return (
       <div className={cn("w-full", className)}>
-        <div className="rounded-md border">
-          <div className="p-8">
-            <LoadingState message="Loading data..." />
-          </div>
-        </div>
+        <TableSkeleton
+          columnCount={columns.length}
+          rowCount={defaultPageSize}
+          showCheckbox={enableRowSelection}
+          showAction={false}
+        />
       </div>
     );
   }

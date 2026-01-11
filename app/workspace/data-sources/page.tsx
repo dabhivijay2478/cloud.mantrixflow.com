@@ -22,6 +22,7 @@ import {
   ConfirmationModal,
   DataTable,
   PageHeader,
+  PageHeaderSkeleton,
 } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -570,8 +571,11 @@ export default function DataSourcesPage() {
           </div>
         </div>
       ) : isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">Loading connections...</div>
+        <div className="space-y-6">
+          <PageHeaderSkeleton showAction={true} />
+          <div className="flex items-center justify-center py-12">
+            <div className="text-muted-foreground">Loading connections...</div>
+          </div>
         </div>
       ) : showGridView ? (
         // Show grid view when no connections or when "New source" is clicked

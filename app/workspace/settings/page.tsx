@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, SettingsSkeleton } from "@/components/shared";
 import { ThemeCustomizer } from "@/components/theme/theme-customizer";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 import { Badge } from "@/components/ui/badge";
@@ -161,6 +161,19 @@ export default function SettingsPage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
   };
+
+  // Show skeleton on initial load
+  if (userLoading && !user) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Settings"
+          description="Manage your workspace, preferences, and account settings"
+        />
+        <SettingsSkeleton sectionCount={3} fieldCountPerSection={3} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
