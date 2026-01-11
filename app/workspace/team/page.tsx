@@ -13,7 +13,7 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConfirmationModal, DataTable, PageHeader } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -61,6 +61,8 @@ const roleIcons: Record<TeamMemberRole, typeof Shield> = {
 export default function TeamPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get("search") || undefined;
 
   // Get current organization from workspace store (set by sidebar selector)
   // This ensures team data updates when organization is switched
@@ -518,6 +520,8 @@ export default function TeamPage() {
         error={membersError || undefined}
         enableSorting
         enableFiltering
+        externalFilter={urlSearch}
+        externalFilterColumnKey="name"
         filterPlaceholder="Filter team members..."
         defaultVisibleColumns={[
           "name",

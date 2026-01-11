@@ -26,6 +26,9 @@ export { dataPipelinesKeys } from "./hooks/use-data-pipelines";
 // Hooks - Data Sources
 export * from "./hooks/use-data-sources";
 export { dataSourcesKeys } from "./hooks/use-data-sources";
+// Hooks - Global Search
+export * from "./hooks/use-global-search";
+export { globalSearchKeys } from "./hooks/use-global-search";
 // Hooks - Onboarding
 export * from "./hooks/use-onboarding";
 export { onboardingKeys } from "./hooks/use-onboarding";
@@ -44,6 +47,7 @@ export { DataPipelinesService } from "./services/data-pipelines.service";
 export { DataSourcesService } from "./services/data-sources.service";
 export { OnboardingService } from "./services/onboarding.service";
 export { OrganizationsService } from "./services/organizations.service";
+export { SearchService } from "./services/search.service";
 // Services
 export { UsersService } from "./services/users.service";
 export type * from "./types/activity-logs";

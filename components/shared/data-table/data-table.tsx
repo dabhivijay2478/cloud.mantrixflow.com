@@ -211,6 +211,15 @@ export interface DataTableProps<TData, TValue> {
    */
   onGlobalFilterChange?: (value: string) => void;
   /**
+   * External filter value (e.g., from URL search params)
+   * This will be synced with the global filter
+   */
+  externalFilter?: string;
+  /**
+   * Column key to apply external filter to (defaults to first searchable column)
+   */
+  externalFilterColumnKey?: string;
+  /**
    * Placeholder for global filter input
    */
   filterPlaceholder?: string;
@@ -283,6 +292,8 @@ export function DataTable<TData, TValue>({
   onColumnFiltersChange,
   globalFilter,
   onGlobalFilterChange,
+  externalFilter,
+  externalFilterColumnKey: _externalFilterColumnKey,
   filterPlaceholder = "Filter...",
   onRowClick,
   emptyMessage = "No results found",
@@ -392,8 +403,21 @@ export function DataTable<TData, TValue>({
       }
     : setInternalColumnFilters;
 
+  // Sync external filter (from URL) with global filter
+  React.useEffect(() => {
+    if (externalFilter !== undefined) {
+      if (onGlobalFilterChange) {
+        onGlobalFilterChange(externalFilter);
+      } else {
+        setInternalGlobalFilter(externalFilter);
+      }
+    }
+  }, [externalFilter, onGlobalFilterChange]);
+
   const currentGlobalFilter =
-    onGlobalFilterChange !== undefined ? globalFilter : internalGlobalFilter;
+    onGlobalFilterChange !== undefined
+      ? (globalFilter ?? externalFilter ?? "")
+      : (internalGlobalFilter ?? externalFilter ?? "");
   const setCurrentGlobalFilter = onGlobalFilterChange
     ? (value: string) => {
         onGlobalFilterChange(value);
@@ -467,6 +491,7 @@ export function DataTable<TData, TValue>({
     [],
   );
 
+  // Create table instance (needed for column access in useEffect)
   const table = useReactTable({
     data,
     columns,

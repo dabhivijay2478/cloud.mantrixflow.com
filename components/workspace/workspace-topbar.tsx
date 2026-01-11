@@ -1,8 +1,7 @@
 "use client";
 
-import { LogOut, Search, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,21 +14,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Kbd } from "@/components/ui/kbd";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { toast as toastUtil } from "@/lib/utils/toast";
+import { GlobalSearch } from "./global-search";
 
 export function WorkspaceTopbar() {
   const router = useRouter();
   const { user, signOut } = useAuthStore();
   const { data: currentOrg } = useCurrentOrganization();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [isMac, setIsMac] = useState(false);
 
   // Get current user's role in the organization
   const currentUserRole = currentOrg?.role as
@@ -38,25 +34,6 @@ export function WorkspaceTopbar() {
     | "EDITOR"
     | "VIEWER"
     | undefined;
-
-  useEffect(() => {
-    setIsMac(/Mac|iPhone|iPod|iPad/i.test(navigator.platform));
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -81,19 +58,8 @@ export function WorkspaceTopbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
         <SidebarTrigger className="cursor-pointer" />
-        <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              type="search"
-              placeholder="Search data sources, pipelines..."
-              className="pl-9 pr-20 h-9"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              <Kbd className="h-5 text-xs">{isMac ? "⌘" : "Ctrl"}K</Kbd>
-            </div>
-          </div>
+        <div className="flex-1 flex items-center justify-center max-w-md mx-auto">
+          <GlobalSearch />
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
