@@ -237,7 +237,12 @@ function ResetPasswordFormContent({
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isPending} aria-busy={isPending} className="cursor-pointer">
+          <Button
+            type="submit"
+            disabled={isPending}
+            aria-busy={isPending}
+            className="cursor-pointer"
+          >
             {isPending ? "Updating password..." : "Update password"}
           </Button>
         </Field>

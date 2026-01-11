@@ -467,26 +467,26 @@ export default function DataPipelinesPage() {
         }
       />
 
-          <DataTable
-            columns={columns}
-            data={pipelines || []}
-            isLoading={pipelinesLoading}
-            enableSorting
-            enableFiltering
-            filterPlaceholder="Filter pipelines ..."
-            defaultVisibleColumns={[
-              "name",
-              "sourceType",
-              "sourceConnectionId",
-              "status",
-              "destinationConnectionId",
-              "createdAt",
-              "actions",
-            ]}
-            fixedColumns={["name", "actions"]}
-            emptyMessage="No pipelines yet"
-            emptyDescription="Create your first data pipeline to start moving data from source to destination. Configure transformations, set up real-time streaming, or bulk load your data."
-          />
+      <DataTable
+        columns={columns}
+        data={pipelines || []}
+        isLoading={pipelinesLoading}
+        enableSorting
+        enableFiltering
+        filterPlaceholder="Filter pipelines ..."
+        defaultVisibleColumns={[
+          "name",
+          "sourceType",
+          "sourceConnectionId",
+          "status",
+          "destinationConnectionId",
+          "createdAt",
+          "actions",
+        ]}
+        fixedColumns={["name", "actions"]}
+        emptyMessage="No pipelines yet"
+        emptyDescription="Create your first data pipeline to start moving data from source to destination. Configure transformations, set up real-time streaming, or bulk load your data."
+      />
     </div>
   );
 }

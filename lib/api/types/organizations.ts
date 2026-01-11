@@ -30,11 +30,7 @@ export interface UpdateOrganizationDto {
  * Organization Member Types
  * AUTHORITATIVE ROLES - Must match backend enum
  */
-export type OrganizationMemberRole =
-  | "OWNER"
-  | "ADMIN"
-  | "EDITOR"
-  | "VIEWER";
+export type OrganizationMemberRole = "OWNER" | "ADMIN" | "EDITOR" | "VIEWER";
 export type OrganizationMemberStatus =
   | "invited"
   | "accepted"

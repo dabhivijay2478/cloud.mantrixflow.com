@@ -314,25 +314,24 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         </Button>
       </div>
 
-    
-          <DataTable
-            columns={columns}
-            data={allEmitters}
-            enableSorting
-            enableFiltering
-            filterPlaceholder="Filter emitters..."
-            defaultVisibleColumns={[
-              "collectorName",
-              "destinationName",
-              "destinationType",
-              "connectionConfig",
-              "actions",
-            ]}
-            fixedColumns={["collectorName", "actions"]}
-            emptyMessage="No emitters configured"
-            emptyDescription="Add emitters to send transformed data to destinations"
-          />
-         
+      <DataTable
+        columns={columns}
+        data={allEmitters}
+        enableSorting
+        enableFiltering
+        filterPlaceholder="Filter emitters..."
+        defaultVisibleColumns={[
+          "collectorName",
+          "destinationName",
+          "destinationType",
+          "connectionConfig",
+          "actions",
+        ]}
+        fixedColumns={["collectorName", "actions"]}
+        emptyMessage="No emitters configured"
+        emptyDescription="Add emitters to send transformed data to destinations"
+      />
+
       {/* Add/Edit Emitter Sheet */}
       <FormSheet
         open={showAddDialog}
@@ -491,7 +490,11 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
       {/* Continue Button */}
       <div className="flex justify-end pt-2">
-        <Button onClick={handleCreate} size="lg" className="w-full sm:w-auto cursor-pointer">
+        <Button
+          onClick={handleCreate}
+          size="lg"
+          className="w-full sm:w-auto cursor-pointer"
+        >
           <ArrowRight className="mr-2 h-4 w-4" />
           Continue to Transform
         </Button>

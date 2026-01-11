@@ -302,18 +302,23 @@ export function CollectorStep({
         </Button>
       </div>
 
-          <DataTable
-            columns={columns}
-            data={collectors}
-            isLoading={false}
-            enableSorting
-            enableFiltering
-            filterPlaceholder="Filter collectors..."
-            defaultVisibleColumns={["sourceId", "selectedTables", "transformers", "actions"]}
-            fixedColumns={["sourceId", "actions"]}
-            emptyMessage="No collectors configured"
-            emptyDescription="Add at least one collector to start your pipeline"
-          />
+      <DataTable
+        columns={columns}
+        data={collectors}
+        isLoading={false}
+        enableSorting
+        enableFiltering
+        filterPlaceholder="Filter collectors..."
+        defaultVisibleColumns={[
+          "sourceId",
+          "selectedTables",
+          "transformers",
+          "actions",
+        ]}
+        fixedColumns={["sourceId", "actions"]}
+        emptyMessage="No collectors configured"
+        emptyDescription="Add at least one collector to start your pipeline"
+      />
 
       {/* Add/Edit Collector Sheet */}
       <FormSheet

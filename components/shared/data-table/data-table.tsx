@@ -239,10 +239,11 @@ export function DataTable<TData, TValue>({
       return {};
     });
   const [internalRowSelection, setInternalRowSelection] = React.useState({});
-  const [internalPagination, setInternalPagination] = React.useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: defaultPageSize,
-  });
+  const [internalPagination, setInternalPagination] =
+    React.useState<PaginationState>({
+      pageIndex: 0,
+      pageSize: defaultPageSize,
+    });
 
   // Use controlled or uncontrolled state
   const sorting = onSortingChange ? initialSorting : internalSorting;
@@ -258,7 +259,11 @@ export function DataTable<TData, TValue>({
     ? columnFilters || []
     : internalColumnFilters;
   const setFilters = onColumnFiltersChange
-    ? (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
+    ? (
+        updater:
+          | ColumnFiltersState
+          | ((prev: ColumnFiltersState) => ColumnFiltersState),
+      ) => {
         const newFilters =
           typeof updater === "function" ? updater(filters) : updater;
         onColumnFiltersChange(newFilters);
@@ -277,7 +282,11 @@ export function DataTable<TData, TValue>({
     ? rowSelection || {}
     : internalRowSelection;
   const setSelection = onRowSelectionChange
-    ? (updater: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => {
+    ? (
+        updater:
+          | Record<string, boolean>
+          | ((prev: Record<string, boolean>) => Record<string, boolean>),
+      ) => {
         const newSelection =
           typeof updater === "function" ? updater(selection) : updater;
         onRowSelectionChange(newSelection);
@@ -286,7 +295,9 @@ export function DataTable<TData, TValue>({
 
   const paginationState = pagination || internalPagination;
   const setPaginationState = onPaginationChange
-    ? (updater: PaginationState | ((prev: PaginationState) => PaginationState)) => {
+    ? (
+        updater: PaginationState | ((prev: PaginationState) => PaginationState),
+      ) => {
         const newPagination =
           typeof updater === "function" ? updater(paginationState) : updater;
         onPaginationChange(newPagination);
@@ -298,7 +309,7 @@ export function DataTable<TData, TValue>({
     (row: any, columnId: string, filterValue: string) => {
       if (!filterValue) return true;
       const searchValue = filterValue.toLowerCase();
-      
+
       // Search across all visible cell values
       return Object.values(row.original).some((value) => {
         if (value === null || value === undefined) return false;
@@ -384,10 +395,7 @@ export function DataTable<TData, TValue>({
       <div className={cn("w-full", className)}>
         <div className="rounded-md border">
           <div className="p-8">
-            <EmptyState
-              title={emptyMessage}
-              description={emptyDescription}
-            />
+            <EmptyState title={emptyMessage} description={emptyDescription} />
           </div>
         </div>
       </div>
@@ -482,7 +490,8 @@ export function DataTable<TData, TValue>({
                         <div
                           className={cn(
                             "flex items-center gap-2",
-                            canSort && "cursor-pointer select-none hover:text-foreground",
+                            canSort &&
+                              "cursor-pointer select-none hover:text-foreground",
                           )}
                           onClick={
                             canSort
@@ -553,7 +562,8 @@ export function DataTable<TData, TValue>({
                 <TableCell
                   colSpan={
                     (enableRowSelection ? 1 : 0) +
-                    table.getAllColumns().filter((col) => col.getIsVisible()).length
+                    table.getAllColumns().filter((col) => col.getIsVisible())
+                      .length
                   }
                   className="h-24 text-center"
                 >

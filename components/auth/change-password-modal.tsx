@@ -17,7 +17,10 @@ import {
 } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
-import { type AuthActionResult, changePasswordAction } from "@/lib/actions/auth";
+import {
+  type AuthActionResult,
+  changePasswordAction,
+} from "@/lib/actions/auth";
 import { toast } from "@/lib/utils/toast";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -152,12 +155,14 @@ export function ChangePasswordModal({
                 }
                 disabled={isPending}
               />
-              {state && !state.success && state.fieldErrors?.confirmPassword && (
-                <FieldError
-                  id="confirmPassword-error"
-                  errors={state.fieldErrors.confirmPassword}
-                />
-              )}
+              {state &&
+                !state.success &&
+                state.fieldErrors?.confirmPassword && (
+                  <FieldError
+                    id="confirmPassword-error"
+                    errors={state.fieldErrors.confirmPassword}
+                  />
+                )}
             </Field>
           </FieldGroup>
 
@@ -171,7 +176,12 @@ export function ChangePasswordModal({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending} aria-busy={isPending} className="cursor-pointer">
+            <Button
+              type="submit"
+              disabled={isPending}
+              aria-busy={isPending}
+              className="cursor-pointer"
+            >
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

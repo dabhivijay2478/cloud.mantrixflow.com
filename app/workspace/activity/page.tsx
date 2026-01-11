@@ -389,7 +389,11 @@ export default function ActivityLogPage() {
               </SelectTrigger>
               <SelectContent>
                 {ENTITY_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -405,7 +409,11 @@ export default function ActivityLogPage() {
               </SelectTrigger>
               <SelectContent>
                 {ACTION_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -418,7 +426,11 @@ export default function ActivityLogPage() {
               </SelectTrigger>
               <SelectContent>
                 {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -434,7 +446,11 @@ export default function ActivityLogPage() {
               </SelectTrigger>
               <SelectContent>
                 {TIME_RANGE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}

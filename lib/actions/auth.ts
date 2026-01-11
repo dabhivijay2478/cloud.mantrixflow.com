@@ -750,7 +750,8 @@ export async function changePasswordAction(
     if (updateError) {
       return {
         success: false,
-        error: updateError.message || "Failed to update password. Please try again.",
+        error:
+          updateError.message || "Failed to update password. Please try again.",
       };
     }
 

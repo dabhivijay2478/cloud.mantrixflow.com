@@ -202,8 +202,8 @@ export function WorkspaceSidebar() {
         createdAtValue instanceof Date
           ? createdAtValue.toISOString()
           : typeof createdAtValue === "string"
-          ? createdAtValue
-          : new Date().toISOString();
+            ? createdAtValue
+            : new Date().toISOString();
 
       setStoreCurrentOrganization({
         id: org.id,
@@ -219,7 +219,7 @@ export function WorkspaceSidebar() {
       showErrorToast(
         "switchFailed",
         "Organization",
-        error instanceof Error ? error.message : undefined
+        error instanceof Error ? error.message : undefined,
       );
     }
   };
@@ -253,7 +253,7 @@ export function WorkspaceSidebar() {
       // If current org is not in the list, or if we don't have a current org, set it
       const currentOrgId = storeCurrentOrg?.id;
       const hasCurrentOrgInList = orgsData.some(
-        (org) => org.id === currentOrgId
+        (org) => org.id === currentOrgId,
       );
 
       if (!hasCurrentOrgInList) {
@@ -322,7 +322,7 @@ export function WorkspaceSidebar() {
   const filteredDataSources = currentOrganization
     ? dataSources.filter(
         (ds) =>
-          !ds.organizationId || ds.organizationId === currentOrganization.id
+          !ds.organizationId || ds.organizationId === currentOrganization.id,
       )
     : dataSources.filter((ds) => !ds.organizationId);
 

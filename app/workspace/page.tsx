@@ -78,17 +78,15 @@ export default function Dashboard() {
 
   // Column definitions for Recent Migrations table
   // Must be defined before any conditional returns to follow Rules of Hooks
-  const migrationColumns: ColumnDef<
-    {
-      id: string;
-      pipelineId: string;
-      pipelineName: string;
-      status: string;
-      startedAt: string | Date | null;
-      completedAt: string | Date | null;
-      rowsProcessed: number | null;
-    }
-  >[] = useMemo(
+  const migrationColumns: ColumnDef<{
+    id: string;
+    pipelineId: string;
+    pipelineName: string;
+    status: string;
+    startedAt: string | Date | null;
+    completedAt: string | Date | null;
+    rowsProcessed: number | null;
+  }>[] = useMemo(
     () => [
       {
         accessorKey: "pipelineName",

@@ -64,14 +64,14 @@ export function WorkspaceTopbar() {
     if (error) {
       toastUtil.error(
         "Sign out failed",
-        error.message || "Failed to sign out. Please try again."
+        error.message || "Failed to sign out. Please try again.",
       );
       return;
     }
 
     toastUtil.success(
       "Signed out successfully",
-      "You have been successfully logged out."
+      "You have been successfully logged out.",
     );
     router.push("/auth/login");
   };

@@ -45,10 +45,7 @@ import {
 } from "@/lib/api";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import {
-  showErrorToast,
-  showSuccessToast,
-} from "@/lib/utils/toast";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
@@ -347,37 +344,47 @@ export default function DataSourcesPage() {
     },
   });
 
-  const handleDisconnect = useCallback(async (dataSourceId: string) => {
-    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) {
-      showErrorToast("notFound", "Data Source");
-      return;
-    }
+  const handleDisconnect = useCallback(
+    async (dataSourceId: string) => {
+      const dataSource = filteredDataSources.find(
+        (ds) => ds.id === dataSourceId,
+      );
+      if (!dataSource) {
+        showErrorToast("notFound", "Data Source");
+        return;
+      }
 
-    try {
-      // Update connection status to inactive
-      // Note: You may need to add an updateConnection hook call here
-      // For now, we'll just show a message
-      showSuccessToast("disconnected", dataSource.name);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Unable to disconnect the data source.";
-      showErrorToast("disconnectFailed", "Data Source", errorMessage);
-    }
-  }, [filteredDataSources]);
+      try {
+        // Update connection status to inactive
+        // Note: You may need to add an updateConnection hook call here
+        // For now, we'll just show a message
+        showSuccessToast("disconnected", dataSource.name);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Unable to disconnect the data source.";
+        showErrorToast("disconnectFailed", "Data Source", errorMessage);
+      }
+    },
+    [filteredDataSources],
+  );
 
-  const handleDelete = useCallback((dataSourceId: string) => {
-    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) {
-      showErrorToast("notFound", "Data Source");
-      return;
-    }
-    // Store the data source to delete and show confirmation modal
-    setDataSourceToDelete({ id: dataSourceId, name: dataSource.name });
-    deleteConfirm.showConfirm(dataSource.name);
-  }, [filteredDataSources, deleteConfirm]);
+  const handleDelete = useCallback(
+    (dataSourceId: string) => {
+      const dataSource = filteredDataSources.find(
+        (ds) => ds.id === dataSourceId,
+      );
+      if (!dataSource) {
+        showErrorToast("notFound", "Data Source");
+        return;
+      }
+      // Store the data source to delete and show confirmation modal
+      setDataSourceToDelete({ id: dataSourceId, name: dataSource.name });
+      deleteConfirm.showConfirm(dataSource.name);
+    },
+    [filteredDataSources, deleteConfirm],
+  );
 
   // Column definitions for DataTable
   const columns: ColumnDef<DataSource>[] = useMemo(
@@ -388,8 +395,7 @@ export default function DataSourcesPage() {
         cell: ({ row }) => {
           const dataSource = row.original;
           const iconType: string =
-            "iconType" in dataSource &&
-            typeof dataSource.iconType === "string"
+            "iconType" in dataSource && typeof dataSource.iconType === "string"
               ? dataSource.iconType
               : dataSource.type === "postgres"
                 ? "postgres"
@@ -422,9 +428,7 @@ export default function DataSourcesPage() {
           const connectedData = getConnectedDataSource(dataSource.id);
           const selectedTables =
             connectedData?.selectedTables ||
-            (connectedData?.selectedTable
-              ? [connectedData.selectedTable]
-              : []);
+            (connectedData?.selectedTable ? [connectedData.selectedTable] : []);
           return connected && selectedTables.length > 0 ? (
             <span className="text-sm font-medium">
               {selectedTables.length}{" "}
@@ -531,7 +535,13 @@ export default function DataSourcesPage() {
         enableHiding: false,
       },
     ],
-    [isConnected, getConnectedDataSource, router, handleDisconnect, handleDelete],
+    [
+      isConnected,
+      getConnectedDataSource,
+      router,
+      handleDisconnect,
+      handleDelete,
+    ],
   );
 
   return (
@@ -541,17 +551,27 @@ export default function DataSourcesPage() {
         description="Connect and manage your data sources to power your dashboards"
         action={
           hasConnections && !showGridView ? (
-            <Button onClick={() => setShowGridView(true)} className="cursor-pointer">
+            <Button
+              onClick={() => setShowGridView(true)}
+              className="cursor-pointer"
+            >
               <Plus className="mr-2 h-4 w-4" />
               New Source
             </Button>
           ) : showGridView ? (
-            <Button variant="outline" onClick={() => setShowGridView(false)} className="cursor-pointer">
+            <Button
+              variant="outline"
+              onClick={() => setShowGridView(false)}
+              className="cursor-pointer"
+            >
               <X className="mr-2 h-4 w-4" />
               Back to List
             </Button>
           ) : (
-            <Button onClick={() => setShowGridView(true)} className="cursor-pointer">
+            <Button
+              onClick={() => setShowGridView(true)}
+              className="cursor-pointer"
+            >
               <Plus className="mr-2 h-4 w-4" />
               New Source
             </Button>
@@ -586,26 +606,26 @@ export default function DataSourcesPage() {
           onDataSourceClick={handleDataSourceClick}
         />
       ) : (
-            <DataTable
-              columns={columns}
-              data={filteredDataSources}
-              isLoading={false}
-              enableSorting
-              enableFiltering
-              filterPlaceholder="Filter data sources..."
-              defaultVisibleColumns={[
-                "name",
-                "type",
-                "connections",
-                "connectedAt",
-                "status",
-                "actions",
-              ]}
-              fixedColumns={["name", "actions"]}
-              onRowClick={(row) => handleDataSourceClick(row.id)}
-              emptyMessage="No data sources found"
-              emptyDescription="Get started by connecting a data source"
-            />
+        <DataTable
+          columns={columns}
+          data={filteredDataSources}
+          isLoading={false}
+          enableSorting
+          enableFiltering
+          filterPlaceholder="Filter data sources..."
+          defaultVisibleColumns={[
+            "name",
+            "type",
+            "connections",
+            "connectedAt",
+            "status",
+            "actions",
+          ]}
+          fixedColumns={["name", "actions"]}
+          onRowClick={(row) => handleDataSourceClick(row.id)}
+          emptyMessage="No data sources found"
+          emptyDescription="Get started by connecting a data source"
+        />
       )}
 
       {/* Connection Sheet */}

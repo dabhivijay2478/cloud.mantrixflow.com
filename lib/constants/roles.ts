@@ -13,15 +13,18 @@ export const roleConfig: Record<
 > = {
   OWNER: {
     label: "Owner",
-    description: "Full access: Update org details, invite/remove users, change roles, manage all data",
+    description:
+      "Full access: Update org details, invite/remove users, change roles, manage all data",
   },
   ADMIN: {
     label: "Admin",
-    description: "Can manage workspace data, data sources, pipelines, and users. Cannot update org details or change ownership",
+    description:
+      "Can manage workspace data, data sources, pipelines, and users. Cannot update org details or change ownership",
   },
   EDITOR: {
     label: "Editor",
-    description: "Can edit workspace data, manage data sources and pipelines. Cannot manage users or org settings",
+    description:
+      "Can edit workspace data, manage data sources and pipelines. Cannot manage users or org settings",
   },
   VIEWER: {
     label: "Viewer",

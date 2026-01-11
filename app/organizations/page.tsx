@@ -1,14 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import {
-  ArrowLeft,
-  Building2,
-  Check,
-  Crown,
-  Edit,
-  Plus,
-} from "lucide-react";
+import { ArrowLeft, Building2, Check, Crown, Edit, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -233,29 +226,27 @@ export default function OrganizationsPage() {
 
       {/* Main content */}
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
- 
-            <DataTable
-              columns={columns}
-              data={displayOrganizations}
-              isLoading={isLoading}
-              enableSorting
-              defaultVisibleColumns={[
-                "name",
-                "slug",
-                "description",
-                "createdAt",
-                "status",
-                "actions",
-              ]}
-              fixedColumns={["name", "actions"]}
-              emptyMessage="No organizations"
-              emptyDescription={
-                canCreateOrganization
-                  ? "Get started by creating your first organization."
-                  : "You haven't been added to any organizations yet."
-              }
-            />
-          
+        <DataTable
+          columns={columns}
+          data={displayOrganizations}
+          isLoading={isLoading}
+          enableSorting
+          defaultVisibleColumns={[
+            "name",
+            "slug",
+            "description",
+            "createdAt",
+            "status",
+            "actions",
+          ]}
+          fixedColumns={["name", "actions"]}
+          emptyMessage="No organizations"
+          emptyDescription={
+            canCreateOrganization
+              ? "Get started by creating your first organization."
+              : "You haven't been added to any organizations yet."
+          }
+        />
 
         {!canCreateOrganization && (
           <Card className="mt-6 border-muted">

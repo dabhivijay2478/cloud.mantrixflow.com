@@ -440,8 +440,8 @@ export default function SettingsPage() {
                 <div className="mb-4 p-3 bg-muted/50 border border-muted rounded-lg">
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
                     <Lock className="h-4 w-4" />
-                    Only organization owners can edit organization details. You have
-                    view-only access.
+                    Only organization owners can edit organization details. You
+                    have view-only access.
                   </p>
                 </div>
               )}
@@ -452,7 +452,9 @@ export default function SettingsPage() {
                   className="text-sm font-medium flex items-center gap-2"
                 >
                   Organization Name
-                  {isOwner && <span className="text-destructive text-xs">*</span>}
+                  {isOwner && (
+                    <span className="text-destructive text-xs">*</span>
+                  )}
                 </Label>
                 <Input
                   id="org-name"

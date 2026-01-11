@@ -360,7 +360,10 @@ export default function EditTeamMemberPage() {
                 onValueChange={(value) => setEditRole(value as TeamMemberRole)}
                 disabled={updateMember.isPending || isOwner}
               >
-                <SelectTrigger id="role-select" className="w-full cursor-pointer">
+                <SelectTrigger
+                  id="role-select"
+                  className="w-full cursor-pointer"
+                >
                   <SelectValue>
                     {editRole
                       ? `${roleConfig[editRole].label} - ${roleConfig[editRole].description}`
@@ -371,7 +374,11 @@ export default function EditTeamMemberPage() {
                   {Object.entries(roleConfig)
                     .filter(([key]) => key !== "OWNER") // Remove OWNER from options
                     .map(([key, config]) => (
-                      <SelectItem key={key} value={key} className="cursor-pointer">
+                      <SelectItem
+                        key={key}
+                        value={key}
+                        className="cursor-pointer"
+                      >
                         {config.label} - {config.description}
                       </SelectItem>
                     ))}
@@ -400,7 +407,7 @@ export default function EditTeamMemberPage() {
                     removeMember.isPending ||
                     member.role === "OWNER"
                   }
-                  className="w-full sm:w-auto cursor-pointer" 
+                  className="w-full sm:w-auto cursor-pointer"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Remove Member

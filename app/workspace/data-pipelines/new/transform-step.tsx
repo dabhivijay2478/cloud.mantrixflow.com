@@ -654,25 +654,23 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         </Button>
       </div>
 
-
-          <DataTable
-            columns={columns}
-            data={allTransforms}
-            enableSorting
-            enableFiltering
-            filterPlaceholder="Filter transformers..."
-            defaultVisibleColumns={[
-              "name",
-              "collectorName",
-              "emitterName",
-              "fieldMappings",
-              "actions",
-            ]}
-            fixedColumns={["name", "actions"]}
-            emptyMessage="No transformers configured"
-            emptyDescription="Add transformers to map fields from collectors to emitters"
-          />
-        
+      <DataTable
+        columns={columns}
+        data={allTransforms}
+        enableSorting
+        enableFiltering
+        filterPlaceholder="Filter transformers..."
+        defaultVisibleColumns={[
+          "name",
+          "collectorName",
+          "emitterName",
+          "fieldMappings",
+          "actions",
+        ]}
+        fixedColumns={["name", "actions"]}
+        emptyMessage="No transformers configured"
+        emptyDescription="Add transformers to map fields from collectors to emitters"
+      />
 
       {/* Add/Edit Transform Sheet */}
       <FormSheet

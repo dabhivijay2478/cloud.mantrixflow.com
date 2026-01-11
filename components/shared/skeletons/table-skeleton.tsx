@@ -33,16 +33,15 @@ export function TableSkeleton({
   showAction = false,
   className,
 }: TableSkeletonProps) {
-  const totalColumns = columnCount + (showCheckbox ? 1 : 0) + (showAction ? 1 : 0);
+  const totalColumns =
+    columnCount + (showCheckbox ? 1 : 0) + (showAction ? 1 : 0);
 
   return (
     <div className={cn("w-full rounded-md border", className)}>
       {/* Table Header */}
       <div className="border-b bg-muted/50">
         <div className="flex items-center gap-4 px-4 py-3">
-          {showCheckbox && (
-            <Skeleton className="h-4 w-4 rounded shrink-0" />
-          )}
+          {showCheckbox && <Skeleton className="h-4 w-4 rounded shrink-0" />}
           {Array.from({ length: columnCount }, (_, index) => (
             <Skeleton
               key={`header-${index}`}
@@ -52,9 +51,7 @@ export function TableSkeleton({
               }}
             />
           ))}
-          {showAction && (
-            <Skeleton className="h-4 w-16 rounded shrink-0" />
-          )}
+          {showAction && <Skeleton className="h-4 w-16 rounded shrink-0" />}
         </div>
       </div>
 
@@ -68,9 +65,7 @@ export function TableSkeleton({
               animationDelay: `${rowIndex * 50}ms`,
             }}
           >
-            {showCheckbox && (
-              <Skeleton className="h-4 w-4 rounded shrink-0" />
-            )}
+            {showCheckbox && <Skeleton className="h-4 w-4 rounded shrink-0" />}
             {Array.from({ length: columnCount }, (_, colIndex) => (
               <Skeleton
                 key={`cell-${rowIndex}-${colIndex}`}
@@ -80,9 +75,7 @@ export function TableSkeleton({
                 }}
               />
             ))}
-            {showAction && (
-              <Skeleton className="h-8 w-8 rounded shrink-0" />
-            )}
+            {showAction && <Skeleton className="h-8 w-8 rounded shrink-0" />}
           </div>
         ))}
       </div>

@@ -97,7 +97,12 @@ export function ForgotPasswordForm({
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isPending} aria-busy={isPending} className="cursor-pointer">
+          <Button
+            type="submit"
+            disabled={isPending}
+            aria-busy={isPending}
+            className="cursor-pointer"
+          >
             {isPending ? "Sending..." : "Send reset email"}
           </Button>
         </Field>

@@ -128,7 +128,10 @@ export default function InviteTeamMemberPage() {
                 disabled={isPending}
                 name="role"
               >
-                <SelectTrigger id="invite-role" className="w-full cursor-pointer">
+                <SelectTrigger
+                  id="invite-role"
+                  className="w-full cursor-pointer"
+                >
                   <SelectValue>
                     {selectedRole
                       ? `${roleConfig[selectedRole].label} - ${roleConfig[selectedRole].description}`
@@ -139,7 +142,11 @@ export default function InviteTeamMemberPage() {
                   {Object.entries(roleConfig)
                     .filter(([key]) => key !== "owner") // Remove owner from invite options
                     .map(([key, config]) => (
-                      <SelectItem key={key} value={key} className="cursor-pointer">
+                      <SelectItem
+                        key={key}
+                        value={key}
+                        className="cursor-pointer"
+                      >
                         {config.label} - {config.description}
                       </SelectItem>
                     ))}
