@@ -43,7 +43,8 @@ export default function DataPipelinesPage() {
   const router = useRouter();
 
   // Get all unique user IDs from pipelines for fetching user names
-  const userIds = pipelines?.map((pipeline) => pipeline.userId).filter(Boolean) || [];
+  const userIds =
+    pipelines?.map((pipeline) => pipeline.userId).filter(Boolean) || [];
   const { usersMap } = useUsers(userIds);
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -365,9 +366,10 @@ export default function DataPipelinesPage() {
           return <span className="text-muted-foreground text-sm">-</span>;
         }
         const creator = usersMap.get(pipeline.userId);
-        const displayName = creator?.fullName || 
-          (creator?.firstName && creator?.lastName 
-            ? `${creator.firstName} ${creator.lastName}` 
+        const displayName =
+          creator?.fullName ||
+          (creator?.firstName && creator?.lastName
+            ? `${creator.firstName} ${creator.lastName}`
             : creator?.email?.split("@")[0] || "Unknown");
         return (
           <span className="text-sm text-muted-foreground">{displayName}</span>
@@ -489,7 +491,9 @@ export default function DataPipelinesPage() {
       />
 
       <DataTable
-        tableId={orgId ? `data-pipelines-table-${orgId}` : "data-pipelines-table"}
+        tableId={
+          orgId ? `data-pipelines-table-${orgId}` : "data-pipelines-table"
+        }
         columns={columns}
         data={pipelines || []}
         isLoading={pipelinesLoading}

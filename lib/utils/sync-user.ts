@@ -4,8 +4,8 @@
  */
 
 import { UsersService } from "@/lib/api";
-import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { supabase } from "@/lib/supabase/client";
 
 export async function syncUserAfterAuth(): Promise<void> {
   try {

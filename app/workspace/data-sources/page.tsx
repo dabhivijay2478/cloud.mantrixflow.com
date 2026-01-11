@@ -471,14 +471,17 @@ export default function DataSourcesPage() {
         cell: ({ row }) => {
           const dataSource = row.original;
           // Find the connection to get userId
-          const connection = connections?.find((conn) => conn.id === dataSource.id);
+          const connection = connections?.find(
+            (conn) => conn.id === dataSource.id,
+          );
           if (!connection?.userId) {
             return <span className="text-muted-foreground text-sm">-</span>;
           }
           const creator = usersMap.get(connection.userId);
-          const displayName = creator?.fullName || 
-            (creator?.firstName && creator?.lastName 
-              ? `${creator.firstName} ${creator.lastName}` 
+          const displayName =
+            creator?.fullName ||
+            (creator?.firstName && creator?.lastName
+              ? `${creator.firstName} ${creator.lastName}`
               : creator?.email?.split("@")[0] || "Unknown");
           return (
             <span className="text-sm text-muted-foreground">{displayName}</span>

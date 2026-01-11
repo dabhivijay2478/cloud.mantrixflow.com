@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, RoleSelect } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,8 +19,7 @@ import {
   inviteTeamMemberAction,
   type TeamActionResult,
 } from "@/lib/actions/team";
-import { type TeamMemberRole } from "@/lib/constants/roles";
-import { RoleSelect } from "@/components/shared";
+import type { TeamMemberRole } from "@/lib/constants/roles";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function InviteTeamMemberPage() {

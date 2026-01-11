@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ConfirmationModal, PageHeader } from "@/components/shared";
+import { ConfirmationModal, PageHeader, RoleSelect } from "@/components/shared";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,7 @@ import {
   useUpdateMember,
 } from "@/lib/api";
 import type { OrganizationMember } from "@/lib/api/types/organizations";
-import { type TeamMemberRole } from "@/lib/constants/roles";
-import { RoleSelect } from "@/components/shared";
+import type { TeamMemberRole } from "@/lib/constants/roles";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";

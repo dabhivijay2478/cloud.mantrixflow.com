@@ -83,126 +83,128 @@ export default function OrganizationsPage() {
   );
 
   // Column definitions for DataTable
-  const columns: ColumnDef<Organization>[] = useMemo(
-    () => {
-      const baseColumns: ColumnDef<Organization>[] = [
-        {
-          accessorKey: "name",
-          header: "Organization",
-          cell: ({ row }) => {
-            const org = row.original;
-            return (
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    <Building2 className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{org.name}</div>
-                  {org.description && (
-                    <div className="text-sm text-muted-foreground truncate md:hidden">
-                      {org.description}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          },
-        },
-        {
-          accessorKey: "slug",
-          header: "Slug",
-          cell: ({ row }) => (
-            <code className="text-xs bg-muted px-2 py-1 rounded">
-              {row.original.slug}
-            </code>
-          ),
-        },
-        {
-          accessorKey: "description",
-          header: "Description",
-          cell: ({ row }) => {
-            const description = row.original.description;
-            return (
-              <div className="text-sm text-muted-foreground max-w-md truncate">
-                {description || <span className="italic">No description</span>}
-              </div>
-            );
-          },
-        },
-        {
-          accessorKey: "createdAt",
-          header: "Created",
-          cell: ({ row }) => {
-            const createdAt = new Date(
-              typeof row.original.createdAt === "string"
-                ? row.original.createdAt
-                : row.original.createdAt,
-            );
-            return (
-              <div className="text-sm text-muted-foreground">
-                {createdAt.toLocaleDateString()}
-              </div>
-            );
-          },
-        },
-        {
-          accessorKey: "status",
-          header: "Status",
-          cell: ({ row }) => {
-            const org = row.original;
-            const isCurrent = currentOrg?.id === org.id;
-            return isCurrent ? (
-              <Badge variant="default" className="gap-1">
-                <Check className="h-3 w-3" />
-                Current
-              </Badge>
-            ) : (
-              <Badge variant="outline">Inactive</Badge>
-            );
-          },
-        },
-      ];
-
-      // Only add actions column if user can create organizations (not an invited user)
-      if (canCreateOrganization) {
-        baseColumns.push({
-          id: "actions",
-          header: () => <div className="text-right">Actions</div>,
-          cell: ({ row }) => {
-            const org = row.original;
-            const isCurrent = currentOrg?.id === org.id;
-            return (
-              <div className="flex items-center justify-end gap-2">
-                {!isCurrent && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSwitchOrganization(org.id)}
-                  >
-                    Switch
-                  </Button>
+  const columns: ColumnDef<Organization>[] = useMemo(() => {
+    const baseColumns: ColumnDef<Organization>[] = [
+      {
+        accessorKey: "name",
+        header: "Organization",
+        cell: ({ row }) => {
+          const org = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  <Building2 className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{org.name}</div>
+                {org.description && (
+                  <div className="text-sm text-muted-foreground truncate md:hidden">
+                    {org.description}
+                  </div>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEditOrganization(org.id)}
-                  title="Edit organization"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
               </div>
-            );
-          },
-          enableHiding: false,
-        });
-      }
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "slug",
+        header: "Slug",
+        cell: ({ row }) => (
+          <code className="text-xs bg-muted px-2 py-1 rounded">
+            {row.original.slug}
+          </code>
+        ),
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ row }) => {
+          const description = row.original.description;
+          return (
+            <div className="text-sm text-muted-foreground max-w-md truncate">
+              {description || <span className="italic">No description</span>}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: ({ row }) => {
+          const createdAt = new Date(
+            typeof row.original.createdAt === "string"
+              ? row.original.createdAt
+              : row.original.createdAt,
+          );
+          return (
+            <div className="text-sm text-muted-foreground">
+              {createdAt.toLocaleDateString()}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const org = row.original;
+          const isCurrent = currentOrg?.id === org.id;
+          return isCurrent ? (
+            <Badge variant="default" className="gap-1">
+              <Check className="h-3 w-3" />
+              Current
+            </Badge>
+          ) : (
+            <Badge variant="outline">Inactive</Badge>
+          );
+        },
+      },
+    ];
 
-      return baseColumns;
-    },
-    [currentOrg, handleSwitchOrganization, handleEditOrganization, canCreateOrganization],
-  );
+    // Only add actions column if user can create organizations (not an invited user)
+    if (canCreateOrganization) {
+      baseColumns.push({
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const org = row.original;
+          const isCurrent = currentOrg?.id === org.id;
+          return (
+            <div className="flex items-center justify-end gap-2">
+              {!isCurrent && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSwitchOrganization(org.id)}
+                >
+                  Switch
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEditOrganization(org.id)}
+                title="Edit organization"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        },
+        enableHiding: false,
+      });
+    }
+
+    return baseColumns;
+  }, [
+    currentOrg,
+    handleSwitchOrganization,
+    handleEditOrganization,
+    canCreateOrganization,
+  ]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -243,7 +245,14 @@ export default function OrganizationsPage() {
           enableSorting
           defaultVisibleColumns={
             canCreateOrganization
-              ? ["name", "slug", "description", "createdAt", "status", "actions"]
+              ? [
+                  "name",
+                  "slug",
+                  "description",
+                  "createdAt",
+                  "status",
+                  "actions",
+                ]
               : ["name", "slug", "description", "createdAt", "status"]
           }
           fixedColumns={canCreateOrganization ? ["name", "actions"] : ["name"]}

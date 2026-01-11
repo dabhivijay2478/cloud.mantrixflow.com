@@ -2,8 +2,17 @@
  * Users TanStack Query Hooks
  */
 
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type UpdateUserDto, UsersService, type User } from "../services/users.service";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  type UpdateUserDto,
+  type User,
+  UsersService,
+} from "../services/users.service";
 import type { CreateUserDto } from "../types/users";
 
 export const usersKeys = {
@@ -68,8 +77,10 @@ export function useUpdateOnboarding() {
  * Uses React Query's useQueries to fetch multiple users efficiently
  */
 export function useUsers(userIds: (string | undefined)[]) {
-  const uniqueUserIds = Array.from(new Set(userIds.filter((id): id is string => !!id)));
-  
+  const uniqueUserIds = Array.from(
+    new Set(userIds.filter((id): id is string => !!id)),
+  );
+
   const queries = useQueries({
     queries: uniqueUserIds.map((userId) => ({
       queryKey: usersKeys.detail(userId),

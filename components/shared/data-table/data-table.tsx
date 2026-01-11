@@ -76,7 +76,10 @@ function getStoredColumnVisibility(tableId: string): string[] | null {
     const visibleIds = map[tableId];
 
     // Validate: must be an array of strings
-    if (Array.isArray(visibleIds) && visibleIds.every((id) => typeof id === "string")) {
+    if (
+      Array.isArray(visibleIds) &&
+      visibleIds.every((id) => typeof id === "string")
+    ) {
       return visibleIds;
     }
 
@@ -92,7 +95,10 @@ function getStoredColumnVisibility(tableId: string): string[] | null {
  * @param tableId - Unique identifier for the table
  * @param visibleColumnIds - Array of visible column IDs
  */
-function saveColumnVisibility(tableId: string, visibleColumnIds: string[]): void {
+function saveColumnVisibility(
+  tableId: string,
+  visibleColumnIds: string[],
+): void {
   if (typeof window === "undefined") {
     return; // SSR safety
   }
@@ -286,22 +292,23 @@ export function DataTable<TData, TValue>({
   defaultPageSize = 10,
 }: DataTableProps<TData, TValue>) {
   // Helper function to get column ID from column definition
-  const getColumnId = React.useCallback((col: ColumnDef<TData, TValue>): string | undefined => {
-    if (col.id) return col.id;
-    if ("accessorKey" in col) {
-      const accessorKey = (col as { accessorKey?: string }).accessorKey;
-      if (typeof accessorKey === "string") {
-        return accessorKey;
+  const getColumnId = React.useCallback(
+    (col: ColumnDef<TData, TValue>): string | undefined => {
+      if (col.id) return col.id;
+      if ("accessorKey" in col) {
+        const accessorKey = (col as { accessorKey?: string }).accessorKey;
+        if (typeof accessorKey === "string") {
+          return accessorKey;
+        }
       }
-    }
-    return undefined;
-  }, []);
+      return undefined;
+    },
+    [],
+  );
 
   // Get all available column IDs from column definitions
   const allColumnIds = React.useMemo(() => {
-    return columns
-      .map(getColumnId)
-      .filter((id): id is string => Boolean(id));
+    return columns.map(getColumnId).filter((id): id is string => Boolean(id));
   }, [columns, getColumnId]);
 
   // Initialize column visibility from localStorage or defaults
@@ -421,7 +428,9 @@ export function DataTable<TData, TValue>({
 
   // Wrapper for column visibility setter that also persists to localStorage
   const setColumnVisibility = React.useCallback(
-    (updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
+    (
+      updater: VisibilityState | ((prev: VisibilityState) => VisibilityState),
+    ) => {
       setInternalColumnVisibility((prev) => {
         const newVisibility =
           typeof updater === "function" ? updater(prev) : updater;

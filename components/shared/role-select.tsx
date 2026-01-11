@@ -91,11 +91,7 @@ export function RoleSelect({
             {Object.entries(roleConfig)
               .filter(([key]) => key !== "OWNER") // Remove OWNER from options
               .map(([key, config]) => (
-                <SelectItem
-                  key={key}
-                  value={key}
-                  className="cursor-pointer"
-                >
+                <SelectItem key={key} value={key} className="cursor-pointer">
                   {config.label} - {config.description}
                 </SelectItem>
               ))}

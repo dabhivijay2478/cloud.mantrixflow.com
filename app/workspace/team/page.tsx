@@ -507,7 +507,11 @@ export default function TeamPage() {
       />
 
       <DataTable
-        tableId={organizationId ? `team-members-table-${organizationId}` : "team-members-table"}
+        tableId={
+          organizationId
+            ? `team-members-table-${organizationId}`
+            : "team-members-table"
+        }
         columns={columns}
         data={teamMembers}
         isLoading={isLoading || membersLoading}
