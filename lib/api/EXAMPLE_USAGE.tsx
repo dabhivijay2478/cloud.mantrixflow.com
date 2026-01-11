@@ -14,13 +14,18 @@ import {
   useDeleteConnection,
   useTestConnection,
 } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export function ExampleDataSourcesPage() {
   // Replace: const { dataSources } = useWorkspaceStore();
-  const { data: connections, isLoading, error } = useConnections();
+  // Get current organization ID (required for all operations)
+  const { currentOrganization } = useWorkspaceStore();
+  const orgId = currentOrganization?.id;
 
-  const createConnection = useCreateConnection();
-  const deleteConnection = useDeleteConnection();
+  const { data: connections, isLoading, error } = useConnections(orgId);
+
+  const createConnection = useCreateConnection(orgId);
+  const deleteConnection = useDeleteConnection(orgId);
   const testConnection = useTestConnection();
 
   const _handleConnect = async (formData: CreateConnectionDto) => {

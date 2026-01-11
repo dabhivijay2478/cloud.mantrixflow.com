@@ -46,7 +46,7 @@ export default function DataSourcesPage() {
     error: connectionsError,
   } = useConnections(orgId);
   const createConnection = useCreateConnection(orgId);
-  const deleteConnection = useDeleteConnection();
+  const deleteConnection = useDeleteConnection(orgId);
   const testConnection = useTestConnection();
 
   // Debug logging for connections
