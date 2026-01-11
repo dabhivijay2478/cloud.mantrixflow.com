@@ -32,6 +32,7 @@ import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
+import { refreshSupabaseUser } from "@/lib/utils/sync-user";
 
 export default function SettingsPage() {
   const { currentOrganization, updateOrganization } = useWorkspaceStore();
@@ -136,6 +137,10 @@ export default function SettingsPage() {
         fullName: fullName.trim() || undefined,
         avatarUrl: avatarUrl.trim() || undefined,
       });
+      
+      // Refresh Supabase user to get updated metadata (including avatar_url)
+      await refreshSupabaseUser();
+      
       toast.success(
         "Profile updated successfully",
         "Your profile information has been updated.",
