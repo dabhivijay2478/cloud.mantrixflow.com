@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SignupForm } from "@/components/auth/signup-form";
 import { Logo } from "@/components/logo";
+import Image from "next/image";
 
 export default function SignupPage() {
   return (
@@ -19,7 +20,12 @@ export default function SignupPage() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5" />
+        <Image
+          src="/p1.jpg"
+          alt="Login Background"
+          fill
+          className="object-cover"
+        />
       </div>
     </div>
   );

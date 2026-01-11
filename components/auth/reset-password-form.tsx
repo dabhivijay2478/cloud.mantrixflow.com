@@ -41,7 +41,7 @@ function ResetPasswordFormContent({
     const checkToken = async () => {
       try {
         const { supabase } = await import("@/lib/supabase/client");
-        
+
         // First, check if there's already a valid session (set by callback route)
         const {
           data: { session: existingSession },
@@ -60,8 +60,9 @@ function ResetPasswordFormContent({
 
         // Handle code exchange (from Supabase redirect)
         if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          
+          const { data, error } =
+            await supabase.auth.exchangeCodeForSession(code);
+
           if (error || !data.session) {
             toast.error(
               "Invalid reset link",

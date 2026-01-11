@@ -29,7 +29,8 @@ export async function GET(request: Request) {
       // Redirect based on type
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
-      const redirectPath = type === "invite" ? "/auth/accept-invite" : "/auth/reset-password";
+      const redirectPath =
+        type === "invite" ? "/auth/accept-invite" : "/auth/reset-password";
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${redirectPath}`);
       } else if (forwardedHost) {
