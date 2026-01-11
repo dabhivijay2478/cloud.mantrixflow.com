@@ -50,6 +50,10 @@ function CommandDialog({
       <DialogContent
         className={cn("overflow-hidden p-0 max-w-2xl", className)}
         showCloseButton={showCloseButton}
+        onOpenAutoFocus={(e) => {
+          // Prevent auto-focus on dialog open, let Command handle it
+          e.preventDefault();
+        }}
       >
         {children}
       </DialogContent>
@@ -59,8 +63,11 @@ function CommandDialog({
 
 function CommandInput({
   className,
+  showEscHint = false,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: React.ComponentProps<typeof CommandPrimitive.Input> & {
+  showEscHint?: boolean;
+}) {
   return (
     <div
       data-slot="command-input-wrapper"
@@ -75,6 +82,11 @@ function CommandInput({
         )}
         {...props}
       />
+      {showEscHint && (
+        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 shrink-0">
+          Esc
+        </kbd>
+      )}
     </div>
   );
 }
@@ -144,7 +156,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 aria-disabled:pointer-events-none",
         className,
       )}
       {...props}

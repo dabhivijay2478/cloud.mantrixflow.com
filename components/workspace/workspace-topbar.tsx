@@ -59,7 +59,7 @@ export function WorkspaceTopbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
         <SidebarTrigger className="cursor-pointer" />
-        <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto">
+        <div className="flex-1 flex items-center justify-center max-w-md mx-auto">
           <GlobalSearch />
         </div>
         <div className="flex items-center gap-2">

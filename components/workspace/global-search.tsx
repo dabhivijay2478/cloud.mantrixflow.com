@@ -1,12 +1,13 @@
 "use client";
 
-import { Database, Loader2, Search, User, Workflow } from "lucide-react";
+import { Database, Loader2, Plug, Search, User, Workflow } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useGlobalSearch } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
   Command,
   CommandDialog,
@@ -21,12 +22,14 @@ const ENTITY_ICONS: Record<string, typeof User> = {
   user: User,
   pipeline: Workflow,
   "data-source": Database,
+  connector: Plug,
 };
 
 const ENTITY_LABELS: Record<string, string> = {
   user: "TEAM MEMBERS",
   pipeline: "PIPELINES",
   "data-source": "DATA SOURCES",
+  connector: "CONNECTORS",
 };
 
 interface GlobalSearchProps {
@@ -54,34 +57,48 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
     enabled: !!searchRequest,
   });
 
-  // Group results by entity type
-  const groupedResults = searchResults?.results.reduce(
-    (acc, result) => {
-      if (!acc[result.type]) {
-        acc[result.type] = [];
-      }
-      acc[result.type].push(result);
-      return acc;
-    },
-    {} as Record<
-      string,
-      Array<{
-        type: string;
-        id: string;
-        title: string;
-        subtitle?: string;
-        redirect: string;
-        filterKey: string;
-        filterValue: string;
-      }>
-    >,
-  ) || {};
+  // Group results by entity type, filtering out connectors (they're in progress)
+  const groupedResults = searchResults?.results
+    .filter((result) => result.type !== "connector") // Filter out connectors
+    .reduce(
+      (acc, result) => {
+        if (!acc[result.type]) {
+          acc[result.type] = [];
+        }
+        acc[result.type].push(result);
+        return acc;
+      },
+      {} as Record<
+        string,
+        Array<{
+          type: string;
+          id: string;
+          title: string;
+          subtitle?: string;
+          redirect: string;
+          filterKey: string;
+          filterValue: string;
+        }>
+      >,
+    ) || {};
 
   const handleResultClick = useCallback(
-    (result: { redirect: string; filterValue: string }) => {
+    (result: {
+      redirect: string;
+      filterValue: string;
+      type?: string;
+      id?: string;
+    }) => {
+      // Don't navigate if it's a connector (disabled)
+      if (result.type === "connector") {
+        return;
+      }
+
       setOpen(false);
       setQuery("");
-      // Navigate to redirect URL with search param
+
+      // For all types (including data sources), navigate to redirect URL with search param
+      // This applies the search filter to the list page
       const url = new URL(result.redirect, window.location.origin);
       url.searchParams.set("search", result.filterValue);
       router.push(url.pathname + url.search);
@@ -144,12 +161,15 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
         <Command
           className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider"
           shouldFilter={false}
+          loop
         >
           <CommandInput
-            placeholder="Run a command or search..."
+            placeholder="Search pipelines, data sources, and team members..."
             value={query}
             onValueChange={setQuery}
             className="h-12 text-base"
+            autoFocus
+            // showEscHint={true}
           />
           <CommandList className="max-h-[400px]">
             {isLoading && (
@@ -165,9 +185,98 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
             )}
 
             {!isLoading && !debouncedQuery.trim() && (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                Start typing to search...
-              </div>
+              <>
+                <CommandGroup heading="SEARCH TIPS">
+                  <CommandItem
+                    value="tip-team-members"
+                    disabled
+                    className="cursor-default"
+                  >
+                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="text-sm">
+                        <span className="font-medium">Team Members:</span>
+                        <span className="text-muted-foreground ml-1">
+                          Search by name or email
+                        </span>
+                      </div>
+                    </div>
+                  </CommandItem>
+                  <CommandItem
+                    value="tip-pipelines"
+                    disabled
+                    className="cursor-default"
+                  >
+                    <Workflow className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="text-sm">
+                        <span className="font-medium">Pipelines:</span>
+                        <span className="text-muted-foreground ml-1">
+                          Search by pipeline name or description
+                        </span>
+                      </div>
+                    </div>
+                  </CommandItem>
+                  <CommandItem
+                    value="tip-data-sources"
+                    disabled
+                    className="cursor-default"
+                  >
+                    <Database className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="text-sm">
+                        <span className="font-medium">Data Sources:</span>
+                        <span className="text-muted-foreground ml-1">
+                          Search by connection name, host, or database
+                        </span>
+                      </div>
+                    </div>
+                  </CommandItem>
+                  <CommandItem
+                    value="tip-connectors"
+                    disabled
+                    className="cursor-default opacity-60"
+                  >
+                    <Plug className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="text-sm flex items-center gap-2">
+                        <span className="font-medium">Connectors:</span>
+                        <Badge variant="outline" className="text-xs">
+                          Coming Soon
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-0.5">
+                        Search PostgreSQL connectors by name or host
+                      </span>
+                    </div>
+                  </CommandItem>
+                </CommandGroup>
+                <div className="border-t px-3 py-2 mt-2">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                        ↑
+                      </kbd>
+                      <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                        ↓
+                      </kbd>
+                      <span>to navigate</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                        ↵
+                      </kbd>
+                      <span>to select</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                        Esc
+                      </kbd>
+                      <span>to close</span>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             {!isLoading &&
@@ -176,28 +285,54 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
               Object.entries(groupedResults).map(([type, results]) => {
                 const Icon = ENTITY_ICONS[type] || Search;
                 const label = ENTITY_LABELS[type] || type.toUpperCase();
+                const isConnector = type === "connector";
 
                 return (
                   <CommandGroup key={type} heading={label}>
-                    {results.map((result) => (
-                      <CommandItem
-                        key={`${result.type}-${result.id}`}
-                        onSelect={() => handleResultClick(result)}
-                        className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-sm data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">
-                            {result.title}
-                          </div>
-                          {result.subtitle && (
-                            <div className="text-xs text-muted-foreground truncate mt-0.5">
-                              {result.subtitle}
-                            </div>
+                    {results.map((result, index) => {
+                      const isDisabled = isConnector;
+                      // Create a unique value for keyboard navigation
+                      const itemValue = `${result.type}-${result.id}-${index}-${result.title.toLowerCase().replace(/\s+/g, "-")}`;
+                      
+                      return (
+                        <CommandItem
+                          key={`${result.type}-${result.id}`}
+                          value={itemValue}
+                          onSelect={() => {
+                            if (!isDisabled) {
+                              handleResultClick({
+                                ...result,
+                                type: result.type,
+                              });
+                            }
+                          }}
+                          disabled={isDisabled}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-sm data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground",
+                            isDisabled
+                              ? "cursor-not-allowed opacity-60"
+                              : "cursor-pointer",
                           )}
-                        </div>
-                      </CommandItem>
-                    ))}
+                        >
+                          <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate flex items-center gap-2">
+                              {result.title}
+                              {isDisabled && (
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  Coming Soon
+                                </Badge>
+                              )}
+                            </div>
+                            {result.subtitle && (
+                              <div className="text-xs text-muted-foreground truncate mt-0.5">
+                                {result.subtitle}
+                              </div>
+                            )}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 );
               })}
