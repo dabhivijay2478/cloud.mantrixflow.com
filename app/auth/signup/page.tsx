@@ -1,7 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SignupForm } from "@/components/auth/signup-form";
 import { Logo } from "@/components/logo";
-import Image from "next/image";
 
 export default function SignupPage() {
   return (

@@ -1,28 +1,21 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import {
-  RefreshCw,
+  Activity,
   Calendar,
   CalendarClock,
+  Database,
+  RefreshCw,
   TrendingUp,
   Users,
-  Database,
-  Activity,
 } from "lucide-react";
+import { useMemo } from "react";
+import { DashboardSkeleton, DataTable, PageHeader } from "@/components/shared";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useDashboardOverview } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/shared";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 function Gauge({
   value,
@@ -83,14 +76,91 @@ export default function Dashboard() {
     isRefetching,
   } = useDashboardOverview(orgId);
 
+  // Column definitions for Recent Migrations table
+  // Must be defined before any conditional returns to follow Rules of Hooks
+  const migrationColumns: ColumnDef<{
+    id: string;
+    pipelineId: string;
+    pipelineName: string;
+    status: string;
+    startedAt: string | Date | null;
+    completedAt: string | Date | null;
+    rowsProcessed: number | null;
+  }>[] = useMemo(
+    () => [
+      {
+        accessorKey: "pipelineName",
+        header: "Pipeline",
+        cell: ({ row }) => (
+          <div className="font-medium text-foreground">
+            {row.original.pipelineName}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const status = row.original.status;
+          return (
+            <Badge
+              variant={
+                status === "completed" || status === "success"
+                  ? "default"
+                  : status === "failed" || status === "error"
+                    ? "destructive"
+                    : "secondary"
+              }
+            >
+              {status}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "startedAt",
+        header: "Started",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {row.original.startedAt
+              ? new Date(row.original.startedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "N/A"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "rowsProcessed",
+        header: () => <div className="text-right">Rows</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <span className="font-medium text-foreground">
+              {row.original.rowsProcessed?.toLocaleString() || "0"}
+            </span>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
   const handleRefresh = () => {
     refetch();
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Skeleton className="w-[300px] h-10" />
+      <div className="min-h-screen bg-background">
+        <div className="space-y-6">
+          <PageHeader
+            title="Dashboard"
+            description="Loading dashboard data..."
+          />
+          <DashboardSkeleton />
+        </div>
       </div>
     );
   }
@@ -125,8 +195,7 @@ export default function Dashboard() {
     );
   }
 
-  const { organization, pipelines, recentMigrations, recentActivity } =
-    dashboard;
+  const { organization, pipelines, recentMigrations } = dashboard;
 
   // Calculate pipeline success rate
   const totalRuns = pipelines.byStatus.completed + pipelines.byStatus.failed;
@@ -156,9 +225,6 @@ export default function Dashboard() {
         <PageHeader
           title={
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground">
-                <Database className="w-5 h-5" />
-              </div>
               <span>{organization.name} Dashboard</span>
             </div>
           }
@@ -174,6 +240,7 @@ export default function Dashboard() {
               size="sm"
               onClick={handleRefresh}
               disabled={isRefetching}
+              className="cursor-pointer"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`}
@@ -442,68 +509,24 @@ export default function Dashboard() {
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
                 Recent Pipeline Runs
               </h4>
-              {recentMigrations.length > 0 ? (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Pipeline</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Started</TableHead>
-                        <TableHead className="text-right">Rows</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentMigrations.slice(0, 10).map((migration) => (
-                        <TableRow key={migration.id}>
-                          <TableCell>
-                            <div className="font-medium text-foreground">
-                              {migration.pipelineName}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                migration.status === "completed" ||
-                                migration.status === "success"
-                                  ? "default"
-                                  : migration.status === "failed" ||
-                                      migration.status === "error"
-                                    ? "destructive"
-                                    : "secondary"
-                              }
-                            >
-                              {migration.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {migration.startedAt
-                                ? new Date(
-                                    migration.startedAt,
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })
-                                : "N/A"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="font-medium text-foreground">
-                              {migration.rowsProcessed?.toLocaleString() || "0"}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  No recent migrations
-                </p>
-              )}
+              <DataTable
+                tableId="dashboard-recent-migrations-table"
+                columns={migrationColumns}
+                data={recentMigrations.slice(0, 10)}
+                isLoading={false}
+                enableSorting
+                enableFiltering
+                filterPlaceholder="Filter migrations..."
+                defaultVisibleColumns={[
+                  "pipelineName",
+                  "status",
+                  "startedAt",
+                  "rowsProcessed",
+                ]}
+                fixedColumns={["pipelineName"]}
+                emptyMessage="No recent migrations"
+                emptyDescription="Pipeline execution runs will appear here"
+              />
             </div>
           </div>
         </section>

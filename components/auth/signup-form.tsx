@@ -246,7 +246,7 @@ export function SignupForm({
         <Field>
           <Button
             type="submit"
-            className="h-8 text-sm"
+            className="h-8 text-sm cursor-pointer"
             disabled={isPending}
             aria-busy={isPending}
           >
@@ -264,7 +264,7 @@ export function SignupForm({
             variant="compact"
           />
 
-          <FieldDescription className="text-center text-xs">
+          <FieldDescription className="text-center text-xs cursor-pointer">
             Already have an account?{" "}
             <Link href="/auth/login" className="underline underline-offset-4">
               Sign in

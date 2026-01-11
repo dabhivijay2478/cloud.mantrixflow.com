@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,14 +18,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
+import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { cn } from "@/lib/utils";
 import { toast as toastUtil } from "@/lib/utils/toast";
 
 export function WorkspaceTopbar() {
   const router = useRouter();
   const { user, signOut } = useAuthStore();
+  const { data: currentOrg } = useCurrentOrganization();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMac, setIsMac] = useState(false);
+
+  // Get current user's role in the organization
+  const currentUserRole = currentOrg?.role as
+    | "OWNER"
+    | "ADMIN"
+    | "EDITOR"
+    | "VIEWER"
+    | undefined;
 
   useEffect(() => {
     setIsMac(/Mac|iPhone|iPod|iPad/i.test(navigator.platform));
@@ -67,7 +80,7 @@ export function WorkspaceTopbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-        <SidebarTrigger />
+        <SidebarTrigger className="cursor-pointer" />
         <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -86,7 +99,10 @@ export function WorkspaceTopbar() {
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button
+                variant="ghost"
+                className="relative h-8 w-8 rounded-full cursor-pointer"
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.user_metadata?.avatar_url} />
                   <AvatarFallback>
@@ -104,17 +120,41 @@ export function WorkspaceTopbar() {
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
                   </p>
+                  {currentUserRole && (
+                    <div className="pt-1">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs font-normal",
+                          currentUserRole === "OWNER" &&
+                            "border-purple-500/50 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950",
+                          currentUserRole === "ADMIN" &&
+                            "border-blue-500/50 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950",
+                          currentUserRole === "EDITOR" &&
+                            "border-green-500/50 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950",
+                          currentUserRole === "VIEWER" &&
+                            "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
+                        )}
+                      >
+                        {roleConfig[currentUserRole as TeamMemberRole].label}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => router.push("/workspace/settings")}
+                className="cursor-pointer"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

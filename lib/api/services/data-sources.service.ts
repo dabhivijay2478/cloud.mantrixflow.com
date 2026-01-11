@@ -80,10 +80,16 @@ export class DataSourcesService {
     );
   }
 
-  static async deleteConnection(id: string): Promise<{ deletedId: string }> {
-    return ApiClient.delete<{ deletedId: string }>(
-      `${DataSourcesService.BASE_PATH}/connections/${id}`,
-    );
+  static async deleteConnection(
+    id: string,
+    orgId?: string,
+  ): Promise<{ deletedId: string }> {
+    // Build URL with orgId query parameter if provided
+    let url = `${DataSourcesService.BASE_PATH}/connections/${id}`;
+    if (orgId) {
+      url += `?orgId=${encodeURIComponent(orgId)}`;
+    }
+    return ApiClient.delete<{ deletedId: string }>(url);
   }
 
   // Schema Discovery

@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, RoleSelect } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,23 +16,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   inviteTeamMemberAction,
   type TeamActionResult,
 } from "@/lib/actions/team";
-import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
+import type { TeamMemberRole } from "@/lib/constants/roles";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function InviteTeamMemberPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("member");
+  const [selectedRole, setSelectedRole] = useState<TeamMemberRole>("EDITOR");
 
   const [state, formAction, isPending] = useActionState<
     TeamActionResult | null,
@@ -46,7 +39,7 @@ export default function InviteTeamMemberPage() {
       // Reset form and redirect after a short delay
       setTimeout(() => {
         setEmail("");
-        setSelectedRole("member");
+        setSelectedRole("EDITOR");
         router.push("/workspace/team");
       }, 1500);
     } else if (state && !state.success) {
@@ -116,41 +109,13 @@ export default function InviteTeamMemberPage() {
             </div>
 
             {/* Role Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="invite-role" className="text-sm font-medium">
-                Role
-              </Label>
-              <Select
-                value={selectedRole}
-                onValueChange={(value) =>
-                  setSelectedRole(value as TeamMemberRole)
-                }
-                disabled={isPending}
-                name="role"
-              >
-                <SelectTrigger id="invite-role" className="w-full">
-                  <SelectValue>
-                    {selectedRole
-                      ? `${roleConfig[selectedRole].label} - ${roleConfig[selectedRole].description}`
-                      : "Select a role"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(roleConfig)
-                    .filter(([key]) => key !== "owner") // Remove owner from invite options
-                    .map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
-                        {config.label} - {config.description}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Note: Owner role cannot be assigned through invitations.
-                Ownership must be transferred separately in organization
-                settings.
-              </p>
-            </div>
+            <RoleSelect
+              value={selectedRole}
+              onValueChange={setSelectedRole}
+              disabled={isPending}
+              id="invite-role"
+              name="role"
+            />
           </CardContent>
         </Card>
 
@@ -166,14 +131,14 @@ export default function InviteTeamMemberPage() {
                   variant="outline"
                   onClick={() => router.push("/workspace/team")}
                   disabled={isPending}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isPending || !email.trim()}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer"
                   aria-busy={isPending}
                 >
                   {isPending ? (

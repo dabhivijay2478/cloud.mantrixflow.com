@@ -6,16 +6,14 @@ import {
   Loader2,
   Lock,
   Mail,
-  Palette,
   Save,
   Shield,
   User,
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { PageHeader } from "@/components/shared";
-import { ThemeCustomizer } from "@/components/theme/theme-customizer";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
+import { PageHeader, SettingsSkeleton } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,19 +28,30 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser, useUpdateUser } from "@/lib/api";
+import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { cn } from "@/lib/utils";
+import { refreshSupabaseUser } from "@/lib/utils/sync-user";
 import { toast } from "@/lib/utils/toast";
 
 export default function SettingsPage() {
   const { currentOrganization, updateOrganization } = useWorkspaceStore();
   const { user: authUser } = useAuthStore();
   const { data: user, isLoading: userLoading } = useCurrentUser();
+  const { data: currentOrg } = useCurrentOrganization();
   const updateUser = useUpdateUser();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
+  // Get current user's role in the organization
+  const currentUserRole = currentOrg?.role as
+    | "OWNER"
+    | "ADMIN"
+    | "EDITOR"
+    | "VIEWER"
+    | undefined;
+  const isOwner = currentUserRole === "OWNER";
 
   // Profile form state
   const [firstName, setFirstName] = useState("");
@@ -56,7 +65,7 @@ export default function SettingsPage() {
   const [orgDescription, setOrgDescription] = useState("");
 
   // Appearance
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const [_theme, _setTheme] = useState<"light" | "dark" | "system">("system");
 
   // Initialize profile form with user data
   useEffect(() => {
@@ -128,6 +137,10 @@ export default function SettingsPage() {
         fullName: fullName.trim() || undefined,
         avatarUrl: avatarUrl.trim() || undefined,
       });
+
+      // Refresh Supabase user to get updated metadata (including avatar_url)
+      await refreshSupabaseUser();
+
       toast.success(
         "Profile updated successfully",
         "Your profile information has been updated.",
@@ -151,6 +164,19 @@ export default function SettingsPage() {
       .replace(/(^-|-$)/g, "");
   };
 
+  // Show skeleton on initial load
+  if (userLoading && !user) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Settings"
+          description="Manage your workspace, preferences, and account settings"
+        />
+        <SettingsSkeleton sectionCount={3} fieldCountPerSection={3} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -164,32 +190,32 @@ export default function SettingsPage() {
         className="space-y-6"
       >
         {/* Improved TabsList */}
-        <div className="border-b">
+        <div className="">
           <TabsList className="inline-flex h-auto w-full sm:w-auto bg-transparent p-0 space-x-1 sm:space-x-2">
             <TabsTrigger
               value="profile"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
             <TabsTrigger
               value="organization"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Organization</span>
             </TabsTrigger>
             {/* <TabsTrigger
               value="appearance"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
             </TabsTrigger> */}
             <TabsTrigger
               value="security"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Security</span>
@@ -368,14 +394,14 @@ export default function SettingsPage() {
                         setAvatarUrl(user.avatarUrl || "");
                       }}
                       disabled={loading}
-                      className="w-full sm:w-auto"
+                      className="w-full sm:w-auto cursor-pointer"
                     >
                       Reset
                     </Button>
                     <Button
                       onClick={handleSaveProfile}
                       disabled={loading}
-                      className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                      className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                     >
                       {loading ? (
                         <>
@@ -406,22 +432,37 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Organization Details</CardTitle>
               <CardDescription>
-                Update your organization information and settings
+                {isOwner
+                  ? "Update your organization information and settings"
+                  : "View your organization information (read-only)"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {!isOwner && (
+                <div className="mb-4 p-3 bg-muted/50 border border-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Only organization owners can edit organization details. You
+                    have view-only access.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <Label
                   htmlFor="org-name"
                   className="text-sm font-medium flex items-center gap-2"
                 >
                   Organization Name
-                  <span className="text-destructive text-xs">*</span>
+                  {isOwner && (
+                    <span className="text-destructive text-xs">*</span>
+                  )}
                 </Label>
                 <Input
                   id="org-name"
                   value={orgName}
                   onChange={(e) => {
+                    if (!isOwner) return;
                     setOrgName(e.target.value);
                     if (
                       !orgSlug ||
@@ -432,7 +473,8 @@ export default function SettingsPage() {
                   }}
                   placeholder="Acme Corporation"
                   className="h-10"
-                  disabled={loading}
+                  disabled={loading || !isOwner}
+                  readOnly={!isOwner}
                 />
                 <p className="text-xs text-muted-foreground">
                   This is your organization's display name
@@ -450,10 +492,14 @@ export default function SettingsPage() {
                   <Input
                     id="org-slug"
                     value={orgSlug}
-                    onChange={(e) => setOrgSlug(e.target.value)}
+                    onChange={(e) => {
+                      if (!isOwner) return;
+                      setOrgSlug(e.target.value);
+                    }}
                     placeholder="acme-corp"
                     className="h-10 flex-1"
-                    disabled={loading}
+                    disabled={loading || !isOwner}
+                    readOnly={!isOwner}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -475,43 +521,49 @@ export default function SettingsPage() {
                 <Textarea
                   id="org-description"
                   value={orgDescription}
-                  onChange={(e) => setOrgDescription(e.target.value)}
+                  onChange={(e) => {
+                    if (!isOwner) return;
+                    setOrgDescription(e.target.value);
+                  }}
                   placeholder="A brief description of your organization..."
                   className="min-h-[100px] resize-none"
-                  disabled={loading}
+                  disabled={loading || !isOwner}
+                  readOnly={!isOwner}
                 />
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setOrgName(currentOrganization?.name || "");
-                    setOrgSlug(currentOrganization?.slug || "");
-                  }}
-                  disabled={loading}
-                  className="w-full sm:w-auto"
-                >
-                  Reset
-                </Button>
-                <Button
-                  onClick={handleSaveOrganization}
-                  disabled={loading || !orgName.trim()}
-                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
+              {isOwner && (
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setOrgName(currentOrganization?.name || "");
+                      setOrgSlug(currentOrganization?.slug || "");
+                    }}
+                    disabled={loading}
+                    className="w-full sm:w-auto cursor-pointer"
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    onClick={handleSaveOrganization}
+                    disabled={loading || !orgName.trim()}
+                    className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -599,7 +651,7 @@ export default function SettingsPage() {
                 </div>
                 <Button
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer"
                   onClick={() => setChangePasswordOpen(true)}
                 >
                   Change Password

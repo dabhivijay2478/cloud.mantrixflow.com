@@ -114,10 +114,10 @@ export function useUpdateConnection() {
   });
 }
 
-export function useDeleteConnection() {
+export function useDeleteConnection(orgId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => DataSourcesService.deleteConnection(id),
+    mutationFn: (id: string) => DataSourcesService.deleteConnection(id, orgId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.connections.lists(),

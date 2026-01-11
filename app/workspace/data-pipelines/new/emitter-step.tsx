@@ -7,8 +7,6 @@ import {
   Database,
   Edit,
   Plus,
-  Search,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -16,7 +14,6 @@ import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -83,7 +80,6 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const [selectedDestinationId, setSelectedDestinationId] =
     useState<string>("");
   const [_configValues, setConfigValues] = useState<Record<string, string>>({});
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
@@ -292,174 +288,38 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     },
   ];
 
-  const filteredEmitters = allEmitters.filter((emitter) => {
-    if (!searchQuery) return true;
-    return (
-      emitter.destinationName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      emitter.collectorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emitter.destinationType.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
   return (
     <div className="space-y-6">
-      {/* Search and Add Button */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search emitters..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {/* Add Button */}
+      <div className="flex items-center justify-end">
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default"
+          className="cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">Add Emitter</span>
-          <span className="sm:hidden">Add</span>
+          Add Emitter
         </Button>
       </div>
 
-      {/* Emitters Table */}
-      {allEmitters.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">
-              No emitters configured
-            </h3>
-            <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
-              Add emitters to send transformed data to destinations
-            </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Add First Emitter
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-6">
-            {/* Desktop Table View */}
-            <div className="hidden md:block">
-              <DataTable columns={columns} data={filteredEmitters} />
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-3 p-4">
-              {filteredEmitters.map((emitter) => {
-                const destination = availableDestinations.find(
-                  (d) => d.id === emitter.destinationId,
-                );
-                const Icon = destination?.icon || Database;
-                return (
-                  <Card
-                    key={emitter.id}
-                    className="border shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                            <Icon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {emitter.destinationName}
-                            </p>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs mt-1 font-normal"
-                            >
-                              {emitter.destinationType}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditEmitter(emitter)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() =>
-                              handleDeleteEmitter(
-                                emitter.collectorId,
-                                emitter.id,
-                              )
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">
-                            Collector:
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {emitter.collectorName}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {Object.entries(emitter.connectionConfig)
-                            .filter(
-                              ([key]) =>
-                                key !== "password" &&
-                                key !== "secretAccessKey" &&
-                                key !== "apiKey" &&
-                                key !== "credentials",
-                            )
-                            .slice(0, 2)
-                            .map(([key, value]) => (
-                              <Badge
-                                key={key}
-                                variant="outline"
-                                className="text-xs font-normal"
-                              >
-                                {key}: {value?.toString().slice(0, 8)}
-                                {value && value.length > 8 ? "..." : ""}
-                              </Badge>
-                            ))}
-                          {Object.keys(emitter.connectionConfig).filter(
-                            (k) =>
-                              k !== "password" &&
-                              k !== "secretAccessKey" &&
-                              k !== "apiKey" &&
-                              k !== "credentials",
-                          ).length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +
-                              {Object.keys(emitter.connectionConfig).length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <DataTable
+        tableId="pipeline-emitter-step-table"
+        columns={columns}
+        data={allEmitters}
+        enableSorting
+        enableFiltering
+        filterPlaceholder="Filter emitters..."
+        defaultVisibleColumns={[
+          "collectorName",
+          "destinationName",
+          "destinationType",
+          "connectionConfig",
+          "actions",
+        ]}
+        fixedColumns={["collectorName", "actions"]}
+        emptyMessage="No emitters configured"
+        emptyDescription="Add emitters to send transformed data to destinations"
+      />
 
       {/* Add/Edit Emitter Sheet */}
       <FormSheet
@@ -619,7 +479,11 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
       {/* Continue Button */}
       <div className="flex justify-end pt-2">
-        <Button onClick={handleCreate} size="lg" className="w-full sm:w-auto">
+        <Button
+          onClick={handleCreate}
+          size="lg"
+          className="w-full sm:w-auto cursor-pointer"
+        >
           <ArrowRight className="mr-2 h-4 w-4" />
           Continue to Transform
         </Button>

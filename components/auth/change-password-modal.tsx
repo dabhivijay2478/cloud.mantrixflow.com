@@ -1,6 +1,9 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,12 +19,12 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Button } from "@/components/ui/button";
-import { type AuthActionResult, changePasswordAction } from "@/lib/actions/auth";
-import { toast } from "@/lib/utils/toast";
-import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  type AuthActionResult,
+  changePasswordAction,
+} from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "@/lib/utils/toast";
 
 interface ChangePasswordModalProps {
   open: boolean;
@@ -152,12 +155,14 @@ export function ChangePasswordModal({
                 }
                 disabled={isPending}
               />
-              {state && !state.success && state.fieldErrors?.confirmPassword && (
-                <FieldError
-                  id="confirmPassword-error"
-                  errors={state.fieldErrors.confirmPassword}
-                />
-              )}
+              {state &&
+                !state.success &&
+                state.fieldErrors?.confirmPassword && (
+                  <FieldError
+                    id="confirmPassword-error"
+                    errors={state.fieldErrors.confirmPassword}
+                  />
+                )}
             </Field>
           </FieldGroup>
 
@@ -165,12 +170,18 @@ export function ChangePasswordModal({
             <Button
               type="button"
               variant="outline"
+              className="cursor-pointer"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending} aria-busy={isPending}>
+            <Button
+              type="submit"
+              disabled={isPending}
+              aria-busy={isPending}
+              className="cursor-pointer"
+            >
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

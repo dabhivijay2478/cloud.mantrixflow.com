@@ -30,6 +30,11 @@ export { BackButton } from "./navigation/back-button";
 export { ProgressSteps } from "./navigation/progress-steps";
 // Navigation Components
 export { StepIndicator } from "./navigation/step-indicator";
+// Role Select Component
+export type { RoleSelectProps } from "./role-select";
+export { RoleSelect } from "./role-select";
 export type { FormSheetProps } from "./sheet";
 // Sheet Components
 export { FormSheet } from "./sheet";
+// Skeleton Components
+export * from "./skeletons";

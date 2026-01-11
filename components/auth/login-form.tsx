@@ -59,7 +59,7 @@ function LoginFormContent({
     if (state?.success) {
       // Get redirect path from server action result
       const redirectTo = state.data?.redirectTo || "/workspace";
-      
+
       // Use window.location.href for full page reload to ensure session sync
       // This is important for cross-browser compatibility
       window.location.href = redirectTo;
@@ -167,7 +167,12 @@ function LoginFormContent({
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+          <Button
+            type="submit"
+            disabled={isPending}
+            aria-busy={isPending}
+            className="cursor-pointer"
+          >
             {isPending ? "Logging in..." : "Login"}
           </Button>
         </Field>
@@ -180,7 +185,7 @@ function LoginFormContent({
             onGoogleClick={handleGoogleLogin}
             disabled={isPending}
           />
-          <FieldDescription className="text-center">
+          <FieldDescription className="text-center cursor-pointer">
             Don&apos;t have an account?{" "}
             <Link href="/auth/signup" className="underline underline-offset-4">
               Sign up

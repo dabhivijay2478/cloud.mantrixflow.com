@@ -1,7 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { AcceptInviteForm } from "@/components/auth/accept-invite-form";
 import { Logo } from "@/components/logo";
-import Image from "next/image";
 
 export default function AcceptInvitePage() {
   return (

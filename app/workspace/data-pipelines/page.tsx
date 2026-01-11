@@ -2,7 +2,6 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
-  ArrowRightLeft,
   Database,
   Pause,
   Play,
@@ -15,7 +14,6 @@ import { useRouter } from "next/navigation";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   useDeletePipeline,
   usePausePipeline,
@@ -24,6 +22,7 @@ import {
   useRunPipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
+import { useUsers } from "@/lib/api/hooks/use-users";
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -42,6 +41,11 @@ export default function DataPipelinesPage() {
   const pausePipeline = usePausePipeline();
   const resumePipeline = useResumePipeline();
   const router = useRouter();
+
+  // Get all unique user IDs from pipelines for fetching user names
+  const userIds =
+    pipelines?.map((pipeline) => pipeline.userId).filter(Boolean) || [];
+  const { usersMap } = useUsers(userIds);
 
   const getPipelineTypeInfo = (type: PipelineType) => {
     switch (type) {
@@ -354,6 +358,25 @@ export default function DataPipelinesPage() {
       ),
     },
     {
+      accessorKey: "createdBy",
+      header: "Created By",
+      cell: ({ row }) => {
+        const pipeline = row.original;
+        if (!pipeline.userId) {
+          return <span className="text-muted-foreground text-sm">-</span>;
+        }
+        const creator = usersMap.get(pipeline.userId);
+        const displayName =
+          creator?.fullName ||
+          (creator?.firstName && creator?.lastName
+            ? `${creator.firstName} ${creator.lastName}`
+            : creator?.email?.split("@")[0] || "Unknown");
+        return (
+          <span className="text-sm text-muted-foreground">{displayName}</span>
+        );
+      },
+    },
+    {
       id: "actions",
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
@@ -467,44 +490,29 @@ export default function DataPipelinesPage() {
         }
       />
 
-      {/* Existing Pipelines */}
-      {pipelinesLoading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading pipelines...</div>
-          </CardContent>
-        </Card>
-      ) : pipelines && pipelines.length > 0 ? (
-        <Card>
-          <CardContent className="p-6">
-            <DataTable
-              columns={columns}
-              data={pipelines}
-              enableSorting={true}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <ArrowRightLeft className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No pipelines yet</h3>
-            <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
-              Create your first data pipeline to start moving data from source
-              to destination. Configure transformations, set up real-time
-              streaming, or bulk load your data.
-            </p>
-            <Button
-              onClick={() => router.push("/workspace/data-pipelines/new")}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Pipeline
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <DataTable
+        tableId={
+          orgId ? `data-pipelines-table-${orgId}` : "data-pipelines-table"
+        }
+        columns={columns}
+        data={pipelines || []}
+        isLoading={pipelinesLoading}
+        enableSorting
+        enableFiltering
+        filterPlaceholder="Filter pipelines ..."
+        defaultVisibleColumns={[
+          "name",
+          "sourceType",
+          "sourceConnectionId",
+          "status",
+          "destinationConnectionId",
+          "createdAt",
+          "actions",
+        ]}
+        fixedColumns={["name", "actions"]}
+        emptyMessage="No pipelines yet"
+        emptyDescription="Create your first data pipeline to start moving data from source to destination. Configure transformations, set up real-time streaming, or bulk load your data."
+      />
     </div>
   );
 }

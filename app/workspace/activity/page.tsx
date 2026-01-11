@@ -1,9 +1,9 @@
 "use client";
 
 import { format, subDays } from "date-fns";
-import { Loader2, RefreshCw, Search, Terminal } from "lucide-react";
+import { RefreshCw, Search, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
-import { PageHeader } from "@/components/shared/layout/page-header";
+import { LogsSkeleton, PageHeader } from "@/components/shared";
 import { MetricCard } from "@/components/shared/metric-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,7 +170,7 @@ export default function ActivityLogPage() {
     setCursor(undefined); // Reset cursor when filter changes
   };
 
-  const handleLoadMore = () => {
+  const _handleLoadMore = () => {
     // Use nextCursor from API response instead of constructing from last log
     // This ensures we use the correct cursor format (encoded with createdAt + id)
     if (nextCursor) {
@@ -301,6 +301,15 @@ export default function ActivityLogPage() {
     );
   }
 
+  // Show skeleton during loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <LogsSkeleton columnCount={6} rowCount={10} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="space-y-6">
@@ -375,12 +384,16 @@ export default function ActivityLogPage() {
               value={selectedEntityType}
               onValueChange={handleEntityTypeChange}
             >
-              <SelectTrigger className="w-[160px] font-mono text-sm">
+              <SelectTrigger className="w-[160px] font-mono text-sm cursor-pointer ">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
                 {ENTITY_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -391,12 +404,16 @@ export default function ActivityLogPage() {
               value={selectedActionType}
               onValueChange={handleActionTypeChange}
             >
-              <SelectTrigger className="w-[160px] font-mono text-sm">
+              <SelectTrigger className="w-[160px] font-mono text-sm cursor-pointer">
                 <SelectValue placeholder="All Actions" />
               </SelectTrigger>
               <SelectContent>
                 {ACTION_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -404,12 +421,16 @@ export default function ActivityLogPage() {
             </Select>
 
             <Select value={selectedStatus} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[140px] font-mono text-sm">
+              <SelectTrigger className="w-[140px] font-mono text-sm cursor-pointer">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
                 {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -420,12 +441,16 @@ export default function ActivityLogPage() {
               value={selectedTimeRange}
               onValueChange={handleTimeRangeChange}
             >
-              <SelectTrigger className="w-[140px] font-mono text-sm">
+              <SelectTrigger className="w-[140px] font-mono text-sm cursor-pointer">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {TIME_RANGE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -439,7 +464,7 @@ export default function ActivityLogPage() {
                 setCursor(undefined);
                 refetch();
               }}
-              className="font-mono"
+              className="font-mono cursor-pointer"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
@@ -450,12 +475,7 @@ export default function ActivityLogPage() {
           <Card className="bg-card border">
             <CardContent className="p-0">
               <div className="bg-background p-4 font-mono text-sm overflow-x-auto min-h-[400px] max-h-[600px] overflow-y-auto">
-                {isLoading ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>[LOADING] Fetching activity logs...</span>
-                  </div>
-                ) : error ? (
+                {error ? (
                   <div className="text-destructive">
                     <div className="mb-2">
                       [ERROR] Failed to load activity logs
@@ -515,7 +535,7 @@ export default function ActivityLogPage() {
                         </div>
                       );
                     })}
-                    {nextCursor && (
+                    {/* {nextCursor && (
                       <div className="pt-4 mt-4 border-t border-border flex justify-center">
                         <Button
                           variant="ghost"
@@ -526,7 +546,7 @@ export default function ActivityLogPage() {
                           [LOAD MORE]
                         </Button>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 )}
               </div>

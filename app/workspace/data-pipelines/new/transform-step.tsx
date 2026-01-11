@@ -10,14 +10,12 @@ import {
   Map as MapIcon,
   Pause,
   Plus,
-  Search,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -97,7 +95,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
   >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Debug: Log when collectors prop changes
   useEffect(() => {
@@ -554,17 +551,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     onComplete(collectors);
   };
 
-  const filteredTransforms = allTransforms.filter((transform) => {
-    if (!searchQuery) return true;
-    return (
-      transform.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transform.collectorName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      transform.emitterName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
   const columns: ColumnDef<
     TransformConfig & { collectorName: string; emitterName: string }
   >[] = [
@@ -655,52 +641,36 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
   return (
     <div className="space-y-6">
-      {/* Search and Add Button */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search transformers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {/* Add Button */}
+      <div className="flex items-center justify-end">
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default"
+          className="cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">Add Transformer</span>
-          <span className="sm:hidden">Add</span>
+          Add Transformer
         </Button>
       </div>
 
-      {/* Transforms Table */}
-      {allTransforms.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <MapIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              No transformers configured
-            </h3>
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              Add transformers to map fields from collectors to emitters
-            </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Add First Transformer
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-6">
-            <DataTable columns={columns} data={filteredTransforms} />
-          </CardContent>
-        </Card>
-      )}
+      <DataTable
+        tableId="pipeline-transform-step-table"
+        columns={columns}
+        data={allTransforms}
+        enableSorting
+        enableFiltering
+        filterPlaceholder="Filter transformers..."
+        defaultVisibleColumns={[
+          "name",
+          "collectorName",
+          "emitterName",
+          "fieldMappings",
+          "actions",
+        ]}
+        fixedColumns={["name", "actions"]}
+        emptyMessage="No transformers configured"
+        emptyDescription="Add transformers to map fields from collectors to emitters"
+      />
 
       {/* Add/Edit Transform Sheet */}
       <FormSheet
@@ -720,7 +690,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !transformName ||
                 !selectedDestinationTable
               }
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto cursor-pointer"
             >
               {editingTransform ? "Update" : "Add"} Transformer
             </Button>
@@ -867,8 +837,11 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                         No tables available in destination
                       </div>
                     ) : (
-                      destinationTables.map((table) => (
-                        <SelectItem key={table.fullName} value={table.fullName}>
+                      destinationTables.map((table, index) => (
+                        <SelectItem
+                          key={`${table.fullName}-${index}`}
+                          value={table.fullName}
+                        >
                           <div className="flex items-center gap-2 w-full">
                             <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
                             <span className="truncate flex-1 font-medium">
@@ -1236,7 +1209,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
       {/* Continue Button */}
       <div className="flex justify-end">
-        <Button onClick={handleContinue}>
+        <Button onClick={handleContinue} className="cursor-pointer">
           Create Pipeline
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

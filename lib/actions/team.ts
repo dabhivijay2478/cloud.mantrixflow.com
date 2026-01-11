@@ -16,7 +16,7 @@ const inviteTeamMemberSchema = z.object({
     .string()
     .min(1, "Email is required")
     .email("Please enter a valid email address"),
-  role: z.enum(["owner", "admin", "member", "viewer", "guest"]),
+  role: z.enum(["OWNER", "ADMIN", "EDITOR", "VIEWER"]),
   agentPanelAccess: z.boolean().optional().default(false),
   allowedModels: z.array(z.string()).optional().default([]),
 });
@@ -31,7 +31,7 @@ const updateTeamMemberSchema = z.object({
     .string()
     .min(1, "Email is required")
     .email("Please enter a valid email address"),
-  role: z.enum(["owner", "admin", "member", "viewer", "guest"]),
+  role: z.enum(["OWNER", "ADMIN", "EDITOR", "VIEWER"]),
   agentPanelAccess: z.boolean().default(false),
   allowedModels: z.array(z.string()).default([]),
 });

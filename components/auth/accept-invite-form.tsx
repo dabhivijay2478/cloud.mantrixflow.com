@@ -297,6 +297,7 @@ function AcceptInviteFormContent({
             id="password"
             name="password"
             autoComplete="new-password"
+            placeholder="Enter your password"
             required
             aria-invalid={
               state && !state.success && state.fieldErrors?.password
@@ -323,6 +324,7 @@ function AcceptInviteFormContent({
             id="confirm-password"
             name="confirmPassword"
             autoComplete="new-password"
+            placeholder="Confirm your password"
             required
             aria-invalid={
               state && !state.success && state.fieldErrors?.confirmPassword
@@ -344,13 +346,18 @@ function AcceptInviteFormContent({
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+          <Button
+            type="submit"
+            disabled={isPending}
+            aria-busy={isPending}
+            className="cursor-pointer"
+          >
             {isPending ? "Setting password..." : "Set password"}
           </Button>
         </Field>
 
         <Field>
-          <FieldDescription className="text-center">
+          <FieldDescription className="text-center cursor-pointer">
             Already have an account?{" "}
             <Link href="/auth/login" className="underline underline-offset-4">
               Sign in
