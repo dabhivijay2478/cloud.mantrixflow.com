@@ -1,5 +1,6 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   RefreshCw,
   Calendar,
@@ -9,20 +10,13 @@ import {
   Database,
   Activity,
 } from "lucide-react";
+import { useMemo } from "react";
 import { useDashboardOverview } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/shared";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, PageHeader } from "@/components/shared";
 
 function Gauge({
   value,
@@ -82,6 +76,79 @@ export default function Dashboard() {
     refetch,
     isRefetching,
   } = useDashboardOverview(orgId);
+
+  // Column definitions for Recent Migrations table
+  // Must be defined before any conditional returns to follow Rules of Hooks
+  const migrationColumns: ColumnDef<
+    {
+      id: string;
+      pipelineId: string;
+      pipelineName: string;
+      status: string;
+      startedAt: string | Date | null;
+      completedAt: string | Date | null;
+      rowsProcessed: number | null;
+    }
+  >[] = useMemo(
+    () => [
+      {
+        accessorKey: "pipelineName",
+        header: "Pipeline",
+        cell: ({ row }) => (
+          <div className="font-medium text-foreground">
+            {row.original.pipelineName}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const status = row.original.status;
+          return (
+            <Badge
+              variant={
+                status === "completed" || status === "success"
+                  ? "default"
+                  : status === "failed" || status === "error"
+                    ? "destructive"
+                    : "secondary"
+              }
+            >
+              {status}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "startedAt",
+        header: "Started",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {row.original.startedAt
+              ? new Date(row.original.startedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "N/A"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "rowsProcessed",
+        header: () => <div className="text-right">Rows</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <span className="font-medium text-foreground">
+              {row.original.rowsProcessed?.toLocaleString() || "0"}
+            </span>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   const handleRefresh = () => {
     refetch();
@@ -440,68 +507,23 @@ export default function Dashboard() {
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
                 Recent Pipeline Runs
               </h4>
-              {recentMigrations.length > 0 ? (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Pipeline</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Started</TableHead>
-                        <TableHead className="text-right">Rows</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentMigrations.slice(0, 10).map((migration) => (
-                        <TableRow key={migration.id}>
-                          <TableCell>
-                            <div className="font-medium text-foreground">
-                              {migration.pipelineName}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                migration.status === "completed" ||
-                                migration.status === "success"
-                                  ? "default"
-                                  : migration.status === "failed" ||
-                                      migration.status === "error"
-                                    ? "destructive"
-                                    : "secondary"
-                              }
-                            >
-                              {migration.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {migration.startedAt
-                                ? new Date(
-                                    migration.startedAt,
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })
-                                : "N/A"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="font-medium text-foreground">
-                              {migration.rowsProcessed?.toLocaleString() || "0"}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  No recent migrations
-                </p>
-              )}
+              <DataTable
+                columns={migrationColumns}
+                data={recentMigrations.slice(0, 10)}
+                isLoading={false}
+                enableSorting
+                enableFiltering
+                filterPlaceholder="Filter migrations..."
+                defaultVisibleColumns={[
+                  "pipelineName",
+                  "status",
+                  "startedAt",
+                  "rowsProcessed",
+                ]}
+                fixedColumns={["pipelineName"]}
+                emptyMessage="No recent migrations"
+                emptyDescription="Pipeline execution runs will appear here"
+              />
             </div>
           </div>
         </section>
