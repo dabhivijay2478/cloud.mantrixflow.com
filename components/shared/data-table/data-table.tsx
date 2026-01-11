@@ -312,7 +312,8 @@ export function DataTable<TData, TValue>({
       const searchValue = filterValue.toLowerCase();
 
       // Search across all visible cell values
-      return Object.values(row.original).some((value) => {
+      const original = row.original as Record<string, unknown>;
+      return Object.values(original).some((value) => {
         if (value === null || value === undefined) return false;
         const stringValue = String(value).toLowerCase();
         return stringValue.includes(searchValue);

@@ -185,32 +185,32 @@ export default function SettingsPage() {
         className="space-y-6"
       >
         {/* Improved TabsList */}
-        <div className="border-b">
+        <div className="">
           <TabsList className="inline-flex h-auto w-full sm:w-auto bg-transparent p-0 space-x-1 sm:space-x-2">
             <TabsTrigger
               value="profile"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
             <TabsTrigger
               value="organization"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Organization</span>
             </TabsTrigger>
             {/* <TabsTrigger
               value="appearance"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
             </TabsTrigger> */}
             <TabsTrigger
               value="security"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
             >
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Security</span>
