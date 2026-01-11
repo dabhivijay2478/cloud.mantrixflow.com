@@ -319,7 +319,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default"
+          className="sm:size-default cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
           <span className="hidden sm:inline">Add Emitter</span>
@@ -340,7 +340,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
             <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
               Add emitters to send transformed data to destinations
             </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline">
+            <Button onClick={() => setShowAddDialog(true)} variant="outline" className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               Add First Emitter
             </Button>
@@ -619,7 +619,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
       {/* Continue Button */}
       <div className="flex justify-end pt-2">
-        <Button onClick={handleCreate} size="lg" className="w-full sm:w-auto">
+        <Button onClick={handleCreate} size="lg" className="w-full sm:w-auto cursor-pointer">
           <ArrowRight className="mr-2 h-4 w-4" />
           Continue to Transform
         </Button>

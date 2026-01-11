@@ -128,7 +128,7 @@ export default function InviteTeamMemberPage() {
                 disabled={isPending}
                 name="role"
               >
-                <SelectTrigger id="invite-role" className="w-full">
+                <SelectTrigger id="invite-role" className="w-full cursor-pointer">
                   <SelectValue>
                     {selectedRole
                       ? `${roleConfig[selectedRole].label} - ${roleConfig[selectedRole].description}`
@@ -139,7 +139,7 @@ export default function InviteTeamMemberPage() {
                   {Object.entries(roleConfig)
                     .filter(([key]) => key !== "owner") // Remove owner from invite options
                     .map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
+                      <SelectItem key={key} value={key} className="cursor-pointer">
                         {config.label} - {config.description}
                       </SelectItem>
                     ))}
@@ -166,14 +166,14 @@ export default function InviteTeamMemberPage() {
                   variant="outline"
                   onClick={() => router.push("/workspace/team")}
                   disabled={isPending}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isPending || !email.trim()}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer"
                   aria-busy={isPending}
                 >
                   {isPending ? (

@@ -332,7 +332,7 @@ export default function TeamPage() {
         action={
           <Button
             onClick={() => router.push("/workspace/team/invite")}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto cursor-pointer"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Invite Member

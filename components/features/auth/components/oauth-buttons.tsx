@@ -43,7 +43,7 @@ export function OAuthButtons({
           <Button
             variant="outline"
             type="button"
-            className="h-8 text-xs"
+            className="h-8 text-xs cursor-pointer"
             onClick={onGitHubClick}
             disabled={disabled}
           >
@@ -55,7 +55,7 @@ export function OAuthButtons({
           <Button
             variant="outline"
             type="button"
-            className="h-8 text-xs"
+            className="h-8 text-xs cursor-pointer"
             onClick={onGoogleClick}
             disabled={disabled}
           >
@@ -75,7 +75,7 @@ export function OAuthButtons({
           type="button"
           onClick={onGitHubClick}
           disabled={disabled}
-          className="w-full"
+          className="w-full cursor-pointer"
         >
           <FaGithub className="size-4" />
           Login with GitHub
@@ -87,7 +87,7 @@ export function OAuthButtons({
           type="button"
           onClick={onGoogleClick}
           disabled={disabled}
-          className="w-full"
+          className="w-full cursor-pointer"
         >
           <FcGoogle className="size-4" />
           Login with Google

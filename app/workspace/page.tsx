@@ -156,9 +156,6 @@ export default function Dashboard() {
         <PageHeader
           title={
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground">
-                <Database className="w-5 h-5" />
-              </div>
               <span>{organization.name} Dashboard</span>
             </div>
           }
@@ -174,6 +171,7 @@ export default function Dashboard() {
               size="sm"
               onClick={handleRefresh}
               disabled={isRefetching}
+              className="cursor-pointer"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`}

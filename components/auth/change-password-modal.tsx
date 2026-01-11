@@ -165,12 +165,13 @@ export function ChangePasswordModal({
             <Button
               type="button"
               variant="outline"
+              className="cursor-pointer"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending} aria-busy={isPending}>
+            <Button type="submit" disabled={isPending} aria-busy={isPending} className="cursor-pointer">
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

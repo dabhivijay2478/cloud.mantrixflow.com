@@ -97,13 +97,13 @@ export function ForgotPasswordForm({
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+          <Button type="submit" disabled={isPending} aria-busy={isPending} className="cursor-pointer">
             {isPending ? "Sending..." : "Send reset email"}
           </Button>
         </Field>
 
         <Field>
-          <FieldDescription className="text-center">
+          <FieldDescription className="text-center cursor-pointer">
             Remember your password?{" "}
             <Link href="/auth/login" className="underline underline-offset-4">
               Back to login

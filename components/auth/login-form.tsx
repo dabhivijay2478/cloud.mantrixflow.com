@@ -167,7 +167,7 @@ function LoginFormContent({
         </Field>
 
         <Field>
-          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+          <Button type="submit" disabled={isPending} aria-busy={isPending} className="cursor-pointer">
             {isPending ? "Logging in..." : "Login"}
           </Button>
         </Field>
@@ -180,7 +180,7 @@ function LoginFormContent({
             onGoogleClick={handleGoogleLogin}
             disabled={isPending}
           />
-          <FieldDescription className="text-center">
+          <FieldDescription className="text-center cursor-pointer">
             Don&apos;t have an account?{" "}
             <Link href="/auth/signup" className="underline underline-offset-4">
               Sign up

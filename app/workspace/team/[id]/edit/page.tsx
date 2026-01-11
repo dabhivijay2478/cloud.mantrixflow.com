@@ -360,7 +360,7 @@ export default function EditTeamMemberPage() {
                 onValueChange={(value) => setEditRole(value as TeamMemberRole)}
                 disabled={updateMember.isPending || isOwner}
               >
-                <SelectTrigger id="role-select" className="w-full">
+                <SelectTrigger id="role-select" className="w-full cursor-pointer">
                   <SelectValue>
                     {editRole
                       ? `${roleConfig[editRole].label} - ${roleConfig[editRole].description}`
@@ -371,7 +371,7 @@ export default function EditTeamMemberPage() {
                   {Object.entries(roleConfig)
                     .filter(([key]) => key !== "owner") // Remove owner from options
                     .map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
+                      <SelectItem key={key} value={key} className="cursor-pointer">
                         {config.label} - {config.description}
                       </SelectItem>
                     ))}
@@ -400,7 +400,7 @@ export default function EditTeamMemberPage() {
                     removeMember.isPending ||
                     member.role === "owner"
                   }
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer" 
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Remove Member
@@ -410,14 +410,14 @@ export default function EditTeamMemberPage() {
                     variant="outline"
                     onClick={() => router.push("/workspace/team")}
                     disabled={updateMember.isPending}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto cursor-pointer"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleSave}
                     disabled={updateMember.isPending || isOwner}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto cursor-pointer"
                   >
                     {updateMember.isPending ? (
                       <>

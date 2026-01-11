@@ -669,7 +669,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default"
+          className="sm:size-default cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
           <span className="hidden sm:inline">Add Transformer</span>
@@ -688,7 +688,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             <p className="text-sm text-muted-foreground text-center mb-4">
               Add transformers to map fields from collectors to emitters
             </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline">
+            <Button onClick={() => setShowAddDialog(true)} variant="outline" className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               Add First Transformer
             </Button>
@@ -720,7 +720,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !transformName ||
                 !selectedDestinationTable
               }
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto cursor-pointer"
             >
               {editingTransform ? "Update" : "Add"} Transformer
             </Button>
@@ -1236,7 +1236,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
       {/* Continue Button */}
       <div className="flex justify-end">
-        <Button onClick={handleContinue}>
+        <Button onClick={handleContinue} className="cursor-pointer">
           Create Pipeline
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

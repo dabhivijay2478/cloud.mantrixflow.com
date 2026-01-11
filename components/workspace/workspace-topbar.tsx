@@ -51,14 +51,14 @@ export function WorkspaceTopbar() {
     if (error) {
       toastUtil.error(
         "Sign out failed",
-        error.message || "Failed to sign out. Please try again.",
+        error.message || "Failed to sign out. Please try again."
       );
       return;
     }
 
     toastUtil.success(
       "Signed out successfully",
-      "You have been successfully logged out.",
+      "You have been successfully logged out."
     );
     router.push("/auth/login");
   };
@@ -67,7 +67,7 @@ export function WorkspaceTopbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors">
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-        <SidebarTrigger />
+        <SidebarTrigger className="cursor-pointer" />
         <div className="flex-1 flex items-center justify-center max-w-2xl mx-auto">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -86,7 +86,10 @@ export function WorkspaceTopbar() {
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button
+                variant="ghost"
+                className="relative h-8 w-8 rounded-full cursor-pointer"
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.user_metadata?.avatar_url} />
                   <AvatarFallback>
@@ -109,12 +112,16 @@ export function WorkspaceTopbar() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => router.push("/workspace/settings")}
+                className="cursor-pointer"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

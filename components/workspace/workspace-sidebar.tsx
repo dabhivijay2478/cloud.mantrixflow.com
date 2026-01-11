@@ -194,8 +194,8 @@ export function WorkspaceSidebar() {
         createdAtValue instanceof Date
           ? createdAtValue.toISOString()
           : typeof createdAtValue === "string"
-            ? createdAtValue
-            : new Date().toISOString();
+          ? createdAtValue
+          : new Date().toISOString();
 
       setStoreCurrentOrganization({
         id: org.id,
@@ -211,7 +211,7 @@ export function WorkspaceSidebar() {
       showErrorToast(
         "switchFailed",
         "Organization",
-        error instanceof Error ? error.message : undefined,
+        error instanceof Error ? error.message : undefined
       );
     }
   };
@@ -245,7 +245,7 @@ export function WorkspaceSidebar() {
       // If current org is not in the list, or if we don't have a current org, set it
       const currentOrgId = storeCurrentOrg?.id;
       const hasCurrentOrgInList = orgsData.some(
-        (org) => org.id === currentOrgId,
+        (org) => org.id === currentOrgId
       );
 
       if (!hasCurrentOrgInList) {
@@ -314,7 +314,7 @@ export function WorkspaceSidebar() {
   const filteredDataSources = currentOrganization
     ? dataSources.filter(
         (ds) =>
-          !ds.organizationId || ds.organizationId === currentOrganization.id,
+          !ds.organizationId || ds.organizationId === currentOrganization.id
       )
     : dataSources.filter((ds) => !ds.organizationId);
 
@@ -338,6 +338,7 @@ export function WorkspaceSidebar() {
                   asChild
                   isActive={pathname === "/workspace"}
                   tooltip="Dashboard"
+                  className="cursor-pointer"
                 >
                   <Link href="/workspace">
                     <LayoutDashboard className="h-4 w-4" />
@@ -350,6 +351,7 @@ export function WorkspaceSidebar() {
                   asChild
                   isActive={pathname?.startsWith("/workspace/data-sources")}
                   tooltip="Data Sources"
+                  className="cursor-pointer"
                 >
                   <Link href="/workspace/data-sources">
                     <Database className="h-4 w-4" />
@@ -367,10 +369,24 @@ export function WorkspaceSidebar() {
                   asChild
                   isActive={pathname?.startsWith("/workspace/data-pipelines")}
                   tooltip="Data Pipelines"
+                  className="cursor-pointer"
                 >
                   <Link href="/workspace/data-pipelines">
                     <GitBranch className="h-4 w-4" />
                     <span>Data Pipelines</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname?.startsWith("/workspace/activity")}
+                  tooltip="Activity Log"
+                  className="cursor-pointer"
+                >
+                  <Link href="/workspace/activity">
+                    <FileText className="h-4 w-4" />
+                    <span>Activity Log</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -387,6 +403,7 @@ export function WorkspaceSidebar() {
                   asChild
                   isActive={pathname?.startsWith("/workspace/settings")}
                   tooltip="Settings"
+                  className="cursor-pointer"
                 >
                   <Link href="/workspace/settings">
                     <Settings className="h-4 w-4" />
@@ -399,22 +416,11 @@ export function WorkspaceSidebar() {
                   asChild
                   isActive={pathname?.startsWith("/workspace/team")}
                   tooltip="Team"
+                  className="cursor-pointer"
                 >
                   <Link href="/workspace/team">
                     <Users className="h-4 w-4" />
                     <span>Team</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname?.startsWith("/workspace/activity")}
-                  tooltip="Activity Log"
-                >
-                  <Link href="/workspace/activity">
-                    <FileText className="h-4 w-4" />
-                    <span>Activity Log</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -317,7 +317,7 @@ export function CollectorStep({
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default"
+          className="sm:size-default cursor-pointer"
           disabled={dataSources.length === 0}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -337,7 +337,7 @@ export function CollectorStep({
             <p className="text-sm text-muted-foreground text-center mb-4">
               Add at least one collector to start your pipeline
             </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline">
+            <Button onClick={() => setShowAddDialog(true)} variant="outline" className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               Add First Collector
             </Button>
@@ -507,7 +507,7 @@ export function CollectorStep({
           onClick={handleContinue}
           disabled={collectors.length === 0}
           size="lg"
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto cursor-pointer"
         >
           Continue to Emitter
           <ArrowRight className="ml-2 h-4 w-4" />

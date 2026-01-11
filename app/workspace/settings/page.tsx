@@ -368,14 +368,14 @@ export default function SettingsPage() {
                         setAvatarUrl(user.avatarUrl || "");
                       }}
                       disabled={loading}
-                      className="w-full sm:w-auto"
+                      className="w-full sm:w-auto cursor-pointer"
                     >
                       Reset
                     </Button>
                     <Button
                       onClick={handleSaveProfile}
                       disabled={loading}
-                      className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                      className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                     >
                       {loading ? (
                         <>
@@ -490,14 +490,14 @@ export default function SettingsPage() {
                     setOrgSlug(currentOrganization?.slug || "");
                   }}
                   disabled={loading}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer"
                 >
                   Reset
                 </Button>
                 <Button
                   onClick={handleSaveOrganization}
                   disabled={loading || !orgName.trim()}
-                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+                  className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 >
                   {loading ? (
                     <>
@@ -599,7 +599,7 @@ export default function SettingsPage() {
                 </div>
                 <Button
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto cursor-pointer"
                   onClick={() => setChangePasswordOpen(true)}
                 >
                   Change Password

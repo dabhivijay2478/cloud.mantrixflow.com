@@ -359,17 +359,17 @@ export default function DataSourcesPage() {
         description="Connect and manage your data sources to power your dashboards"
         action={
           hasConnections && !showGridView ? (
-            <Button onClick={() => setShowGridView(true)}>
+            <Button onClick={() => setShowGridView(true)} className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               New Source
             </Button>
           ) : showGridView ? (
-            <Button variant="outline" onClick={() => setShowGridView(false)}>
+            <Button variant="outline" onClick={() => setShowGridView(false)} className="cursor-pointer">
               <X className="mr-2 h-4 w-4" />
               Back to List
             </Button>
           ) : (
-            <Button onClick={() => setShowGridView(true)}>
+            <Button onClick={() => setShowGridView(true)} className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               New Source
             </Button>

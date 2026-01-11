@@ -375,12 +375,12 @@ export default function ActivityLogPage() {
               value={selectedEntityType}
               onValueChange={handleEntityTypeChange}
             >
-              <SelectTrigger className="w-[160px] font-mono text-sm">
+              <SelectTrigger className="w-[160px] font-mono text-sm cursor-pointer ">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
                 {ENTITY_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                     {option.label}
                   </SelectItem>
                 ))}
@@ -391,12 +391,12 @@ export default function ActivityLogPage() {
               value={selectedActionType}
               onValueChange={handleActionTypeChange}
             >
-              <SelectTrigger className="w-[160px] font-mono text-sm">
+              <SelectTrigger className="w-[160px] font-mono text-sm cursor-pointer">
                 <SelectValue placeholder="All Actions" />
               </SelectTrigger>
               <SelectContent>
                 {ACTION_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                     {option.label}
                   </SelectItem>
                 ))}
@@ -404,12 +404,12 @@ export default function ActivityLogPage() {
             </Select>
 
             <Select value={selectedStatus} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[140px] font-mono text-sm">
+              <SelectTrigger className="w-[140px] font-mono text-sm cursor-pointer">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
                 {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                     {option.label}
                   </SelectItem>
                 ))}
@@ -420,12 +420,12 @@ export default function ActivityLogPage() {
               value={selectedTimeRange}
               onValueChange={handleTimeRangeChange}
             >
-              <SelectTrigger className="w-[140px] font-mono text-sm">
+              <SelectTrigger className="w-[140px] font-mono text-sm cursor-pointer">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {TIME_RANGE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                     {option.label}
                   </SelectItem>
                 ))}
@@ -439,7 +439,7 @@ export default function ActivityLogPage() {
                 setCursor(undefined);
                 refetch();
               }}
-              className="font-mono"
+              className="font-mono cursor-pointer"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
@@ -515,7 +515,7 @@ export default function ActivityLogPage() {
                         </div>
                       );
                     })}
-                    {nextCursor && (
+                    {/* {nextCursor && (
                       <div className="pt-4 mt-4 border-t border-border flex justify-center">
                         <Button
                           variant="ghost"
@@ -526,7 +526,7 @@ export default function ActivityLogPage() {
                           [LOAD MORE]
                         </Button>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 )}
               </div>
