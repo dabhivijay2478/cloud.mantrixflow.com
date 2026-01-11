@@ -16,17 +16,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   inviteTeamMemberAction,
   type TeamActionResult,
 } from "@/lib/actions/team";
-import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
+import { type TeamMemberRole } from "@/lib/constants/roles";
+import { RoleSelect } from "@/components/shared";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function InviteTeamMemberPage() {
@@ -116,48 +110,13 @@ export default function InviteTeamMemberPage() {
             </div>
 
             {/* Role Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="invite-role" className="text-sm font-medium">
-                Role
-              </Label>
-              <Select
-                value={selectedRole}
-                onValueChange={(value) =>
-                  setSelectedRole(value as TeamMemberRole)
-                }
-                disabled={isPending}
-                name="role"
-              >
-                <SelectTrigger
-                  id="invite-role"
-                  className="w-full cursor-pointer"
-                >
-                  <SelectValue>
-                    {selectedRole
-                      ? `${roleConfig[selectedRole].label} - ${roleConfig[selectedRole].description}`
-                      : "Select a role"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(roleConfig)
-                    .filter(([key]) => key !== "owner") // Remove owner from invite options
-                    .map(([key, config]) => (
-                      <SelectItem
-                        key={key}
-                        value={key}
-                        className="cursor-pointer"
-                      >
-                        {config.label} - {config.description}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Note: Owner role cannot be assigned through invitations.
-                Ownership must be transferred separately in organization
-                settings.
-              </p>
-            </div>
+            <RoleSelect
+              value={selectedRole}
+              onValueChange={setSelectedRole}
+              disabled={isPending}
+              id="invite-role"
+              name="role"
+            />
           </CardContent>
         </Card>
 

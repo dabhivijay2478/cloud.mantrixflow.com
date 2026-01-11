@@ -23,14 +23,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useConfirmation } from "@/hooks/use-confirmation";
 import {
   useOrganizationMember,
@@ -38,7 +30,8 @@ import {
   useUpdateMember,
 } from "@/lib/api";
 import type { OrganizationMember } from "@/lib/api/types/organizations";
-import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
+import { type TeamMemberRole } from "@/lib/constants/roles";
+import { RoleSelect } from "@/components/shared";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
@@ -351,46 +344,18 @@ export default function EditTeamMemberPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="role-select" className="text-sm font-medium">
-                Role
-              </Label>
-              <Select
-                value={editRole}
-                onValueChange={(value) => setEditRole(value as TeamMemberRole)}
-                disabled={updateMember.isPending || isOwner}
-              >
-                <SelectTrigger
-                  id="role-select"
-                  className="w-full cursor-pointer"
-                >
-                  <SelectValue>
-                    {editRole
-                      ? `${roleConfig[editRole].label} - ${roleConfig[editRole].description}`
-                      : "Select a role"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(roleConfig)
-                    .filter(([key]) => key !== "OWNER") // Remove OWNER from options
-                    .map(([key, config]) => (
-                      <SelectItem
-                        key={key}
-                        value={key}
-                        className="cursor-pointer"
-                      >
-                        {config.label} - {config.description}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              {isOwner && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  The owner role cannot be changed. To transfer ownership, use
-                  the organization settings.
-                </p>
-              )}
-            </div>
+            <RoleSelect
+              value={editRole}
+              onValueChange={setEditRole}
+              disabled={updateMember.isPending || isOwner}
+              id="role-select"
+              helpText={
+                isOwner
+                  ? "The owner role cannot be changed. To transfer ownership, use the organization settings."
+                  : undefined
+              }
+              showDefaultHelpText={!isOwner}
+            />
           </CardContent>
         </Card>
 

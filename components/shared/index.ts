@@ -35,3 +35,6 @@ export type { FormSheetProps } from "./sheet";
 export { FormSheet } from "./sheet";
 // Skeleton Components
 export * from "./skeletons";
+// Role Select Component
+export type { RoleSelectProps } from "./role-select";
+export { RoleSelect } from "./role-select";
