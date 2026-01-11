@@ -180,13 +180,13 @@ export default function SettingsPage() {
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Organization</span>
             </TabsTrigger>
-            <TabsTrigger
+            {/* <TabsTrigger
               value="appearance"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
             >
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger
               value="security"
               className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-b-0 border-transparent"
@@ -516,9 +516,7 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Appearance */}
-        <TabsContent value="appearance" className="space-y-6">
-          {/* Theme Mode Selection */}
+        {/* <TabsContent value="appearance" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Theme Mode</CardTitle>
@@ -564,10 +562,8 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Theme Customization */}
           <ThemeCustomizer />
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Security */}
         <TabsContent value="security" className="space-y-6">
