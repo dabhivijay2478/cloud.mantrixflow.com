@@ -7,7 +7,6 @@ import {
   Database,
   Edit,
   Plus,
-  Search,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -16,7 +15,6 @@ import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -83,7 +81,6 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const [selectedDestinationId, setSelectedDestinationId] =
     useState<string>("");
   const [_configValues, setConfigValues] = useState<Record<string, string>>({});
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
@@ -305,58 +302,41 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
   return (
     <div className="space-y-6">
-      {/* Search and Add Button */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search emitters..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {/* Add Button */}
+      <div className="flex items-center justify-end">
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default cursor-pointer"
+          className="cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">Add Emitter</span>
-          <span className="sm:hidden">Add</span>
+          Add Emitter
         </Button>
       </div>
 
       {/* Emitters Table */}
-      {allEmitters.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">
-              No emitters configured
-            </h3>
-            <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
-              Add emitters to send transformed data to destinations
-            </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline" className="cursor-pointer">
-              <Plus className="mr-2 h-4 w-4" />
-              Add First Emitter
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-6">
-            {/* Desktop Table View */}
-            <div className="hidden md:block">
-              <DataTable columns={columns} data={filteredEmitters} />
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-3 p-4">
-              {filteredEmitters.map((emitter) => {
+      <Card>
+        <CardContent className="p-6">
+          <DataTable
+            columns={columns}
+            data={allEmitters}
+            enableSorting
+            enableFiltering
+            filterPlaceholder="Filter emitters..."
+            defaultVisibleColumns={[
+              "collectorName",
+              "destinationName",
+              "destinationType",
+              "connectionConfig",
+              "actions",
+            ]}
+            fixedColumns={["collectorName", "actions"]}
+            emptyMessage="No emitters configured"
+            emptyDescription="Add emitters to send transformed data to destinations"
+          />
+          {/* Mobile Card View - Keep for backward compatibility */}
+          <div className="md:hidden space-y-3 p-4 hidden">
+            {allEmitters.map((emitter) => {
                 const destination = availableDestinations.find(
                   (d) => d.id === emitter.destinationId,
                 );
@@ -459,7 +439,6 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
             </div>
           </CardContent>
         </Card>
-      )}
 
       {/* Add/Edit Emitter Sheet */}
       <FormSheet

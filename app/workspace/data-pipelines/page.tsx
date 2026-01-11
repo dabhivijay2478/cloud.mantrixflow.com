@@ -468,43 +468,28 @@ export default function DataPipelinesPage() {
       />
 
       {/* Existing Pipelines */}
-      {pipelinesLoading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading pipelines...</div>
-          </CardContent>
-        </Card>
-      ) : pipelines && pipelines.length > 0 ? (
-        <Card>
-          <CardContent className="p-6">
-            <DataTable
-              columns={columns}
-              data={pipelines}
-              enableSorting={true}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <ArrowRightLeft className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No pipelines yet</h3>
-            <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
-              Create your first data pipeline to start moving data from source
-              to destination. Configure transformations, set up real-time
-              streaming, or bulk load your data.
-            </p>
-            <Button
-              onClick={() => router.push("/workspace/data-pipelines/new")}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Pipeline
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardContent className="p-6">
+          <DataTable
+            columns={columns}
+            data={pipelines || []}
+            isLoading={pipelinesLoading}
+            enableSorting
+            defaultVisibleColumns={[
+              "name",
+              "sourceType",
+              "sourceConnectionId",
+              "status",
+              "destinationConnectionId",
+              "createdAt",
+              "actions",
+            ]}
+            fixedColumns={["name", "actions"]}
+            emptyMessage="No pipelines yet"
+            emptyDescription="Create your first data pipeline to start moving data from source to destination. Configure transformations, set up real-time streaming, or bulk load your data."
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

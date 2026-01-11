@@ -10,7 +10,6 @@ import {
   Map as MapIcon,
   Pause,
   Plus,
-  Search,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -18,7 +17,6 @@ import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -97,7 +95,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
   >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Debug: Log when collectors prop changes
   useEffect(() => {
@@ -655,52 +652,40 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
   return (
     <div className="space-y-6">
-      {/* Search and Add Button */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search transformers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {/* Add Button */}
+      <div className="flex items-center justify-end">
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default cursor-pointer"
+          className="cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">Add Transformer</span>
-          <span className="sm:hidden">Add</span>
+          Add Transformer
         </Button>
       </div>
 
       {/* Transforms Table */}
-      {allTransforms.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <MapIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              No transformers configured
-            </h3>
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              Add transformers to map fields from collectors to emitters
-            </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline" className="cursor-pointer">
-              <Plus className="mr-2 h-4 w-4" />
-              Add First Transformer
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-6">
-            <DataTable columns={columns} data={filteredTransforms} />
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardContent className="p-6">
+          <DataTable
+            columns={columns}
+            data={allTransforms}
+            enableSorting
+            enableFiltering
+            filterPlaceholder="Filter transformers..."
+            defaultVisibleColumns={[
+              "name",
+              "collectorName",
+              "emitterName",
+              "fieldMappings",
+              "actions",
+            ]}
+            fixedColumns={["name", "actions"]}
+            emptyMessage="No transformers configured"
+            emptyDescription="Add transformers to map fields from collectors to emitters"
+          />
+        </CardContent>
+      </Card>
 
       {/* Add/Edit Transform Sheet */}
       <FormSheet

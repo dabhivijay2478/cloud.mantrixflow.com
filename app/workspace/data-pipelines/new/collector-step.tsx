@@ -7,7 +7,6 @@ import {
   Edit,
   Loader2,
   Plus,
-  Search,
   Table,
   Trash2,
   X,
@@ -18,7 +17,6 @@ import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -89,7 +87,6 @@ export function CollectorStep({
 
   const [collectors, setCollectors] =
     useState<CollectorConfig[]>(initialCollectors);
-  const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCollector, setEditingCollector] = useState<string | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
@@ -260,17 +257,6 @@ export function CollectorStep({
     },
   ];
 
-  const filteredCollectors = collectors.filter((collector) => {
-    if (!searchQuery) return true;
-    const source = dataSources.find((ds) => ds.id === collector.sourceId);
-    return (
-      source?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      collector.selectedTables.some((table) =>
-        table.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    );
-  });
-
   // Show loading or no org message
   if (!orgId) {
     return (
@@ -303,53 +289,36 @@ export function CollectorStep({
 
   return (
     <div className="space-y-6">
-      {/* Search and Add Button */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search collectors..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {/* Add Button */}
+      <div className="flex items-center justify-end">
         <Button
           onClick={() => setShowAddDialog(true)}
           size="sm"
-          className="sm:size-default cursor-pointer"
+          className="cursor-pointer"
           disabled={dataSources.length === 0}
         >
           <Plus className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">Add Collector</span>
-          <span className="sm:hidden">Add</span>
+          Add Collector
         </Button>
       </div>
 
       {/* Collectors Table */}
-      {collectors.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Database className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              No collectors configured
-            </h3>
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              Add at least one collector to start your pipeline
-            </p>
-            <Button onClick={() => setShowAddDialog(true)} variant="outline" className="cursor-pointer">
-              <Plus className="mr-2 h-4 w-4" />
-              Add First Collector
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-6">
-            <DataTable columns={columns} data={filteredCollectors} />
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardContent className="p-6">
+          <DataTable
+            columns={columns}
+            data={collectors}
+            isLoading={false}
+            enableSorting
+            enableFiltering
+            filterPlaceholder="Filter collectors..."
+            defaultVisibleColumns={["sourceId", "selectedTables", "transformers", "actions"]}
+            fixedColumns={["sourceId", "actions"]}
+            emptyMessage="No collectors configured"
+            emptyDescription="Add at least one collector to start your pipeline"
+          />
+        </CardContent>
+      </Card>
 
       {/* Add/Edit Collector Sheet */}
       <FormSheet

@@ -1,18 +1,38 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import {
+  Check,
+  MoreVertical,
+  Plus,
+  Table as TableIcon,
+  Trash2,
+  Unlink,
+  X,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import {
   allDataSources,
   ConnectionSheet,
   DataSourceGrid,
-  DataSourceTable,
+  getIconComponent,
 } from "@/components/data-sources";
 import {
   ConfirmationModal,
+  DataTable,
   PageHeader,
 } from "@/components/shared";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useConfirmation } from "@/hooks/use-confirmation";
 import {
   type CreateConnectionDto,
@@ -100,6 +120,7 @@ export default function DataSourcesPage() {
     };
   }) || []) as DataSource[];
 
+  const router = useRouter();
   const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
     null,
   );
@@ -107,10 +128,6 @@ export default function DataSourcesPage() {
   const [connectingDataSourceId, setConnectingDataSourceId] = useState<
     string | null
   >(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortColumn, setSortColumn] = useState<string>("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   // Check if there are any connections (regardless of status)
   const hasConnections = filteredDataSources.length > 0;
 
@@ -302,36 +319,6 @@ export default function DataSourcesPage() {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
-
-  const handleDisconnect = async (dataSourceId: string) => {
-    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
-    if (!dataSource) {
-      showErrorToast("notFound", "Data Source");
-      return;
-    }
-
-    try {
-      // Update connection status to inactive
-      // Note: You may need to add an updateConnection hook call here
-      // For now, we'll just show a message
-      showSuccessToast("disconnected", dataSource.name);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Unable to disconnect the data source.";
-      showErrorToast("disconnectFailed", "Data Source", errorMessage);
-    }
-  };
-
   // State to track which data source is being deleted
   const [dataSourceToDelete, setDataSourceToDelete] = useState<{
     id: string;
@@ -359,7 +346,28 @@ export default function DataSourcesPage() {
     },
   });
 
-  const handleDelete = (dataSourceId: string) => {
+  const handleDisconnect = useCallback(async (dataSourceId: string) => {
+    const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
+    if (!dataSource) {
+      showErrorToast("notFound", "Data Source");
+      return;
+    }
+
+    try {
+      // Update connection status to inactive
+      // Note: You may need to add an updateConnection hook call here
+      // For now, we'll just show a message
+      showSuccessToast("disconnected", dataSource.name);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to disconnect the data source.";
+      showErrorToast("disconnectFailed", "Data Source", errorMessage);
+    }
+  }, [filteredDataSources]);
+
+  const handleDelete = useCallback((dataSourceId: string) => {
     const dataSource = filteredDataSources.find((ds) => ds.id === dataSourceId);
     if (!dataSource) {
       showErrorToast("notFound", "Data Source");
@@ -368,7 +376,162 @@ export default function DataSourcesPage() {
     // Store the data source to delete and show confirmation modal
     setDataSourceToDelete({ id: dataSourceId, name: dataSource.name });
     deleteConfirm.showConfirm(dataSource.name);
-  };
+  }, [filteredDataSources, deleteConfirm]);
+
+  // Column definitions for DataTable
+  const columns: ColumnDef<DataSource>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => {
+          const dataSource = row.original;
+          const iconType: string =
+            "iconType" in dataSource &&
+            typeof dataSource.iconType === "string"
+              ? dataSource.iconType
+              : dataSource.type === "postgres"
+                ? "postgres"
+                : dataSource.type;
+          return (
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                {getIconComponent(iconType, 16)}
+              </div>
+              <span className="font-semibold">{dataSource.name}</span>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "type",
+        header: "Connector",
+        cell: ({ row }) => (
+          <span className="capitalize text-sm text-muted-foreground">
+            {row.original.type}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "connections",
+        header: "Connections",
+        cell: ({ row }) => {
+          const dataSource = row.original;
+          const connected = isConnected(dataSource.id);
+          const connectedData = getConnectedDataSource(dataSource.id);
+          const selectedTables =
+            connectedData?.selectedTables ||
+            (connectedData?.selectedTable
+              ? [connectedData.selectedTable]
+              : []);
+          return connected && selectedTables.length > 0 ? (
+            <span className="text-sm font-medium">
+              {selectedTables.length}{" "}
+              {selectedTables.length === 1 ? "table" : "tables"}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-sm">-</span>
+          );
+        },
+      },
+      {
+        accessorKey: "connectedAt",
+        header: "Last Sync",
+        cell: ({ row }) => {
+          const dataSource = row.original;
+          const connectedData = getConnectedDataSource(dataSource.id);
+          return connectedData?.connectedAt ? (
+            <span className="text-sm text-muted-foreground">
+              {new Date(connectedData.connectedAt).toLocaleDateString()}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-sm">-</span>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const dataSource = row.original;
+          const connected = isConnected(dataSource.id);
+          return connected ? (
+            <Badge className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-0 font-medium">
+              <Check className="h-3 w-3 mr-1" />
+              Connected
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">Not connected</span>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const dataSource = row.original;
+          const connected = isConnected(dataSource.id);
+          return (
+            <div className="flex items-center justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {connected && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(
+                            `/workspace/data-sources/${dataSource.id}/query`,
+                          );
+                        }}
+                      >
+                        <TableIcon className="mr-2 h-4 w-4" />
+                        View table navigation
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDisconnect(dataSource.id);
+                        }}
+                        className="text-orange-600 focus:text-orange-600"
+                      >
+                        <Unlink className="mr-2 h-4 w-4" />
+                        Disconnect
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(dataSource.id);
+                    }}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+        enableHiding: false,
+      },
+    ],
+    [isConnected, getConnectedDataSource, router, handleDisconnect, handleDelete],
+  );
 
   return (
     <div className="space-y-6">
@@ -419,25 +582,30 @@ export default function DataSourcesPage() {
           onDataSourceClick={handleDataSourceClick}
         />
       ) : (
-        <>
-          {/* Show table list view with only connected data sources */}
-          <DataSourceTable
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            onSort={handleSort}
-            isConnected={isConnected}
-            getConnectedDataSource={getConnectedDataSource}
-            onDataSourceClick={handleDataSourceClick}
-            showOnlyConnected={true}
-            connections={filteredDataSources}
-            onDisconnect={handleDisconnect}
-            onDelete={handleDelete}
-          />
-        </>
+        <Card>
+          <CardContent className="p-6">
+            <DataTable
+              columns={columns}
+              data={filteredDataSources}
+              isLoading={false}
+              enableSorting
+              enableFiltering
+              filterPlaceholder="Filter data sources..."
+              defaultVisibleColumns={[
+                "name",
+                "type",
+                "connections",
+                "connectedAt",
+                "status",
+                "actions",
+              ]}
+              fixedColumns={["name", "actions"]}
+              onRowClick={(row) => handleDataSourceClick(row.id)}
+              emptyMessage="No data sources found"
+              emptyDescription="Get started by connecting a data source"
+            />
+          </CardContent>
+        </Card>
       )}
 
       {/* Connection Sheet */}
@@ -456,15 +624,22 @@ export default function DataSourcesPage() {
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
-        {...deleteConfirm.confirmProps}
-        isLoading={deleteConnection.isPending}
+        open={deleteConfirm.confirmProps.open}
         onOpenChange={(open) => {
-          deleteConfirm.confirmProps.onOpenChange(open);
           if (!open) {
+            deleteConfirm.hideConfirm();
             // Clear the data source to delete when modal closes
             setDataSourceToDelete(null);
+          } else {
+            // If opening, use the showConfirm from confirmProps
+            // This shouldn't happen normally, but handle it
           }
         }}
+        action={deleteConfirm.confirmProps.action}
+        itemName={deleteConfirm.confirmProps.itemName}
+        itemValue={deleteConfirm.confirmProps.itemValue}
+        onConfirm={deleteConfirm.confirmProps.onConfirm}
+        isLoading={deleteConnection.isPending}
       />
     </div>
   );

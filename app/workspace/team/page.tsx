@@ -1,11 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   Check,
   Crown,
   Edit,
-  Loader2,
   Mail,
   MoreVertical,
   Shield,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ConfirmationModal, PageHeader } from "@/components/shared";
+import { ConfirmationModal, DataTable, PageHeader } from "@/components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,14 +34,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useConfirmation } from "@/hooks/use-confirmation";
 import {
   organizationMembersKeys,
@@ -297,6 +289,174 @@ export default function TeamPage() {
     );
   };
 
+  // Column definitions for DataTable
+  const columns: ColumnDef<TeamMember>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Member",
+        cell: ({ row }) => {
+          const member = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={member.avatar || undefined} />
+                <AvatarFallback>
+                  {member.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <div className="font-medium truncate">{member.name}</div>
+                <div className="text-sm text-muted-foreground flex items-center gap-1 truncate">
+                  <Mail className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{member.email}</span>
+                </div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => getStatusBadge(row.original.status),
+      },
+      {
+        accessorKey: "role",
+        header: "Role",
+        cell: ({ row }) => {
+          const member = row.original;
+          if (member.role === "OWNER") {
+            return getRoleBadge(member.role);
+          }
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 hover:bg-transparent"
+                >
+                  {getRoleBadge(member.role)}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {Object.entries(roleConfig)
+                  .filter(([key]) => key !== "OWNER")
+                  .map(([key, config]) => {
+                    const Icon = roleIcons[key as TeamMemberRole];
+                    return (
+                      <DropdownMenuItem
+                        key={key}
+                        onClick={() =>
+                          handleRoleChange(
+                            member.id,
+                            member.email,
+                            key as TeamMemberRole,
+                            member.role,
+                          )
+                        }
+                        className={cn(
+                          "flex items-center gap-2",
+                          member.role === key && "bg-accent",
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <div className="flex flex-col flex-1">
+                          <span>{config.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {config.description}
+                          </span>
+                        </div>
+                        {member.role === key && (
+                          <Check className="h-4 w-4 ml-auto" />
+                        )}
+                      </DropdownMenuItem>
+                    );
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
+      },
+      {
+        accessorKey: "joinedAt",
+        header: "Joined",
+        cell: ({ row }) => {
+          const joinedAt = row.original.joinedAt;
+          return (
+            <div className="text-muted-foreground">
+              {joinedAt
+                ? new Date(joinedAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "-"}
+            </div>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const member = row.original;
+          return (
+            <div className="flex items-center justify-end gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleEditClick(member)}
+                    disabled={member.role === "OWNER"}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Member
+                    {member.role === "OWNER" && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        (Owner)
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handleRemoveMember(member.id, member.email)
+                    }
+                    className="text-destructive"
+                    disabled={member.role === "OWNER"}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove Member
+                    {member.role === "OWNER" && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        (Owner)
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+        enableHiding: false,
+      },
+    ],
+    [handleRoleChange, handleEditClick, handleRemoveMember],
+  );
+
   // Show message if no organization is selected
   if (!organizationId) {
     return (
@@ -350,221 +510,18 @@ export default function TeamPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Member</TableHead>
-                  <TableHead className="hidden md:table-cell">Status</TableHead>
-                  <TableHead className="hidden lg:table-cell">Role</TableHead>
-                  <TableHead className="hidden lg:table-cell">Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading || membersLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        <p className="text-muted-foreground">
-                          Loading members...
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : membersError ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-2">
-                        <p className="text-destructive">
-                          Failed to load team members
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {membersError instanceof Error
-                            ? membersError.message
-                            : "An error occurred"}
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : teamMembers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-2">
-                        <User className="h-12 w-12 text-muted-foreground" />
-                        <p className="text-muted-foreground">
-                          No team members yet
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Invite team members to get started
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  teamMembers.map((member) => {
-                    return (
-                      <TableRow key={member.id} className="hover:bg-muted/50">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={member.avatar || undefined} />
-                              <AvatarFallback>
-                                {member.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col min-w-0">
-                              <div className="font-medium truncate">
-                                {member.name}
-                              </div>
-                              <div className="text-sm text-muted-foreground flex items-center gap-1 truncate">
-                                <Mail className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{member.email}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {getStatusBadge(member.status)}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {member.role === "OWNER" ? (
-                            // OWNERs cannot have their role changed - show badge only
-                            getRoleBadge(member.role)
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-auto p-0 hover:bg-transparent"
-                                >
-                                  {getRoleBadge(member.role)}
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="start"
-                                className="w-56"
-                              >
-                                <DropdownMenuLabel>
-                                  Change Role
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {Object.entries(roleConfig)
-                                  .filter(([key]) => key !== "OWNER") // Remove OWNER from options
-                                  .map(([key, config]) => {
-                                    const Icon =
-                                      roleIcons[key as TeamMemberRole];
-                                    return (
-                                      <DropdownMenuItem
-                                        key={key}
-                                        onClick={() =>
-                                          handleRoleChange(
-                                            member.id,
-                                            member.email,
-                                            key as TeamMemberRole,
-                                            member.role,
-                                          )
-                                        }
-                                        className={cn(
-                                          "flex items-center gap-2",
-                                          member.role === key && "bg-accent",
-                                        )}
-                                      >
-                                        <Icon className="h-4 w-4" />
-                                        <div className="flex flex-col flex-1">
-                                          <span>{config.label}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {config.description}
-                                          </span>
-                                        </div>
-                                        {member.role === key && (
-                                          <Check className="h-4 w-4 ml-auto" />
-                                        )}
-                                      </DropdownMenuItem>
-                                    );
-                                  })}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-muted-foreground">
-                          {member.joinedAt
-                            ? new Date(member.joinedAt).toLocaleDateString(
-                                "en-US",
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )
-                            : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <div className="lg:hidden">
-                              {getStatusBadge(member.status)}
-                            </div>
-                            <div className="lg:hidden">
-                              {getRoleBadge(member.role)}
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleEditClick(member)}
-                                  disabled={member.role === "OWNER"}
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit Member
-                                  {member.role === "OWNER" && (
-                                    <span className="ml-auto text-xs text-muted-foreground">
-                                      (Owner)
-                                    </span>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleRemoveMember(member.id, member.email)
-                                  }
-                                  className="text-destructive"
-                                  disabled={member.role === "OWNER"}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove Member
-                                  {member.role === "OWNER" && (
-                                    <span className="ml-auto text-xs text-muted-foreground">
-                                      (Owner)
-                                    </span>
-                                  )}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="p-6">
+          <DataTable
+            columns={columns}
+            data={teamMembers}
+            isLoading={isLoading || membersLoading}
+            error={membersError || undefined}
+            enableSorting
+            defaultVisibleColumns={["name", "status", "role", "joinedAt", "actions"]}
+            fixedColumns={["name", "actions"]}
+            emptyMessage="No team members yet"
+            emptyDescription="Invite team members to get started"
+          />
         </CardContent>
       </Card>
 

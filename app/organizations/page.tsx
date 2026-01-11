@@ -1,16 +1,18 @@
 "use client";
 
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowLeft,
   Building2,
   Check,
   Crown,
   Edit,
-  Loader2,
   Plus,
 } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { DataTable } from "@/components/shared";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,19 +24,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   useCanCreateOrganization,
   useCurrentOrganization,
   useOrganizations,
   useSetCurrentOrganization,
 } from "@/lib/api/hooks/use-organizations";
+import type { Organization } from "@/lib/api/types/organizations";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
@@ -93,6 +88,120 @@ export default function OrganizationsPage() {
   const displayOrganizations = apiOrganizations || [];
   const isLoading = orgsLoading;
 
+  // Column definitions for DataTable
+  const columns: ColumnDef<Organization>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Organization",
+        cell: ({ row }) => {
+          const org = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  <Building2 className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{org.name}</div>
+                {org.description && (
+                  <div className="text-sm text-muted-foreground truncate md:hidden">
+                    {org.description}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "slug",
+        header: "Slug",
+        cell: ({ row }) => (
+          <code className="text-xs bg-muted px-2 py-1 rounded">
+            {row.original.slug}
+          </code>
+        ),
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ row }) => {
+          const description = row.original.description;
+          return (
+            <div className="text-sm text-muted-foreground max-w-md truncate">
+              {description || <span className="italic">No description</span>}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        cell: ({ row }) => {
+          const createdAt = new Date(
+            typeof row.original.createdAt === "string"
+              ? row.original.createdAt
+              : row.original.createdAt,
+          );
+          return (
+            <div className="text-sm text-muted-foreground">
+              {createdAt.toLocaleDateString()}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const org = row.original;
+          const isCurrent = currentOrg?.id === org.id;
+          return isCurrent ? (
+            <Badge variant="default" className="gap-1">
+              <Check className="h-3 w-3" />
+              Current
+            </Badge>
+          ) : (
+            <Badge variant="outline">Inactive</Badge>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const org = row.original;
+          const isCurrent = currentOrg?.id === org.id;
+          return (
+            <div className="flex items-center justify-end gap-2">
+              {!isCurrent && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSwitchOrganization(org.id)}
+                >
+                  Switch
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEditOrganization(org.id)}
+                title="Edit organization"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        },
+        enableHiding: false,
+      },
+    ],
+    [currentOrg, handleSwitchOrganization, handleEditOrganization],
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Simple header */}
@@ -124,184 +233,61 @@ export default function OrganizationsPage() {
 
       {/* Main content */}
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl">
-        {isLoading ? (
-          <Card>
-            <CardContent className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </CardContent>
-          </Card>
-        ) : !displayOrganizations || displayOrganizations.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No organizations</h3>
-              <p className="text-sm text-muted-foreground text-center mb-4">
-                {canCreateOrganization
+        <Card className="mt-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Organizations</CardTitle>
+                <CardDescription>
+                  {displayOrganizations.length}{" "}
+                  {displayOrganizations.length === 1
+                    ? "organization"
+                    : "organizations"}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <DataTable
+              columns={columns}
+              data={displayOrganizations}
+              isLoading={isLoading}
+              enableSorting
+              defaultVisibleColumns={[
+                "name",
+                "slug",
+                "description",
+                "createdAt",
+                "status",
+                "actions",
+              ]}
+              fixedColumns={["name", "actions"]}
+              emptyMessage="No organizations"
+              emptyDescription={
+                canCreateOrganization
                   ? "Get started by creating your first organization."
-                  : "You haven't been added to any organizations yet."}
-              </p>
-              {canCreateOrganization && (
-                <Button onClick={() => router.push("/organizations/new")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Organization
-                </Button>
-              )}
+                  : "You haven't been added to any organizations yet."
+              }
+            />
+          </CardContent>
+        </Card>
+
+        {!canCreateOrganization && (
+          <Card className="mt-6 border-muted">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <Crown className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold mb-1">Invited User</h4>
+                  <p className="text-sm text-muted-foreground">
+                    As an invited user, you can view and work within
+                    organizations you've been added to, but you cannot create
+                    new organizations.
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <>
-            <Card className="mt-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Organizations</CardTitle>
-                    <CardDescription>
-                      {displayOrganizations.length}{" "}
-                      {displayOrganizations.length === 1
-                        ? "organization"
-                        : "organizations"}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[300px]">
-                          Organization
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Slug
-                        </TableHead>
-                        <TableHead className="hidden lg:table-cell">
-                          Description
-                        </TableHead>
-                        <TableHead className="hidden lg:table-cell">
-                          Created
-                        </TableHead>
-                        <TableHead className="w-[100px]">Status</TableHead>
-                        <TableHead className="text-right w-[200px]">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {displayOrganizations.map((org) => {
-                        const isCurrent = currentOrg?.id === org.id;
-                        const createdAt = new Date(
-                          typeof org.createdAt === "string"
-                            ? org.createdAt
-                            : org.createdAt,
-                        );
-
-                        return (
-                          <TableRow
-                            key={org.id}
-                            className={cn(
-                              "hover:bg-muted/50",
-                              isCurrent && "bg-primary/5",
-                            )}
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarFallback className="bg-primary/10 text-primary">
-                                    <Building2 className="h-5 w-5" />
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium truncate">
-                                    {org.name}
-                                  </div>
-                                  {org.description && (
-                                    <div className="text-sm text-muted-foreground truncate md:hidden">
-                                      {org.description}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <code className="text-xs bg-muted px-2 py-1 rounded">
-                                {org.slug}
-                              </code>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <div className="text-sm text-muted-foreground max-w-md truncate">
-                                {org.description || (
-                                  <span className="italic">No description</span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <div className="text-sm text-muted-foreground">
-                                {createdAt.toLocaleDateString()}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {isCurrent ? (
-                                <Badge variant="default" className="gap-1">
-                                  <Check className="h-3 w-3" />
-                                  Current
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline">Inactive</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {!isCurrent && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleSwitchOrganization(org.id)
-                                    }
-                                  >
-                                    Switch
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditOrganization(org.id)}
-                                  title="Edit organization"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {!canCreateOrganization && (
-              <Card className="mt-6 border-muted">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <Crown className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1">
-                      <h4 className="text-sm font-semibold mb-1">
-                        Invited User
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        As an invited user, you can view and work within
-                        organizations you've been added to, but you cannot
-                        create new organizations.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
         )}
       </div>
     </div>
