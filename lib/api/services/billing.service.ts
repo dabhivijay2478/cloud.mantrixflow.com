@@ -4,7 +4,13 @@
  */
 
 import { ApiClient } from "../client";
-import type { BillingInvoice, BillingOverview, BillingUsage } from "../types/billing";
+import type {
+  BillingInvoice,
+  BillingOverview,
+  BillingUsage,
+  BillingPlan,
+  CheckoutSessionResult,
+} from "../types/billing";
 
 export class BillingService {
   private static readonly BASE_PATH = "api/billing";
@@ -56,42 +62,53 @@ export class BillingService {
   }
 
   /**
-   * Create Stripe Customer Portal session
+   * Get available billing plans
    */
-  static async createPortalSession(
-    organizationId: string,
-    returnUrl: string,
-  ): Promise<string> {
-    const response = await ApiClient.post<{ url: string }>(
-      `${BillingService.BASE_PATH}/create-portal-session`,
-      {
-        organizationId,
-        returnUrl,
-      },
+  static async getPlans(): Promise<BillingPlan[]> {
+    const plans = await ApiClient.get<BillingPlan[]>(
+      `${BillingService.BASE_PATH}/plans`,
     );
 
-    return response.url;
+    return plans;
   }
 
   /**
-   * Create Stripe Checkout session
+   * Create checkout session for subscription
    */
   static async createCheckoutSession(
     organizationId: string,
     planId: string,
-    successUrl: string,
+    interval: "month" | "year",
+    returnUrl: string,
     cancelUrl: string,
-  ): Promise<string> {
-    const response = await ApiClient.post<{ url: string }>(
-      `${BillingService.BASE_PATH}/create-checkout-session`,
+  ): Promise<CheckoutSessionResult> {
+    const result = await ApiClient.post<CheckoutSessionResult>(
+      `${BillingService.BASE_PATH}/checkout`,
       {
         organizationId,
         planId,
-        successUrl,
+        interval,
+        returnUrl,
         cancelUrl,
       },
     );
 
-    return response.url;
+    return result;
+  }
+
+  /**
+   * Cancel subscription
+   */
+  static async cancelSubscription(
+    organizationId: string,
+    cancelImmediately: boolean = false,
+  ): Promise<void> {
+    await ApiClient.post(
+      `${BillingService.BASE_PATH}/cancel`,
+      {
+        organizationId,
+        cancelImmediately,
+      },
+    );
   }
 }

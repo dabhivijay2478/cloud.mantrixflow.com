@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Building2, Loader2 } from "lucide-react";
+import { ArrowLeft, Building2, CreditCard, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -134,28 +134,17 @@ export default function EditOrganizationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Simple header */}
-      <div className="border-b">
-        <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8 max-w-2xl">
-          <div className="flex items-center gap-4">
-            <Link href="/organizations">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-semibold">Edit Organization</h1>
-              <p className="text-sm text-muted-foreground">
-                {organization.name}
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
+        <p className="text-muted-foreground">
+          Update your organization details
+        </p>
       </div>
 
       {/* Main content */}
-      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-2xl">
+      <div className="max-w-2xl">
         <Card className="mt-6">
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">

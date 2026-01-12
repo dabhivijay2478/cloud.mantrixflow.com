@@ -419,18 +419,6 @@ export function WorkspaceSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/workspace/billing"}
-                  tooltip="Billing"
-                >
-                  <Link href="/workspace/billing">
-                    <CreditCard className="h-4 w-4" />
-                    <span>Billing</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

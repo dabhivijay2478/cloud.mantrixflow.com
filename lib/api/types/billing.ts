@@ -26,3 +26,39 @@ export interface BillingInvoice {
   status: "paid" | "pending";
   downloadUrl: string;
 }
+
+export interface BillingPlan {
+  id: "free" | "pro" | "scale";
+  name: string;
+  description: string;
+  pricing: {
+    month: number;
+    year: number;
+    countryPricing?: Record<string, { month: number; year: number }>;
+  };
+  features: Array<{
+    label: string;
+    value: string | number;
+    unit?: string;
+  }>;
+  limits: {
+    pipelines: number;
+    dataSources: number;
+    migrationsPerMonth: number;
+  };
+}
+
+export interface CheckoutSessionResult {
+  checkoutData: {
+    subscriptionId: string;
+    customerId?: string;
+    amount?: number;
+    currency?: string;
+    keyId?: string;
+    returnUrl?: string;
+    cancelUrl?: string;
+    planId?: string;
+    interval?: string;
+  };
+  subscriptionId: string;
+}

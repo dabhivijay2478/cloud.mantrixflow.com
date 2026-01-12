@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, CreditCard, Loader2, Zap } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,14 +18,13 @@ import {
   useBillingPlans,
   useCreateCheckoutSession,
 } from "@/lib/api/hooks/use-billing";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { showErrorToast } from "@/lib/utils/toast";
 import type { BillingPlan } from "@/lib/api/types/billing";
 
-export default function BillingPage() {
+export default function OrganizationBillingPage() {
   const router = useRouter();
-  const { currentOrganization } = useWorkspaceStore();
-  const organizationId = currentOrganization?.id;
+  const params = useParams();
+  const organizationId = params.id as string;
 
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [selectedInterval, setSelectedInterval] = useState<"month" | "year">("month");
@@ -84,8 +83,8 @@ export default function BillingPage() {
 
     setIsCreatingCheckout(true);
     try {
-      const returnUrl = `${window.location.origin}/workspace/billing?success=true`;
-      const cancelUrl = `${window.location.origin}/workspace/billing?canceled=true`;
+      const returnUrl = `${window.location.origin}/organizations/${organizationId}/billing?success=true`;
+      const cancelUrl = `${window.location.origin}/organizations/${organizationId}/billing?canceled=true`;
 
       const result = await createCheckoutSession.mutateAsync({
         organizationId,
@@ -103,9 +102,9 @@ export default function BillingPage() {
         );
       }
 
-      // Redirect to custom checkout page with subscription ID
+      // Redirect to custom checkout page
       const checkoutUrl = new URL(
-        `/workspace/billing/checkout`,
+        `/organizations/${organizationId}/billing/checkout`,
         window.location.origin,
       );
       checkoutUrl.searchParams.set("subscriptionId", result.subscriptionId);

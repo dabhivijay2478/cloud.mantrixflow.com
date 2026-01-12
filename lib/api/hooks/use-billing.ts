@@ -15,6 +15,7 @@ export const billingKeys = {
     [...billingKeys.all, "usage", organizationId] as const,
   invoices: (organizationId: string) =>
     [...billingKeys.all, "invoices", organizationId] as const,
+  plans: () => [...billingKeys.all, "plans"] as const,
 };
 
 /**
@@ -78,41 +79,60 @@ export function useBillingInvoices(organizationId: string | undefined) {
 }
 
 /**
- * Create Stripe Customer Portal session
+ * Get available billing plans
  */
-export function useCreatePortalSession() {
-  return useMutation({
-    mutationFn: ({
-      organizationId,
-      returnUrl,
-    }: {
-      organizationId: string;
-      returnUrl: string;
-    }) => BillingService.createPortalSession(organizationId, returnUrl),
+export function useBillingPlans() {
+  return useQuery({
+    queryKey: billingKeys.plans(),
+    queryFn: async () => {
+      const result = await BillingService.getPlans();
+      if (!result) {
+        throw new Error("Billing plans data is undefined");
+      }
+      return result;
+    },
   });
 }
 
 /**
- * Create Stripe Checkout session
+ * Create checkout session
  */
 export function useCreateCheckoutSession() {
   return useMutation({
     mutationFn: ({
       organizationId,
       planId,
-      successUrl,
+      interval,
+      returnUrl,
       cancelUrl,
     }: {
       organizationId: string;
       planId: string;
-      successUrl: string;
+      interval: "month" | "year";
+      returnUrl: string;
       cancelUrl: string;
     }) =>
       BillingService.createCheckoutSession(
         organizationId,
         planId,
-        successUrl,
+        interval,
+        returnUrl,
         cancelUrl,
       ),
+  });
+}
+
+/**
+ * Cancel subscription
+ */
+export function useCancelSubscription() {
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      cancelImmediately,
+    }: {
+      organizationId: string;
+      cancelImmediately?: boolean;
+    }) => BillingService.cancelSubscription(organizationId, cancelImmediately),
   });
 }
