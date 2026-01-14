@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CreditCard, Loader2, Zap } from "lucide-react";
+import { Check, CreditCard, Download, Loader2, Zap } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   useBillingOverview,
   useBillingUsage,
+  useBillingInvoices,
   useBillingPlans,
   useCreateCheckoutSession,
   useGetPortalUrl,
+  useGetInvoiceDownloadUrl,
 } from "@/lib/api/hooks/use-billing";
 import { showErrorToast } from "@/lib/utils/toast";
 import type { BillingPlan } from "@/lib/api/types/billing";
@@ -34,18 +36,26 @@ export default function OrganizationBillingPage() {
 
   const createCheckoutSession = useCreateCheckoutSession();
   const getPortalUrl = useGetPortalUrl();
+  const getInvoiceDownloadUrl = useGetInvoiceDownloadUrl();
+
+  // Fetch invoices
+  const {
+    data: invoices,
+    isLoading: invoicesLoading,
+    error: invoicesError,
+  } = useBillingInvoices();
 
   // Fetch billing data
   const {
     data: overview,
     isLoading: overviewLoading,
     error: overviewError,
-  } = useBillingOverview(organizationId);
+  } = useBillingOverview();
   const {
     data: usage,
     isLoading: usageLoading,
     error: usageError,
-  } = useBillingUsage(organizationId);
+  } = useBillingUsage();
   const {
     data: plans,
     isLoading: plansLoading,
@@ -53,7 +63,7 @@ export default function OrganizationBillingPage() {
   } = useBillingPlans();
 
   // Show loading state
-  if (!organizationId || overviewLoading || usageLoading || plansLoading) {
+  if (overviewLoading || usageLoading || plansLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -79,18 +89,12 @@ export default function OrganizationBillingPage() {
 
   // Handle upgrade to plan
   const handleUpgrade = async (planId: string) => {
-    if (!organizationId) {
-      showErrorToast("notFound", "Organization");
-      return;
-    }
-
     setIsCreatingCheckout(true);
     try {
       const returnUrl = `${window.location.origin}/organizations/${organizationId}/billing?success=true`;
       const cancelUrl = `${window.location.origin}/organizations/${organizationId}/billing?canceled=true`;
 
       const result = await createCheckoutSession.mutateAsync({
-        organizationId,
         planId,
         interval: selectedInterval,
         returnUrl,
@@ -172,14 +176,14 @@ export default function OrganizationBillingPage() {
                   <CardDescription>Subscription and billing information</CardDescription>
                 </div>
               </div>
-              {overview.currentPlan !== "free" && overview.billingStatus === "active" && (
+              {overview.currentPlan !== "free" && (
                 <Button
                   variant="outline"
                   onClick={async () => {
-                    if (!organizationId) return;
                     setIsOpeningPortal(true);
                     try {
-                      const portalUrl = await getPortalUrl.mutateAsync({ organizationId });
+                      const portalUrl = await getPortalUrl.mutateAsync();
+                      // Redirect to Dodo customer portal (e.g., https://test.customer.dodopayments.com/session/subscriptions/...)
                       window.location.href = portalUrl;
                     } catch (error) {
                       showErrorToast(
@@ -187,7 +191,7 @@ export default function OrganizationBillingPage() {
                         "Billing",
                         error instanceof Error
                           ? error.message
-                          : "Failed to open billing portal",
+                          : "Failed to open Dodo customer portal",
                       );
                     } finally {
                       setIsOpeningPortal(false);
@@ -203,7 +207,7 @@ export default function OrganizationBillingPage() {
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Manage Billing
+                      Manage in Dodo Payments
                     </>
                   )}
                 </Button>
@@ -410,6 +414,70 @@ export default function OrganizationBillingPage() {
             })}
           </div>
         </div>
+      )}
+
+      {/* Customer Information & Portal */}
+      {overview?.currentPlan !== "free" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer Information</CardTitle>
+            <CardDescription>
+              Manage your subscription, invoices, and billing details in Dodo Payments customer portal
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="text-sm text-muted-foreground max-w-xl">
+                <p className="mb-2">
+                  Dodo Payments automatically generates and emails invoices for every successful payment.
+                  All customer information, subscription details, and invoices are managed in the Dodo
+                  customer portal.
+                </p>
+                <p className="text-xs">
+                  In the portal, you can view billing history, download invoices, manage subscriptions,
+                  and update payment methods.
+                </p>
+              </div>
+              <Button
+                variant="default"
+                size="lg"
+                onClick={async () => {
+                  setIsOpeningPortal(true);
+                  try {
+                    const portalUrl = await getPortalUrl.mutateAsync();
+                    // Redirect to Dodo customer portal
+                    // Test mode: https://test.customer.dodopayments.com/session/subscriptions/...
+                    // Live mode: https://customer.dodopayments.com/session/subscriptions/...
+                    window.location.href = portalUrl;
+                  } catch (error) {
+                    showErrorToast(
+                      "loadFailed",
+                      "Billing",
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to open Dodo customer portal",
+                    );
+                  } finally {
+                    setIsOpeningPortal(false);
+                  }
+                }}
+                disabled={isOpeningPortal}
+              >
+                {isOpeningPortal ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Opening...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Manage in Dodo Payments
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -256,6 +256,17 @@ export default function TeamPage() {
   const getRoleBadge = (role: TeamMemberRole) => {
     const config = roleConfig[role];
     const Icon = roleIcons[role];
+    
+    // Safety check: if config doesn't exist, use fallback
+    if (!config) {
+      return (
+        <Badge variant="outline" className="flex items-center gap-1.5 px-2 py-1">
+          <User className="h-3 w-3" />
+          {role}
+        </Badge>
+      );
+    }
+    
     return (
       <Badge
         variant="outline"

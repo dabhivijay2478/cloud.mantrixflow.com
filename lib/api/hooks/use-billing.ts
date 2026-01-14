@@ -9,72 +9,57 @@ import { BillingService } from "../services/billing.service";
 // Query Keys
 export const billingKeys = {
   all: ["billing"] as const,
-  overview: (organizationId: string) =>
-    [...billingKeys.all, "overview", organizationId] as const,
-  usage: (organizationId: string) =>
-    [...billingKeys.all, "usage", organizationId] as const,
-  invoices: (organizationId: string) =>
-    [...billingKeys.all, "invoices", organizationId] as const,
+  overview: () => [...billingKeys.all, "overview"] as const,
+  usage: () => [...billingKeys.all, "usage"] as const,
+  invoices: () => [...billingKeys.all, "invoices"] as const,
   plans: () => [...billingKeys.all, "plans"] as const,
 };
 
 /**
- * Get billing overview for an organization
+ * Get billing overview for the authenticated user
  */
-export function useBillingOverview(organizationId: string | undefined) {
+export function useBillingOverview() {
   return useQuery({
-    queryKey: billingKeys.overview(organizationId || ""),
+    queryKey: billingKeys.overview(),
     queryFn: async () => {
-      if (!organizationId) {
-        throw new Error("Organization ID is required");
-      }
-      const result = await BillingService.getBillingOverview(organizationId);
+      const result = await BillingService.getBillingOverview();
       if (!result) {
         throw new Error("Billing overview data is undefined");
       }
       return result;
     },
-    enabled: !!organizationId,
   });
 }
 
 /**
- * Get billing usage for an organization
+ * Get billing usage for the authenticated user
  */
-export function useBillingUsage(organizationId: string | undefined) {
+export function useBillingUsage() {
   return useQuery({
-    queryKey: billingKeys.usage(organizationId || ""),
+    queryKey: billingKeys.usage(),
     queryFn: async () => {
-      if (!organizationId) {
-        throw new Error("Organization ID is required");
-      }
-      const result = await BillingService.getBillingUsage(organizationId);
+      const result = await BillingService.getBillingUsage();
       if (!result) {
         throw new Error("Billing usage data is undefined");
       }
       return result;
     },
-    enabled: !!organizationId,
   });
 }
 
 /**
- * Get billing invoices for an organization
+ * Get billing invoices for the authenticated user
  */
-export function useBillingInvoices(organizationId: string | undefined) {
+export function useBillingInvoices() {
   return useQuery({
-    queryKey: billingKeys.invoices(organizationId || ""),
+    queryKey: billingKeys.invoices(),
     queryFn: async () => {
-      if (!organizationId) {
-        throw new Error("Organization ID is required");
-      }
-      const result = await BillingService.getBillingInvoices(organizationId);
+      const result = await BillingService.getBillingInvoices();
       if (!result) {
         throw new Error("Billing invoices data is undefined");
       }
       return result;
     },
-    enabled: !!organizationId,
   });
 }
 
@@ -101,20 +86,17 @@ export function useBillingPlans() {
 export function useCreateCheckoutSession() {
   return useMutation({
     mutationFn: ({
-      organizationId,
       planId,
       interval,
       returnUrl,
       cancelUrl,
     }: {
-      organizationId: string;
       planId: string;
       interval: "month" | "year";
       returnUrl: string;
       cancelUrl: string;
     }) =>
       BillingService.createCheckoutSession(
-        organizationId,
         planId,
         interval,
         returnUrl,
@@ -128,8 +110,7 @@ export function useCreateCheckoutSession() {
  */
 export function useGetPortalUrl() {
   return useMutation({
-    mutationFn: ({ organizationId }: { organizationId: string }) =>
-      BillingService.getPortalUrl(organizationId),
+    mutationFn: () => BillingService.getPortalUrl(),
   });
 }
 
@@ -138,12 +119,17 @@ export function useGetPortalUrl() {
  */
 export function useCancelSubscription() {
   return useMutation({
-    mutationFn: ({
-      organizationId,
-      cancelImmediately,
-    }: {
-      organizationId: string;
-      cancelImmediately?: boolean;
-    }) => BillingService.cancelSubscription(organizationId, cancelImmediately),
+    mutationFn: ({ cancelImmediately }: { cancelImmediately?: boolean }) =>
+      BillingService.cancelSubscription(cancelImmediately),
+  });
+}
+
+/**
+ * Get invoice download URL
+ */
+export function useGetInvoiceDownloadUrl() {
+  return useMutation({
+    mutationFn: ({ invoiceId }: { invoiceId: string }) =>
+      BillingService.getInvoiceDownloadUrl(invoiceId),
   });
 }

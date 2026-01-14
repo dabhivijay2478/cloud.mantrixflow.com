@@ -24,46 +24,33 @@ export class BillingService {
   private static readonly BASE_PATH = "api/billing";
 
   /**
-   * Get billing overview for an organization
+   * Get billing overview for the authenticated user
    */
-  static async getBillingOverview(
-    organizationId: string,
-  ): Promise<BillingOverview> {
-    const params = new URLSearchParams();
-    params.append("organizationId", organizationId);
-
+  static async getBillingOverview(): Promise<BillingOverview> {
     const overview = await ApiClient.get<BillingOverview>(
-      `${BillingService.BASE_PATH}/overview?${params.toString()}`,
+      `${BillingService.BASE_PATH}/overview`,
     );
 
     return overview;
   }
 
   /**
-   * Get billing usage for an organization
+   * Get billing usage for the authenticated user
    */
-  static async getBillingUsage(organizationId: string): Promise<BillingUsage> {
-    const params = new URLSearchParams();
-    params.append("organizationId", organizationId);
-
+  static async getBillingUsage(): Promise<BillingUsage> {
     const usage = await ApiClient.get<BillingUsage>(
-      `${BillingService.BASE_PATH}/usage?${params.toString()}`,
+      `${BillingService.BASE_PATH}/usage`,
     );
 
     return usage;
   }
 
   /**
-   * Get billing invoices for an organization
+   * Get billing invoices for the authenticated user
    */
-  static async getBillingInvoices(
-    organizationId: string,
-  ): Promise<BillingInvoice[]> {
-    const params = new URLSearchParams();
-    params.append("organizationId", organizationId);
-
+  static async getBillingInvoices(): Promise<BillingInvoice[]> {
     const invoices = await ApiClient.get<BillingInvoice[]>(
-      `${BillingService.BASE_PATH}/invoices?${params.toString()}`,
+      `${BillingService.BASE_PATH}/invoices`,
     );
 
     return invoices;
@@ -85,7 +72,6 @@ export class BillingService {
    * Returns Dodo-hosted checkout URL
    */
   static async createCheckoutSession(
-    organizationId: string,
     planId: string,
     interval: "month" | "year",
     returnUrl: string,
@@ -94,7 +80,6 @@ export class BillingService {
     const result = await ApiClient.post<CheckoutSessionResult>(
       `${BillingService.BASE_PATH}/checkout`,
       {
-        organizationId,
         planId,
         interval,
         returnUrl,
@@ -109,12 +94,9 @@ export class BillingService {
    * Get customer portal URL
    * Returns Dodo-hosted billing portal URL
    */
-  static async getPortalUrl(organizationId: string): Promise<string> {
-    const params = new URLSearchParams();
-    params.append("organizationId", organizationId);
-
+  static async getPortalUrl(): Promise<string> {
     const result = await ApiClient.get<PortalSessionResult>(
-      `${BillingService.BASE_PATH}/portal?${params.toString()}`,
+      `${BillingService.BASE_PATH}/portal`,
     );
 
     return result.url;
@@ -124,15 +106,26 @@ export class BillingService {
    * Cancel subscription
    */
   static async cancelSubscription(
-    organizationId: string,
     cancelImmediately: boolean = false,
   ): Promise<void> {
     await ApiClient.post(
       `${BillingService.BASE_PATH}/cancel`,
       {
-        organizationId,
         cancelImmediately,
       },
     );
+  }
+
+  /**
+   * Get invoice download URL
+   */
+  static async getInvoiceDownloadUrl(
+    invoiceId: string,
+  ): Promise<string> {
+    const result = await ApiClient.get<{ downloadUrl: string }>(
+      `${BillingService.BASE_PATH}/invoices/${invoiceId}/download`,
+    );
+
+    return result.downloadUrl;
   }
 }

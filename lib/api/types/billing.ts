@@ -23,8 +23,9 @@ export interface BillingInvoice {
   invoiceId: string;
   date: string | Date;
   amount: number;
-  status: "paid" | "pending";
-  downloadUrl: string;
+  currency?: string;
+  status: "paid" | "pending" | "failed";
+  downloadUrl?: string;
 }
 
 export interface BillingPlan {

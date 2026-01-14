@@ -17,6 +17,7 @@ import {
   useBillingUsage,
   useBillingPlans,
   useCreateCheckoutSession,
+  useGetPortalUrl,
 } from "@/lib/api/hooks/use-billing";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { showErrorToast } from "@/lib/utils/toast";
@@ -30,8 +31,10 @@ export default function BillingPage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [selectedInterval, setSelectedInterval] = useState<"month" | "year">("month");
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   const createCheckoutSession = useCreateCheckoutSession();
+  const getPortalUrl = useGetPortalUrl();
 
   // Fetch billing data
   const {
@@ -95,22 +98,12 @@ export default function BillingPage() {
         cancelUrl,
       });
 
-      // Store checkout data in sessionStorage for checkout page
-      if (result.checkoutData) {
-        sessionStorage.setItem(
-          `checkout_${result.subscriptionId}`,
-          JSON.stringify(result.checkoutData),
-        );
+      // Redirect directly to Dodo-hosted checkout page
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL received from server");
       }
-
-      // Redirect to custom checkout page with subscription ID
-      const checkoutUrl = new URL(
-        `/workspace/billing/checkout`,
-        window.location.origin,
-      );
-      checkoutUrl.searchParams.set("subscriptionId", result.subscriptionId);
-      checkoutUrl.searchParams.set("planId", planId);
-      router.push(checkoutUrl.toString());
     } catch (error) {
       showErrorToast(
         "loadFailed",
@@ -159,11 +152,51 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
-        <p className="text-muted-foreground">
-          Manage your organization billing and subscription
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
+          <p className="text-muted-foreground">
+            Manage your organization billing and subscription
+          </p>
+        </div>
+        {overview?.currentPlan !== "free" && (
+          <Button
+            variant="outline"
+            onClick={async () => {
+              if (!organizationId) return;
+              setIsOpeningPortal(true);
+              try {
+                const portalUrl = await getPortalUrl.mutateAsync({ organizationId });
+                // Redirect to Dodo customer portal
+                // Test mode: https://test.customer.dodopayments.com/session/subscriptions/...
+                window.location.href = portalUrl;
+              } catch (error) {
+                showErrorToast(
+                  "loadFailed",
+                  "Billing",
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to open Dodo customer portal",
+                );
+              } finally {
+                setIsOpeningPortal(false);
+              }
+            }}
+            disabled={isOpeningPortal}
+          >
+            {isOpeningPortal ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Opening...
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Manage in Dodo Payments
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Current Plan Card */}
