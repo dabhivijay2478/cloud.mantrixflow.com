@@ -91,13 +91,7 @@ export default function BillingSuccessPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [
-    user,
-    router,
-    currentOrg,
-    onboardingStatus,
-    completeOnboarding,
-  ]);
+  }, [user, router, currentOrg, onboardingStatus, completeOnboarding]);
 
   const handleCreateOrg = async (e: React.FormEvent) => {
     e.preventDefault();

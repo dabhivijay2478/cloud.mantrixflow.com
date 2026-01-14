@@ -1,7 +1,15 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowLeft, Building2, Check, Crown, Edit, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Check,
+  CreditCard,
+  Crown,
+  Edit,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
@@ -26,6 +34,14 @@ export default function OrganizationsPage() {
   const { data: currentOrg } = useCurrentOrganization();
   const { data: canCreateData } = useCanCreateOrganization();
   const canCreateOrganization = canCreateData?.canCreate ?? true;
+
+  // Get current user's role in the current organization
+  const currentUserRole = currentOrg?.role as
+    | "OWNER"
+    | "ADMIN"
+    | "EDITOR"
+    | "VIEWER"
+    | undefined;
 
   const setCurrentOrganization = useSetCurrentOrganization();
 
@@ -225,12 +241,24 @@ export default function OrganizationsPage() {
                 </p>
               </div>
             </div>
-            {canCreateOrganization && (
-              <Button onClick={() => router.push("/organizations/new")}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Organization
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Billing - Visible to OWNER only */}
+              {currentUserRole === "OWNER" && (
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/workspace/billing")}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Billing
+                </Button>
+              )}
+              {canCreateOrganization && (
+                <Button onClick={() => router.push("/organizations/new")}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Organization
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
