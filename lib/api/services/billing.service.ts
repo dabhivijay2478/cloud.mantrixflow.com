@@ -9,8 +9,16 @@ import type {
   BillingOverview,
   BillingUsage,
   BillingPlan,
-  CheckoutSessionResult,
 } from "../types/billing";
+
+export interface CheckoutSessionResult {
+  checkoutUrl: string;
+  subscriptionId: string;
+}
+
+export interface PortalSessionResult {
+  url: string;
+}
 
 export class BillingService {
   private static readonly BASE_PATH = "api/billing";
@@ -74,6 +82,7 @@ export class BillingService {
 
   /**
    * Create checkout session for subscription
+   * Returns Dodo-hosted checkout URL
    */
   static async createCheckoutSession(
     organizationId: string,
@@ -94,6 +103,21 @@ export class BillingService {
     );
 
     return result;
+  }
+
+  /**
+   * Get customer portal URL
+   * Returns Dodo-hosted billing portal URL
+   */
+  static async getPortalUrl(organizationId: string): Promise<string> {
+    const params = new URLSearchParams();
+    params.append("organizationId", organizationId);
+
+    const result = await ApiClient.get<PortalSessionResult>(
+      `${BillingService.BASE_PATH}/portal?${params.toString()}`,
+    );
+
+    return result.url;
   }
 
   /**

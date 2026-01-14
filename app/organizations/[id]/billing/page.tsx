@@ -17,6 +17,7 @@ import {
   useBillingUsage,
   useBillingPlans,
   useCreateCheckoutSession,
+  useGetPortalUrl,
 } from "@/lib/api/hooks/use-billing";
 import { showErrorToast } from "@/lib/utils/toast";
 import type { BillingPlan } from "@/lib/api/types/billing";
@@ -29,8 +30,10 @@ export default function OrganizationBillingPage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [selectedInterval, setSelectedInterval] = useState<"month" | "year">("month");
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   const createCheckoutSession = useCreateCheckoutSession();
+  const getPortalUrl = useGetPortalUrl();
 
   // Fetch billing data
   const {
@@ -94,22 +97,12 @@ export default function OrganizationBillingPage() {
         cancelUrl,
       });
 
-      // Store checkout data in sessionStorage for checkout page
-      if (result.checkoutData) {
-        sessionStorage.setItem(
-          `checkout_${result.subscriptionId}`,
-          JSON.stringify(result.checkoutData),
-        );
+      // Redirect directly to Dodo-hosted checkout page
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL received from server");
       }
-
-      // Redirect to custom checkout page
-      const checkoutUrl = new URL(
-        `/organizations/${organizationId}/billing/checkout`,
-        window.location.origin,
-      );
-      checkoutUrl.searchParams.set("subscriptionId", result.subscriptionId);
-      checkoutUrl.searchParams.set("planId", planId);
-      router.push(checkoutUrl.toString());
     } catch (error) {
       showErrorToast(
         "loadFailed",
@@ -169,14 +162,52 @@ export default function OrganizationBillingPage() {
       {overview && (
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Current Plan</CardTitle>
+                  <CardDescription>Subscription and billing information</CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle>Current Plan</CardTitle>
-                <CardDescription>Subscription and billing information</CardDescription>
-              </div>
+              {overview.currentPlan !== "free" && overview.billingStatus === "active" && (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (!organizationId) return;
+                    setIsOpeningPortal(true);
+                    try {
+                      const portalUrl = await getPortalUrl.mutateAsync({ organizationId });
+                      window.location.href = portalUrl;
+                    } catch (error) {
+                      showErrorToast(
+                        "loadFailed",
+                        "Billing",
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to open billing portal",
+                      );
+                    } finally {
+                      setIsOpeningPortal(false);
+                    }
+                  }}
+                  disabled={isOpeningPortal}
+                >
+                  {isOpeningPortal ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Opening...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Manage Billing
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>

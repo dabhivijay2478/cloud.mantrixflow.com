@@ -96,6 +96,7 @@ export function useBillingPlans() {
 
 /**
  * Create checkout session
+ * Returns Dodo-hosted checkout URL
  */
 export function useCreateCheckoutSession() {
   return useMutation({
@@ -119,6 +120,16 @@ export function useCreateCheckoutSession() {
         returnUrl,
         cancelUrl,
       ),
+  });
+}
+
+/**
+ * Get customer portal URL
+ */
+export function useGetPortalUrl() {
+  return useMutation({
+    mutationFn: ({ organizationId }: { organizationId: string }) =>
+      BillingService.getPortalUrl(organizationId),
   });
 }
 
