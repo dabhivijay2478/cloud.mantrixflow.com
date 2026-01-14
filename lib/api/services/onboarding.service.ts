@@ -34,4 +34,16 @@ export class OnboardingService {
       `${OnboardingService.BASE_PATH}/complete`,
     );
   }
+
+  static async createOrg(
+    data: { name: string },
+    options?: { token?: string | null },
+  ): Promise<{ success: boolean; data: { id: string; name: string } }> {
+    return ApiClient.post<{
+      success: boolean;
+      data: { id: string; name: string };
+    }>(`${OnboardingService.BASE_PATH}/create-org`, data, {
+      token: options?.token,
+    });
+  }
 }

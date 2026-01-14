@@ -78,6 +78,7 @@ export interface Dataset {
 export interface OnboardingState {
   currentStep:
     | "welcome"
+    | "plans"
     | "organization"
     | "data-source"
     | "connect"

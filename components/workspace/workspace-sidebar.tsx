@@ -3,6 +3,7 @@
 import {
   Building2,
   ChevronsUpDown,
+  CreditCard,
   Database,
   FileText,
   GitBranch,
@@ -444,6 +445,22 @@ export function WorkspaceSidebar() {
                     <Link href="/workspace/team">
                       <Users className="h-4 w-4" />
                       <span>Team</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {/* Billing - Visible to OWNER only (for managing subscription) */}
+              {currentUserRole === "OWNER" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname?.startsWith("/workspace/billing")}
+                    tooltip="Billing & Plans"
+                    className="cursor-pointer"
+                  >
+                    <Link href="/workspace/billing">
+                      <CreditCard className="h-4 w-4" />
+                      <span>Billing</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

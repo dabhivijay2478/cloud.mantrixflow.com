@@ -48,9 +48,18 @@ export default function WelcomePage() {
   }, [user, loading, onboardingStatus?.completed, router]);
 
   const handleGetStarted = async () => {
-    await updateOnboardingStep.mutateAsync("organization");
-    setOnboardingStep("organization");
-    router.push("/onboarding/organization");
+    // Check if user already has an organization - if so, skip plan selection
+    if (currentOrganization || onboardingStatus?.currentOrgId) {
+      // User already has organization, go directly to organization creation
+      await updateOnboardingStep.mutateAsync("organization");
+      setOnboardingStep("organization");
+      router.push("/onboarding/organization");
+    } else {
+      // New user - show plan selection (optional)
+      await updateOnboardingStep.mutateAsync("plans");
+      setOnboardingStep("plans");
+      router.push("/onboarding/plans");
+    }
   };
 
   const handleSkip = async () => {
