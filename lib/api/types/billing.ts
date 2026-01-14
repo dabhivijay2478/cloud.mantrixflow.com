@@ -45,12 +45,26 @@ export interface CreateCheckoutResponse {
 
 export interface ChangePlanRequest {
   planId: SubscriptionPlan;
-  returnUrl?: string;
+  returnUrl?: string; // Optional, not used anymore but kept for backward compatibility
 }
 
 export interface ChangePlanResponse {
-  checkoutUrl: string;
-  sessionId: string;
+  success: boolean;
+  message: string;
+}
+
+export interface CancelSubscriptionResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface UpdatePaymentMethodRequest {
+  returnUrl?: string;
+}
+
+export interface UpdatePaymentMethodResponse {
+  url: string;
+  sessionId?: string;
 }
 
 export interface SubscriptionPlanDetails {

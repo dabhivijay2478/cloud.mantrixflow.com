@@ -25,10 +25,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  useCancelSubscription,
   useChangePlan,
   useCreateCheckout,
   useCustomerPortal,
+  useResumeSubscription,
   useSubscription,
+  useUpdatePaymentMethod,
 } from "@/lib/api/hooks/use-billing";
 import type { SubscriptionPlan } from "@/lib/api/types/billing";
 import { toast } from "@/lib/utils/toast";
@@ -101,6 +104,9 @@ export default function BillingPage() {
   const changePlan = useChangePlan();
   const createCheckout = useCreateCheckout();
   const customerPortal = useCustomerPortal();
+  const cancelSubscription = useCancelSubscription();
+  const resumeSubscription = useResumeSubscription();
+  const updatePaymentMethod = useUpdatePaymentMethod();
   const searchParams = useSearchParams();
 
   // Show success message if redirected from payment
@@ -122,6 +128,16 @@ export default function BillingPage() {
       window.history.replaceState({}, "", "/workspace/billing");
       // Refetch subscription to show updated plan
       // The hook will automatically refetch when component remounts
+    }
+
+    // Show success message if payment method was updated
+    if (searchParams.get("paymentMethodUpdated") === "true") {
+      toast.success(
+        "Payment method updated!",
+        "Your payment method has been successfully updated.",
+      );
+      // Remove query param from URL
+      window.history.replaceState({}, "", "/workspace/billing");
     }
   }, [searchParams]);
 
@@ -161,12 +177,15 @@ export default function BillingPage() {
     }
 
     try {
-      // Create checkout session for plan change - will redirect to payment
-      await changePlan.mutateAsync({
+      // Change plan directly via API - no checkout needed!
+      const result = await changePlan.mutateAsync({
         planId,
-        returnUrl: `${window.location.origin}/workspace/billing?payment=success&planChanged=true`,
       });
-      // Note: onSuccess in hook will handle redirect to checkout
+
+      // Show success message
+      if (result?.success) {
+        toast.success("Plan changed successfully!", result.message);
+      }
     } catch (error) {
       console.error("Failed to change plan:", error);
       toast.error(
@@ -328,6 +347,135 @@ export default function BillingPage() {
                   </p>
                 </div>
               )}
+              {subscription?.cancelAtPeriodEnd && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Cancellation Status
+                  </p>
+                  <p className="text-lg font-semibold text-yellow-600">
+                    Will cancel at period end
+                    {subscription.currentPeriodEnd &&
+                      ` (${format(
+                        new Date(subscription.currentPeriodEnd),
+                        "MMM dd, yyyy",
+                      )})`}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3 pt-4 border-t">
+              {/* Update Payment Method - Show when on_hold or failed */}
+              {(subscription.status === "on_hold" ||
+                subscription.status === "failed") && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    updatePaymentMethod.mutate({
+                      returnUrl: `${window.location.origin}/workspace/billing?paymentMethodUpdated=true`,
+                    });
+                  }}
+                  disabled={updatePaymentMethod.isPending}
+                  className="gap-2"
+                >
+                  {updatePaymentMethod.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4" />
+                      Update Payment Method
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Resume Subscription - Show when cancelAtPeriodEnd is true */}
+              {subscription.cancelAtPeriodEnd && (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const result = await resumeSubscription.mutateAsync();
+                      if (result?.success) {
+                        toast.success("Subscription resumed!", result.message);
+                      }
+                    } catch (error) {
+                      toast.error(
+                        "Failed to resume subscription",
+                        error instanceof Error
+                          ? error.message
+                          : "Please try again",
+                      );
+                    }
+                  }}
+                  disabled={resumeSubscription.isPending}
+                  className="gap-2"
+                >
+                  {resumeSubscription.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Resume Subscription
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Cancel Subscription - Show when active and not already canceled */}
+              {subscription.status === "active" &&
+                !subscription.cancelAtPeriodEnd && (
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          "Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.",
+                        )
+                      ) {
+                        return;
+                      }
+
+                      try {
+                        const result = await cancelSubscription.mutateAsync();
+                        if (result?.success) {
+                          toast.success(
+                            "Subscription canceled",
+                            result.message,
+                          );
+                        }
+                      } catch (error) {
+                        toast.error(
+                          "Failed to cancel subscription",
+                          error instanceof Error
+                            ? error.message
+                            : "Please try again",
+                        );
+                      }
+                    }}
+                    disabled={cancelSubscription.isPending}
+                    className="gap-2"
+                  >
+                    {cancelSubscription.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4" />
+                        Cancel Subscription
+                      </>
+                    )}
+                  </Button>
+                )}
             </div>
           </CardContent>
         </Card>

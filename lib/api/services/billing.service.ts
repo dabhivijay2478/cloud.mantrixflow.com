@@ -5,11 +5,14 @@
 
 import { ApiClient } from "../client";
 import type {
+  CancelSubscriptionResponse,
   ChangePlanRequest,
   ChangePlanResponse,
   CreateCheckoutRequest,
   CreateCheckoutResponse,
   Subscription,
+  UpdatePaymentMethodRequest,
+  UpdatePaymentMethodResponse,
 } from "../types/billing";
 
 export class BillingService {
@@ -60,7 +63,8 @@ export class BillingService {
   }
 
   /**
-   * Change subscription plan - creates checkout session for new plan
+   * Change subscription plan - uses Dodo Payments changePlan API directly
+   * No checkout session needed - plan changes immediately
    */
   static async changePlan(
     request: ChangePlanRequest,
@@ -69,6 +73,53 @@ export class BillingService {
     return ApiClient.post<ChangePlanResponse>(
       `${BillingService.BASE_PATH}/change-plan`,
       request,
+      {
+        token: options?.token,
+      },
+    );
+  }
+
+  /**
+   * Cancel subscription at period end
+   */
+  static async cancelSubscription(options?: {
+    token?: string | null;
+  }): Promise<CancelSubscriptionResponse> {
+    return ApiClient.post<CancelSubscriptionResponse>(
+      `${BillingService.BASE_PATH}/cancel`,
+      {},
+      {
+        token: options?.token,
+      },
+    );
+  }
+
+  /**
+   * Resume subscription (undo cancel)
+   */
+  static async resumeSubscription(options?: {
+    token?: string | null;
+  }): Promise<CancelSubscriptionResponse> {
+    return ApiClient.post<CancelSubscriptionResponse>(
+      `${BillingService.BASE_PATH}/resume`,
+      {},
+      {
+        token: options?.token,
+      },
+    );
+  }
+
+  /**
+   * Update payment method for subscription
+   * Returns URL to redirect user to payment method update page
+   */
+  static async updatePaymentMethod(
+    request?: UpdatePaymentMethodRequest,
+    options?: { token?: string | null },
+  ): Promise<UpdatePaymentMethodResponse> {
+    return ApiClient.post<UpdatePaymentMethodResponse>(
+      `${BillingService.BASE_PATH}/update-payment-method`,
+      request || {},
       {
         token: options?.token,
       },

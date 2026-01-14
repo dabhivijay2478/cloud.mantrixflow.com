@@ -3,11 +3,12 @@
  * TanStack Query hooks for billing endpoints
  */
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BillingService } from "../services/billing.service";
 import type {
   ChangePlanRequest,
   CreateCheckoutRequest,
+  UpdatePaymentMethodRequest,
 } from "../types/billing";
 
 // Query keys
@@ -69,36 +70,84 @@ export function useCreateCheckout() {
 }
 
 /**
- * Change subscription plan - creates checkout session and redirects
+ * Change subscription plan - uses Dodo Payments changePlan API directly
+ * No redirect needed - plan changes immediately
  */
 export function useChangePlan() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (request: ChangePlanRequest) =>
       BillingService.changePlan(request),
     onSuccess: (data) => {
-      // Redirect to checkout URL for plan change payment
-      console.log(
-        "Plan change checkout response received:",
-        JSON.stringify(data, null, 2),
-      );
+      // Plan changed successfully - no redirect needed!
+      console.log("Plan change successful:", data.message);
 
-      if (data?.checkoutUrl) {
-        console.log(
-          "Redirecting to checkout URL for plan change:",
-          data.checkoutUrl,
-        );
-        // Use window.location.replace to avoid back button issues
-        window.location.replace(data.checkoutUrl);
+      // Invalidate subscription query to refresh data
+      queryClient.invalidateQueries({
+        queryKey: billingKeys.subscription(),
+      });
+    },
+    onError: (error: unknown) => {
+      console.error("Failed to change plan:", error);
+    },
+  });
+}
+
+/**
+ * Cancel subscription at period end
+ */
+export function useCancelSubscription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => BillingService.cancelSubscription(),
+    onSuccess: () => {
+      // Invalidate subscription query to refresh data
+      queryClient.invalidateQueries({
+        queryKey: billingKeys.subscription(),
+      });
+    },
+  });
+}
+
+/**
+ * Resume subscription (undo cancel)
+ */
+export function useResumeSubscription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => BillingService.resumeSubscription(),
+    onSuccess: () => {
+      // Invalidate subscription query to refresh data
+      queryClient.invalidateQueries({
+        queryKey: billingKeys.subscription(),
+      });
+    },
+  });
+}
+
+/**
+ * Update payment method for subscription
+ * Redirects to payment method update page
+ */
+export function useUpdatePaymentMethod() {
+  return useMutation({
+    mutationFn: (request?: UpdatePaymentMethodRequest) =>
+      BillingService.updatePaymentMethod(request),
+    onSuccess: (data) => {
+      if (data?.url) {
+        // Redirect to payment method update page
+        window.location.replace(data.url);
       } else {
-        console.error("No checkout URL in response. Full response:", data);
-        alert(
-          "Failed to get checkout URL. Please check the console for details.",
-        );
+        console.error("No URL in response. Full response:", data);
+        alert("Failed to get payment method update URL. Please try again.");
       }
     },
     onError: (error) => {
-      console.error("Failed to create plan change checkout session:", error);
-      alert("Failed to create checkout session. Please try again.");
+      console.error("Failed to update payment method:", error);
+      alert("Failed to update payment method. Please try again.");
     },
   });
 }
