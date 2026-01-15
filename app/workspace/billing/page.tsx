@@ -46,43 +46,69 @@ const PLANS: Array<{
   description?: string;
 }> = [
   {
-    id: "basic",
-    name: "Basic",
-    price: 10,
-    description: "Perfect for getting started",
+    id: "free",
+    name: "Free",
+    price: 0,
+    description: "Best for evaluation & small tests",
     features: [
-      "Up to 5 data sources",
-      "Basic support",
-      "Standard features",
-      "Email support",
+      "1 organization",
+      "1 data source connection",
+      "1 data pipeline",
+      "Manual sync only",
+      "Limited records per run (e.g. 10k)",
+      "Community support",
+      "No billing setup required",
     ],
   },
   {
     id: "pro",
     name: "Pro",
-    price: 20,
-    description: "For growing teams",
+    price: 29,
+    description: "Best for individual developers & small teams",
     features: [
-      "Unlimited data sources",
-      "Priority support",
-      "Advanced features",
-      "Custom integrations",
-      "API access",
+      "1 organization",
+      "Up to 5 data sources",
+      "Up to 5 active pipelines",
+      "Scheduled sync (hourly / daily)",
+      "Incremental sync",
+      "Basic transformations",
+      "Activity logs (7 days)",
+      "Email support",
     ],
     popular: true,
   },
   {
+    id: "scale",
+    name: "Scale",
+    price: 99,
+    description: "Best for growing teams & production workloads",
+    features: [
+      "Up to 3 organizations",
+      "Unlimited data sources",
+      "Unlimited pipelines",
+      "Near-real-time sync",
+      "Advanced transformations",
+      "Retry & failure handling",
+      "Activity logs (90 days)",
+      "Team roles & permissions",
+      "Priority email support",
+    ],
+  },
+  {
     id: "enterprise",
     name: "Enterprise",
-    price: 50,
-    description: "For large organizations",
+    price: 299,
+    description: "Best for large teams & enterprise workloads",
     features: [
-      "Everything in Pro",
-      "Dedicated support",
-      "Custom SLA",
-      "On-premise deployment",
-      "Custom integrations",
-      "Advanced security",
+      "Unlimited organizations",
+      "Unlimited pipelines & sources",
+      "High-volume / continuous sync",
+      "Custom SLAs",
+      "Dedicated support channel",
+      "Audit logs & compliance",
+      "Custom retention policies",
+      "SSO / SCIM (optional)",
+      "Custom contract & invoicing",
     ],
   },
 ];
@@ -92,7 +118,7 @@ const getPlanComparison = (
   currentPlan: SubscriptionPlan,
   targetPlan: SubscriptionPlan,
 ): "upgrade" | "downgrade" | "same" => {
-  const planOrder: SubscriptionPlan[] = ["basic", "pro", "enterprise"];
+  const planOrder: SubscriptionPlan[] = ["free", "pro", "scale", "enterprise"];
   const currentIndex = planOrder.indexOf(currentPlan);
   const targetIndex = planOrder.indexOf(targetPlan);
 
@@ -573,8 +599,21 @@ export default function BillingPage() {
                     {plan.description}
                   </CardDescription>
                   <div className="mt-2">
-                    <span className="text-3xl font-bold">${plan.price}</span>
-                    <span className="text-muted-foreground">/month</span>
+                    {plan.price === 0 ? (
+                      <span className="text-3xl font-bold">Free</span>
+                    ) : plan.id === "enterprise" ? (
+                      <>
+                        <span className="text-3xl font-bold">Custom</span>
+                        <span className="text-muted-foreground text-sm block">
+                          Starts at ${plan.price}/month
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold">${plan.price}</span>
+                        <span className="text-muted-foreground">/month</span>
+                      </>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">

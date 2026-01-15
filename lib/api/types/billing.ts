@@ -3,7 +3,7 @@
  * TypeScript types for billing endpoints
  */
 
-export type SubscriptionPlan = "basic" | "pro" | "enterprise";
+export type SubscriptionPlan = "free" | "pro" | "scale" | "enterprise";
 
 export type SubscriptionStatus =
   | "active"

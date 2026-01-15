@@ -23,34 +23,70 @@ const PLANS: Array<{
   price: number;
   features: string[];
   popular?: boolean;
+  description?: string;
 }> = [
   {
-    id: "basic",
-    name: "Basic",
-    price: 10,
-    features: ["Up to 5 data sources", "Basic support", "Standard features"],
+    id: "free",
+    name: "Free",
+    price: 0,
+    description: "Best for evaluation & small tests",
+    features: [
+      "1 organization",
+      "1 data source connection",
+      "1 data pipeline",
+      "Manual sync only",
+      "Limited records per run (e.g. 10k)",
+      "Community support",
+    ],
   },
   {
     id: "pro",
     name: "Pro",
-    price: 20,
+    price: 29,
+    description: "Best for individual developers & small teams",
     features: [
-      "Unlimited data sources",
-      "Priority support",
-      "Advanced features",
-      "Custom integrations",
+      "1 organization",
+      "Up to 5 data sources",
+      "Up to 5 active pipelines",
+      "Scheduled sync (hourly / daily)",
+      "Incremental sync",
+      "Basic transformations",
+      "Activity logs (7 days)",
+      "Email support",
     ],
     popular: true,
   },
   {
+    id: "scale",
+    name: "Scale",
+    price: 99,
+    description: "Best for growing teams & production workloads",
+    features: [
+      "Up to 3 organizations",
+      "Unlimited data sources",
+      "Unlimited pipelines",
+      "Near-real-time sync",
+      "Advanced transformations",
+      "Retry & failure handling",
+      "Activity logs (90 days)",
+      "Team roles & permissions",
+      "Priority email support",
+    ],
+  },
+  {
     id: "enterprise",
     name: "Enterprise",
-    price: 50,
+    price: 299,
+    description: "Best for large teams & enterprise workloads",
     features: [
-      "Everything in Pro",
-      "Dedicated support",
-      "Custom SLA",
-      "On-premise deployment",
+      "Unlimited organizations",
+      "Unlimited pipelines & sources",
+      "High-volume / continuous sync",
+      "Custom SLAs",
+      "Dedicated support channel",
+      "Audit logs & compliance",
+      "Custom retention policies",
+      "SSO / SCIM (optional)",
     ],
   },
 ];
@@ -72,6 +108,12 @@ export default function PlansPage() {
     setSelectedPlan(planId);
 
     try {
+      // Free plan doesn't need checkout - skip to organization creation
+      if (planId === "free") {
+        router.push("/onboarding/organization");
+        return;
+      }
+
       // Create checkout session - the hook will redirect to checkout URL
       const response = await createCheckout.mutateAsync({
         planId,
@@ -153,9 +195,27 @@ export default function PlansPage() {
                 )}
                 <CardHeader>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  {plan.description && (
+                    <CardDescription className="text-sm mb-2">
+                      {plan.description}
+                    </CardDescription>
+                  )}
                   <CardDescription>
-                    <span className="text-3xl font-bold">${plan.price}</span>
-                    <span className="text-muted-foreground">/month</span>
+                    {plan.price === 0 ? (
+                      <span className="text-3xl font-bold">Free</span>
+                    ) : plan.id === "enterprise" ? (
+                      <>
+                        <span className="text-3xl font-bold">Custom</span>
+                        <span className="text-muted-foreground text-sm block">
+                          Starts at ${plan.price}/month
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold">${plan.price}</span>
+                        <span className="text-muted-foreground">/month</span>
+                      </>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
