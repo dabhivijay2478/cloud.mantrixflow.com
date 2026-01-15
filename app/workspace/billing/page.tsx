@@ -10,9 +10,12 @@ import {
   Crown,
   ExternalLink,
   Loader2,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared";
 import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,6 +29,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +47,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   useCancelSubscription,
   useChangePlan,
@@ -185,6 +212,7 @@ export default function BillingPage() {
   const manageSeats = useManageSeats();
   const createOnDemandSubscription = useCreateOnDemandSubscription();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // State for plan change confirmation modal
   const [showPlanChangeConfirm, setShowPlanChangeConfirm] = useState(false);
@@ -196,6 +224,35 @@ export default function BillingPage() {
   // State for seat management
   const [showSeatManage, setShowSeatManage] = useState(false);
   const [desiredSeatCount, setDesiredSeatCount] = useState<number>(seatInfo?.seatCount || 0);
+
+  // State for on-demand usage toggle
+  const [onDemandEnabled, setOnDemandEnabled] = useState(false);
+  const [spendLimit, setSpendLimit] = useState<number | "unlimited" | "custom">(50);
+  const [customLimit, setCustomLimit] = useState<string>("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // Mock data for usage (will be replaced with real API calls later)
+  const [includedUsage] = useState({
+    pipelines: { used: 3, limit: 5, cost: 0 },
+    executions: { used: 1250, limit: 1500, cost: 0 }, // 50/day * 30 days
+    dataSources: { used: 4, limit: 5, cost: 0 },
+  });
+
+  const [onDemandUsage] = useState({
+    executions: [],
+    total: 0,
+  });
+
+  const [invoices] = useState([
+    {
+      id: "inv_1",
+      date: subscription?.currentPeriodStart || new Date(),
+      description: `${subscription?.planId || "Pro"} Plan - Monthly`,
+      status: "Paid",
+      amount: subscription ? PLANS.find((p) => p.id === subscription.planId)?.price || 0 : 0,
+      invoiceUrl: "#",
+    },
+  ]);
 
   // Sync desired seat count when seat info changes
   useEffect(() => {
@@ -215,6 +272,7 @@ export default function BillingPage() {
           "On-demand subscription authorized!",
           "Your payment method has been authorized for execution overages.",
         );
+        setOnDemandEnabled(true);
       } else if (planChanged) {
         toast.success(
           "Plan changed successfully!",
@@ -228,8 +286,6 @@ export default function BillingPage() {
       }
       // Remove query param from URL
       window.history.replaceState({}, "", "/workspace/billing");
-      // Refetch subscription to show updated plan
-      // The hook will automatically refetch when component remounts
     }
 
     // Show success message if payment method was updated
@@ -238,23 +294,65 @@ export default function BillingPage() {
         "Payment method updated!",
         "Your payment method has been successfully updated.",
       );
-      // Remove query param from URL
       window.history.replaceState({}, "", "/workspace/billing");
     }
   }, [searchParams]);
 
-  // Debug: Log subscription data to help troubleshoot
-  useEffect(() => {
-    if (subscription) {
-      console.log("Subscription data:", {
-        id: subscription.id,
-        dodoCustomerId: subscription.dodoCustomerId,
-        dodoSubscriptionId: subscription.dodoSubscriptionId,
-        planId: subscription.planId,
-        status: subscription.status,
-      });
+  // Get billing period dates
+  const getBillingPeriod = () => {
+    if (!subscription?.currentPeriodStart || !subscription?.currentPeriodEnd) {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { start, end };
     }
-  }, [subscription]);
+    return {
+      start: new Date(subscription.currentPeriodStart),
+      end: new Date(subscription.currentPeriodEnd),
+    };
+  };
+
+  const billingPeriod = getBillingPeriod();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Billing & Invoices"
+          description="Manage your subscription and billing information"
+        />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Billing & Invoices"
+          description="Manage your subscription and billing information"
+        />
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              Error
+            </CardTitle>
+            <CardDescription>
+              Failed to load subscription information. Please try again later.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  const currentPlan = subscription
+    ? PLANS.find((p) => p.id === subscription.planId)
+    : null;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -278,14 +376,12 @@ export default function BillingPage() {
       return;
     }
 
-    // Determine if this is an upgrade or downgrade
     const comparison = getPlanComparison(subscription.planId, planId);
     
     if (comparison === "same") {
       return;
     }
 
-    // Store the pending plan change and show confirmation modal
     setPendingPlanChange({ planId, comparison });
     setShowPlanChangeConfirm(true);
   };
@@ -299,19 +395,15 @@ export default function BillingPage() {
 
     try {
       if (comparison === "upgrade") {
-        // For upgrades: create checkout session (payment required)
         await createCheckout.mutateAsync({
           planId,
           returnUrl: `${window.location.origin}/workspace/billing?payment=success&planChanged=true`,
         });
-        // Checkout will redirect, so we don't need to close modal here
       } else {
-        // For downgrades: use changePlan API directly (database sync, no payment)
         const result = await changePlan.mutateAsync({
           planId,
         });
 
-        // Close modal and show success message
         setShowPlanChangeConfirm(false);
         setPendingPlanChange(null);
 
@@ -325,59 +417,16 @@ export default function BillingPage() {
         "Failed to change plan",
         error instanceof Error ? error.message : "Please try again",
       );
-      // Close modal on error
       setShowPlanChangeConfirm(false);
       setPendingPlanChange(null);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Billing"
-          description="Manage your subscription and billing information"
-        />
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Billing"
-          description="Manage your subscription and billing information"
-        />
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-4 w-4" />
-              Error
-            </CardTitle>
-            <CardDescription>
-              Failed to load subscription information. Please try again later.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
-  // Don't return early - show plans even when no subscription
-
-  const currentPlan = subscription
-    ? PLANS.find((p) => p.id === subscription.planId)
-    : null;
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Billing"
-        description="Manage your subscription and billing information"
+        title="Billing & Invoices"
+        description="Manage your subscription, usage, and billing history"
         action={
           subscription?.dodoCustomerId ? (
             <Button
@@ -402,585 +451,534 @@ export default function BillingPage() {
         }
       />
 
-      {/* Current Subscription - Only show if subscription exists */}
-      {subscription && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Current Subscription
-                </CardTitle>
-                <CardDescription>
-                  Your current plan and billing information
-                </CardDescription>
-              </div>
-              {getStatusBadge(subscription.status)}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Seat Information */}
-            {seatInfoLoading ? (
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              </div>
-            ) : seatInfo && subscription.planId !== "free" ? (
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-medium">Seat Usage</p>
-                    <p className="text-xs text-muted-foreground">
-                      {seatInfo.seatCount} of {seatInfo.includedSeats + seatInfo.extraSeats} seats used
-                    </p>
-                  </div>
-                  {seatInfo.extraSeats > 0 && (
-                    <Badge variant="secondary">
-                      +{seatInfo.extraSeats} extra seats
-                    </Badge>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Included seats:</span>
-                    <span className="font-medium">{seatInfo.includedSeats}</span>
-                  </div>
-                  {seatInfo.extraSeats > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Extra seats:</span>
-                      <span className="font-medium">
-                        {seatInfo.extraSeats} × ${PLANS.find((p) => p.id === subscription.planId)?.extraSeatPrice?.replace("/seat / month", "") || "0"}/month
-                      </span>
-                    </div>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => {
-                      setDesiredSeatCount(seatInfo.seatCount);
-                      setShowSeatManage(true);
-                    }}
-                    disabled={manageSeats.isPending}
-                  >
-                    {manageSeats.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Manage Seats"
-                    )}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
 
-            {/* On-Demand Subscription Status */}
-            {currentPlan && currentPlan.onDemand && subscription.planId !== "free" && (
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-medium">On-Demand Executions</p>
-                    <p className="text-xs text-muted-foreground">
-                      Authorize payment method for execution overages
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    ✓ Available
+
+      {/* Current Subscription Summary with On-Demand - Side by Side */}
+      {subscription && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Current Plan Card */}
+          <Card id="current-subscription">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-xl">{currentPlan?.name || subscription.planId}</CardTitle>
+                  <Badge variant="secondary" className="text-xs">
+                    Current
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Your plan supports on-demand charges for execution overages. 
-                  Authorize your payment method to enable automatic billing for usage beyond your plan limits.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={async () => {
-                    try {
-                      await createOnDemandSubscription.mutateAsync({
-                        returnUrl: `${window.location.origin}/workspace/billing?payment=success&onDemand=true`,
-                      });
-                    } catch (error) {
-                      toast.error(
-                        "Failed to create on-demand subscription",
-                        error instanceof Error ? error.message : "Please try again",
-                      );
-                    }
-                  }}
-                  disabled={createOnDemandSubscription.isPending}
-                >
-                  {createOnDemandSubscription.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
+                <div className="text-right">
+                  {currentPlan?.price === 0 ? (
+                    <span className="text-2xl font-bold">$0</span>
+                  ) : currentPlan?.id === "enterprise" ? (
+                    <span className="text-2xl font-bold">Custom</span>
                   ) : (
                     <>
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Authorize On-Demand Payments
+                      <span className="text-2xl font-bold">${currentPlan?.price || 0}</span>
+                      <span className="text-muted-foreground text-sm">/mo.</span>
                     </>
                   )}
-                </Button>
+                </div>
               </div>
-            )}
+              <CardDescription className="text-sm mt-2">
+                {currentPlan?.description || "Your current subscription plan"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button
+                className="w-full"
+                variant="secondary"
+                asChild
+              >
+                <Link href="/workspace/billing/manage">Manage Subscription</Link>
+              </Button>
+            </CardContent>
+          </Card>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Plan
-                </p>
-                <p className="text-lg font-semibold">
-                  {currentPlan?.name || subscription?.planId}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Status
-                </p>
-                <p className="text-lg font-semibold capitalize">
-                  {subscription?.status}
-                </p>
-              </div>
-              {subscription?.currentPeriodStart && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Current Period Start
-                  </p>
-                  <p className="text-lg font-semibold">
-                    {format(
-                      new Date(subscription.currentPeriodStart),
-                      "MMM dd, yyyy",
-                    )}
-                  </p>
-                </div>
-              )}
-              {subscription?.currentPeriodEnd && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Current Period End
-                  </p>
-                  <p className="text-lg font-semibold">
-                    {format(
-                      new Date(subscription.currentPeriodEnd),
-                      "MMM dd, yyyy",
-                    )}
-                  </p>
-                </div>
-              )}
-              {subscription?.trialEnd && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Trial Ends
-                  </p>
-                  <p className="text-lg font-semibold">
-                    {format(new Date(subscription.trialEnd), "MMM dd, yyyy")}
-                  </p>
-                </div>
-              )}
-              {subscription?.canceledAt && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Canceled At
-                  </p>
-                  <p className="text-lg font-semibold">
-                    {format(new Date(subscription.canceledAt), "MMM dd, yyyy")}
-                  </p>
-                </div>
-              )}
-              {subscription?.cancelAtPeriodEnd && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Cancellation Status
-                  </p>
-                  <p className="text-lg font-semibold text-yellow-600">
-                    Will cancel at period end
-                    {subscription.currentPeriodEnd &&
-                      ` (${format(
-                        new Date(subscription.currentPeriodEnd),
-                        "MMM dd, yyyy",
-                      )})`}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3 pt-4 border-t">
-              {/* Update Payment Method - Show when on_hold or failed */}
-              {(subscription.status === "on_hold" ||
-                subscription.status === "failed") && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    updatePaymentMethod.mutate({
-                      returnUrl: `${window.location.origin}/workspace/billing?paymentMethodUpdated=true`,
-                    });
-                  }}
-                  disabled={updatePaymentMethod.isPending}
-                  className="gap-2"
-                >
-                  {updatePaymentMethod.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4" />
-                      Update Payment Method
-                    </>
-                  )}
-                </Button>
-              )}
-
-              {/* Resume Subscription - Show when cancelAtPeriodEnd is true */}
-              {subscription.cancelAtPeriodEnd && (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const result = await resumeSubscription.mutateAsync();
-                      if (result?.success) {
-                        toast.success("Subscription resumed!", result.message);
-                      }
-                    } catch (error) {
-                      toast.error(
-                        "Failed to resume subscription",
-                        error instanceof Error
-                          ? error.message
-                          : "Please try again",
-                      );
-                    }
-                  }}
-                  disabled={resumeSubscription.isPending}
-                  className="gap-2"
-                >
-                  {resumeSubscription.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Resume Subscription
-                    </>
-                  )}
-                </Button>
-              )}
-
-              {/* Cancel Subscription - Show when active and not already canceled */}
-              {subscription.status === "active" &&
-                !subscription.cancelAtPeriodEnd && (
-                  <Button
-                    variant="destructive"
+          {/* On-Demand Usage Card - Separate Card */}
+          {currentPlan && currentPlan.onDemand && subscription.planId !== "free" ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl">
+                  On-Demand Usage is {onDemandEnabled ? "On" : "Off"}
+                </CardTitle>
+                {!onDemandEnabled && (
+                  <div className="mt-2 space-y-1">
+                    <div className="text-muted-foreground text-xs">························</div>
+                    <div className="text-muted-foreground text-xs">························</div>
+                    <div className="text-muted-foreground text-xs">························</div>
+                  </div>
+                )}
+                <CardDescription className="text-sm mt-2">
+                  Go beyond your plan's included quota with on-demand usage
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-4">
+                {onDemandEnabled ? (
+                  <>
+                    {/* Show spend limit when enabled */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Monthly Spend Limit</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[50, 100, 200, 500].map((limit) => (
+                          <button
+                            key={limit}
+                            type="button"
+                            className={`w-full px-3 py-2 text-sm rounded-md border transition-colors ${
+                              spendLimit === limit
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background border-input hover:bg-accent hover:text-accent-foreground"
+                            }`}
+                            onClick={() => {
+                              setSpendLimit(limit);
+                              setShowCustomInput(false);
+                              // TODO: Save to backend
+                              toast.success(`Spend limit set to $${limit}`);
+                            }}
+                          >
+                            ${limit}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className={`w-full px-3 py-2 text-sm rounded-md border transition-colors ${
+                            spendLimit === "unlimited"
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background border-input hover:bg-accent hover:text-accent-foreground"
+                          }`}
+                          onClick={() => {
+                            setSpendLimit("unlimited");
+                            setShowCustomInput(false);
+                            // TODO: Save to backend
+                            toast.success("Spend limit set to Unlimited");
+                          }}
+                        >
+                          Unlimited
+                        </button>
+                        <button
+                          type="button"
+                          className={`w-full px-3 py-2 text-sm rounded-md border transition-colors ${
+                            showCustomInput || spendLimit === "custom"
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background border-input hover:bg-accent hover:text-accent-foreground"
+                          }`}
+                          onClick={() => {
+                            setShowCustomInput(!showCustomInput);
+                            setSpendLimit("custom");
+                          }}
+                        >
+                          Custom
+                        </button>
+                      </div>
+                      {showCustomInput && (
+                        <div className="space-y-2">
+                          <input
+                            type="number"
+                            placeholder="Enter amount"
+                            value={customLimit}
+                            onChange={(e) => setCustomLimit(e.target.value)}
+                            min="1"
+                            className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background"
+                          />
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                            onClick={() => {
+                              if (customLimit) {
+                                // TODO: Save to backend
+                                toast.success(`Spend limit set to $${customLimit}`);
+                                setShowCustomInput(false);
+                                setCustomLimit("");
+                              }
+                            }}
+                          >
+                            Set Custom Limit
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="w-full px-4 py-2 text-sm rounded-md border border-input bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                      onClick={() => {
+                        setOnDemandEnabled(false);
+                        // TODO: Disable on-demand in backend
+                        toast.success("On-demand usage disabled");
+                      }}
+                    >
+                      Disable On-Demand Usage
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="w-full px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={async () => {
-                      if (
-                        !confirm(
-                          "Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.",
-                        )
-                      ) {
-                        return;
-                      }
-
                       try {
-                        const result = await cancelSubscription.mutateAsync();
-                        if (result?.success) {
-                          toast.success(
-                            "Subscription canceled",
-                            result.message,
-                          );
-                        }
+                        await createOnDemandSubscription.mutateAsync({
+                          returnUrl: `${window.location.origin}/workspace/billing?payment=success&onDemand=true`,
+                        });
                       } catch (error) {
                         toast.error(
-                          "Failed to cancel subscription",
-                          error instanceof Error
-                            ? error.message
-                            : "Please try again",
+                          "Failed to enable on-demand usage",
+                          error instanceof Error ? error.message : "Please try again",
                         );
                       }
                     }}
-                    disabled={cancelSubscription.isPending}
-                    className="gap-2"
+                    disabled={createOnDemandSubscription.isPending}
                   >
-                    {cancelSubscription.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                    {createOnDemandSubscription.isPending ? (
+                      <span className="flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Processing...
-                      </>
+                      </span>
                     ) : (
-                      <>
-                        <AlertCircle className="h-4 w-4" />
-                        Cancel Subscription
-                      </>
+                      "Enable On-Demand Usage"
                     )}
-                  </Button>
+                  </button>
                 )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      )}
+
+      {/* Included Usage Section */}
+      {subscription && subscription.planId !== "free" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Included Usage</CardTitle>
+            <CardDescription>
+              {format(billingPeriod.start, "MMM dd, yyyy")} - {format(billingPeriod.end, "MMM dd, yyyy")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-2 text-sm text-muted-foreground">
+              Included in {currentPlan?.name || subscription.planId}
             </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-right">Usage</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Pipelines</TableCell>
+                  <TableCell className="text-right">
+                    {includedUsage.pipelines.used} / {includedUsage.pipelines.limit}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="text-muted-foreground">Included</span>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Executions</TableCell>
+                  <TableCell className="text-right">
+                    {includedUsage.executions.used.toLocaleString()} / {includedUsage.executions.limit.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="text-muted-foreground">Included</span>
+                  </TableCell>
+                </TableRow>
+                {seatInfo && (
+                  <TableRow>
+                    <TableCell className="font-medium">Seats</TableCell>
+                    <TableCell className="text-right">
+                      {seatInfo.seatCount} / {seatInfo.includedSeats + seatInfo.extraSeats}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="text-muted-foreground">Included</span>
+                    </TableCell>
+                  </TableRow>
+                )}
+                <TableRow className="font-semibold">
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-right">
+                    {includedUsage.pipelines.used + includedUsage.executions.used + (seatInfo?.seatCount || 0)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="text-muted-foreground">Included</span>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
 
-      {/* Available Plans */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-2">
-          {subscription ? "Available Plans" : "Choose a Plan"}
-        </h2>
-        <p className="text-muted-foreground mb-6">
-          {subscription
-            ? "Upgrade or downgrade your plan at any time. Changes take effect immediately."
-            : "Select a plan to get started. You can upgrade or downgrade at any time."}
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {PLANS.map((plan) => {
-            const isCurrentPlan = subscription?.planId === plan.id;
-            const isChanging = changePlan.isPending || createCheckout.isPending;
-            const comparison = subscription
-              ? getPlanComparison(subscription.planId, plan.id)
-              : "same";
-            const isUpgrade = comparison === "upgrade";
-            const isDowngrade = comparison === "downgrade";
-
-            return (
-              <Card
-                key={plan.id}
-                className={`relative ${
-                  plan.popular
-                    ? "border-primary border-2"
-                    : isCurrentPlan
-                      ? "border-primary"
-                      : plan.comingSoon
-                        ? "opacity-75"
-                        : ""
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground">
-                      <Crown className="h-3 w-3 mr-1" />
-                      Popular
-                    </Badge>
-                  </div>
-                )}
-                {isCurrentPlan && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge variant="secondary">Current Plan</Badge>
-                  </div>
-                )}
-                <CardHeader className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                    {plan.comingSoon && (
-                      <Badge variant="secondary" className="text-xs">
-                        Coming Soon
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription className="text-base">
-                    {plan.description}
-                  </CardDescription>
-                  <div className="mt-2">
-                    {plan.price === 0 ? (
-                      <span className="text-3xl font-bold">Free</span>
-                    ) : plan.id === "enterprise" ? (
-                      <>
-                        <span className="text-3xl font-bold">Custom</span>
-                        <span className="text-muted-foreground text-sm block">
-                          Starts at ${plan.price}/month
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-3xl font-bold">${plan.price}</span>
-                        <span className="text-muted-foreground">/month</span>
-                      </>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Plan Limits */}
-                  <div className="grid grid-cols-2 gap-3 text-sm border-b pb-4">
-                    <div>
-                      <p className="text-muted-foreground">Pipelines</p>
-                      <p className="font-semibold">{plan.pipelines}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Executions</p>
-                      <p className="font-semibold">{plan.executions}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Seats</p>
-                      <p className="font-semibold">{plan.seats}</p>
-                      {plan.extraSeatPrice && (
-                        <p className="text-xs text-muted-foreground">
-                          {plan.extraSeatPrice}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">On-Demand</p>
-                      <p className="font-semibold">
-                        {plan.onDemand ? (
-                          <span className="text-green-500">✓ Allowed</span>
-                        ) : (
-                          <span className="text-muted-foreground">Not allowed</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Features List */}
-                  <ul className="space-y-3">
-                    {plan.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-start gap-2 text-sm"
-                      >
-                        <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {!subscription ? (
-                    <Button
-                      className="w-full"
-                      variant="default"
-                      disabled={createCheckout.isPending || plan.comingSoon || plan.id === "free"}
-                      onClick={async () => {
-                        if (plan.id === "free") {
-                          // Free plan - skip checkout
-                          return;
-                        }
-                        try {
-                          // Create checkout session directly from billing page
-                          // Return to billing page after payment (user already has org)
-                          await createCheckout.mutateAsync({
-                            planId: plan.id,
-                            returnUrl: `${window.location.origin}/workspace/billing?payment=success&from=billing`,
-                          });
-                        } catch (error) {
-                          console.error("Failed to create checkout:", error);
-                          toast.error(
-                            "Failed to create checkout session",
-                            error instanceof Error
-                              ? error.message
-                              : "Please try again",
-                          );
-                        }
-                      }}
-                    >
-                      {createCheckout.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : plan.comingSoon ? (
-                        "Coming Soon"
-                      ) : plan.id === "free" ? (
-                        "Current Plan"
-                      ) : (
-                        <>
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Select {plan.name}
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      variant={
-                        isCurrentPlan
-                          ? "outline"
-                          : isUpgrade
-                            ? "default"
-                            : "secondary"
+      {/* On-Demand Usage Section */}
+      {subscription && currentPlan && currentPlan.onDemand && subscription.planId !== "free" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>On-Demand Usage</CardTitle>
+                <CardDescription>
+                  {format(billingPeriod.start, "MMM dd, yyyy")} - {format(billingPeriod.end, "MMM dd, yyyy")}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-3">
+                <Select defaultValue={format(billingPeriod.start, "MMM dd, yyyy")}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={format(billingPeriod.start, "MMM dd, yyyy")}>
+                      Cycle Starting {format(billingPeriod.start, "MMM dd, yyyy")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-medium">
+                    On-Demand Usage is {onDemandEnabled ? "On" : "Off"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Go beyond your plan's included quota with on-demand usage
+                  </p>
+                </div>
+                <Button
+                  variant={onDemandEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={async () => {
+                    if (!onDemandEnabled) {
+                      try {
+                        await createOnDemandSubscription.mutateAsync({
+                          returnUrl: `${window.location.origin}/workspace/billing?payment=success&onDemand=true`,
+                        });
+                      } catch (error) {
+                        toast.error(
+                          "Failed to enable on-demand usage",
+                          error instanceof Error ? error.message : "Please try again",
+                        );
                       }
-                      disabled={isCurrentPlan || isChanging || createCheckout.isPending || plan.comingSoon}
-                      onClick={() => handlePlanChangeClick(plan.id)}
-                    >
-                      {isCurrentPlan ? (
-                        <>
-                          <Check className="h-4 w-4 mr-2" />
-                          Current Plan
-                        </>
-                      ) : isChanging ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : isUpgrade ? (
-                        <>
-                          <ArrowUp className="h-4 w-4 mr-2" />
-                          Upgrade to {plan.name}
-                        </>
-                      ) : isDowngrade ? (
-                        <>
-                          <ArrowDown className="h-4 w-4 mr-2" />
-                          Downgrade to {plan.name}
-                        </>
-                      ) : plan.comingSoon ? (
-                        "Coming Soon"
-                      ) : (
-                        `Select ${plan.name}`
-                      )}
-                    </Button>
+                    } else {
+                      // TODO: Implement disable on-demand
+                      setOnDemandEnabled(false);
+                      toast.success("On-demand usage disabled");
+                    }
+                  }}
+                  disabled={createOnDemandSubscription.isPending}
+                  className="gap-2"
+                >
+                  {createOnDemandSubscription.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : onDemandEnabled ? (
+                    <>
+                      <ToggleRight className="h-4 w-4" />
+                      Disable On-Demand
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="h-4 w-4" />
+                      Enable On-Demand Usage
+                    </>
                   )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Change Plan Info */}
-      {(changePlan.isPending || createCheckout.isPending) && (
-        <Alert>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <AlertTitle>Processing Plan Change</AlertTitle>
-          <AlertDescription>
-            Please wait while we update your subscription. This may take a few
-            moments.
-          </AlertDescription>
-        </Alert>
+                </Button>
+              </div>
+            </div>
+            <div className="mb-4 text-right">
+              <span className="text-2xl font-bold">US${onDemandUsage.total.toFixed(2)}</span>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Executions</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {onDemandUsage.executions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No on-demand usage this cycle
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  onDemandUsage.executions.map((item: any, index: number) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{item.type}</TableCell>
+                      <TableCell className="text-right">{item.executions}</TableCell>
+                      <TableCell className="text-right">US${item.cost.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{item.qty}</TableCell>
+                      <TableCell className="text-right">US${item.total.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+                <TableRow className="font-semibold">
+                  <TableCell colSpan={4}>Subtotal</TableCell>
+                  <TableCell className="text-right">US${onDemandUsage.total.toFixed(2)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Plan Change Confirmation Modal */}
+      {/* Invoices Section */}
+      {subscription && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Invoices</CardTitle>
+              <Select defaultValue={format(new Date(), "MMMM yyyy")}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={format(new Date(), "MMMM yyyy")}>
+                    {format(new Date(), "MMMM yyyy")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Invoice</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No invoices found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  invoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell>{format(new Date(invoice.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell>{invoice.description}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={invoice.status === "Paid" ? "default" : "secondary"}
+                        >
+                          {invoice.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {invoice.amount.toFixed(2)} USD
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (invoice.invoiceUrl !== "#") {
+                              window.open(invoice.invoiceUrl, "_blank");
+                            } else {
+                              customerPortal.mutate();
+                            }
+                          }}
+                          className="gap-1"
+                        >
+                          View
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+
+      {/* Plan Change Confirmation Modal - With Refund Details */}
       {pendingPlanChange && (
-        <ConfirmationModal
-          open={showPlanChangeConfirm}
-          onOpenChange={(open) => {
-            setShowPlanChangeConfirm(open);
-            if (!open) {
-              setPendingPlanChange(null);
-            }
-          }}
-          action="update"
-          title={
-            pendingPlanChange.comparison === "upgrade"
-              ? `Upgrade to ${PLANS.find((p) => p.id === pendingPlanChange.planId)?.name || pendingPlanChange.planId} Plan`
-              : `Downgrade to ${PLANS.find((p) => p.id === pendingPlanChange.planId)?.name || pendingPlanChange.planId} Plan`
+        <Dialog open={showPlanChangeConfirm} onOpenChange={(open) => {
+          setShowPlanChangeConfirm(open);
+          if (!open) {
+            setPendingPlanChange(null);
           }
-          description={
-            pendingPlanChange.comparison === "upgrade"
-              ? `You will be redirected to checkout to complete your upgrade. The new plan will be charged immediately, and you'll receive a prorated credit for the remaining time on your current plan.`
-              : `Your plan will be downgraded immediately. You'll receive a prorated credit for the remaining time on your current plan, which will be applied to future billing cycles.`
-          }
-          confirmLabel={
-            pendingPlanChange.comparison === "upgrade"
-              ? "Continue to Checkout"
-              : "Confirm Downgrade"
-          }
-          cancelLabel="Cancel"
-          confirmVariant="default"
-          isLoading={changePlan.isPending || createCheckout.isPending}
-          onConfirm={handleConfirmPlanChange}
-        />
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {pendingPlanChange.comparison === "upgrade"
+                  ? `Confirm Upgrade to ${PLANS.find((p) => p.id === pendingPlanChange.planId)?.name || pendingPlanChange.planId}`
+                  : `Confirm Downgrade to ${PLANS.find((p) => p.id === pendingPlanChange.planId)?.name || pendingPlanChange.planId}`}
+              </DialogTitle>
+              <DialogDescription className="pt-4">
+                {pendingPlanChange.comparison === "upgrade" ? (
+                  <div className="space-y-2">
+                    <p>
+                      You will be charged ${PLANS.find((p) => p.id === pendingPlanChange.planId)?.price || 0}/month, and receive a prorated refund for the remaining days in your current plan.
+                    </p>
+                    {subscription?.currentPeriodEnd && (
+                      <p className="text-xs text-muted-foreground">
+                        Current plan ends: {format(new Date(subscription.currentPeriodEnd), "MMM dd, yyyy")}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p>
+                      Your plan will be downgraded immediately. You'll receive a prorated credit for the remaining time on your current plan, which will be applied to future billing cycles.
+                    </p>
+                    {subscription?.currentPeriodEnd && (
+                      <p className="text-xs text-muted-foreground">
+                        Current plan ends: {format(new Date(subscription.currentPeriodEnd), "MMM dd, yyyy")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPlanChangeConfirm(false);
+                  setPendingPlanChange(null);
+                }}
+                disabled={changePlan.isPending || createCheckout.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleConfirmPlanChange}
+                disabled={changePlan.isPending || createCheckout.isPending}
+              >
+                {changePlan.isPending || createCheckout.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : pendingPlanChange.comparison === "upgrade" ? (
+                  "Confirm"
+                ) : (
+                  "Confirm Downgrade"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
+
 
       {/* Seat Management Modal */}
       {showSeatManage && seatInfo && currentOrg && subscription && (
