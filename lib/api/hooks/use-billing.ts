@@ -8,7 +8,10 @@ import { BillingService } from "../services/billing.service";
 import type {
   ChangePlanRequest,
   CreateCheckoutRequest,
+  CreateOnDemandSubscriptionRequest,
   UpdatePaymentMethodRequest,
+  ManageSeatsRequest,
+  OnDemandChargeRequest,
 } from "../types/billing";
 
 // Query keys
@@ -174,6 +177,84 @@ export function useCustomerPortal() {
           ? String(error.message)
           : "Failed to open customer portal. Please try again.";
       alert(message);
+    },
+  });
+}
+
+/**
+ * Get seat count for organization
+ */
+export function useSeatCount(organizationId: string | null) {
+  return useQuery({
+    queryKey: [...billingKeys.all, "seats", organizationId],
+    queryFn: () => BillingService.getSeatCount(organizationId!),
+    enabled: !!organizationId,
+  });
+}
+
+/**
+ * Manage seats for subscription
+ */
+export function useManageSeats() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      ...request
+    }: ManageSeatsRequest & { organizationId: string }) =>
+      BillingService.manageSeats(organizationId, request),
+    onSuccess: (data, variables) => {
+      // Invalidate seat count query
+      queryClient.invalidateQueries({
+        queryKey: [...billingKeys.all, "seats", variables.organizationId],
+      });
+      // Also invalidate subscription query
+      queryClient.invalidateQueries({
+        queryKey: billingKeys.subscription(),
+      });
+    },
+  });
+}
+
+/**
+ * Create on-demand subscription (mandate) for execution overages
+ * This authorizes a payment method for variable charges later
+ */
+export function useCreateOnDemandSubscription() {
+  return useMutation({
+    mutationFn: (request: CreateOnDemandSubscriptionRequest) =>
+      BillingService.createOnDemandSubscription(request),
+    onSuccess: (data) => {
+      // Redirect to checkout URL
+      if (data?.checkoutUrl) {
+        window.location.replace(data.checkoutUrl);
+      } else {
+        console.error("No checkout URL in response. Full response:", data);
+        alert("Failed to get checkout URL. Please try again.");
+      }
+    },
+    onError: (error) => {
+      console.error("Failed to create on-demand subscription:", error);
+      alert("Failed to create on-demand subscription. Please try again.");
+    },
+  });
+}
+
+/**
+ * Create on-demand charge for execution overages
+ */
+export function useOnDemandCharge() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: OnDemandChargeRequest) =>
+      BillingService.createOnDemandCharge(request),
+    onSuccess: () => {
+      // Invalidate subscription query to refresh billing info
+      queryClient.invalidateQueries({
+        queryKey: billingKeys.subscription(),
+      });
     },
   });
 }

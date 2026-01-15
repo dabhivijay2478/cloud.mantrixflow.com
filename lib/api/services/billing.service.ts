@@ -10,6 +10,8 @@ import type {
   ChangePlanResponse,
   CreateCheckoutRequest,
   CreateCheckoutResponse,
+  CreateOnDemandSubscriptionRequest,
+  CreateOnDemandSubscriptionResponse,
   Subscription,
   UpdatePaymentMethodRequest,
   UpdatePaymentMethodResponse,
@@ -134,6 +136,71 @@ export class BillingService {
   }): Promise<{ portalUrl: string }> {
     return ApiClient.get<{ portalUrl: string }>(
       `${BillingService.BASE_PATH}/customer-portal`,
+      {
+        token: options?.token,
+      },
+    );
+  }
+
+  /**
+   * Get seat count for organization
+   */
+  static async getSeatCount(
+    organizationId: string,
+    options?: { token?: string | null },
+  ): Promise<{ seatCount: number; includedSeats: number; extraSeats: number }> {
+    return ApiClient.get<{ seatCount: number; includedSeats: number; extraSeats: number }>(
+      `${BillingService.BASE_PATH}/seats/${organizationId}`,
+      {
+        token: options?.token,
+      },
+    );
+  }
+
+  /**
+   * Manage seats for subscription
+   */
+  static async manageSeats(
+    organizationId: string,
+    request: { seatCount: number },
+    options?: { token?: string | null },
+  ): Promise<{ success: boolean; message: string; newSeatCount: number }> {
+    return ApiClient.post<{ success: boolean; message: string; newSeatCount: number }>(
+      `${BillingService.BASE_PATH}/seats/${organizationId}`,
+      request,
+      {
+        token: options?.token,
+      },
+    );
+  }
+
+  /**
+   * Create on-demand subscription (mandate) for execution overages
+   * This authorizes a payment method for variable charges later
+   */
+  static async createOnDemandSubscription(
+    request: CreateOnDemandSubscriptionRequest,
+    options?: { token?: string | null },
+  ): Promise<CreateOnDemandSubscriptionResponse> {
+    return ApiClient.post<CreateOnDemandSubscriptionResponse>(
+      `${BillingService.BASE_PATH}/on-demand-subscription`,
+      request,
+      {
+        token: options?.token,
+      },
+    );
+  }
+
+  /**
+   * Create on-demand charge for execution overages
+   */
+  static async createOnDemandCharge(
+    request: { productPrice: number; productDescription?: string; productCurrency?: string },
+    options?: { token?: string | null },
+  ): Promise<{ success: boolean; paymentId: string; message: string }> {
+    return ApiClient.post<{ success: boolean; paymentId: string; message: string }>(
+      `${BillingService.BASE_PATH}/on-demand-charge`,
+      request,
       {
         token: options?.token,
       },

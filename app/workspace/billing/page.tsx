@@ -16,6 +16,16 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,11 +39,15 @@ import {
   useCancelSubscription,
   useChangePlan,
   useCreateCheckout,
+  useCreateOnDemandSubscription,
   useCustomerPortal,
   useResumeSubscription,
   useSubscription,
   useUpdatePaymentMethod,
+  useSeatCount,
+  useManageSeats,
 } from "@/lib/api/hooks/use-billing";
+import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import type { SubscriptionPlan } from "@/lib/api/types/billing";
 import { toast } from "@/lib/utils/toast";
 
@@ -158,12 +172,18 @@ const getPlanComparison = (
 
 export default function BillingPage() {
   const { data: subscription, isLoading, error } = useSubscription();
+  const { data: currentOrg } = useCurrentOrganization();
+  const { data: seatInfo, isLoading: seatInfoLoading } = useSeatCount(
+    currentOrg?.id || null,
+  );
   const changePlan = useChangePlan();
   const createCheckout = useCreateCheckout();
   const customerPortal = useCustomerPortal();
   const cancelSubscription = useCancelSubscription();
   const resumeSubscription = useResumeSubscription();
   const updatePaymentMethod = useUpdatePaymentMethod();
+  const manageSeats = useManageSeats();
+  const createOnDemandSubscription = useCreateOnDemandSubscription();
   const searchParams = useSearchParams();
 
   // State for plan change confirmation modal
@@ -173,11 +193,29 @@ export default function BillingPage() {
     comparison: "upgrade" | "downgrade";
   } | null>(null);
 
+  // State for seat management
+  const [showSeatManage, setShowSeatManage] = useState(false);
+  const [desiredSeatCount, setDesiredSeatCount] = useState<number>(seatInfo?.seatCount || 0);
+
+  // Sync desired seat count when seat info changes
+  useEffect(() => {
+    if (seatInfo) {
+      setDesiredSeatCount(seatInfo.seatCount);
+    }
+  }, [seatInfo]);
+
   // Show success message if redirected from payment
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
       const planChanged = searchParams.get("planChanged") === "true";
-      if (planChanged) {
+      const onDemand = searchParams.get("onDemand") === "true";
+      
+      if (onDemand) {
+        toast.success(
+          "On-demand subscription authorized!",
+          "Your payment method has been authorized for execution overages.",
+        );
+      } else if (planChanged) {
         toast.success(
           "Plan changed successfully!",
           "Your subscription plan has been updated.",
@@ -382,6 +420,115 @@ export default function BillingPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Seat Information */}
+            {seatInfoLoading ? (
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              </div>
+            ) : seatInfo && subscription.planId !== "free" ? (
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium">Seat Usage</p>
+                    <p className="text-xs text-muted-foreground">
+                      {seatInfo.seatCount} of {seatInfo.includedSeats + seatInfo.extraSeats} seats used
+                    </p>
+                  </div>
+                  {seatInfo.extraSeats > 0 && (
+                    <Badge variant="secondary">
+                      +{seatInfo.extraSeats} extra seats
+                    </Badge>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Included seats:</span>
+                    <span className="font-medium">{seatInfo.includedSeats}</span>
+                  </div>
+                  {seatInfo.extraSeats > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Extra seats:</span>
+                      <span className="font-medium">
+                        {seatInfo.extraSeats} × ${PLANS.find((p) => p.id === subscription.planId)?.extraSeatPrice?.replace("/seat / month", "") || "0"}/month
+                      </span>
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => {
+                      setDesiredSeatCount(seatInfo.seatCount);
+                      setShowSeatManage(true);
+                    }}
+                    disabled={manageSeats.isPending}
+                  >
+                    {manageSeats.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Manage Seats"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* On-Demand Subscription Status */}
+            {currentPlan && currentPlan.onDemand && subscription.planId !== "free" && (
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium">On-Demand Executions</p>
+                    <p className="text-xs text-muted-foreground">
+                      Authorize payment method for execution overages
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    ✓ Available
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Your plan supports on-demand charges for execution overages. 
+                  Authorize your payment method to enable automatic billing for usage beyond your plan limits.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={async () => {
+                    try {
+                      await createOnDemandSubscription.mutateAsync({
+                        returnUrl: `${window.location.origin}/workspace/billing?payment=success&onDemand=true`,
+                      });
+                    } catch (error) {
+                      toast.error(
+                        "Failed to create on-demand subscription",
+                        error instanceof Error ? error.message : "Please try again",
+                      );
+                    }
+                  }}
+                  disabled={createOnDemandSubscription.isPending}
+                >
+                  {createOnDemandSubscription.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Authorize On-Demand Payments
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -833,6 +980,81 @@ export default function BillingPage() {
           isLoading={changePlan.isPending || createCheckout.isPending}
           onConfirm={handleConfirmPlanChange}
         />
+      )}
+
+      {/* Seat Management Modal */}
+      {showSeatManage && seatInfo && currentOrg && subscription && (
+        <AlertDialog open={showSeatManage} onOpenChange={setShowSeatManage}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Manage Seats</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4">
+                  <p>
+                    Your plan includes {seatInfo.includedSeats} seats. You currently have {seatInfo.seatCount} billable seats
+                    {seatInfo.extraSeats > 0 && ` (${seatInfo.extraSeats} extra)`}.
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Desired Seat Count</label>
+                    <input
+                      type="number"
+                      min={seatInfo.includedSeats}
+                      value={desiredSeatCount}
+                      onChange={(e) => setDesiredSeatCount(parseInt(e.target.value) || seatInfo.includedSeats)}
+                      className="w-full px-3 py-2 border rounded-md"
+                      disabled={manageSeats.isPending}
+                    />
+                    {desiredSeatCount > seatInfo.includedSeats && (
+                      <p className="text-xs text-muted-foreground">
+                        Extra seats: {desiredSeatCount - seatInfo.includedSeats} × ${PLANS.find((p) => p.id === subscription.planId)?.extraSeatPrice?.replace("/seat / month", "") || "0"}/month
+                      </p>
+                    )}
+                    {desiredSeatCount < seatInfo.seatCount && (
+                      <p className="text-xs text-yellow-600">
+                        Warning: You have {seatInfo.seatCount} active billable seats. Reducing seats may require removing team members.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={manageSeats.isPending}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (!currentOrg) return;
+                  try {
+                    const result = await manageSeats.mutateAsync({
+                      organizationId: currentOrg.id,
+                      seatCount: desiredSeatCount,
+                    });
+                    if (result.success) {
+                      toast.success("Seats updated successfully!", result.message);
+                      setShowSeatManage(false);
+                    }
+                  } catch (error) {
+                    toast.error(
+                      "Failed to update seats",
+                      error instanceof Error ? error.message : "Please try again",
+                    );
+                  }
+                }}
+                disabled={manageSeats.isPending || desiredSeatCount === seatInfo.seatCount}
+              >
+                {manageSeats.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Update Seats"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

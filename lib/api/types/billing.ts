@@ -36,6 +36,7 @@ export interface CustomerPortalResponse {
 export interface CreateCheckoutRequest {
   planId: SubscriptionPlan;
   returnUrl: string;
+  seatCount?: number; // Optional: total seats desired (includes base seats)
 }
 
 export interface CreateCheckoutResponse {
@@ -74,4 +75,41 @@ export interface SubscriptionPlanDetails {
   priceInterval: "month" | "year";
   features: string[];
   popular?: boolean;
+}
+
+export interface SeatInfo {
+  seatCount: number;
+  includedSeats: number;
+  extraSeats: number;
+}
+
+export interface ManageSeatsRequest {
+  seatCount: number;
+}
+
+export interface ManageSeatsResponse {
+  success: boolean;
+  message: string;
+  newSeatCount: number;
+}
+
+export interface CreateOnDemandSubscriptionRequest {
+  returnUrl: string;
+}
+
+export interface CreateOnDemandSubscriptionResponse {
+  checkoutUrl: string;
+  sessionId: string;
+}
+
+export interface OnDemandChargeRequest {
+  productPrice: number; // Amount in cents (e.g., 300 = $3.00)
+  productDescription?: string;
+  productCurrency?: string;
+}
+
+export interface OnDemandChargeResponse {
+  success: boolean;
+  paymentId: string;
+  message: string;
 }
