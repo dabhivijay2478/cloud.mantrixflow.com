@@ -28,18 +28,23 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser, useUpdateUser } from "@/lib/api";
-import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
+import {
+  useCurrentOrganization,
+  useUpdateOrganization,
+} from "@/lib/api/hooks/use-organizations";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { refreshSupabaseUser } from "@/lib/utils/sync-user";
 import { toast } from "@/lib/utils/toast";
 
 export default function SettingsPage() {
-  const { currentOrganization, updateOrganization } = useWorkspaceStore();
+  const { currentOrganization, updateOrganization: updateOrgInStore } =
+    useWorkspaceStore();
   const { user: authUser } = useAuthStore();
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const { data: currentOrg } = useCurrentOrganization();
   const updateUser = useUpdateUser();
+  const updateOrganization = useUpdateOrganization();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -84,25 +89,47 @@ export default function SettingsPage() {
     }
   }, [currentOrganization]);
 
+  // Sync organization description from API
+  useEffect(() => {
+    if (currentOrg?.description !== undefined) {
+      setOrgDescription(currentOrg.description || "");
+    }
+  }, [currentOrg]);
+
   const handleSaveOrganization = async () => {
-    if (!currentOrganization) return;
+    if (!currentOrganization || !isOwner) return;
 
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      updateOrganization(currentOrganization.id, {
-        name: orgName,
-        slug: orgSlug,
+      // Call API to update organization
+      const updatedOrg = await updateOrganization.mutateAsync({
+        id: currentOrganization.id,
+        data: {
+          name: orgName.trim(),
+          slug: orgSlug.trim(),
+          description: orgDescription.trim() || undefined,
+        },
       });
+
+      // Update local store with the response from API
+      updateOrgInStore(currentOrganization.id, {
+        name: updatedOrg.name,
+        slug: updatedOrg.slug,
+      });
+
       toast.success(
         "Organization settings saved successfully",
         "Your organization settings have been updated.",
       );
-    } catch {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       toast.error(
         "Failed to save settings",
-        "Unable to save organization settings. Please try again.",
+        errorMessage ||
+          "Unable to save organization settings. Please try again.",
       );
+      console.error("Failed to update organization:", error);
     } finally {
       setLoading(false);
     }
@@ -539,6 +566,7 @@ export default function SettingsPage() {
                     onClick={() => {
                       setOrgName(currentOrganization?.name || "");
                       setOrgSlug(currentOrganization?.slug || "");
+                      setOrgDescription(currentOrg?.description || "");
                     }}
                     disabled={loading}
                     className="w-full sm:w-auto cursor-pointer"

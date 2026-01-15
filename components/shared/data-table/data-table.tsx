@@ -656,13 +656,18 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
                   const sortDirection = header.column.getIsSorted();
+                  const headerClassName = header.column.columnDef.meta?.className;
                   return (
-                    <TableHead key={header.id} className="relative">
+                    <TableHead
+                      key={header.id}
+                      className={cn("relative", headerClassName)}
+                    >
                       {header.isPlaceholder ? null : canSort ? (
                         <button
                           type="button"
                           className={cn(
-                            "flex items-center gap-2 w-full text-left cursor-pointer select-none hover:text-foreground",
+                            "flex items-center gap-2 w-full cursor-pointer select-none hover:text-foreground",
+                            headerClassName || "text-left",
                           )}
                           onClick={header.column.getToggleSortingHandler()}
                         >
@@ -681,7 +686,13 @@ export function DataTable<TData, TValue>({
                           )}
                         </button>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "flex items-center gap-2",
+                            headerClassName === "text-right" && "justify-end",
+                            headerClassName === "text-center" && "justify-center",
+                          )}
+                        >
                           {flexRender(
                             header.column.columnDef.header,
                             header.getContext(),
@@ -720,7 +731,10 @@ export function DataTable<TData, TValue>({
                     </TableCell>
                   )}
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={cell.column.columnDef.meta?.className}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),

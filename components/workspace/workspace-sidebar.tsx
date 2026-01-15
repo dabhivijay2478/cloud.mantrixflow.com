@@ -3,6 +3,7 @@
 import {
   Building2,
   ChevronsUpDown,
+  CreditCard,
   Database,
   FileText,
   GitBranch,
@@ -57,12 +58,14 @@ function OrganizationSwitcher({
   onOrganizationChange,
   onCreateOrganization,
   canCreateOrganization,
+  currentUserRole,
 }: {
   organizations: Organization[];
   currentOrganization: Organization | null;
   onOrganizationChange: (org: Organization | null) => void;
   onCreateOrganization: () => void;
   canCreateOrganization: boolean;
+  currentUserRole?: "OWNER" | "ADMIN" | "EDITOR" | "VIEWER";
 }) {
   const { isMobile } = useSidebar();
 
@@ -151,6 +154,25 @@ function OrganizationSwitcher({
                 </div>
               </Link>
             </DropdownMenuItem>
+            {/* Billing - Visible to OWNER only (for managing subscription) */}
+            {currentUserRole === "OWNER" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/workspace/billing"
+                    className="gap-2 p-2 flex items-center cursor-pointer"
+                  >
+                    <div className="flex size-6 items-center justify-center ">
+                      <CreditCard className="size-4" />
+                    </div>
+                    <div className="text-muted-foreground font-medium">
+                      Billing
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
@@ -459,6 +481,7 @@ export function WorkspaceSidebar() {
           onOrganizationChange={handleOrganizationChange}
           onCreateOrganization={() => router.push("/organizations/new")}
           canCreateOrganization={canCreateOrganization}
+          currentUserRole={currentUserRole}
         />
       </SidebarFooter>
     </Sidebar>
