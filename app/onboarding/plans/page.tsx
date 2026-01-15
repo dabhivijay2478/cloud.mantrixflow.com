@@ -24,12 +24,24 @@ const PLANS: Array<{
   features: string[];
   popular?: boolean;
   description?: string;
+  pipelines: string;
+  executions: string;
+  seats: string;
+  extraSeatPrice?: string;
+  onDemand: boolean;
+  invites: boolean;
+  comingSoon?: boolean;
 }> = [
   {
     id: "free",
     name: "Free",
     price: 0,
     description: "Best for evaluation & small tests",
+    pipelines: "1",
+    executions: "5 / day",
+    seats: "1 (Owner only)",
+    onDemand: false,
+    invites: false,
     features: [
       "1 organization",
       "1 data source connection",
@@ -44,6 +56,13 @@ const PLANS: Array<{
     name: "Pro",
     price: 29,
     description: "Best for individual developers & small teams",
+    pipelines: "Up to 5",
+    executions: "50 / day",
+    seats: "3 included",
+    extraSeatPrice: "$5 / seat / month",
+    onDemand: true,
+    invites: true,
+    popular: true,
     features: [
       "1 organization",
       "Up to 5 data sources",
@@ -54,13 +73,18 @@ const PLANS: Array<{
       "Activity logs (7 days)",
       "Email support",
     ],
-    popular: true,
   },
   {
     id: "scale",
     name: "Scale",
     price: 99,
     description: "Best for growing teams & production workloads",
+    pipelines: "Unlimited",
+    executions: "500 / day",
+    seats: "10 included",
+    extraSeatPrice: "$4 / seat / month",
+    onDemand: true,
+    invites: true,
     features: [
       "Up to 3 organizations",
       "Unlimited data sources",
@@ -78,6 +102,12 @@ const PLANS: Array<{
     name: "Enterprise",
     price: 299,
     description: "Best for large teams & enterprise workloads",
+    pipelines: "Unlimited",
+    executions: "Custom / Unlimited",
+    seats: "Unlimited or contract-based",
+    onDemand: true,
+    invites: true,
+    comingSoon: true,
     features: [
       "Unlimited organizations",
       "Unlimited pipelines & sources",
@@ -176,7 +206,7 @@ export default function PlansPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {PLANS.map((plan) => {
             const isSelected = selectedPlan === plan.id;
             const isProcessing = createCheckout.isPending && isSelected;
@@ -186,11 +216,20 @@ export default function PlansPage() {
                 key={plan.id}
                 className={`relative ${
                   plan.popular ? "border-primary shadow-lg" : ""
-                } ${isSelected ? "ring-2 ring-primary" : ""}`}
+                } ${isSelected ? "ring-2 ring-primary" : ""} ${
+                  plan.comingSoon ? "opacity-75" : ""
+                }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge className="bg-primary">Popular</Badge>
+                  </div>
+                )}
+                {plan.comingSoon && (
+                  <div className="absolute -top-3 right-4">
+                    <Badge variant="secondary" className="text-xs">
+                      Coming Soon
+                    </Badge>
                   </div>
                 )}
                 <CardHeader>
@@ -219,6 +258,38 @@ export default function PlansPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Plan Limits */}
+                  <div className="grid grid-cols-2 gap-3 text-sm border-b pb-4">
+                    <div>
+                      <p className="text-muted-foreground">Pipelines</p>
+                      <p className="font-semibold">{plan.pipelines}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Executions</p>
+                      <p className="font-semibold">{plan.executions}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Seats</p>
+                      <p className="font-semibold">{plan.seats}</p>
+                      {plan.extraSeatPrice && (
+                        <p className="text-xs text-muted-foreground">
+                          {plan.extraSeatPrice}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">On-Demand</p>
+                      <p className="font-semibold">
+                        {plan.onDemand ? (
+                          <span className="text-green-500">✓</span>
+                        ) : (
+                          <span className="text-muted-foreground">✗</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Features List */}
                   <ul className="space-y-3">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2">
@@ -230,7 +301,7 @@ export default function PlansPage() {
                   <Button
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
-                    disabled={isProcessing}
+                    disabled={isProcessing || plan.comingSoon}
                     onClick={() => handleSelectPlan(plan.id)}
                   >
                     {isProcessing ? (
@@ -238,6 +309,8 @@ export default function PlansPage() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Processing...
                       </>
+                    ) : plan.comingSoon ? (
+                      "Coming Soon"
                     ) : (
                       "Select Plan"
                     )}

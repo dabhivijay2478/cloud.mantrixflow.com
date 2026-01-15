@@ -44,12 +44,24 @@ const PLANS: Array<{
   features: string[];
   popular?: boolean;
   description?: string;
+  pipelines: string;
+  executions: string;
+  seats: string;
+  extraSeatPrice?: string;
+  onDemand: boolean;
+  invites: boolean;
+  comingSoon?: boolean;
 }> = [
   {
     id: "free",
     name: "Free",
     price: 0,
     description: "Best for evaluation & small tests",
+    pipelines: "1",
+    executions: "5 / day",
+    seats: "1 (Owner only)",
+    onDemand: false,
+    invites: false,
     features: [
       "1 organization",
       "1 data source connection",
@@ -65,6 +77,13 @@ const PLANS: Array<{
     name: "Pro",
     price: 29,
     description: "Best for individual developers & small teams",
+    pipelines: "Up to 5",
+    executions: "50 / day",
+    seats: "3 included",
+    extraSeatPrice: "$5 / seat / month",
+    onDemand: true,
+    invites: true,
+    popular: true,
     features: [
       "1 organization",
       "Up to 5 data sources",
@@ -75,13 +94,18 @@ const PLANS: Array<{
       "Activity logs (7 days)",
       "Email support",
     ],
-    popular: true,
   },
   {
     id: "scale",
     name: "Scale",
     price: 99,
     description: "Best for growing teams & production workloads",
+    pipelines: "Unlimited",
+    executions: "500 / day",
+    seats: "10 included",
+    extraSeatPrice: "$4 / seat / month",
+    onDemand: true,
+    invites: true,
     features: [
       "Up to 3 organizations",
       "Unlimited data sources",
@@ -99,6 +123,12 @@ const PLANS: Array<{
     name: "Enterprise",
     price: 299,
     description: "Best for large teams & enterprise workloads",
+    pipelines: "Unlimited",
+    executions: "Custom / Unlimited",
+    seats: "Unlimited or contract-based",
+    onDemand: true,
+    invites: true,
+    comingSoon: true,
     features: [
       "Unlimited organizations",
       "Unlimited pipelines & sources",
@@ -559,7 +589,7 @@ export default function BillingPage() {
             ? "Upgrade or downgrade your plan at any time. Changes take effect immediately."
             : "Select a plan to get started. You can upgrade or downgrade at any time."}
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {PLANS.map((plan) => {
             const isCurrentPlan = subscription?.planId === plan.id;
             const isChanging = changePlan.isPending || createCheckout.isPending;
@@ -577,7 +607,9 @@ export default function BillingPage() {
                     ? "border-primary border-2"
                     : isCurrentPlan
                       ? "border-primary"
-                      : ""
+                      : plan.comingSoon
+                        ? "opacity-75"
+                        : ""
                 }`}
               >
                 {plan.popular && (
@@ -594,7 +626,14 @@ export default function BillingPage() {
                   </div>
                 )}
                 <CardHeader className="pt-6">
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                    {plan.comingSoon && (
+                      <Badge variant="secondary" className="text-xs">
+                        Coming Soon
+                      </Badge>
+                    )}
+                  </div>
                   <CardDescription className="text-base">
                     {plan.description}
                   </CardDescription>
@@ -617,6 +656,38 @@ export default function BillingPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Plan Limits */}
+                  <div className="grid grid-cols-2 gap-3 text-sm border-b pb-4">
+                    <div>
+                      <p className="text-muted-foreground">Pipelines</p>
+                      <p className="font-semibold">{plan.pipelines}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Executions</p>
+                      <p className="font-semibold">{plan.executions}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Seats</p>
+                      <p className="font-semibold">{plan.seats}</p>
+                      {plan.extraSeatPrice && (
+                        <p className="text-xs text-muted-foreground">
+                          {plan.extraSeatPrice}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">On-Demand</p>
+                      <p className="font-semibold">
+                        {plan.onDemand ? (
+                          <span className="text-green-500">✓ Allowed</span>
+                        ) : (
+                          <span className="text-muted-foreground">Not allowed</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Features List */}
                   <ul className="space-y-3">
                     {plan.features.map((feature) => (
                       <li
@@ -632,8 +703,12 @@ export default function BillingPage() {
                     <Button
                       className="w-full"
                       variant="default"
-                      disabled={createCheckout.isPending}
+                      disabled={createCheckout.isPending || plan.comingSoon || plan.id === "free"}
                       onClick={async () => {
+                        if (plan.id === "free") {
+                          // Free plan - skip checkout
+                          return;
+                        }
                         try {
                           // Create checkout session directly from billing page
                           // Return to billing page after payment (user already has org)
@@ -657,6 +732,10 @@ export default function BillingPage() {
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Processing...
                         </>
+                      ) : plan.comingSoon ? (
+                        "Coming Soon"
+                      ) : plan.id === "free" ? (
+                        "Current Plan"
                       ) : (
                         <>
                           <CreditCard className="h-4 w-4 mr-2" />
@@ -674,7 +753,7 @@ export default function BillingPage() {
                             ? "default"
                             : "secondary"
                       }
-                      disabled={isCurrentPlan || isChanging || createCheckout.isPending}
+                      disabled={isCurrentPlan || isChanging || createCheckout.isPending || plan.comingSoon}
                       onClick={() => handlePlanChangeClick(plan.id)}
                     >
                       {isCurrentPlan ? (
@@ -697,6 +776,8 @@ export default function BillingPage() {
                           <ArrowDown className="h-4 w-4 mr-2" />
                           Downgrade to {plan.name}
                         </>
+                      ) : plan.comingSoon ? (
+                        "Coming Soon"
                       ) : (
                         `Select ${plan.name}`
                       )}
