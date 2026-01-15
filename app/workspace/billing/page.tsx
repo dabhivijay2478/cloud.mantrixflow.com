@@ -12,8 +12,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/shared";
+import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,13 @@ export default function BillingPage() {
   const updatePaymentMethod = useUpdatePaymentMethod();
   const searchParams = useSearchParams();
 
+  // State for plan change confirmation modal
+  const [showPlanChangeConfirm, setShowPlanChangeConfirm] = useState(false);
+  const [pendingPlanChange, setPendingPlanChange] = useState<{
+    planId: SubscriptionPlan;
+    comparison: "upgrade" | "downgrade";
+  } | null>(null);
+
   // Show success message if redirected from payment
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
@@ -171,20 +179,51 @@ export default function BillingPage() {
     }
   };
 
-  const handleChangePlan = async (planId: SubscriptionPlan) => {
-    if (subscription?.planId === planId) {
+  const handlePlanChangeClick = (planId: SubscriptionPlan) => {
+    if (!subscription || subscription.planId === planId) {
       return;
     }
 
-    try {
-      // Change plan directly via API - no checkout needed!
-      const result = await changePlan.mutateAsync({
-        planId,
-      });
+    // Determine if this is an upgrade or downgrade
+    const comparison = getPlanComparison(subscription.planId, planId);
+    
+    if (comparison === "same") {
+      return;
+    }
 
-      // Show success message
-      if (result?.success) {
-        toast.success("Plan changed successfully!", result.message);
+    // Store the pending plan change and show confirmation modal
+    setPendingPlanChange({ planId, comparison });
+    setShowPlanChangeConfirm(true);
+  };
+
+  const handleConfirmPlanChange = async () => {
+    if (!pendingPlanChange || !subscription) {
+      return;
+    }
+
+    const { planId, comparison } = pendingPlanChange;
+
+    try {
+      if (comparison === "upgrade") {
+        // For upgrades: create checkout session (payment required)
+        await createCheckout.mutateAsync({
+          planId,
+          returnUrl: `${window.location.origin}/workspace/billing?payment=success&planChanged=true`,
+        });
+        // Checkout will redirect, so we don't need to close modal here
+      } else {
+        // For downgrades: use changePlan API directly (database sync, no payment)
+        const result = await changePlan.mutateAsync({
+          planId,
+        });
+
+        // Close modal and show success message
+        setShowPlanChangeConfirm(false);
+        setPendingPlanChange(null);
+
+        if (result?.success) {
+          toast.success("Plan changed successfully!", result.message);
+        }
       }
     } catch (error) {
       console.error("Failed to change plan:", error);
@@ -192,6 +231,9 @@ export default function BillingPage() {
         "Failed to change plan",
         error instanceof Error ? error.message : "Please try again",
       );
+      // Close modal on error
+      setShowPlanChangeConfirm(false);
+      setPendingPlanChange(null);
     }
   };
 
@@ -494,7 +536,7 @@ export default function BillingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => {
             const isCurrentPlan = subscription?.planId === plan.id;
-            const isChanging = changePlan.isPending;
+            const isChanging = changePlan.isPending || createCheckout.isPending;
             const comparison = subscription
               ? getPlanComparison(subscription.planId, plan.id)
               : "same";
@@ -593,8 +635,8 @@ export default function BillingPage() {
                             ? "default"
                             : "secondary"
                       }
-                      disabled={isCurrentPlan || isChanging}
-                      onClick={() => handleChangePlan(plan.id)}
+                      disabled={isCurrentPlan || isChanging || createCheckout.isPending}
+                      onClick={() => handlePlanChangeClick(plan.id)}
                     >
                       {isCurrentPlan ? (
                         <>
@@ -629,7 +671,7 @@ export default function BillingPage() {
       </div>
 
       {/* Change Plan Info */}
-      {changePlan.isPending && (
+      {(changePlan.isPending || createCheckout.isPending) && (
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertTitle>Processing Plan Change</AlertTitle>
@@ -638,6 +680,39 @@ export default function BillingPage() {
             moments.
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Plan Change Confirmation Modal */}
+      {pendingPlanChange && (
+        <ConfirmationModal
+          open={showPlanChangeConfirm}
+          onOpenChange={(open) => {
+            setShowPlanChangeConfirm(open);
+            if (!open) {
+              setPendingPlanChange(null);
+            }
+          }}
+          action="update"
+          title={
+            pendingPlanChange.comparison === "upgrade"
+              ? `Upgrade to ${PLANS.find((p) => p.id === pendingPlanChange.planId)?.name || pendingPlanChange.planId} Plan`
+              : `Downgrade to ${PLANS.find((p) => p.id === pendingPlanChange.planId)?.name || pendingPlanChange.planId} Plan`
+          }
+          description={
+            pendingPlanChange.comparison === "upgrade"
+              ? `You will be redirected to checkout to complete your upgrade. The new plan will be charged immediately, and you'll receive a prorated credit for the remaining time on your current plan.`
+              : `Your plan will be downgraded immediately. You'll receive a prorated credit for the remaining time on your current plan, which will be applied to future billing cycles.`
+          }
+          confirmLabel={
+            pendingPlanChange.comparison === "upgrade"
+              ? "Continue to Checkout"
+              : "Confirm Downgrade"
+          }
+          cancelLabel="Cancel"
+          confirmVariant="default"
+          isLoading={changePlan.isPending || createCheckout.isPending}
+          onConfirm={handleConfirmPlanChange}
+        />
       )}
     </div>
   );
