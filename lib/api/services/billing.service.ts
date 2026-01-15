@@ -10,11 +10,7 @@ import type {
   ChangePlanResponse,
   CreateCheckoutRequest,
   CreateCheckoutResponse,
-  CreateOnDemandSubscriptionRequest,
-  CreateOnDemandSubscriptionResponse,
   Subscription,
-  UpdatePaymentMethodRequest,
-  UpdatePaymentMethodResponse,
 } from "../types/billing";
 
 export class BillingService {
@@ -111,22 +107,6 @@ export class BillingService {
     );
   }
 
-  /**
-   * Update payment method for subscription
-   * Returns URL to redirect user to payment method update page
-   */
-  static async updatePaymentMethod(
-    request?: UpdatePaymentMethodRequest,
-    options?: { token?: string | null },
-  ): Promise<UpdatePaymentMethodResponse> {
-    return ApiClient.post<UpdatePaymentMethodResponse>(
-      `${BillingService.BASE_PATH}/update-payment-method`,
-      request || {},
-      {
-        token: options?.token,
-      },
-    );
-  }
 
   /**
    * Get customer portal URL for managing subscriptions and invoices
@@ -142,68 +122,4 @@ export class BillingService {
     );
   }
 
-  /**
-   * Get seat count for organization
-   */
-  static async getSeatCount(
-    organizationId: string,
-    options?: { token?: string | null },
-  ): Promise<{ seatCount: number; includedSeats: number; extraSeats: number }> {
-    return ApiClient.get<{ seatCount: number; includedSeats: number; extraSeats: number }>(
-      `${BillingService.BASE_PATH}/seats/${organizationId}`,
-      {
-        token: options?.token,
-      },
-    );
-  }
-
-  /**
-   * Manage seats for subscription
-   */
-  static async manageSeats(
-    organizationId: string,
-    request: { seatCount: number },
-    options?: { token?: string | null },
-  ): Promise<{ success: boolean; message: string; newSeatCount: number }> {
-    return ApiClient.post<{ success: boolean; message: string; newSeatCount: number }>(
-      `${BillingService.BASE_PATH}/seats/${organizationId}`,
-      request,
-      {
-        token: options?.token,
-      },
-    );
-  }
-
-  /**
-   * Create on-demand subscription (mandate) for execution overages
-   * This authorizes a payment method for variable charges later
-   */
-  static async createOnDemandSubscription(
-    request: CreateOnDemandSubscriptionRequest,
-    options?: { token?: string | null },
-  ): Promise<CreateOnDemandSubscriptionResponse> {
-    return ApiClient.post<CreateOnDemandSubscriptionResponse>(
-      `${BillingService.BASE_PATH}/on-demand-subscription`,
-      request,
-      {
-        token: options?.token,
-      },
-    );
-  }
-
-  /**
-   * Create on-demand charge for execution overages
-   */
-  static async createOnDemandCharge(
-    request: { productPrice: number; productDescription?: string; productCurrency?: string },
-    options?: { token?: string | null },
-  ): Promise<{ success: boolean; paymentId: string; message: string }> {
-    return ApiClient.post<{ success: boolean; paymentId: string; message: string }>(
-      `${BillingService.BASE_PATH}/on-demand-charge`,
-      request,
-      {
-        token: options?.token,
-      },
-    );
-  }
 }

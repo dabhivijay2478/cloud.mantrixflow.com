@@ -128,9 +128,22 @@ export default function ManageSubscriptionPage() {
     comparison: "upgrade" | "downgrade";
   } | null>(null);
 
-  const handlePlanChangeClick = (planId: SubscriptionPlan) => {
-    if (!subscription) return;
+  const handlePlanSelectClick = (planId: SubscriptionPlan) => {
+    // If no subscription, directly create checkout for any plan (except free)
+    if (!subscription) {
+      if (planId === "free") {
+        toast.info("You're already on the free plan");
+        return;
+      }
+      // Create checkout session for new subscription
+      createCheckout.mutate({
+        planId,
+        returnUrl: `${window.location.origin}/workspace/billing?payment=success&from=manage`,
+      });
+      return;
+    }
 
+    // If subscription exists, handle plan change
     const comparison = getPlanComparison(subscription.planId, planId);
     if (comparison === "same") return;
 
@@ -139,7 +152,16 @@ export default function ManageSubscriptionPage() {
   };
 
   const handleConfirmPlanChange = async () => {
-    if (!pendingPlanChange || !subscription) return;
+    if (!pendingPlanChange) return;
+
+    // If no subscription, this shouldn't happen, but handle it
+    if (!subscription) {
+      await createCheckout.mutateAsync({
+        planId: pendingPlanChange.planId,
+        returnUrl: `${window.location.origin}/workspace/billing?payment=success&from=manage`,
+      });
+      return;
+    }
 
     try {
       if (pendingPlanChange.comparison === "upgrade") {
@@ -173,40 +195,28 @@ export default function ManageSubscriptionPage() {
     );
   }
 
-  if (!subscription) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Manage Subscription"
-          description="Select a plan to get started"
-        />
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            No active subscription found
-          </p>
-          <Button asChild>
-            <Link href="/workspace/billing">Go to Billing</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Change Plan"
-        description="Upgrade or downgrade your plan at any time. Changes take effect immediately."
+        title={subscription ? "Change Plan" : "Manage Subscription"}
+        description={
+          subscription
+            ? "Upgrade or downgrade your plan at any time. Changes take effect immediately."
+            : "Select a plan to get started"
+        }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {PLANS.map((plan) => {
-          const isCurrentPlan = subscription.planId === plan.id;
+          const isCurrentPlan = subscription?.planId === plan.id;
           const isChanging = changePlan.isPending || createCheckout.isPending;
-          const comparison = getPlanComparison(subscription.planId, plan.id);
+          const comparison = subscription
+            ? getPlanComparison(subscription.planId, plan.id)
+            : null;
           const isUpgrade = comparison === "upgrade";
           const isDowngrade = comparison === "downgrade";
           const isFree = plan.id === "free";
+          const isNewSubscription = !subscription && !isFree;
 
           return (
             <Card
@@ -226,6 +236,13 @@ export default function ManageSubscriptionPage() {
                 <div className="absolute -top-2 right-3">
                   <Badge variant="secondary" className="text-xs">
                     Coming Soon
+                  </Badge>
+                </div>
+              )}
+              {!subscription && plan.popular && (
+                <div className="absolute -top-2 left-3">
+                  <Badge className="bg-blue-500 text-white text-xs">
+                    Popular
                   </Badge>
                 </div>
               )}
@@ -265,11 +282,15 @@ export default function ManageSubscriptionPage() {
                     isChanging ||
                     createCheckout.isPending ||
                     plan.comingSoon ||
-                    isFree
+                    (subscription && isFree)
                   }
                   onClick={() => {
-                    if (!isFree && (isUpgrade || isDowngrade)) {
-                      handlePlanChangeClick(plan.id);
+                    if (isNewSubscription) {
+                      // New subscription - create checkout
+                      handlePlanSelectClick(plan.id);
+                    } else if (subscription && !isFree && (isUpgrade || isDowngrade)) {
+                      // Existing subscription - change plan
+                      handlePlanSelectClick(plan.id);
                     }
                   }}
                 >
@@ -283,7 +304,12 @@ export default function ManageSubscriptionPage() {
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Processing...
                     </>
-                  ) : isFree ? (
+                  ) : isNewSubscription ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Subscribe to {plan.name}
+                    </>
+                  ) : subscription && isFree ? (
                     "Not Available"
                   ) : isUpgrade ? (
                     <>
