@@ -30,7 +30,29 @@ export { dataPipelinesKeys } from "./hooks/use-data-pipelines";
 export * from "./hooks/use-data-source";
 export { dataSourceKeys } from "./hooks/use-data-source";
 // Hooks - Data Sources (legacy postgres connections)
-export * from "./hooks/use-data-sources";
+export {
+  useTestConnection as useTestConnectionLegacy,
+  useCreateConnection,
+  useConnections,
+  useConnection as useConnectionLegacy,
+  useUpdateConnection,
+  useDeleteConnection,
+  useDatabases,
+  useTables,
+  useTableSchema,
+  useSchemas,
+  useSchemasWithTables,
+  useExecuteQuery,
+  useExplainQuery,
+  useCreateSyncJob,
+  useSyncJobs,
+  useSyncJob,
+  useCancelSyncJob,
+  useUpdateSyncJobSchedule,
+  useConnectionHealth,
+  useQueryLogs,
+  useConnectionMetrics,
+} from "./hooks/use-data-sources";
 export { dataSourcesKeys } from "./hooks/use-data-sources";
 // Hooks - Destination Schemas
 export * from "./hooks/use-destination-schemas";

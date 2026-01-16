@@ -242,9 +242,9 @@ export function WorkspaceSidebar() {
         name: apiOrg.name,
         slug: apiOrg.slug,
         createdAt:
-          typeof apiOrg.createdAt === "string"
-            ? apiOrg.createdAt
-            : apiOrg.createdAt.toISOString(),
+          apiOrg.createdAt ||
+          apiOrg.created_at ||
+          new Date().toISOString(),
       }));
 
       // Set all organizations at once
@@ -264,9 +264,9 @@ export function WorkspaceSidebar() {
             name: apiCurrentOrg.name,
             slug: apiCurrentOrg.slug,
             createdAt:
-              typeof apiCurrentOrg.createdAt === "string"
-                ? apiCurrentOrg.createdAt
-                : apiCurrentOrg.createdAt.toISOString(),
+            apiCurrentOrg.createdAt ||
+            apiCurrentOrg.created_at ||
+            new Date().toISOString(),
           });
         } else if (orgsData.length > 0) {
           // Set first organization as current if no current org from API
@@ -290,9 +290,9 @@ export function WorkspaceSidebar() {
         name: apiCurrentOrg.name,
         slug: apiCurrentOrg.slug,
         createdAt:
-          typeof apiCurrentOrg.createdAt === "string"
-            ? apiCurrentOrg.createdAt
-            : apiCurrentOrg.createdAt.toISOString(),
+          apiCurrentOrg.createdAt ||
+          apiCurrentOrg.created_at ||
+          new Date().toISOString(),
       };
 
       // Update current org if it's different (using store state to avoid loop)
@@ -310,9 +310,9 @@ export function WorkspaceSidebar() {
           name: firstOrg.name,
           slug: firstOrg.slug,
           createdAt:
-            typeof firstOrg.createdAt === "string"
-              ? firstOrg.createdAt
-              : firstOrg.createdAt.toISOString(),
+            firstOrg.createdAt ||
+            firstOrg.created_at ||
+            new Date().toISOString(),
         });
       }
     }

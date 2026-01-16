@@ -42,7 +42,7 @@ import type { OrganizationMember } from "@/lib/api/types/organizations";
 import { roleConfig, type TeamMemberRole } from "@/lib/constants/roles";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
-import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
+import { showErrorToast, showSuccessToast, toast } from "@/lib/utils/toast";
 
 interface TeamMember {
   id: string;
@@ -202,9 +202,8 @@ export default function TeamPage() {
         await transferOwnership.mutateAsync({
           newOwnerId: member.user_id,
         });
-        showSuccessToast(
-          "transferred",
-          "Organization Ownership",
+        toast.success(
+          "Ownership transferred",
           `Ownership has been transferred to ${memberToTransfer.memberEmail}`,
         );
         setMemberToTransfer(null);
