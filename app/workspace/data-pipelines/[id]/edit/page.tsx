@@ -50,8 +50,23 @@ export default function EditPipelinePage() {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
   const pipelineId = params.id as string;
-  const { data: pipeline, isLoading, error } = usePipeline(pipelineId, orgId);
-  const updatePipelineMutation = useUpdatePipeline();
+  const { data: pipeline, isLoading, error } = usePipeline(orgId, pipelineId);
+  const updatePipelineMutation = useUpdatePipeline(orgId, pipelineId);
+
+  if (!orgId) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p className="text-muted-foreground">No organization selected</p>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/workspace/data-pipelines")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Pipelines
+        </Button>
+      </div>
+    );
+  }
 
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
@@ -107,164 +122,76 @@ export default function EditPipelinePage() {
             }
           });
 
+          // Find emitters that belong to this collector
           const collectorEmitters = emitters.filter((e) =>
             collectorEmitterIds.has(e.id),
           );
-
           if (collectorEmitters.length > 0) {
             collectorEmittersMap.set(c.id, collectorEmitters);
           }
         }
       });
 
-      // Also check if there are emitters without collector association (fallback)
-      // In this case, associate them with the first collector
-      if (collectors.length > 0 && emitters.length > 0) {
-        const allMappedEmitterIds = new Set(
-          Array.from(collectorEmittersMap.values())
-            .flat()
-            .map((e) => e.id),
-        );
-        const unmappedEmitters = emitters.filter(
-          (e) => !allMappedEmitterIds.has(e.id),
-        );
-        if (
-          unmappedEmitters.length > 0 &&
-          !collectorEmittersMap.has(collectors[0].id)
-        ) {
-          collectorEmittersMap.set(collectors[0].id, unmappedEmitters);
-        }
-      }
-
-      const finalConfig = {
-        collectors: collectors.map((c) => {
-          const collectorEmitters = collectorEmittersMap.get(c.id) || [];
-
-          return {
-            id: c.id,
-            sourceId: c.sourceId,
-            selectedTables: c.selectedTables || [],
-            emitters: collectorEmitters.map((e) => ({
-              id: e.id,
-              transformId: e.transformId || "",
-              destinationId: e.destinationId,
-              destinationName: e.destinationName,
-              destinationType: e.destinationType,
-              connectionConfig: e.connectionConfig || {},
-            })),
-            transformers: (c.transformers || []).map((t) => ({
-              id: t.id,
-              name: t.name,
-              collectorId: t.collectorId || c.id,
-              emitterId: t.emitterId || "",
-              destinationTable:
-                (t as { destinationTable?: string }).destinationTable || "",
-              primaryKeyField:
-                (t as { primaryKeyField?: string }).primaryKeyField || "",
-              fieldMappings: Array.isArray(t.fieldMappings)
-                ? t.fieldMappings.map((fm): FieldMapping => {
-                    if (
-                      typeof fm === "object" &&
-                      fm !== null &&
-                      "source" in fm &&
-                      "destination" in fm
-                    ) {
-                      return {
-                        source: String(fm.source),
-                        destination: String(fm.destination),
-                        isPrimaryKey:
-                          "isPrimaryKey" in fm
-                            ? Boolean(fm.isPrimaryKey)
-                            : false,
-                      };
-                    }
-                    if (typeof fm === "string") {
-                      return {
-                        source: fm,
-                        destination: fm,
-                        isPrimaryKey: false,
-                      };
-                    }
-                    return {
-                      source: String(
-                        (fm as { source?: unknown })?.source || "",
-                      ),
-                      destination: String(
-                        (fm as { destination?: unknown })?.destination || "",
-                      ),
-                      isPrimaryKey: false,
-                    };
-                  })
-                : t.fieldMappings &&
-                    typeof t.fieldMappings === "object" &&
-                    !Array.isArray(t.fieldMappings)
-                  ? Object.entries(t.fieldMappings).map(
-                      ([source, destination]): FieldMapping => ({
-                        source: String(source),
-                        destination: String(destination),
-                        isPrimaryKey: false,
-                      }),
-                    )
-                  : [],
-            })),
-          };
-        }) as CollectorConfig[],
-      };
-
-      console.log("Config set for edit:", {
-        collectorsCount: finalConfig.collectors.length,
-        configCollectors: finalConfig.collectors.map((c) => ({
-          id: c.id,
-          sourceId: c.sourceId,
-          selectedTables: c.selectedTables,
-          emittersCount: c.emitters?.length || 0,
-          emitters:
-            c.emitters?.map((e) => ({
-              id: e.id,
-              destinationId: e.destinationId,
-              destinationName: e.destinationName,
-            })) || [],
-          transformersCount: c.transformers?.length || 0,
-          transformers:
-            c.transformers?.map((t) => ({
-              id: t.id,
-              name: t.name,
-              emitterId: t.emitterId,
-              fieldMappingsCount: t.fieldMappings?.length || 0,
-            })) || [],
+      // Build the config with emitters attached to collectors
+      const configWithEmitters: CollectorConfig[] = collectors.map((c) => ({
+        id: c.id,
+        sourceId: c.sourceId,
+        selectedTables: c.selectedTables || [],
+        emitters: collectorEmittersMap.get(c.id) || [],
+        transformers: (c.transformers || []).map((t) => ({
+          id: t.id,
+          name: t.name,
+          collectorId: t.collectorId || c.id,
+          emitterId: t.emitterId || "",
+          fieldMappings: Array.isArray(t.fieldMappings)
+            ? t.fieldMappings
+            : typeof t.fieldMappings === "object" && t.fieldMappings !== null
+              ? Object.entries(t.fieldMappings).map(([source, destination]) => ({
+                  source,
+                  destination: String(destination),
+                }))
+              : [],
         })),
-      });
+      }));
 
-      setConfig(finalConfig);
+      setConfig({ collectors: configWithEmitters });
     }
   }, [pipeline]);
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading pipeline...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (error || !pipeline) {
+  if (error) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Pipeline not found</h2>
-          <p className="text-muted-foreground mb-4">
-            {error
-              ? "Failed to load pipeline"
-              : "The pipeline you're looking for doesn't exist."}
-          </p>
-          <Button onClick={() => router.push("/workspace/data-pipelines")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Pipelines
-          </Button>
-        </div>
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p className="text-destructive">Failed to load pipeline</p>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/workspace/data-pipelines")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Pipelines
+        </Button>
+      </div>
+    );
+  }
+
+  if (!pipeline) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p className="text-muted-foreground">Pipeline not found</p>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/workspace/data-pipelines")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Pipelines
+        </Button>
       </div>
     );
   }
@@ -285,70 +212,22 @@ export default function EditPipelinePage() {
     setCurrentStep("transform");
   };
 
-  const handleTransformComplete = (collectors: CollectorConfig[]) => {
+  const handleTransformComplete = async (collectors: CollectorConfig[]) => {
     setConfig((prev) => ({
       ...prev,
       collectors,
     }));
-    handleSavePipeline();
-  };
-
-  const handleSavePipeline = async () => {
-    if (!pipeline) return;
 
     try {
-      // Extract emitters from collectors
-      const allEmitters = config.collectors.flatMap((c) =>
-        (c.emitters || []).map((e) => ({
-          ...e,
-          collectorId: c.id,
-        })),
-      );
-
-      const _allDestinationIds = [
-        ...new Set(allEmitters.map((e) => e.destinationId)),
-      ];
-
-      // Get transformers with emitters
-      const transformersWithEmitters = config.collectors.flatMap((c) =>
-        (c.transformers || []).map((t) => ({
-          ...t,
-          collectorId: t.collectorId || c.id,
-          emitterId: t.emitterId || "",
-        })),
-      );
-
-      // Map emitters to the format expected by the API
-      const emitters = allEmitters.map((e) => {
-        const transformer = transformersWithEmitters.find(
-          (t) => t.emitterId === e.id,
-        );
-        return {
-          id: e.id,
-          transformId: transformer?.id || "",
-          destinationId: e.destinationId,
-          destinationName: e.destinationName,
-          destinationType: e.destinationType,
-        };
-      });
-
+      // TODO: The new API requires updating schemas separately
+      // This edit page needs to be refactored to work with the new schema-based approach
+      // For now, we'll just update basic fields
       await updatePipelineMutation.mutateAsync({
-        id: pipeline.id,
-        data: {
-          collectors: config.collectors.map((c) => ({
-            id: c.id,
-            sourceId: c.sourceId,
-            selectedTables: c.selectedTables,
-            transformers: c.transformers?.map((t) => ({
-              id: t.id,
-              name: t.name,
-              collectorId: t.collectorId || c.id,
-              emitterId: t.emitterId || "",
-              fieldMappings: t.fieldMappings || [],
-            })),
-          })),
-          emitters: emitters,
-        },
+        name: pipeline.name,
+        description: pipeline.description || undefined,
+        // Note: The new API structure uses sourceSchemaId and destinationSchemaId
+        // This edit page needs to be refactored to work with the new schema-based approach
+        // For now, we'll just update basic fields
       });
 
       toast.success(
@@ -389,70 +268,52 @@ export default function EditPipelinePage() {
   const getMigrationStateBadge = () => {
     if (!pipeline) return null;
 
-    const migrationState = pipeline.migrationState || "pending";
-
-    switch (migrationState) {
-      case "running":
-        return (
-          <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 animate-pulse">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
-              Running
-            </div>
-          </Badge>
-        );
-      case "listing":
-        return (
-          <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:text-purple-400" />
-              Listing
-            </div>
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:text-green-400" />
-              Completed
-            </div>
-          </Badge>
-        );
-      case "error":
-        return (
-          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:text-red-400" />
-              Error
-            </div>
-          </Badge>
-        );
-      case "pending":
-        if (pipeline.status === "paused") {
-          return (
-            <Badge
-              variant="outline"
-              className="text-muted-foreground border-amber-300 dark:border-amber-700"
-            >
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Paused
-              </div>
-            </Badge>
-          );
-        }
-        return (
-          <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:text-amber-400" />
-              Pending
-            </div>
-          </Badge>
-        );
-      default:
-        return null;
+    // Migration state is no longer part of the new schema
+    // Use status and lastRunStatus instead
+    if (pipeline.status === "paused") {
+      return (
+        <Badge
+          variant="outline"
+          className="text-muted-foreground border-amber-300 dark:border-amber-700"
+        >
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            Paused
+          </div>
+        </Badge>
+      );
     }
+
+    if (pipeline.status === "error") {
+      return (
+        <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
+            Error
+          </div>
+        </Badge>
+      );
+    }
+
+    if (pipeline.lastRunStatus === "success") {
+      return (
+        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400" />
+            Active
+          </div>
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
+        <div className="flex items-center gap-1.5">
+          <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:text-amber-400" />
+          {pipeline.status === "active" ? "Active" : "Pending"}
+        </div>
+      </Badge>
+    );
   };
 
   return (

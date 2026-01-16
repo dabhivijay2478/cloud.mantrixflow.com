@@ -45,11 +45,8 @@ export default function DataPipelinesPage() {
   const router = useRouter();
 
   // Get all unique user IDs from pipelines for fetching user names
-  // Use created_by if available, fallback to userId for backward compatibility
   const userIds =
-    pipelines
-      ?.map((pipeline) => pipeline.created_by || pipeline.userId)
-      .filter(Boolean) || [];
+    pipelines?.map((pipeline) => pipeline.createdBy).filter(Boolean) || [];
   const { usersMap } = useUsers(userIds);
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -82,8 +79,6 @@ export default function DataPipelinesPage() {
   };
 
   const getStatusBadge = (pipeline: Pipeline) => {
-    // Priority order: paused status > migrationState > lastRunStatus > status
-
     // Check if pipeline is paused first (highest priority)
     if (pipeline.status === "paused") {
       return (
@@ -99,66 +94,24 @@ export default function DataPipelinesPage() {
       );
     }
 
-    // Get migration state (default to pending if not set)
-    const migrationState = pipeline.migrationState || "pending";
-
-    // Migration state badges (second priority)
-    switch (migrationState) {
-      case "running":
-        return (
-          <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 animate-pulse">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
-              Running
-            </div>
-          </Badge>
-        );
-      case "listing":
-        return (
-          <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:bg-purple-400" />
-              Listing
-            </div>
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400" />
-              Completed
-            </div>
-          </Badge>
-        );
-      case "error":
-        return (
-          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
-              Error
-            </div>
-          </Badge>
-        );
-      case "pending":
-        // Show pending state (paused status is already handled at the top of the function)
-        return (
-          <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
-              Pending
-            </div>
-          </Badge>
-        );
+    // Check lastRunStatus
+    if (pipeline.lastRunStatus === "success") {
+      return (
+        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400" />
+            Success
+          </div>
+        </Badge>
+      );
     }
 
-    // Fallback to lastRunStatus if migrationState is not set
-    if (pipeline.lastRunStatus === "running") {
+    if (pipeline.lastRunStatus === "failed") {
       return (
-        <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 animate-pulse">
+        <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
           <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
-            Running
+            <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
+            Failed
           </div>
         </Badge>
       );
@@ -368,62 +321,25 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
     },
     {
-      accessorKey: "sourceType",
-      header: "Type",
-      cell: ({ row }) => {
-        // Map source type to pipeline type for display
-        const sourceType = row.original.sourceType;
-        const typeInfo = getPipelineTypeInfo("bulk"); // Default to bulk for now
-        const Icon = typeInfo.icon;
-        return (
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-8 w-8 rounded-lg ${typeInfo.bgColor} flex items-center justify-center`}
-            >
-              <Icon className={`h-4 w-4 ${typeInfo.color}`} />
-            </div>
-            <span className="text-sm capitalize">{sourceType}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "sourceDataSourceId",
+      accessorKey: "sourceSchema",
       header: "Source",
       cell: ({ row }) => {
         const pipeline = row.original;
-        // Try new field first (sourceDataSourceId)
-        let sourceDataSourceId =
-          (pipeline as { sourceDataSourceId?: string }).sourceDataSourceId ||
-          // Fallback to legacy field (sourceConnectionId)
-          (pipeline as { sourceConnectionId?: string }).sourceConnectionId;
+        const sourceSchema = pipeline.sourceSchema;
 
-        // If not found, try to get from source_schema
-        if (!sourceDataSourceId && pipeline.source_schema) {
-          const sourceSchema = pipeline.source_schema as {
-            data_source_id?: string;
-            data_source?: { name?: string; id?: string };
-          };
-          sourceDataSourceId = sourceSchema.data_source_id;
-          if (sourceSchema.data_source) {
-            return (
-              <div className="text-sm text-muted-foreground">
-                {sourceSchema.data_source.name ||
-                  sourceDataSourceId ||
-                  "Unknown source"}
-              </div>
-            );
-          }
+        if (sourceSchema) {
+          return (
+            <div className="text-sm text-muted-foreground">
+              {sourceSchema.name ||
+                (sourceSchema.sourceTable
+                  ? `${sourceSchema.sourceSchema || "public"}.${sourceSchema.sourceTable}`
+                  : "Unknown source")}
+            </div>
+          );
         }
 
-        // Try legacy connections list
-        const source = connections?.find(
-          (conn) => conn.id === sourceDataSourceId,
-        );
         return (
-          <div className="text-sm text-muted-foreground">
-            {source?.name || sourceDataSourceId || "Unknown source"}
-          </div>
+          <div className="text-sm text-muted-foreground">Unknown source</div>
         );
       },
     },
@@ -433,41 +349,24 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => getStatusBadge(row.original),
     },
     {
-      accessorKey: "destinationDataSourceId",
+      accessorKey: "destinationSchema",
       header: "Destination",
       cell: ({ row }) => {
         const pipeline = row.original;
-        // Try new field first (destinationDataSourceId)
-        let destDataSourceId =
-          (pipeline as { destinationDataSourceId?: string })
-            .destinationDataSourceId ||
-          // Fallback to legacy field (destinationConnectionId)
-          (pipeline as { destinationConnectionId?: string })
-            .destinationConnectionId;
+        const destinationSchema = pipeline.destinationSchema;
 
-        // If not found, try to get from destination_schema
-        if (!destDataSourceId && pipeline.destination_schema) {
-          const destSchema = pipeline.destination_schema as {
-            data_source_id?: string;
-            data_source?: { name?: string; id?: string };
-          };
-          destDataSourceId = destSchema.data_source_id;
-          if (destSchema.data_source) {
-            return (
-              <div className="text-sm text-muted-foreground">
-                {destSchema.data_source.name ||
-                  destDataSourceId ||
-                  "Unknown destination"}
-              </div>
-            );
-          }
+        if (destinationSchema) {
+          return (
+            <div className="text-sm text-muted-foreground">
+              {destinationSchema.name ||
+                `${destinationSchema.destinationSchema || "public"}.${destinationSchema.destinationTable}`}
+            </div>
+          );
         }
 
-        // Try legacy connections list
-        const dest = connections?.find((conn) => conn.id === destDataSourceId);
         return (
           <div className="text-sm text-muted-foreground">
-            {dest?.name || destDataSourceId || "Unknown destination"}
+            Unknown destination
           </div>
         );
       },
@@ -486,8 +385,7 @@ export default function DataPipelinesPage() {
       header: "Created By",
       cell: ({ row }) => {
         const pipeline = row.original;
-        // Use created_by if available, fallback to userId for backward compatibility
-        const creatorId = pipeline.created_by || pipeline.userId;
+        const creatorId = pipeline.createdBy;
         if (!creatorId) {
           return <span className="text-muted-foreground text-sm">-</span>;
         }
@@ -507,46 +405,16 @@ export default function DataPipelinesPage() {
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const pipeline = row.original;
-        const migrationState = pipeline.migrationState || "pending";
-        const isRunning =
-          migrationState === "running" ||
-          migrationState === "listing" ||
-          pipeline.lastRunStatus === "running";
         const isPaused = pipeline.status === "paused";
-        // Only show pause button when running/listing AND not paused
-        const canPause =
-          (migrationState === "running" || migrationState === "listing") &&
-          !isPaused;
 
-        // Get button text based on actual migration state (matching status badge logic)
+        // Get button text based on status
         const getButtonText = () => {
-          if (migrationState === "running") return "Running...";
-          if (migrationState === "listing") return "Listing...";
-          if (pipeline.lastRunStatus === "running") return "Running...";
           if (isPaused) return "Run"; // Allow running even when paused (will resume)
-          if (migrationState === "pending") return "Run";
-          if (migrationState === "completed") return "Run";
-          if (migrationState === "error") return "Run";
           return "Run";
         };
 
         return (
           <div className="flex items-center justify-end gap-2">
-            {canPause && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePausePipeline(pipeline.id, pipeline.name);
-                }}
-                disabled={pausePipelineMutation.isPending}
-                title="Pause pipeline execution"
-              >
-                <Pause className="h-4 w-4 mr-2" />
-                Pause
-              </Button>
-            )}
             {isPaused ? (
               <Button
                 variant="default"
@@ -569,13 +437,11 @@ export default function DataPipelinesPage() {
                   e.stopPropagation();
                   handleRunPipeline(pipeline.id, pipeline.name);
                 }}
-                disabled={runPipelineMutation.isPending || isRunning}
+                disabled={runPipelineMutation.isPending}
                 title={
                   runPipelineMutation.isPending
                     ? "Pipeline execution in progress..."
-                    : isRunning
-                      ? "Pipeline is currently running. Please wait for it to complete."
-                      : "Run pipeline"
+                    : "Run pipeline"
                 }
               >
                 <Zap className="h-4 w-4 mr-2" />
@@ -632,10 +498,9 @@ export default function DataPipelinesPage() {
         filterPlaceholder="Filter pipelines ..."
         defaultVisibleColumns={[
           "name",
-          "sourceType",
-          "sourceDataSourceId",
+          "sourceSchema",
           "status",
-          "destinationDataSourceId",
+          "destinationSchema",
           "createdAt",
           "actions",
         ]}

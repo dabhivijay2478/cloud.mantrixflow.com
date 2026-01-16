@@ -260,7 +260,7 @@ export function CollectorStep({
   ];
 
   // Show loading or no org message
-  if (!orgId) {
+  if (!organizationId) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">

@@ -5,7 +5,6 @@
 
 import { ApiClient } from "../client";
 import type {
-  AutoMapResponse,
   CreatePipelineDto,
   DryRunResult,
   Pipeline,
@@ -108,15 +107,6 @@ export class DataPipelinesService {
   ): Promise<ValidationResult> {
     return ApiClient.post<ValidationResult>(
       `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/validate`,
-    );
-  }
-
-  static async autoMapColumns(
-    organizationId: string,
-    pipelineId: string,
-  ): Promise<AutoMapResponse> {
-    return ApiClient.post<AutoMapResponse>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/auto-map`,
     );
   }
 

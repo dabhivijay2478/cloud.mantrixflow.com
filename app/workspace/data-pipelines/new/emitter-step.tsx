@@ -393,7 +393,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
           {selectedCollectorId && (
             <div className="space-y-2">
               <Label>Destination</Label>
-              {!orgId ? (
+              {!organizationId ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   No organization selected. Please select an organization from
                   the sidebar.

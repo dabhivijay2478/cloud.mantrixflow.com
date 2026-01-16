@@ -26,6 +26,12 @@ export { dashboardKeys } from "./hooks/use-dashboard";
 // Hooks - Data Pipelines
 export * from "./hooks/use-data-pipelines";
 export { dataPipelinesKeys } from "./hooks/use-data-pipelines";
+// Hooks - Source Schemas
+export * from "./hooks/use-source-schemas";
+export { sourceSchemasKeys } from "./hooks/use-source-schemas";
+// Hooks - Destination Schemas
+export * from "./hooks/use-destination-schemas";
+export { destinationSchemasKeys } from "./hooks/use-destination-schemas";
 // Hooks - Data Source (new dynamic data sources)
 export * from "./hooks/use-data-source";
 export { dataSourceKeys } from "./hooks/use-data-source";
@@ -53,9 +59,11 @@ export { DashboardService } from "./services/dashboard.service";
 export { DataPipelinesService } from "./services/data-pipelines.service";
 export { DataSourceService } from "./services/data-source.service";
 export { DataSourcesService } from "./services/data-sources.service";
+export { DestinationSchemasService } from "./services/destination-schemas.service";
 export { OnboardingService } from "./services/onboarding.service";
 export { OrganizationsService } from "./services/organizations.service";
 export { SearchService } from "./services/search.service";
+export { SourceSchemasService } from "./services/source-schemas.service";
 export { UsersService } from "./services/users.service";
 export type * from "./types/activity-logs";
 export type * from "./types/dashboard";

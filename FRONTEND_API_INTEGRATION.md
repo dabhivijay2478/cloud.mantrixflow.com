@@ -1,203 +1,201 @@
-# Frontend API Integration - Progress Report
+# Frontend API Integration - Data Pipelines
 
-## ✅ Completed Tasks
+## Overview
+This document describes the frontend integration with the new data pipeline APIs. The new API structure uses a schema-based approach where source and destination schemas are created first, then referenced by pipelines.
 
-### 1. TypeScript Types Updated
-- ✅ **`lib/api/types/data-sources.ts`** - Complete types for new data source schema
-  - Added `DataSource`, `DataSourceConnection`, `ConnectionConfig` types
-  - Added config types for all source types (Postgres, MySQL, MongoDB, S3, API, etc.)
-  - Kept legacy types for backward compatibility
+## New API Structure
 
-- ✅ **`lib/api/types/data-pipelines.ts`** - Updated for new schema
-  - Changed `orgId` → `organization_id`
-  - Changed `userId` → `created_by`
-  - Changed `sourceConnectionId` → `sourceDataSourceId`
-  - Changed `destinationConnectionId` → `destinationDataSourceId`
-  - Added `PipelineSourceSchema` and `PipelineDestinationSchema` with `data_source` references
+### Key Changes
+1. **Schema-Based Approach**: Pipelines now reference `sourceSchemaId` and `destinationSchemaId` instead of directly containing source/destination configuration
+2. **Separate Schema Management**: Source and destination schemas are managed independently via dedicated APIs
+3. **Simplified Pipeline DTO**: Pipeline creation now only requires:
+   - `name`, `description`
+   - `sourceSchemaId`, `destinationSchemaId`
+   - `transformations` (optional)
+   - `syncMode`, `syncFrequency`, `incrementalColumn`
 
-- ✅ **`lib/api/types/organizations.ts`** - Updated for new ownership model
-  - Added `owner_user_id` field
-  - Added `TransferOwnershipDto` type
-  - Removed references to `organization_owners` table
+## Integrated Services
 
-### 2. New Services Created
-- ✅ **`lib/api/services/data-source.service.ts`** - NEW service for data source endpoints
-  - `listDataSources(organizationId, filters?)`
-  - `getDataSource(organizationId, dataSourceId)`
-  - `createDataSource(organizationId, data)`
-  - `updateDataSource(organizationId, dataSourceId, data)`
-  - `deleteDataSource(organizationId, dataSourceId)`
-  - `getSupportedTypes(organizationId)`
+### 1. Data Pipelines Service (`lib/api/services/data-pipelines.service.ts`)
+- ✅ Updated to match new API endpoints
+- ✅ All CRUD operations for pipelines
+- ✅ Pipeline execution (run, pause, resume)
+- ✅ Pipeline validation and dry-run
+- ✅ Pipeline monitoring (runs, stats)
 
-- ✅ **`lib/api/services/connection.service.ts`** - NEW service for connection management
-  - `createOrUpdateConnection(organizationId, dataSourceId, data)`
-  - `getConnection(organizationId, dataSourceId, includeSensitive?)`
-  - `updateConnection(organizationId, dataSourceId, data)`
-  - `testConnection(organizationId, dataSourceId)`
-  - `discoverSchema(organizationId, dataSourceId)`
+### 2. Source Schemas Service (`lib/api/services/source-schemas.service.ts`)
+- ✅ Created with full CRUD operations
+- ✅ Schema discovery functionality
+- ✅ Endpoints:
+  - `createSourceSchema(organizationId, data)`
+  - `listSourceSchemas(organizationId)`
+  - `getSourceSchema(organizationId, sourceSchemaId)`
+  - `updateSourceSchema(organizationId, sourceSchemaId, data)`
+  - `deleteSourceSchema(organizationId, sourceSchemaId)`
+  - `discoverSourceSchema(organizationId, sourceSchemaId)`
 
-### 3. Services Updated
-- ✅ **`lib/api/services/data-pipelines.service.ts`** - Updated all methods
-  - Changed from `/api/data-pipelines` to `/api/organizations/:organizationId/pipelines`
-  - All methods now require `organizationId` as first parameter
-  - Updated method signatures: `createPipeline(organizationId, data)`, etc.
+### 3. Destination Schemas Service (`lib/api/services/destination-schemas.service.ts`)
+- ✅ Created with full CRUD operations
+- ✅ Schema validation functionality
+- ✅ Endpoints:
+  - `createDestinationSchema(organizationId, data)`
+  - `listDestinationSchemas(organizationId)`
+  - `getDestinationSchema(organizationId, destinationSchemaId)`
+  - `updateDestinationSchema(organizationId, destinationSchemaId, data)`
+  - `deleteDestinationSchema(organizationId, destinationSchemaId)`
+  - `validateDestinationSchema(organizationId, destinationSchemaId)`
 
-- ✅ **`lib/api/services/organizations.service.ts`** - Added transfer ownership
-  - Added `transferOwnership(organizationId, data)` method
-  - Removed console.log statements
+## Integrated Hooks
 
-- ✅ **`lib/api/services/data-sources.service.ts`** - Legacy service (kept for backward compatibility)
-  - Still uses old `/api/data-sources/postgres` endpoints
-  - Will be deprecated in favor of new `DataSourceService`
+### 1. Data Pipelines Hooks (`lib/api/hooks/use-data-pipelines.ts`)
+- ✅ All pipeline management hooks
+- ✅ Pipeline execution hooks
+- ✅ Pipeline monitoring hooks
+- ✅ Removed `useAutoMapColumns` (endpoint doesn't exist)
 
-### 4. React Hooks Created/Updated
-- ✅ **`lib/api/hooks/use-data-source.ts`** - NEW hooks for data sources
-  - `useDataSources(organizationId, filters?)`
-  - `useDataSource(organizationId, dataSourceId)`
-  - `useSupportedDataSourceTypes(organizationId)`
-  - `useCreateDataSource(organizationId)`
-  - `useUpdateDataSource(organizationId, dataSourceId)`
-  - `useDeleteDataSource(organizationId)`
+### 2. Source Schemas Hooks (`lib/api/hooks/use-source-schemas.ts`)
+- ✅ Created with all CRUD hooks
+- ✅ Discovery hook
+- ✅ Query keys for React Query caching
 
-- ✅ **`lib/api/hooks/use-connection.ts`** - NEW hooks for connections
-  - `useConnection(organizationId, dataSourceId, includeSensitive?)`
-  - `useCreateOrUpdateConnection(organizationId, dataSourceId)`
-  - `useUpdateConnection(organizationId, dataSourceId)`
-  - `useTestConnection(organizationId, dataSourceId)`
-  - `useDiscoverSchema(organizationId, dataSourceId)`
+### 3. Destination Schemas Hooks (`lib/api/hooks/use-destination-schemas.ts`)
+- ✅ Created with all CRUD hooks
+- ✅ Validation hook
+- ✅ Query keys for React Query caching
 
-- ✅ **`lib/api/hooks/use-data-pipelines.ts`** - Updated all hooks
-  - All hooks now require `organizationId` parameter
-  - Updated query keys to include `organizationId`
-  - Updated method calls to use new service signatures
+## Updated Types
 
-- ✅ **`lib/api/hooks/use-organizations.ts`** - Added transfer ownership hook
-  - Added `useTransferOwnership(organizationId)` hook
+### Pipeline Types (`lib/api/types/data-pipelines.ts`)
+- ✅ Updated `CreatePipelineDto` to use `sourceSchemaId` and `destinationSchemaId`
+- ✅ Updated `UpdatePipelineDto` to match new structure
+- ✅ Updated `Pipeline` interface with new field names (camelCase)
+- ✅ Updated `PipelineRun` interface
+- ✅ Updated `PipelineStats` interface
+- ✅ Added `PipelineSourceSchema` and `PipelineDestinationSchema` types
+- ✅ Added `CreateSourceSchemaDto`, `UpdateSourceSchemaDto`
+- ✅ Added `CreateDestinationSchemaDto`, `UpdateDestinationSchemaDto`
+- ✅ Added `DiscoveredSchema` and `SchemaValidationResult` types
 
-### 5. Exports Updated
-- ✅ **`lib/api/index.ts`** - Added new exports
-  - Exported `DataSourceService` and `ConnectionService`
-  - Exported new hooks: `use-data-source`, `use-connection`
-  - All types exported
+## Component Updates Needed
 
-## ⚠️ Remaining Tasks
+### ⚠️ TODO: Pipeline Creation Flow
+The current pipeline creation page (`app/workspace/data-pipelines/new/page.tsx`) uses the old multi-collector/emitter structure. It needs to be refactored to:
 
-### 1. Update Components to Use New Hooks
+1. **Step 1: Create Source Schema**
+   - User selects data source
+   - User selects tables/schemas
+   - Create source schema via `SourceSchemasService.createSourceSchema()`
+   - Optionally discover schema structure
 
-#### High Priority Components:
-1. **`app/workspace/data-sources/page.tsx`**
-   - Currently uses `useConnections(orgId)` - should use `useDataSources(organizationId)`
-   - Update to use new `DataSourceService` instead of legacy `DataSourcesService`
-   - Remove console.log statements
+2. **Step 2: Create Destination Schema**
+   - User selects destination data source
+   - User specifies destination table
+   - Create destination schema via `DestinationSchemasService.createDestinationSchema()`
+   - Optionally validate schema
 
-2. **`app/workspace/data-pipelines/page.tsx`**
-   - Update `usePipelines(orgId)` → `usePipelines(organizationId)`
-   - Update all pipeline operations to pass `organizationId`
+3. **Step 3: Create Pipeline**
+   - User provides pipeline name/description
+   - User configures transformations (optional)
+   - User sets sync mode/frequency
+   - Create pipeline with `sourceSchemaId` and `destinationSchemaId`
 
-3. **`app/workspace/data-pipelines/new/collector-step.tsx`**
-   - Update to use `useDataSources(organizationId)` instead of `useConnections(orgId)`
-   - Update data source selection to show new data source structure
+### ⚠️ TODO: Pipeline Edit Flow
+The edit page (`app/workspace/data-pipelines/[id]/edit/page.tsx`) also needs similar refactoring to work with the new schema-based approach.
 
-4. **`app/workspace/data-pipelines/new/emitter-step.tsx`**
-   - Update destination selection to use new data sources
+### ✅ Fixed: Pipeline List Page
+- Updated to use new field names (`createdBy` instead of `created_by`)
+- Updated to use `sourceSchema` and `destinationSchema` instead of old fields
+- Removed references to `migrationState` (no longer exists)
+- Updated status badge logic to use `status` and `lastRunStatus`
 
-5. **`app/organizations/page.tsx`**
-   - Add transfer ownership functionality
-   - Update to check `owner_user_id` instead of `organization_owners`
+## Usage Examples
 
-#### Medium Priority Components:
-6. **`app/workspace/data-sources/[id]/query/page.tsx`**
-   - Update to use new connection hooks
-   - Update `orgId` → `organizationId`
+### Creating a Source Schema
+```typescript
+import { useCreateSourceSchema } from "@/lib/api";
 
-7. **`app/workspace/data-sources/[id]/query/view/page.tsx`**
-   - Similar updates as above
+const createSourceSchema = useCreateSourceSchema(organizationId);
 
-### 2. Remove Console.log Statements
-- ⚠️ **`lib/api/client.ts`** - Has 12 console.log/error statements
-- ⚠️ **`lib/api/config.ts`** - Has 7 console.log/warn statements
-- ⚠️ **Component files** - Multiple files have console.log statements
-
-### 3. Update State Management
-- ⚠️ **`lib/stores/workspace-store.ts`** - May need updates for new schema
-- Check if it references old `orgId` or connection structures
-
-### 4. Create New UI Components
-- ⚠️ **Data Source Management Components** - Need to be created:
-  - `DataSourceList` component
-  - `DataSourceForm` component (with dynamic connection fields)
-  - `ConnectionFormFields` components (per type)
-  - `TestConnectionButton` component
-
-### 5. Update Forms
-- ⚠️ **Pipeline Creation Forms** - Update to use:
-  - `sourceDataSourceId` instead of `sourceConnectionId`
-  - `destinationDataSourceId` instead of `destinationConnectionId`
-  - Show data source information in selectors
-
-## Migration Guide for Components
-
-### Pattern 1: Updating Data Source Lists
-
-**OLD:**
-```tsx
-const { data: connections } = useConnections(orgId);
+await createSourceSchema.mutateAsync({
+  sourceType: "postgres",
+  dataSourceId: "ds_123",
+  sourceSchema: "public",
+  sourceTable: "users",
+  name: "Users Source Schema"
+});
 ```
 
-**NEW:**
-```tsx
-const { data: dataSources } = useDataSources(organizationId);
+### Creating a Destination Schema
+```typescript
+import { useCreateDestinationSchema } from "@/lib/api";
+
+const createDestinationSchema = useCreateDestinationSchema(organizationId);
+
+await createDestinationSchema.mutateAsync({
+  dataSourceId: "ds_456",
+  destinationSchema: "public",
+  destinationTable: "users_copy",
+  writeMode: "append",
+  columnMappings: [
+    { sourceColumn: "id", destinationColumn: "id", dataType: "integer", nullable: false }
+  ]
+});
 ```
 
-### Pattern 2: Updating Pipeline Operations
+### Creating a Pipeline
+```typescript
+import { useCreatePipeline } from "@/lib/api";
 
-**OLD:**
-```tsx
-const createPipeline = useCreatePipeline();
-await createPipeline.mutateAsync({ data, orgId });
-```
-
-**NEW:**
-```tsx
 const createPipeline = useCreatePipeline(organizationId);
-await createPipeline.mutateAsync(data);
-```
 
-### Pattern 3: Updating Connection Management
-
-**OLD:**
-```tsx
-const { data: connection } = useConnection(connectionId);
-```
-
-**NEW:**
-```tsx
-const { data: connection } = useConnection(organizationId, dataSourceId);
-```
-
-### Pattern 4: Organization Ownership
-
-**OLD:**
-```tsx
-const isOwner = organization.owners?.some(owner => owner.userId === userId);
-```
-
-**NEW:**
-```tsx
-const isOwner = organization.owner_user_id === userId;
+await createPipeline.mutateAsync({
+  name: "User Sync Pipeline",
+  description: "Syncs users from source to destination",
+  sourceSchemaId: "src_schema_123",
+  destinationSchemaId: "dest_schema_456",
+  syncMode: "full",
+  syncFrequency: "hourly",
+  transformations: []
+});
 ```
 
 ## Next Steps
 
-1. **Update all component files** to use new hooks and `organizationId`
-2. **Remove all console.log statements** from services and components
-3. **Create new UI components** for data source management
-4. **Update forms** to use new field names
-5. **Test all functionality** with new endpoints
+1. **Refactor Pipeline Creation UI**: Update the multi-step wizard to create schemas first, then pipeline
+2. **Refactor Pipeline Edit UI**: Update edit flow to work with schema-based approach
+3. **Add Schema Management UI**: Create pages/components for managing source and destination schemas independently
+4. **Update Transformations**: Ensure transformation configuration works with the new schema structure
+5. **Testing**: Test all CRUD operations for pipelines, source schemas, and destination schemas
 
-## Notes
+## API Endpoints Reference
 
-- Legacy `DataSourcesService` (for postgres connections) is kept for backward compatibility
-- New `DataSourceService` should be used for all new development
-- All hooks now require `organizationId` as a parameter (not optional)
-- Type definitions include both new field names and legacy fields for backward compatibility
+### Pipelines
+- `POST /api/organizations/:organizationId/pipelines` - Create pipeline
+- `GET /api/organizations/:organizationId/pipelines` - List pipelines
+- `GET /api/organizations/:organizationId/pipelines/:id` - Get pipeline
+- `PATCH /api/organizations/:organizationId/pipelines/:id` - Update pipeline
+- `DELETE /api/organizations/:organizationId/pipelines/:id` - Delete pipeline
+- `POST /api/organizations/:organizationId/pipelines/:id/run` - Run pipeline
+- `POST /api/organizations/:organizationId/pipelines/:id/pause` - Pause pipeline
+- `POST /api/organizations/:organizationId/pipelines/:id/resume` - Resume pipeline
+- `POST /api/organizations/:organizationId/pipelines/:id/validate` - Validate pipeline
+- `POST /api/organizations/:organizationId/pipelines/:id/dry-run` - Dry run pipeline
+- `GET /api/organizations/:organizationId/pipelines/:id/runs` - Get pipeline runs
+- `GET /api/organizations/:organizationId/pipelines/:id/runs/:runId` - Get pipeline run
+- `GET /api/organizations/:organizationId/pipelines/:id/stats` - Get pipeline stats
+
+### Source Schemas
+- `POST /api/organizations/:organizationId/source-schemas` - Create source schema
+- `GET /api/organizations/:organizationId/source-schemas` - List source schemas
+- `GET /api/organizations/:organizationId/source-schemas/:id` - Get source schema
+- `PATCH /api/organizations/:organizationId/source-schemas/:id` - Update source schema
+- `DELETE /api/organizations/:organizationId/source-schemas/:id` - Delete source schema
+- `POST /api/organizations/:organizationId/source-schemas/:id/discover` - Discover source schema
+
+### Destination Schemas
+- `POST /api/organizations/:organizationId/destination-schemas` - Create destination schema
+- `GET /api/organizations/:organizationId/destination-schemas` - List destination schemas
+- `GET /api/organizations/:organizationId/destination-schemas/:id` - Get destination schema
+- `PATCH /api/organizations/:organizationId/destination-schemas/:id` - Update destination schema
+- `DELETE /api/organizations/:organizationId/destination-schemas/:id` - Delete destination schema
+- `POST /api/organizations/:organizationId/destination-schemas/:id/validate` - Validate destination schema

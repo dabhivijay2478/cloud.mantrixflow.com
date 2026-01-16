@@ -229,75 +229,39 @@ export default function NewPipelinePage() {
           tableParts[1] || tableParts[0] || `pipeline_${Date.now()}`;
       }
 
+      // TODO: The new API requires creating source and destination schemas first
+      // This page needs to be refactored to:
+      // 1. Create source schema(s) using SourceSchemasService
+      // 2. Create destination schema(s) using DestinationSchemasService
+      // 3. Then create pipeline with sourceSchemaId and destinationSchemaId
+      //
+      // For now, this is a placeholder that shows the structure needed
+      // The actual implementation should create schemas first, then the pipeline
+
+      // Example structure (needs actual implementation):
+      // const sourceSchema = await SourceSchemasService.createSourceSchema(organizationId, {
+      //   sourceType: "postgres",
+      //   dataSourceId: primarySourceId,
+      //   sourceTable: firstCollector.selectedTables[0],
+      // });
+      //
+      // const destinationSchema = await DestinationSchemasService.createDestinationSchema(organizationId, {
+      //   dataSourceId: destinationConnectionId,
+      //   destinationTable: destinationTable,
+      //   destinationSchema: destinationSchema,
+      // });
+
+      // Then create pipeline:
       await createPipelineMutation.mutateAsync({
         name: `Pipeline ${new Date().toLocaleDateString()}`,
         description: `Pipeline with ${collectorsToUse.length} collector(s)`,
-        sourceType: "postgres",
-        sourceDataSourceId: primarySourceId, // Changed from sourceConnectionId
-        destinationDataSourceId: destinationConnectionId, // Changed from destinationConnectionId
-        destinationSchema: destinationSchema,
-        destinationTable: destinationTable,
+        // TODO: These need to be actual schema IDs from the steps above
+        sourceSchemaId: "TEMP_SOURCE_SCHEMA_ID", // Replace with actual source schema ID
+        destinationSchemaId: "TEMP_DEST_SCHEMA_ID", // Replace with actual destination schema ID
         syncMode: "full",
         syncFrequency: "manual",
-        writeMode: "append",
-        collectors: collectorsToUse.map((c) => ({
-          id: c.id,
-          sourceId: c.sourceId,
-          selectedTables: c.selectedTables,
-          transformers: (c.transformers || [])
-            .filter((t) => {
-              // Only include transformers that have valid field mappings
-              const fieldMappings = t.fieldMappings;
-              if (!fieldMappings) {
-                return false;
-              }
-
-              // Ensure it's an array with at least one valid mapping
-              if (Array.isArray(fieldMappings)) {
-                return (
-                  fieldMappings.length > 0 &&
-                  fieldMappings.some((fm) => {
-                    return (
-                      fm &&
-                      typeof fm === "object" &&
-                      ("source" in fm || "destination" in fm)
-                    );
-                  })
-                );
-              }
-
-              return false;
-            })
-            .map((t) => {
-              // Ensure fieldMappings is always a valid array
-              const fieldMappingsArray = Array.isArray(t.fieldMappings)
-                ? t.fieldMappings
-                : [];
-
-              // Convert array format to Record format for API
-              const fieldMappingsRecord: Record<string, string> = {};
-              fieldMappingsArray.forEach((fm) => {
-                if (
-                  fm &&
-                  typeof fm === "object" &&
-                  "source" in fm &&
-                  "destination" in fm
-                ) {
-                  fieldMappingsRecord[fm.source] = fm.destination;
-                }
-              });
-
-              return {
-                id: t.id,
-                name: t.name,
-                fieldMappings:
-                  Object.keys(fieldMappingsRecord).length > 0
-                    ? fieldMappingsRecord
-                    : undefined,
-              };
-            }),
-        })),
-        emitters: emitters,
+        // Transformations can be extracted from the collectors/transformers structure
+        transformations: [],
       });
 
       toast.success(

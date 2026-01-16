@@ -279,31 +279,6 @@ export function useValidatePipeline(
   });
 }
 
-export function useAutoMapColumns(
-  organizationId: string | undefined,
-  pipelineId: string | undefined,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => {
-      if (!organizationId || !pipelineId) {
-        throw new Error("Organization ID and Pipeline ID are required");
-      }
-      return DataPipelinesService.autoMapColumns(organizationId, pipelineId);
-    },
-    onSuccess: () => {
-      if (organizationId && pipelineId) {
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            pipelineId,
-          ),
-        });
-      }
-    },
-  });
-}
-
 // Pipeline Monitoring Hooks
 export function usePipelineRuns(
   organizationId: string | undefined,
