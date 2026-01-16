@@ -1,7 +1,9 @@
 /**
  * Data Pipelines API Types
- * Type definitions for data pipeline endpoints
+ * Type definitions for data pipeline endpoints (updated for new schema)
  */
+
+import type { DataSource } from "./data-sources";
 
 export interface ColumnMapping {
   sourceColumn: string;
@@ -24,12 +26,12 @@ export interface CreatePipelineDto {
   name: string;
   description?: string;
   sourceType: string;
-  sourceConnectionId?: string;
+  sourceDataSourceId?: string; // Changed from sourceConnectionId
   sourceConfig?: Record<string, unknown>;
   sourceSchema?: string;
   sourceTable?: string;
   sourceQuery?: string;
-  destinationConnectionId: string;
+  destinationDataSourceId: string; // Changed from destinationConnectionId
   destinationSchema?: string;
   destinationTable: string;
   columnMappings?: ColumnMapping[];
@@ -64,8 +66,8 @@ export interface UpdatePipelineDto {
   name?: string;
   description?: string;
   sourceType?: string;
-  sourceConnectionId?: string;
-  destinationConnectionId?: string;
+  sourceDataSourceId?: string; // Changed from sourceConnectionId
+  destinationDataSourceId?: string; // Changed from destinationConnectionId
   destinationSchema?: string;
   destinationTable?: string;
   columnMappings?: ColumnMapping[];
@@ -98,48 +100,83 @@ export interface UpdatePipelineDto {
   }>;
 }
 
+export interface PipelineSourceSchema {
+  id: string;
+  organization_id: string; // Changed from org_id
+  data_source_id: string; // Changed from source_connection_id
+  name: string;
+  source_type: string;
+  source_schema?: string;
+  source_table?: string;
+  data_source?: DataSource; // New - includes full data source
+}
+
+export interface PipelineDestinationSchema {
+  id: string;
+  organization_id: string; // Changed from org_id
+  data_source_id: string; // Changed from destination_connection_id
+  name: string;
+  destination_schema: string;
+  destination_table: string;
+  data_source?: DataSource; // New - includes full data source
+}
+
 export interface Pipeline {
   id: string;
-  orgId: string;
-  userId: string;
+  organization_id: string; // Changed from orgId
+  created_by: string; // New field (replaces userId)
   name: string;
   description?: string;
-  sourceType: string;
+  source_schema_id: string;
+  destination_schema_id: string;
+  source_schema?: PipelineSourceSchema;
+  destination_schema?: PipelineDestinationSchema;
+  transformations?: Transformation[];
+  sync_mode: "full" | "incremental";
+  sync_frequency: "manual" | "15min" | "1hour" | "24hours";
+  status: "active" | "paused" | "error";
+  last_run_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Legacy fields for backward compatibility
+  orgId?: string;
+  userId?: string;
+  sourceType?: string;
   sourceConnectionId?: string;
-  sourceConfig?: Record<string, unknown>;
+  destinationConnectionId?: string;
   sourceSchema?: string;
   sourceTable?: string;
-  sourceQuery?: string;
-  destinationConnectionId: string;
-  destinationSchema: string;
-  destinationTable: string;
+  destinationSchema?: string;
+  destinationTable?: string;
   columnMappings?: ColumnMapping[];
-  transformations?: Transformation[];
-  writeMode: "append" | "upsert" | "replace";
+  writeMode?: "append" | "upsert" | "replace";
   upsertKey?: string[];
-  syncMode: "full" | "incremental";
   incrementalColumn?: string;
-  syncFrequency: "manual" | "15min" | "1hour" | "24hours";
-  status: "active" | "paused" | "error";
-  lastRunAt?: Date | string;
   lastRunStatus?: "running" | "success" | "failed";
   migrationState?: "pending" | "running" | "listing" | "completed" | "error";
-  nextRunAt?: Date | string;
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  nextRunAt?: string;
 }
 
 export interface PipelineRun {
   id: string;
-  pipelineId: string;
+  pipeline_id: string;
+  organization_id: string;
+  triggered_by: string;
   status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  rows_processed?: number;
+  rows_written?: number;
+  execution_time_ms?: number;
+  error?: string;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  // Legacy fields
+  pipelineId?: string;
   rowsProcessed?: number;
   rowsWritten?: number;
   executionTimeMs?: number;
-  error?: string;
-  startedAt?: Date | string;
-  completedAt?: Date | string;
-  createdAt: Date | string;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export interface PipelineStats {
@@ -149,7 +186,7 @@ export interface PipelineStats {
   totalRowsProcessed: number;
   totalRowsWritten: number;
   averageExecutionTimeMs: number;
-  lastRunAt?: Date | string;
+  lastRunAt?: string;
   lastRunStatus?: string;
 }
 

@@ -16,212 +16,363 @@ export const dataPipelinesKeys = {
   pipelines: {
     all: ["data-pipelines", "pipelines"] as const,
     lists: () => [...dataPipelinesKeys.pipelines.all, "list"] as const,
-    list: (filters?: Record<string, unknown>) =>
-      [...dataPipelinesKeys.pipelines.lists(), filters] as const,
+    list: (organizationId: string, filters?: Record<string, unknown>) =>
+      [
+        ...dataPipelinesKeys.pipelines.lists(),
+        organizationId,
+        filters,
+      ] as const,
     details: () => [...dataPipelinesKeys.pipelines.all, "detail"] as const,
-    detail: (id: string) =>
-      [...dataPipelinesKeys.pipelines.details(), id] as const,
+    detail: (organizationId: string, pipelineId: string) =>
+      [
+        ...dataPipelinesKeys.pipelines.details(),
+        organizationId,
+        pipelineId,
+      ] as const,
   },
-  runs: (pipelineId: string, limit?: number, offset?: number) =>
-    [...dataPipelinesKeys.all, "runs", pipelineId, limit, offset] as const,
-  run: (pipelineId: string, runId: string) =>
-    [...dataPipelinesKeys.all, "runs", pipelineId, runId] as const,
-  stats: (pipelineId: string) =>
-    [...dataPipelinesKeys.all, "stats", pipelineId] as const,
+  runs: (
+    organizationId: string,
+    pipelineId: string,
+    limit?: number,
+    offset?: number,
+  ) =>
+    [
+      ...dataPipelinesKeys.all,
+      "runs",
+      organizationId,
+      pipelineId,
+      limit,
+      offset,
+    ] as const,
+  run: (organizationId: string, pipelineId: string, runId: string) =>
+    [
+      ...dataPipelinesKeys.all,
+      "runs",
+      organizationId,
+      pipelineId,
+      runId,
+    ] as const,
+  stats: (organizationId: string, pipelineId: string) =>
+    [...dataPipelinesKeys.all, "stats", organizationId, pipelineId] as const,
 };
 
 // Pipeline Management Hooks
-export function useCreatePipeline() {
+export function useCreatePipeline(organizationId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      data,
-      orgId,
-    }: {
-      data: CreatePipelineDto;
-      orgId?: string;
-    }) => DataPipelinesService.createPipeline(data, orgId),
+    mutationFn: (data: CreatePipelineDto) => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataPipelinesService.createPipeline(organizationId, data);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.lists(),
-      });
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
+      }
     },
   });
 }
 
-export function usePipelines(orgId?: string) {
+export function usePipelines(organizationId: string | undefined) {
   return useQuery({
-    queryKey: [...dataPipelinesKeys.pipelines.lists(), orgId],
-    queryFn: () => DataPipelinesService.listPipelines(orgId),
-    enabled: !!orgId,
-  });
-}
-
-export function usePipeline(id: string | undefined, orgId?: string) {
-  return useQuery({
-    queryKey: [...dataPipelinesKeys.pipelines.detail(id || ""), orgId],
+    queryKey: dataPipelinesKeys.pipelines.list(organizationId || ""),
     queryFn: () => {
-      if (!id) throw new Error("Pipeline ID is required");
-      return DataPipelinesService.getPipeline(id, orgId);
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataPipelinesService.listPipelines(organizationId);
     },
-    enabled: !!id,
+    enabled: !!organizationId,
   });
 }
 
-export function useUpdatePipeline() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdatePipelineDto }) =>
-      DataPipelinesService.updatePipeline(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(variables.id),
-      });
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.lists(),
-      });
+export function usePipeline(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
+  return useQuery({
+    queryKey: dataPipelinesKeys.pipelines.detail(
+      organizationId || "",
+      pipelineId || "",
+    ),
+    queryFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.getPipeline(organizationId, pipelineId);
     },
+    enabled: !!organizationId && !!pipelineId,
   });
 }
 
-export function useDeletePipeline() {
+export function useUpdatePipeline(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => DataPipelinesService.deletePipeline(id),
+    mutationFn: (data: UpdatePipelineDto) => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.updatePipeline(
+        organizationId,
+        pipelineId,
+        data,
+      );
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.lists(),
-      });
+      if (organizationId && pipelineId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            pipelineId,
+          ),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
+      }
+    },
+  });
+}
+
+export function useDeletePipeline(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (pipelineId: string) => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataPipelinesService.deletePipeline(organizationId, pipelineId);
+    },
+    onSuccess: () => {
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
+      }
     },
   });
 }
 
 // Pipeline Execution Hooks
-export function useRunPipeline() {
+export function useRunPipeline(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => DataPipelinesService.runPipeline(id),
-    onSuccess: (_, pipelineId) => {
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(pipelineId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.runs(pipelineId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.stats(pipelineId),
-      });
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.runPipeline(organizationId, pipelineId);
+    },
+    onSuccess: () => {
+      if (organizationId && pipelineId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            pipelineId,
+          ),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.runs(organizationId, pipelineId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.stats(organizationId, pipelineId),
+        });
+      }
     },
   });
 }
 
-export function useDryRunPipeline() {
+export function useDryRunPipeline(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
   return useMutation({
-    mutationFn: (id: string) => DataPipelinesService.dryRunPipeline(id),
-  });
-}
-
-export function usePausePipeline() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => DataPipelinesService.pausePipeline(id),
-    onSuccess: (updatedPipeline, _pipelineId) => {
-      // ApiClient already extracts data from response, so updatedPipeline is the Pipeline object
-      // Update the cache with the returned pipeline data
-      if (updatedPipeline?.id) {
-        queryClient.setQueryData(
-          dataPipelinesKeys.pipelines.detail(updatedPipeline.id),
-          updatedPipeline,
-        );
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
       }
-      // Invalidate lists to ensure consistency
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.lists(),
-      });
+      // Note: dryRunPipeline endpoint may need to be updated in service
+      return DataPipelinesService.dryRunPipeline(organizationId, pipelineId);
     },
   });
 }
 
-export function useResumePipeline() {
+export function usePausePipeline(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => DataPipelinesService.resumePipeline(id),
-    onSuccess: (updatedPipeline, _pipelineId) => {
-      // ApiClient already extracts data from response, so updatedPipeline is the Pipeline object
-      // Update the cache with the returned pipeline data
-      if (updatedPipeline?.id) {
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.pausePipeline(organizationId, pipelineId);
+    },
+    onSuccess: (updatedPipeline) => {
+      if (updatedPipeline?.id && organizationId) {
         queryClient.setQueryData(
-          dataPipelinesKeys.pipelines.detail(updatedPipeline.id),
+          dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            updatedPipeline.id,
+          ),
           updatedPipeline,
         );
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
       }
-      // Invalidate lists to ensure consistency
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.lists(),
-      });
+    },
+  });
+}
+
+export function useResumePipeline(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.resumePipeline(organizationId, pipelineId);
+    },
+    onSuccess: (updatedPipeline) => {
+      if (updatedPipeline?.id && organizationId) {
+        queryClient.setQueryData(
+          dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            updatedPipeline.id,
+          ),
+          updatedPipeline,
+        );
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
+      }
     },
   });
 }
 
 // Pipeline Configuration Hooks
-export function useValidatePipeline() {
+export function useValidatePipeline(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
   return useMutation({
-    mutationFn: (id: string) => DataPipelinesService.validatePipeline(id),
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.validatePipeline(organizationId, pipelineId);
+    },
   });
 }
 
-export function useAutoMapColumns() {
+export function useAutoMapColumns(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => DataPipelinesService.autoMapColumns(id),
-    onSuccess: (_, pipelineId) => {
-      queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(pipelineId),
-      });
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.autoMapColumns(organizationId, pipelineId);
+    },
+    onSuccess: () => {
+      if (organizationId && pipelineId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            pipelineId,
+          ),
+        });
+      }
     },
   });
 }
 
 // Pipeline Monitoring Hooks
 export function usePipelineRuns(
+  organizationId: string | undefined,
   pipelineId: string | undefined,
   limit?: number,
   offset?: number,
 ) {
   return useQuery({
-    queryKey: dataPipelinesKeys.runs(pipelineId || "", limit, offset),
+    queryKey: dataPipelinesKeys.runs(
+      organizationId || "",
+      pipelineId || "",
+      limit,
+      offset,
+    ),
     queryFn: () => {
-      if (!pipelineId) throw new Error("Pipeline ID is required");
-      return DataPipelinesService.getPipelineRuns(pipelineId, limit, offset);
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.getPipelineRuns(
+        organizationId,
+        pipelineId,
+        limit,
+        offset,
+      );
     },
-    enabled: !!pipelineId,
+    enabled: !!organizationId && !!pipelineId,
   });
 }
 
 export function usePipelineRun(
+  organizationId: string | undefined,
   pipelineId: string | undefined,
   runId: string | undefined,
 ) {
   return useQuery({
-    queryKey: dataPipelinesKeys.run(pipelineId || "", runId || ""),
+    queryKey: dataPipelinesKeys.run(
+      organizationId || "",
+      pipelineId || "",
+      runId || "",
+    ),
     queryFn: () => {
-      if (!pipelineId || !runId) {
-        throw new Error("Pipeline ID and Run ID are required");
+      if (!organizationId || !pipelineId || !runId) {
+        throw new Error(
+          "Organization ID, Pipeline ID, and Run ID are required",
+        );
       }
-      return DataPipelinesService.getPipelineRun(pipelineId, runId);
+      return DataPipelinesService.getPipelineRun(
+        organizationId,
+        pipelineId,
+        runId,
+      );
     },
-    enabled: !!pipelineId && !!runId,
+    enabled: !!organizationId && !!pipelineId && !!runId,
   });
 }
 
-export function usePipelineStats(pipelineId: string | undefined) {
+export function usePipelineStats(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
   return useQuery({
-    queryKey: dataPipelinesKeys.stats(pipelineId || ""),
+    queryKey: dataPipelinesKeys.stats(organizationId || "", pipelineId || ""),
     queryFn: () => {
-      if (!pipelineId) throw new Error("Pipeline ID is required");
-      return DataPipelinesService.getPipelineStats(pipelineId);
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.getPipelineStats(organizationId, pipelineId);
     },
-    enabled: !!pipelineId,
+    enabled: !!organizationId && !!pipelineId,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 }

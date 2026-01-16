@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   Database,
@@ -15,14 +16,13 @@ import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  dataPipelinesKeys,
   useDeletePipeline,
-  usePausePipeline,
   usePipelines,
-  useResumePipeline,
-  useRunPipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { useUsers } from "@/lib/api/hooks/use-users";
+import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -31,22 +31,25 @@ type PipelineType = "bulk" | "stream" | "emit";
 
 export default function DataPipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get("search") || undefined;
 
   // Use real API hooks instead of workspace store
-  const { data: pipelines, isLoading: pipelinesLoading } = usePipelines(orgId);
-  const { data: connections } = useConnections(orgId);
-  const deletePipeline = useDeletePipeline();
-  const runPipeline = useRunPipeline();
-  const pausePipeline = usePausePipeline();
-  const resumePipeline = useResumePipeline();
+  const { data: pipelines, isLoading: pipelinesLoading } =
+    usePipelines(organizationId);
+  // Note: connections are now accessed via data sources
+  // For now, we'll keep this for backward compatibility but should migrate to useDataSources
+  const { data: connections } = useConnections(organizationId);
+  const deletePipeline = useDeletePipeline(organizationId);
   const router = useRouter();
 
   // Get all unique user IDs from pipelines for fetching user names
+  // Use created_by if available, fallback to userId for backward compatibility
   const userIds =
-    pipelines?.map((pipeline) => pipeline.userId).filter(Boolean) || [];
+    pipelines
+      ?.map((pipeline) => pipeline.created_by || pipeline.userId)
+      .filter(Boolean) || [];
   const { usersMap } = useUsers(userIds);
 
   const getPipelineTypeInfo = (type: PipelineType) => {
@@ -219,12 +222,86 @@ export default function DataPipelinesPage() {
     }
   };
 
+  const queryClient = useQueryClient();
+
+  // Create hooks that can work with any pipeline (pipelineId passed in mutation)
+  // We'll create wrapper hooks that accept pipelineId in the mutation function
+  const runPipelineMutation = useMutation({
+    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataPipelinesService.runPipeline(organizationId, pipelineId);
+    },
+    onSuccess: (_, variables) => {
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            variables.pipelineId,
+          ),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
+      }
+    },
+  });
+
+  const pausePipelineMutation = useMutation({
+    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataPipelinesService.pausePipeline(organizationId, pipelineId);
+    },
+    onSuccess: (_, variables) => {
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            variables.pipelineId,
+          ),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
+      }
+    },
+  });
+
+  const resumePipelineMutation = useMutation({
+    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataPipelinesService.resumePipeline(organizationId, pipelineId);
+    },
+    onSuccess: (_, variables) => {
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            variables.pipelineId,
+          ),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        });
+      }
+    },
+  });
+
   const handleRunPipeline = async (
     pipelineId: string,
     pipelineName: string,
   ) => {
+    if (!organizationId) {
+      toast.error("Error", "Organization ID is required");
+      return;
+    }
     try {
-      await runPipeline.mutateAsync(pipelineId);
+      await runPipelineMutation.mutateAsync({ pipelineId });
       toast.success(
         "Pipeline execution started",
         `${pipelineName} is now running. Check the runs tab for progress.`,
@@ -242,8 +319,12 @@ export default function DataPipelinesPage() {
     pipelineId: string,
     pipelineName: string,
   ) => {
+    if (!organizationId) {
+      toast.error("Error", "Organization ID is required");
+      return;
+    }
     try {
-      await pausePipeline.mutateAsync(pipelineId);
+      await pausePipelineMutation.mutateAsync({ pipelineId });
       toast.success(
         "Pipeline paused",
         `${pipelineName} has been paused successfully.`,
@@ -261,8 +342,12 @@ export default function DataPipelinesPage() {
     pipelineId: string,
     pipelineName: string,
   ) => {
+    if (!organizationId) {
+      toast.error("Error", "Organization ID is required");
+      return;
+    }
     try {
-      await resumePipeline.mutateAsync(pipelineId);
+      await resumePipelineMutation.mutateAsync({ pipelineId });
       toast.success(
         "Pipeline resumed",
         `${pipelineName} has been resumed successfully. You can now run it.`,
@@ -303,31 +388,41 @@ export default function DataPipelinesPage() {
       },
     },
     {
-      accessorKey: "sourceConnectionId",
+      accessorKey: "sourceDataSourceId",
       header: "Source",
       cell: ({ row }) => {
-        // Try to get sourceConnectionId from pipeline object first
-        let sourceConnectionId = (
-          row.original as { sourceConnectionId?: string }
-        ).sourceConnectionId;
+        const pipeline = row.original;
+        // Try new field first (sourceDataSourceId)
+        let sourceDataSourceId =
+          (pipeline as { sourceDataSourceId?: string }).sourceDataSourceId ||
+          // Fallback to legacy field (sourceConnectionId)
+          (pipeline as { sourceConnectionId?: string }).sourceConnectionId;
 
-        // If not found, extract from transformations.collectors
-        if (!sourceConnectionId && row.original.transformations) {
-          const transformations = row.original.transformations as {
-            collectors?: Array<{ sourceId?: string }>;
+        // If not found, try to get from source_schema
+        if (!sourceDataSourceId && pipeline.source_schema) {
+          const sourceSchema = pipeline.source_schema as {
+            data_source_id?: string;
+            data_source?: { name?: string; id?: string };
           };
-          const collectors = transformations?.collectors || [];
-          if (collectors.length > 0 && collectors[0].sourceId) {
-            sourceConnectionId = collectors[0].sourceId;
+          sourceDataSourceId = sourceSchema.data_source_id;
+          if (sourceSchema.data_source) {
+            return (
+              <div className="text-sm text-muted-foreground">
+                {sourceSchema.data_source.name ||
+                  sourceDataSourceId ||
+                  "Unknown source"}
+              </div>
+            );
           }
         }
 
+        // Try legacy connections list
         const source = connections?.find(
-          (conn) => conn.id === sourceConnectionId,
+          (conn) => conn.id === sourceDataSourceId,
         );
         return (
           <div className="text-sm text-muted-foreground">
-            {source?.name || sourceConnectionId || "Unknown source"}
+            {source?.name || sourceDataSourceId || "Unknown source"}
           </div>
         );
       },
@@ -338,14 +433,41 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => getStatusBadge(row.original),
     },
     {
-      accessorKey: "destinationConnectionId",
+      accessorKey: "destinationDataSourceId",
       header: "Destination",
       cell: ({ row }) => {
-        const destConnectionId = row.original.destinationConnectionId;
-        const dest = connections?.find((conn) => conn.id === destConnectionId);
+        const pipeline = row.original;
+        // Try new field first (destinationDataSourceId)
+        let destDataSourceId =
+          (pipeline as { destinationDataSourceId?: string })
+            .destinationDataSourceId ||
+          // Fallback to legacy field (destinationConnectionId)
+          (pipeline as { destinationConnectionId?: string })
+            .destinationConnectionId;
+
+        // If not found, try to get from destination_schema
+        if (!destDataSourceId && pipeline.destination_schema) {
+          const destSchema = pipeline.destination_schema as {
+            data_source_id?: string;
+            data_source?: { name?: string; id?: string };
+          };
+          destDataSourceId = destSchema.data_source_id;
+          if (destSchema.data_source) {
+            return (
+              <div className="text-sm text-muted-foreground">
+                {destSchema.data_source.name ||
+                  destDataSourceId ||
+                  "Unknown destination"}
+              </div>
+            );
+          }
+        }
+
+        // Try legacy connections list
+        const dest = connections?.find((conn) => conn.id === destDataSourceId);
         return (
           <div className="text-sm text-muted-foreground">
-            {dest?.name || destConnectionId || "Unknown destination"}
+            {dest?.name || destDataSourceId || "Unknown destination"}
           </div>
         );
       },
@@ -364,10 +486,12 @@ export default function DataPipelinesPage() {
       header: "Created By",
       cell: ({ row }) => {
         const pipeline = row.original;
-        if (!pipeline.userId) {
+        // Use created_by if available, fallback to userId for backward compatibility
+        const creatorId = pipeline.created_by || pipeline.userId;
+        if (!creatorId) {
           return <span className="text-muted-foreground text-sm">-</span>;
         }
-        const creator = usersMap.get(pipeline.userId);
+        const creator = usersMap.get(creatorId);
         const displayName =
           creator?.fullName ||
           (creator?.firstName && creator?.lastName
@@ -416,7 +540,7 @@ export default function DataPipelinesPage() {
                   e.stopPropagation();
                   handlePausePipeline(pipeline.id, pipeline.name);
                 }}
-                disabled={pausePipeline.isPending}
+                disabled={pausePipelineMutation.isPending}
                 title="Pause pipeline execution"
               >
                 <Pause className="h-4 w-4 mr-2" />
@@ -431,7 +555,7 @@ export default function DataPipelinesPage() {
                   e.stopPropagation();
                   handleResumePipeline(pipeline.id, pipeline.name);
                 }}
-                disabled={resumePipeline.isPending}
+                disabled={resumePipelineMutation.isPending}
                 title="Resume pipeline to active state"
               >
                 <Play className="h-4 w-4 mr-2" />
@@ -445,9 +569,9 @@ export default function DataPipelinesPage() {
                   e.stopPropagation();
                   handleRunPipeline(pipeline.id, pipeline.name);
                 }}
-                disabled={runPipeline.isPending || isRunning}
+                disabled={runPipelineMutation.isPending || isRunning}
                 title={
-                  runPipeline.isPending
+                  runPipelineMutation.isPending
                     ? "Pipeline execution in progress..."
                     : isRunning
                       ? "Pipeline is currently running. Please wait for it to complete."
@@ -494,7 +618,9 @@ export default function DataPipelinesPage() {
 
       <DataTable
         tableId={
-          orgId ? `data-pipelines-table-${orgId}` : "data-pipelines-table"
+          organizationId
+            ? `data-pipelines-table-${organizationId}`
+            : "data-pipelines-table"
         }
         columns={columns}
         data={pipelines || []}
@@ -507,9 +633,9 @@ export default function DataPipelinesPage() {
         defaultVisibleColumns={[
           "name",
           "sourceType",
-          "sourceConnectionId",
+          "sourceDataSourceId",
           "status",
-          "destinationConnectionId",
+          "destinationDataSourceId",
           "createdAt",
           "actions",
         ]}

@@ -92,11 +92,13 @@ export function PipelineConfigurationForm({
   initialType = "bulk",
 }: PipelineConfigurationFormProps) {
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
 
   // Fetch connections from API instead of workspace store
+  // Note: Currently using legacy postgres connections API
+  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
   const { data: connections, isLoading: connectionsLoading } =
-    useConnections(orgId);
+    useConnections(organizationId);
 
   // Convert API connections to data sources format
   const dataSources = (connections || []).map((conn) => ({
@@ -168,8 +170,8 @@ export function PipelineConfigurationForm({
           fanOutEnabled: data.fanOutEnabled,
         },
       });
-    } catch (error) {
-      console.error("Failed to create pipeline:", error);
+    } catch (_error) {
+      // Error handling is done by the parent component
     } finally {
       setLoading(false);
     }

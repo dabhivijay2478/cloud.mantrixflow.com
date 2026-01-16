@@ -44,11 +44,13 @@ export interface EmitterConfig {
 
 export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
 
   // Fetch connections from API instead of workspace store
+  // Note: Currently using legacy postgres connections API
+  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
   const { data: connections, isLoading: connectionsLoading } =
-    useConnections(orgId);
+    useConnections(organizationId);
 
   // Convert API connections to destination format
   // All connections from the PostgreSQL endpoint are PostgreSQL connections
@@ -70,7 +72,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         conn.status === "active"
           ? ("connected" as const)
           : ("disconnected" as const),
-      organizationId: conn.orgId,
+      organizationId: conn.orgId || organizationId,
       connectedAt: conn.lastConnectedAt || undefined,
       tables: [],
     })) || [];

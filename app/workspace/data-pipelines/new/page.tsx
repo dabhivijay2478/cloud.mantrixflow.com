@@ -22,8 +22,8 @@ type Transformer = CollectorConfig["transformers"][number];
 export default function NewPipelinePage() {
   const router = useRouter();
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
-  const createPipelineMutation = useCreatePipeline();
+  const organizationId = currentOrganization?.id;
+  const createPipelineMutation = useCreatePipeline(organizationId);
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
     collectors: [],
@@ -111,13 +111,10 @@ export default function NewPipelinePage() {
 
     // Prevent double submission
     if (isCreating) {
-      console.warn(
-        "Pipeline creation already in progress, ignoring duplicate request",
-      );
       return;
     }
 
-    if (!orgId) {
+    if (!organizationId) {
       toast.error(
         "No organization selected",
         "Please select an organization from the sidebar.",
@@ -233,77 +230,74 @@ export default function NewPipelinePage() {
       }
 
       await createPipelineMutation.mutateAsync({
-        data: {
-          name: `Pipeline ${new Date().toLocaleDateString()}`,
-          description: `Pipeline with ${collectorsToUse.length} collector(s)`,
-          sourceType: "postgres",
-          sourceConnectionId: primarySourceId,
-          destinationConnectionId: destinationConnectionId,
-          destinationSchema: destinationSchema,
-          destinationTable: destinationTable,
-          syncMode: "full",
-          syncFrequency: "manual",
-          writeMode: "append",
-          collectors: collectorsToUse.map((c) => ({
-            id: c.id,
-            sourceId: c.sourceId,
-            selectedTables: c.selectedTables,
-            transformers: (c.transformers || [])
-              .filter((t) => {
-                // Only include transformers that have valid field mappings
-                const fieldMappings = t.fieldMappings;
-                if (!fieldMappings) {
-                  return false;
-                }
-
-                // Ensure it's an array with at least one valid mapping
-                if (Array.isArray(fieldMappings)) {
-                  return (
-                    fieldMappings.length > 0 &&
-                    fieldMappings.some((fm) => {
-                      return (
-                        fm &&
-                        typeof fm === "object" &&
-                        ("source" in fm || "destination" in fm)
-                      );
-                    })
-                  );
-                }
-
+        name: `Pipeline ${new Date().toLocaleDateString()}`,
+        description: `Pipeline with ${collectorsToUse.length} collector(s)`,
+        sourceType: "postgres",
+        sourceDataSourceId: primarySourceId, // Changed from sourceConnectionId
+        destinationDataSourceId: destinationConnectionId, // Changed from destinationConnectionId
+        destinationSchema: destinationSchema,
+        destinationTable: destinationTable,
+        syncMode: "full",
+        syncFrequency: "manual",
+        writeMode: "append",
+        collectors: collectorsToUse.map((c) => ({
+          id: c.id,
+          sourceId: c.sourceId,
+          selectedTables: c.selectedTables,
+          transformers: (c.transformers || [])
+            .filter((t) => {
+              // Only include transformers that have valid field mappings
+              const fieldMappings = t.fieldMappings;
+              if (!fieldMappings) {
                 return false;
-              })
-              .map((t) => {
-                // Ensure fieldMappings is always a valid array
-                const fieldMappingsArray = Array.isArray(t.fieldMappings)
-                  ? t.fieldMappings
-                  : [];
+              }
 
-                // Convert array format to Record format for API
-                const fieldMappingsRecord: Record<string, string> = {};
-                fieldMappingsArray.forEach((fm) => {
-                  if (
-                    fm &&
-                    typeof fm === "object" &&
-                    "source" in fm &&
-                    "destination" in fm
-                  ) {
-                    fieldMappingsRecord[fm.source] = fm.destination;
-                  }
-                });
+              // Ensure it's an array with at least one valid mapping
+              if (Array.isArray(fieldMappings)) {
+                return (
+                  fieldMappings.length > 0 &&
+                  fieldMappings.some((fm) => {
+                    return (
+                      fm &&
+                      typeof fm === "object" &&
+                      ("source" in fm || "destination" in fm)
+                    );
+                  })
+                );
+              }
 
-                return {
-                  id: t.id,
-                  name: t.name,
-                  fieldMappings:
-                    Object.keys(fieldMappingsRecord).length > 0
-                      ? fieldMappingsRecord
-                      : undefined,
-                };
-              }),
-          })),
-          emitters: emitters,
-        },
-        orgId,
+              return false;
+            })
+            .map((t) => {
+              // Ensure fieldMappings is always a valid array
+              const fieldMappingsArray = Array.isArray(t.fieldMappings)
+                ? t.fieldMappings
+                : [];
+
+              // Convert array format to Record format for API
+              const fieldMappingsRecord: Record<string, string> = {};
+              fieldMappingsArray.forEach((fm) => {
+                if (
+                  fm &&
+                  typeof fm === "object" &&
+                  "source" in fm &&
+                  "destination" in fm
+                ) {
+                  fieldMappingsRecord[fm.source] = fm.destination;
+                }
+              });
+
+              return {
+                id: t.id,
+                name: t.name,
+                fieldMappings:
+                  Object.keys(fieldMappingsRecord).length > 0
+                    ? fieldMappingsRecord
+                    : undefined,
+              };
+            }),
+        })),
+        emitters: emitters,
       });
 
       toast.success(
@@ -312,7 +306,6 @@ export default function NewPipelinePage() {
       );
       router.push("/workspace/data-pipelines");
     } catch (error) {
-      console.error("Failed to create pipeline:", error);
       toast.error(
         "Failed to create pipeline",
         error instanceof Error ? error.message : "Unknown error occurred",

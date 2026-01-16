@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { OrganizationsService } from "../services/organizations.service";
 import type {
   CreateOrganizationDto,
+  TransferOwnershipDto,
   UpdateOrganizationDto,
 } from "../types/organizations";
 
@@ -130,5 +131,38 @@ export function useCanCreateOrganization() {
     queryKey: organizationsKeys.canCreate(),
     queryFn: () => OrganizationsService.canCreateOrganization(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+/**
+ * Hook to transfer organization ownership
+ */
+export function useTransferOwnership(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: TransferOwnershipDto) => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return OrganizationsService.transferOwnership(organizationId, data);
+    },
+    onSuccess: () => {
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: organizationsKeys.detail(organizationId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: organizationsKeys.lists(),
+        });
+        queryClient.invalidateQueries({
+          queryKey: organizationsKeys.current(),
+        });
+        // Invalidate members list to refresh owner status
+        queryClient.invalidateQueries({
+          queryKey: ["organization-members"],
+        });
+      }
+    },
   });
 }

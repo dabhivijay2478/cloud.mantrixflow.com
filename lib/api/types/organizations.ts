@@ -1,6 +1,6 @@
 /**
  * Organizations API Types
- * Type definitions for organization endpoints
+ * Type definitions for organization endpoints (updated for new schema)
  */
 
 export interface Organization {
@@ -8,10 +8,18 @@ export interface Organization {
   name: string;
   slug: string;
   description?: string;
-  isOwner: boolean;
+  owner_user_id: string; // This identifies the owner (replaces organization_owners table)
+  is_active: boolean;
+  settings?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  members?: OrganizationMember[];
+  // Legacy fields for backward compatibility
+  isOwner?: boolean;
   role?: OrganizationMemberRole;
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateOrganizationDto {
@@ -26,6 +34,10 @@ export interface UpdateOrganizationDto {
   description?: string;
 }
 
+export interface TransferOwnershipDto {
+  newOwnerId: string;
+}
+
 /**
  * Organization Member Types
  * AUTHORITATIVE ROLES - Must match backend enum
@@ -35,23 +47,33 @@ export type OrganizationMemberStatus =
   | "invited"
   | "accepted"
   | "active"
-  | "inactive";
+  | "inactive"
+  | "suspended";
 
 export interface OrganizationMember {
   id: string;
-  organizationId: string;
-  userId?: string;
+  organization_id: string;
+  user_id?: string;
   email: string;
   role: OrganizationMemberRole;
   status: OrganizationMemberStatus;
-  invitedBy?: string;
-  invitedAt: Date | string;
-  acceptedAt?: Date | string;
-  agentPanelAccess: boolean;
-  allowedModels: string[];
+  invited_by?: string;
+  invited_at: string;
+  accepted_at?: string;
+  agent_panel_access: boolean;
+  allowed_models: string[];
   metadata?: Record<string, unknown>;
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  created_at: string;
+  updated_at: string;
+  // Legacy fields
+  organizationId?: string;
+  userId?: string;
+  invitedAt?: string;
+  acceptedAt?: string;
+  agentPanelAccess?: boolean;
+  allowedModels?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface InviteMemberDto {

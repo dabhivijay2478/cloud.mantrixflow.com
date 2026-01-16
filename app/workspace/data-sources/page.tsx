@@ -52,41 +52,18 @@ type ConnectionFormValues = Record<string, string>;
 export default function DataSourcesPage() {
   // Get current organization from workspace store (set by sidebar selector)
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get("search") || undefined;
 
-  // Debug logging
-  useEffect(() => {
-    if (currentOrganization) {
-      console.log("Current Organization from store:", currentOrganization);
-      console.log("Organization ID:", orgId);
-    } else {
-      console.warn("No organization selected in workspace store");
-    }
-  }, [currentOrganization, orgId]);
-
   // Use real API hooks instead of workspace store
-  const {
-    data: connections,
-    isLoading: connectionsLoading,
-    error: connectionsError,
-  } = useConnections(orgId);
-  const createConnection = useCreateConnection(orgId);
-  const deleteConnection = useDeleteConnection(orgId);
+  // Note: Currently using legacy postgres connections API
+  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
+  const { data: connections, isLoading: connectionsLoading } =
+    useConnections(organizationId);
+  const createConnection = useCreateConnection(organizationId);
+  const deleteConnection = useDeleteConnection(organizationId);
   const testConnection = useTestConnection();
-
-  // Debug logging for connections
-  useEffect(() => {
-    if (connections !== undefined) {
-      console.log("Connections loaded:", connections);
-      console.log("Connections count:", connections?.length || 0);
-      console.log("Query orgId used:", orgId);
-    }
-    if (connectionsError) {
-      console.error("Connections error:", connectionsError);
-    }
-  }, [connections, connectionsError, orgId]);
 
   const isLoading = connectionsLoading;
 
@@ -251,13 +228,7 @@ export default function DataSourcesPage() {
         },
       };
 
-      // Ensure orgId is passed - log for debugging
-      console.log("[DataSourcesPage] Creating connection with orgId:", orgId);
-      console.log("[DataSourcesPage] Connection data:", {
-        name: connectionData.name,
-      });
-
-      if (!orgId) {
+      if (!organizationId) {
         showErrorToast(
           "notFound",
           "Organization",
@@ -281,7 +252,6 @@ export default function DataSourcesPage() {
           ? error.message
           : "Unable to connect the data source. Please try again.";
       showErrorToast("connectFailed", "Data Source", errorMessage);
-      console.error(error);
     }
   };
 
@@ -617,7 +587,7 @@ export default function DataSourcesPage() {
         }
       />
 
-      {!orgId ? (
+      {!organizationId ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-2">
             <p className="text-sm font-medium text-muted-foreground">
@@ -645,7 +615,11 @@ export default function DataSourcesPage() {
         />
       ) : (
         <DataTable
-          tableId={orgId ? `data-sources-table-${orgId}` : "data-sources-table"}
+          tableId={
+            organizationId
+              ? `data-sources-table-${organizationId}`
+              : "data-sources-table"
+          }
           columns={columns}
           data={filteredDataSources}
           isLoading={false}

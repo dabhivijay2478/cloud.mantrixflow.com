@@ -31,8 +31,11 @@ import {
 import { useConfirmation } from "@/hooks/use-confirmation";
 import {
   organizationMembersKeys,
+  useCurrentOrganization,
+  useCurrentUser,
   useOrganizationMembers,
   useRemoveMember,
+  useTransferOwnership,
   useUpdateMember,
 } from "@/lib/api";
 import type { OrganizationMember } from "@/lib/api/types/organizations";
@@ -69,6 +72,17 @@ export default function TeamPage() {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
+  // Fetch current organization to get owner_user_id
+  const { data: currentOrg } = useCurrentOrganization();
+  const { data: currentUser } = useCurrentUser();
+  const currentUserId = currentUser?.id;
+
+  // Check if current user is the owner
+  const isCurrentUserOwner =
+    currentOrg && currentUserId
+      ? currentOrg.owner_user_id === currentUserId
+      : false;
+
   // Show loading if no organization is selected
   const isLoading = !organizationId;
 
@@ -81,6 +95,12 @@ export default function TeamPage() {
 
   // State for member removal
   const [memberToRemove, setMemberToRemove] = useState<{
+    memberId: string;
+    memberEmail: string;
+  } | null>(null);
+
+  // State for ownership transfer
+  const [memberToTransfer, setMemberToTransfer] = useState<{
     memberId: string;
     memberEmail: string;
   } | null>(null);
@@ -110,6 +130,7 @@ export default function TeamPage() {
   // Mutations
   const updateMember = useUpdateMember();
   const removeMember = useRemoveMember();
+  const transferOwnership = useTransferOwnership(organizationId);
 
   // Confirmation modal for removing member
   const removeMemberConfirm = useConfirmation({
@@ -160,11 +181,53 @@ export default function TeamPage() {
     },
   });
 
+  // Confirmation modal for transferring ownership
+  const transferOwnershipConfirm = useConfirmation({
+    action: "update",
+    itemName: "Organization Ownership",
+    onConfirm: async () => {
+      if (!memberToTransfer || !organizationId) return;
+      try {
+        // Find the member to get their user_id
+        const member = members?.find((m) => m.id === memberToTransfer.memberId);
+        if (!member?.user_id) {
+          showErrorToast(
+            "transferFailed",
+            "Ownership Transfer",
+            "Cannot transfer ownership to a member without a user account.",
+          );
+          return;
+        }
+
+        await transferOwnership.mutateAsync({
+          newOwnerId: member.user_id,
+        });
+        showSuccessToast(
+          "transferred",
+          "Organization Ownership",
+          `Ownership has been transferred to ${memberToTransfer.memberEmail}`,
+        );
+        setMemberToTransfer(null);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Unable to transfer ownership.";
+        showErrorToast("transferFailed", "Ownership Transfer", errorMessage);
+        throw error; // Re-throw to prevent modal from closing on error
+      }
+    },
+  });
+
   // Transform API members to TeamMember format
   const teamMembers: TeamMember[] = useMemo(() => {
-    if (!members) return [];
+    if (!members || !currentOrg) return [];
 
     return members.map((member: OrganizationMember) => {
+      // Check if this member is the owner by comparing user_id with owner_user_id
+      const isOwner =
+        member.user_id && currentOrg.owner_user_id === member.user_id;
+
       // Map status: invited -> pending, accepted/active -> active
       const status: TeamMember["status"] =
         member.status === "invited"
@@ -177,7 +240,7 @@ export default function TeamPage() {
         id: member.id,
         name: member.email.split("@")[0], // Use email prefix as name until user signs up
         email: member.email,
-        role: member.role,
+        role: isOwner ? ("OWNER" as TeamMemberRole) : member.role,
         avatar: null,
         status,
         joinedAt: member.acceptedAt
@@ -187,7 +250,7 @@ export default function TeamPage() {
             : undefined,
       };
     });
-  }, [members]);
+  }, [members, currentOrg]);
 
   const handleRoleChange = useCallback(
     (
@@ -436,6 +499,22 @@ export default function TeamPage() {
                       </span>
                     )}
                   </DropdownMenuItem>
+                  {isCurrentUserOwner && member.role !== "OWNER" && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setMemberToTransfer({
+                          memberId: member.id,
+                          memberEmail: member.email,
+                        });
+                        transferOwnershipConfirm.showConfirm(member.email);
+                      }}
+                      className="text-purple-600 dark:text-purple-400"
+                    >
+                      <Crown className="mr-2 h-4 w-4" />
+                      Transfer Ownership
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => handleRemoveMember(member.id, member.email)}
                     className="text-destructive"
@@ -463,6 +542,8 @@ export default function TeamPage() {
       handleRemoveMember,
       getRoleBadge,
       getStatusBadge,
+      isCurrentUserOwner,
+      transferOwnershipConfirm.showConfirm,
     ],
   );
 
@@ -558,6 +639,17 @@ export default function TeamPage() {
         }
         confirmLabel="Update Role"
         isLoading={updateMember.isPending}
+      />
+      <ConfirmationModal
+        {...transferOwnershipConfirm.confirmProps}
+        title="Transfer Organization Ownership"
+        description={
+          memberToTransfer
+            ? `Are you sure you want to transfer ownership of this organization to ${memberToTransfer.memberEmail}? This action cannot be undone. You will become an ADMIN member after the transfer.`
+            : "Are you sure you want to transfer ownership?"
+        }
+        confirmLabel="Transfer Ownership"
+        confirmVariant="destructive"
       />
     </div>
   );

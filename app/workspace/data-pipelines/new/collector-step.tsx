@@ -64,11 +64,13 @@ export function CollectorStep({
 }: CollectorStepProps) {
   // Get current organization from workspace store
   const { currentOrganization, datasets } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
 
   // Fetch connections from API
+  // Note: Currently using legacy postgres connections API
+  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
   const { data: connections, isLoading: connectionsLoading } =
-    useConnections(orgId);
+    useConnections(organizationId);
 
   // Convert API connections to DataSource format for compatibility
   const dataSources =
@@ -80,7 +82,7 @@ export function CollectorStep({
         conn.status === "active"
           ? ("connected" as const)
           : ("disconnected" as const),
-      organizationId: conn.orgId,
+      organizationId: conn.orgId || organizationId,
       connectedAt: conn.lastConnectedAt || undefined,
       tables: [], // Will be populated when needed
     })) || [];
@@ -107,7 +109,7 @@ export function CollectorStep({
   // Fetch schemas with tables for the selected source
   const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
     selectedSourceId,
-    orgId,
+    organizationId,
   );
 
   // Flatten all tables from all schemas

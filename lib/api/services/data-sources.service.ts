@@ -46,11 +46,6 @@ export class DataSourcesService {
       throw new Error("Organization ID is required to create a connection");
     }
     const params = `?orgId=${encodeURIComponent(orgId)}`;
-    console.log(
-      "[DataSourcesService] Creating connection with URL:",
-      `${DataSourcesService.BASE_PATH}/connections${params}`,
-    );
-    console.log("[DataSourcesService] orgId being sent:", orgId);
     return ApiClient.post<Connection>(
       `${DataSourcesService.BASE_PATH}/connections${params}`,
       data,
