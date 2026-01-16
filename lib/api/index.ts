@@ -26,18 +26,15 @@ export { dashboardKeys } from "./hooks/use-dashboard";
 // Hooks - Data Pipelines
 export * from "./hooks/use-data-pipelines";
 export { dataPipelinesKeys } from "./hooks/use-data-pipelines";
-// Hooks - Source Schemas
-export * from "./hooks/use-source-schemas";
-export { sourceSchemasKeys } from "./hooks/use-source-schemas";
-// Hooks - Destination Schemas
-export * from "./hooks/use-destination-schemas";
-export { destinationSchemasKeys } from "./hooks/use-destination-schemas";
 // Hooks - Data Source (new dynamic data sources)
 export * from "./hooks/use-data-source";
 export { dataSourceKeys } from "./hooks/use-data-source";
 // Hooks - Data Sources (legacy postgres connections)
 export * from "./hooks/use-data-sources";
 export { dataSourcesKeys } from "./hooks/use-data-sources";
+// Hooks - Destination Schemas
+export * from "./hooks/use-destination-schemas";
+export { destinationSchemasKeys } from "./hooks/use-destination-schemas";
 // Hooks - Global Search
 export * from "./hooks/use-global-search";
 export { globalSearchKeys } from "./hooks/use-global-search";
@@ -49,6 +46,9 @@ export { organizationMembersKeys } from "./hooks/use-organization-members";
 // Hooks - Organizations
 export * from "./hooks/use-organizations";
 export { organizationsKeys } from "./hooks/use-organizations";
+// Hooks - Source Schemas
+export * from "./hooks/use-source-schemas";
+export { sourceSchemasKeys } from "./hooks/use-source-schemas";
 // Hooks - Users
 export * from "./hooks/use-users";
 export { usersKeys } from "./hooks/use-users";

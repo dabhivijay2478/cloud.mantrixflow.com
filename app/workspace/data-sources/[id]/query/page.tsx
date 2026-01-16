@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/resizable";
 import {
   useConnection,
+  useDataSource,
   useExecuteQuery,
   useSchemasWithTables,
 } from "@/lib/api";
@@ -123,8 +124,10 @@ export default function DataSourceQueryPage() {
   const orgId = currentOrganization?.id;
 
   // Use real API hooks
+  const { data: dataSourceData, isLoading: dataSourceLoading } =
+    useDataSource(orgId, dataSourceId);
   const { data: connection, isLoading: connectionLoading } =
-    useConnection(dataSourceId);
+    useConnection(orgId, dataSourceId);
   const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
     dataSourceId,
     orgId,
@@ -133,12 +136,12 @@ export default function DataSourceQueryPage() {
 
   // Removed dataset tab functionality
 
-  // Convert API connection to component format
-  const dataSource = connection
+  // Convert API data to component format
+  const dataSource = dataSourceData && connection
     ? {
-        id: connection.id,
-        name: connection.name,
-        type: "postgres" as const,
+        id: dataSourceData.id,
+        name: dataSourceData.name,
+        type: dataSourceData.source_type as "postgres",
         status:
           connection.status === "active"
             ? ("connected" as const)
@@ -210,7 +213,7 @@ export default function DataSourceQueryPage() {
     }
   }, [dataSource, query, shouldShowSQLEditor]);
 
-  if (connectionLoading) {
+  if (dataSourceLoading || connectionLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Card>

@@ -10,6 +10,14 @@ import {
   usePipeline,
   useUpdatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import {
+  useDestinationSchema,
+  useUpdateDestinationSchema,
+} from "@/lib/api/hooks/use-destination-schemas";
+import {
+  useSourceSchema,
+  useUpdateSourceSchema,
+} from "@/lib/api/hooks/use-source-schemas";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "../../new/collector-step";
@@ -26,12 +34,6 @@ interface PipelineConfig {
 type Emitter = NonNullable<CollectorConfig["emitters"]>[number];
 
 type Transformer = CollectorConfig["transformers"][number];
-
-type FieldMapping = {
-  source: string;
-  destination: string;
-  isPrimaryKey?: boolean;
-};
 
 interface TransformationsData {
   collectors?: Array<{
@@ -53,20 +55,24 @@ export default function EditPipelinePage() {
   const { data: pipeline, isLoading, error } = usePipeline(orgId, pipelineId);
   const updatePipelineMutation = useUpdatePipeline(orgId, pipelineId);
 
-  if (!orgId) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center">
-        <p className="text-muted-foreground">No organization selected</p>
-        <Button
-          variant="outline"
-          onClick={() => router.push("/workspace/data-pipelines")}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Pipelines
-        </Button>
-      </div>
-    );
-  }
+  // Load source and destination schemas
+  const { data: sourceSchema } = useSourceSchema(
+    orgId,
+    pipeline?.sourceSchemaId,
+  );
+  const { data: destinationSchema } = useDestinationSchema(
+    orgId,
+    pipeline?.destinationSchemaId,
+  );
+
+  const updateSourceSchemaMutation = useUpdateSourceSchema(
+    orgId,
+    pipeline?.sourceSchemaId,
+  );
+  const updateDestinationSchemaMutation = useUpdateDestinationSchema(
+    orgId,
+    pipeline?.destinationSchemaId,
+  );
 
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
@@ -75,12 +81,51 @@ export default function EditPipelinePage() {
 
   // Load pipeline configuration from API response
   useEffect(() => {
-    if (pipeline) {
-      // Parse collectors from transformations JSONB field
+    if (pipeline && sourceSchema && destinationSchema) {
+      // Try to parse collectors from transformations JSONB field first
+      // If not available, reconstruct from source and destination schemas
       const transformations =
         pipeline.transformations as unknown as TransformationsData;
-      const collectors = transformations?.collectors || [];
+      let collectors = transformations?.collectors || [];
       const emitters = transformations?.emitters || [];
+
+      // If no collectors in transformations, reconstruct from schemas
+      if (collectors.length === 0 && sourceSchema && destinationSchema) {
+        // Reconstruct collector from source schema
+        const sourceTableName = sourceSchema.sourceTable
+          ? sourceSchema.sourceSchema && sourceSchema.sourceSchema !== "public"
+            ? `${sourceSchema.sourceSchema}.${sourceSchema.sourceTable}`
+            : sourceSchema.sourceTable
+          : "";
+
+        // Reconstruct transformers from destination schema column mappings
+        const transformers =
+          destinationSchema.columnMappings &&
+          destinationSchema.columnMappings.length > 0
+            ? [
+                {
+                  id: `transformer_${Date.now()}`,
+                  name: "Default Transformer",
+                  collectorId: `collector_${Date.now()}`,
+                  emitterId: `emitter_${Date.now()}`,
+                  fieldMappings: destinationSchema.columnMappings.map((cm) => ({
+                    source: cm.sourceColumn,
+                    destination: cm.destinationColumn,
+                    isPrimaryKey: cm.isPrimaryKey || false,
+                  })),
+                },
+              ]
+            : [];
+
+        collectors = [
+          {
+            id: `collector_${Date.now()}`,
+            sourceId: sourceSchema.dataSourceId || "",
+            selectedTables: sourceTableName ? [sourceTableName] : [],
+            transformers: transformers,
+          },
+        ];
+      }
 
       console.log("Pipeline data loaded for edit:", {
         transformations,
@@ -146,17 +191,34 @@ export default function EditPipelinePage() {
           fieldMappings: Array.isArray(t.fieldMappings)
             ? t.fieldMappings
             : typeof t.fieldMappings === "object" && t.fieldMappings !== null
-              ? Object.entries(t.fieldMappings).map(([source, destination]) => ({
-                  source,
-                  destination: String(destination),
-                }))
+              ? Object.entries(t.fieldMappings).map(
+                  ([source, destination]) => ({
+                    source,
+                    destination: String(destination),
+                  }),
+                )
               : [],
         })),
       }));
 
       setConfig({ collectors: configWithEmitters });
     }
-  }, [pipeline]);
+  }, [pipeline, sourceSchema, destinationSchema]);
+
+  if (!orgId) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p className="text-muted-foreground">No organization selected</p>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/workspace/data-pipelines")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Pipelines
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -218,16 +280,117 @@ export default function EditPipelinePage() {
       collectors,
     }));
 
+    if (!pipeline || !sourceSchema || !destinationSchema) {
+      toast.error(
+        "Missing data",
+        "Pipeline, source schema, or destination schema not loaded.",
+      );
+      return;
+    }
+
     try {
-      // TODO: The new API requires updating schemas separately
-      // This edit page needs to be refactored to work with the new schema-based approach
-      // For now, we'll just update basic fields
+      // Step 1: Update source schema if needed
+      const firstCollector = collectors[0];
+      if (firstCollector && sourceSchema) {
+        const firstTable = firstCollector.selectedTables[0];
+        if (firstTable) {
+          const tableParts = firstTable.includes(".")
+            ? firstTable.split(".")
+            : ["public", firstTable];
+          const sourceSchemaName = tableParts[0] || "public";
+          const sourceTableName = tableParts[1] || tableParts[0] || firstTable;
+
+          // Only update if changed
+          if (
+            sourceSchema.sourceSchema !== sourceSchemaName ||
+            sourceSchema.sourceTable !== sourceTableName
+          ) {
+            await updateSourceSchemaMutation.mutateAsync({
+              sourceSchema: sourceSchemaName,
+              sourceTable: sourceTableName,
+            });
+          }
+        }
+      }
+
+      // Step 2: Update destination schema if needed
+      const firstTransformer = collectors
+        .flatMap((c) => c.transformers || [])
+        .find((t) => t.fieldMappings && t.fieldMappings.length > 0);
+
+      if (firstTransformer?.fieldMappings && destinationSchema) {
+        // Extract destination table from transformer
+        const transformerWithTable = firstTransformer as Transformer & {
+          destinationTable?: string;
+        };
+        let destinationTable = destinationSchema.destinationTable;
+        if (transformerWithTable.destinationTable) {
+          destinationTable = transformerWithTable.destinationTable;
+        }
+
+        // Parse destination table
+        const destTableParts = destinationTable.includes(".")
+          ? destinationTable.split(".")
+          : ["public", destinationTable];
+        const destSchemaName = destTableParts[0] || "public";
+        const destTableName =
+          destTableParts[1] || destTableParts[0] || destinationTable;
+
+        // Convert field mappings to column mappings
+        const columnMappings = firstTransformer.fieldMappings.map((fm) => {
+          const mapping = fm as {
+            source: string;
+            destination: string;
+            isPrimaryKey?: boolean;
+          };
+          return {
+            sourceColumn: mapping.source,
+            destinationColumn: mapping.destination,
+            dataType: "text", // Default type
+            nullable: true,
+            isPrimaryKey: mapping.isPrimaryKey || false,
+          };
+        });
+
+        // Extract primary keys
+        const primaryKeyFields = firstTransformer.fieldMappings
+          .filter((fm) => {
+            const mapping = fm as { isPrimaryKey?: boolean };
+            return mapping.isPrimaryKey === true;
+          })
+          .map((fm) => {
+            const mapping = fm as { destination: string };
+            return mapping.destination;
+          });
+
+        const writeMode: "append" | "upsert" | "replace" =
+          primaryKeyFields.length > 0 ? "upsert" : "append";
+
+        // Only update if changed
+        if (
+          destinationSchema.destinationSchema !== destSchemaName ||
+          destinationSchema.destinationTable !== destTableName ||
+          JSON.stringify(destinationSchema.columnMappings) !==
+            JSON.stringify(columnMappings) ||
+          destinationSchema.writeMode !== writeMode
+        ) {
+          await updateDestinationSchemaMutation.mutateAsync({
+            destinationSchema: destSchemaName,
+            destinationTable: destTableName,
+            columnMappings: columnMappings,
+            writeMode: writeMode,
+            upsertKey:
+              primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
+          });
+        }
+      }
+
+      // Step 3: Update pipeline
       await updatePipelineMutation.mutateAsync({
         name: pipeline.name,
         description: pipeline.description || undefined,
-        // Note: The new API structure uses sourceSchemaId and destinationSchemaId
-        // This edit page needs to be refactored to work with the new schema-based approach
-        // For now, we'll just update basic fields
+        // Note: sourceSchemaId and destinationSchemaId remain the same
+        // unless schemas were recreated (which would require more complex logic)
       });
 
       toast.success(

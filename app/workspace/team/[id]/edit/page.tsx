@@ -90,7 +90,10 @@ export default function EditTeamMemberPage() {
   });
 
   const getStatusBadge = (status: OrganizationMember["status"]) => {
-    const statusMap = {
+    const statusMap: Record<
+      OrganizationMember["status"],
+      { label: string; className: string; dotColor: string }
+    > = {
       active: {
         label: "Active",
         className:
@@ -114,6 +117,12 @@ export default function EditTeamMemberPage() {
         className:
           "border-gray-500/50 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950",
         dotColor: "bg-gray-500",
+      },
+      suspended: {
+        label: "Suspended",
+        className:
+          "border-red-500/50 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950",
+        dotColor: "bg-red-500",
       },
     };
 

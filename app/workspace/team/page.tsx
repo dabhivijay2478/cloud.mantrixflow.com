@@ -192,7 +192,7 @@ export default function TeamPage() {
         const member = members?.find((m) => m.id === memberToTransfer.memberId);
         if (!member?.user_id) {
           showErrorToast(
-            "transferFailed",
+            "updateFailed",
             "Ownership Transfer",
             "Cannot transfer ownership to a member without a user account.",
           );
@@ -213,7 +213,7 @@ export default function TeamPage() {
           error instanceof Error
             ? error.message
             : "Unable to transfer ownership.";
-        showErrorToast("transferFailed", "Ownership Transfer", errorMessage);
+        showErrorToast("updateFailed", "Ownership Transfer", errorMessage);
         throw error; // Re-throw to prevent modal from closing on error
       }
     },

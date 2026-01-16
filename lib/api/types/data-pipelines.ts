@@ -3,8 +3,6 @@
  * Type definitions for data pipeline endpoints (updated for new schema)
  */
 
-import type { DataSource } from "./data-sources";
-
 export interface ColumnMapping {
   sourceColumn: string;
   destinationColumn: string;

@@ -122,9 +122,9 @@ export default function OrganizationPage() {
         name: newOrganization.name,
         slug: newOrganization.slug,
         createdAt:
-          typeof newOrganization.createdAt === "string"
-            ? newOrganization.createdAt
-            : newOrganization.createdAt.toISOString(),
+          newOrganization.createdAt ||
+          newOrganization.created_at ||
+          new Date().toISOString(),
       });
 
       // Update onboarding step

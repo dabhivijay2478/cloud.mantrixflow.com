@@ -392,7 +392,7 @@ export function PipelineConfigurationForm({
           </div>
 
           <ScrollArea className="h-[300px] rounded-md border p-4">
-            {!orgId ? (
+            {!organizationId ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 No organization selected. Please select an organization from the
                 sidebar.

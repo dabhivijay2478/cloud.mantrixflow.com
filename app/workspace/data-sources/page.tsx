@@ -40,9 +40,9 @@ import {
   useConnections,
   useCreateConnection,
   useDeleteConnection,
-  useTestConnection,
   useUsers,
 } from "@/lib/api";
+import { useTestConnection as useTestConnectionLegacy } from "@/lib/api/hooks/use-data-sources";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
@@ -63,7 +63,8 @@ export default function DataSourcesPage() {
     useConnections(organizationId);
   const createConnection = useCreateConnection(organizationId);
   const deleteConnection = useDeleteConnection(organizationId);
-  const testConnection = useTestConnection();
+  // Use legacy testConnection hook that doesn't require orgId/dataSourceId
+  const testConnection = useTestConnectionLegacy();
 
   const isLoading = connectionsLoading;
 
@@ -211,7 +212,7 @@ export default function DataSourcesPage() {
         host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
 
       const connectionData: CreateConnectionDto = {
-        name: data.name || dataSource.name,
+        connection_type: "postgres",
         config: {
           host: host,
           port: data.port ? parseInt(data.port, 10) : 5432,
@@ -221,10 +222,8 @@ export default function DataSourcesPage() {
           // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
           ssl:
             !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
-              ? { enabled: true, rejectUnauthorized: !isLocalhost }
+              ? { enabled: true }
               : undefined,
-          // Pass database type as metadata for backend processing
-          databaseType: databaseType,
         },
       };
 
@@ -278,7 +277,7 @@ export default function DataSourcesPage() {
         // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
         ssl:
           !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
-            ? { enabled: true, rejectUnauthorized: !isLocalhost }
+            ? { enabled: true }
             : undefined,
         databaseType: databaseType,
       };

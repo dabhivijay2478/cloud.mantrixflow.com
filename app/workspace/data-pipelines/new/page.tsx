@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { useCreatePipeline } from "@/lib/api/hooks/use-data-pipelines";
+import { useCreateDestinationSchema } from "@/lib/api/hooks/use-destination-schemas";
+import { useCreateSourceSchema } from "@/lib/api/hooks/use-source-schemas";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
@@ -24,6 +26,9 @@ export default function NewPipelinePage() {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
   const createPipelineMutation = useCreatePipeline(organizationId);
+  const createSourceSchemaMutation = useCreateSourceSchema(organizationId);
+  const createDestinationSchemaMutation =
+    useCreateDestinationSchema(organizationId);
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
     collectors: [],
@@ -174,90 +179,129 @@ export default function NewPipelinePage() {
       return;
     }
 
-    // Map transformers to emitters - set transformId on emitters
-    const transformersWithEmitters = collectorsToUse.flatMap((c) =>
-      (c.transformers || []).map((t) => ({
-        ...t,
-        collectorId: t.collectorId || c.id,
-        emitterId: t.emitterId || "",
-      })),
-    );
-
-    // Map emitters to the format expected by the API
-    // Set transformId for emitters that are referenced by transformers
-    const emitters = allEmitters.map((e) => {
-      // Find transformer that references this emitter
-      const transformer = transformersWithEmitters.find(
-        (t) => t.emitterId === e.id,
-      );
-      return {
-        id: e.id,
-        transformId: transformer?.id || "", // Set transformId if transformer references this emitter
-        destinationId: e.destinationId,
-        destinationName: e.destinationName,
-        destinationType: e.destinationType,
-        connectionConfig: e.connectionConfig || {}, // Include connectionConfig (required by API)
-      };
-    });
+    // Note: emitters mapping is no longer needed for schema-based API
+    // The destination schema is created directly from transformer field mappings
 
     try {
-      // Use the first collector's source as the primary source
+      // Step 1: Create source schema from collector data
       const firstCollector = collectorsToUse[0];
       const primarySourceId = firstCollector.sourceId;
+      const firstTable = firstCollector.selectedTables[0];
 
+      if (!firstTable) {
+        toast.error(
+          "No table selected",
+          "Please select at least one table in the collector step.",
+        );
+        setIsCreating(false);
+        return;
+      }
+
+      // Parse table name (format: "schema.table" or just "table")
+      const tableParts = firstTable.includes(".")
+        ? firstTable.split(".")
+        : ["public", firstTable];
+      const sourceSchemaName = tableParts[0] || "public";
+      const sourceTableName = tableParts[1] || tableParts[0] || firstTable;
+
+      // Create source schema
+      const sourceSchema = await createSourceSchemaMutation.mutateAsync({
+        sourceType: "postgres", // Default to postgres, could be determined from data source
+        dataSourceId: primarySourceId,
+        sourceSchema: sourceSchemaName,
+        sourceTable: sourceTableName,
+        name: `Source: ${sourceTableName}`,
+      });
+
+      // Step 2: Create destination schema from emitter/transformer data
       // Get destination connection ID from emitters
       const destinationConnectionId = allDestinationIds[0];
 
-      // Extract destination table from transformers (use first transformer's destinationTable if available)
-      // Format: "schema.table" or just "table" (defaults to "public")
-      let destinationTable = `pipeline_${Date.now()}`;
-      let destinationSchema = "public";
-
+      // Extract destination information from transformers
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find(
-          (t): t is Transformer & { destinationTable: string } =>
-            !!(t as { destinationTable?: string }).destinationTable,
-        );
+        .find((t) => t.fieldMappings && t.fieldMappings.length > 0);
 
-      if (firstTransformer?.destinationTable) {
-        const tableParts = firstTransformer.destinationTable.includes(".")
-          ? firstTransformer.destinationTable.split(".")
-          : ["public", firstTransformer.destinationTable];
-        destinationSchema = tableParts[0] || "public";
-        destinationTable =
-          tableParts[1] || tableParts[0] || `pipeline_${Date.now()}`;
+      if (
+        !firstTransformer?.fieldMappings ||
+        firstTransformer.fieldMappings.length === 0
+      ) {
+        toast.error(
+          "No field mappings",
+          "Please configure field mappings in the transform step.",
+        );
+        setIsCreating(false);
+        return;
       }
 
-      // TODO: The new API requires creating source and destination schemas first
-      // This page needs to be refactored to:
-      // 1. Create source schema(s) using SourceSchemasService
-      // 2. Create destination schema(s) using DestinationSchemasService
-      // 3. Then create pipeline with sourceSchemaId and destinationSchemaId
-      //
-      // For now, this is a placeholder that shows the structure needed
-      // The actual implementation should create schemas first, then the pipeline
+      // Extract destination table from transformer (may be stored in destinationTable field)
+      // Format: "schema.table" or just "table" (defaults to "public")
+      let destinationTable = `pipeline_${Date.now()}`;
+      const transformerWithTable = firstTransformer as Transformer & {
+        destinationTable?: string;
+      };
+      if (transformerWithTable.destinationTable) {
+        destinationTable = transformerWithTable.destinationTable;
+      }
 
-      // Example structure (needs actual implementation):
-      // const sourceSchema = await SourceSchemasService.createSourceSchema(organizationId, {
-      //   sourceType: "postgres",
-      //   dataSourceId: primarySourceId,
-      //   sourceTable: firstCollector.selectedTables[0],
-      // });
-      //
-      // const destinationSchema = await DestinationSchemasService.createDestinationSchema(organizationId, {
-      //   dataSourceId: destinationConnectionId,
-      //   destinationTable: destinationTable,
-      //   destinationSchema: destinationSchema,
-      // });
+      // Parse destination table (format: "schema.table" or just "table")
+      const destTableParts = destinationTable.includes(".")
+        ? destinationTable.split(".")
+        : ["public", destinationTable];
+      const destSchemaName = destTableParts[0] || "public";
+      const destTableName =
+        destTableParts[1] || destTableParts[0] || destinationTable;
 
-      // Then create pipeline:
+      // Convert field mappings to column mappings format
+      // Field mappings may have isPrimaryKey flag
+      const columnMappings = firstTransformer.fieldMappings.map((fm) => {
+        const mapping = fm as {
+          source: string;
+          destination: string;
+          isPrimaryKey?: boolean;
+        };
+        return {
+          sourceColumn: mapping.source,
+          destinationColumn: mapping.destination,
+          dataType: "text", // Default type, could be enhanced with type detection
+          nullable: true,
+          isPrimaryKey: mapping.isPrimaryKey || false,
+        };
+      });
+
+      // Extract primary keys from field mappings
+      const primaryKeyFields = firstTransformer.fieldMappings
+        .filter((fm) => {
+          const mapping = fm as { isPrimaryKey?: boolean };
+          return mapping.isPrimaryKey === true;
+        })
+        .map((fm) => {
+          const mapping = fm as { destination: string };
+          return mapping.destination;
+        });
+
+      // Determine write mode (default to append, could be enhanced)
+      const writeMode: "append" | "upsert" | "replace" =
+        primaryKeyFields.length > 0 ? "upsert" : "append";
+
+      // Create destination schema
+      const destinationSchema =
+        await createDestinationSchemaMutation.mutateAsync({
+          dataSourceId: destinationConnectionId,
+          destinationSchema: destSchemaName,
+          destinationTable: destTableName,
+          columnMappings: columnMappings,
+          writeMode: writeMode,
+          upsertKey: primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
+          name: `Destination: ${destTableName}`,
+        });
+
+      // Step 3: Create pipeline with schema IDs
       await createPipelineMutation.mutateAsync({
         name: `Pipeline ${new Date().toLocaleDateString()}`,
         description: `Pipeline with ${collectorsToUse.length} collector(s)`,
-        // TODO: These need to be actual schema IDs from the steps above
-        sourceSchemaId: "TEMP_SOURCE_SCHEMA_ID", // Replace with actual source schema ID
-        destinationSchemaId: "TEMP_DEST_SCHEMA_ID", // Replace with actual destination schema ID
+        sourceSchemaId: sourceSchema.id,
+        destinationSchemaId: destinationSchema.id,
         syncMode: "full",
         syncFrequency: "manual",
         // Transformations can be extracted from the collectors/transformers structure

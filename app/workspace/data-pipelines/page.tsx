@@ -2,15 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import {
-  Database,
-  Pause,
-  Play,
-  Plus,
-  Sparkles,
-  Trash2,
-  Zap,
-} from "lucide-react";
+import { Play, Plus, Trash2, Zap } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
@@ -20,14 +12,11 @@ import {
   useDeletePipeline,
   usePipelines,
 } from "@/lib/api/hooks/use-data-pipelines";
-import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { useUsers } from "@/lib/api/hooks/use-users";
 import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
-
-type PipelineType = "bulk" | "stream" | "emit";
 
 export default function DataPipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();
@@ -38,9 +27,6 @@ export default function DataPipelinesPage() {
   // Use real API hooks instead of workspace store
   const { data: pipelines, isLoading: pipelinesLoading } =
     usePipelines(organizationId);
-  // Note: connections are now accessed via data sources
-  // For now, we'll keep this for backward compatibility but should migrate to useDataSources
-  const { data: connections } = useConnections(organizationId);
   const deletePipeline = useDeletePipeline(organizationId);
   const router = useRouter();
 
@@ -48,35 +34,6 @@ export default function DataPipelinesPage() {
   const userIds =
     pipelines?.map((pipeline) => pipeline.createdBy).filter(Boolean) || [];
   const { usersMap } = useUsers(userIds);
-
-  const getPipelineTypeInfo = (type: PipelineType) => {
-    switch (type) {
-      case "bulk":
-        return {
-          icon: Database,
-          title: "Bulk Load",
-          description: "One-time bulk imports from any system",
-          color: "text-blue-600 dark:text-blue-400",
-          bgColor: "bg-blue-100 dark:bg-blue-900/30",
-        };
-      case "stream":
-        return {
-          icon: Zap,
-          title: "Stream & Transform",
-          description: "Real-time pipelines with rewind capability",
-          color: "text-purple-600 dark:text-purple-400",
-          bgColor: "bg-purple-100 dark:bg-purple-900/30",
-        };
-      case "emit":
-        return {
-          icon: Sparkles,
-          title: "Emit Fearlessly",
-          description: "Fan out to any destination",
-          color: "text-green-600 dark:text-green-400",
-          bgColor: "bg-green-100 dark:bg-green-900/30",
-        };
-    }
-  };
 
   const getStatusBadge = (pipeline: Pipeline) => {
     // Check if pipeline is paused first (highest priority)
@@ -201,28 +158,6 @@ export default function DataPipelinesPage() {
     },
   });
 
-  const pausePipelineMutation = useMutation({
-    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
-      if (!organizationId) {
-        throw new Error("Organization ID is required");
-      }
-      return DataPipelinesService.pausePipeline(organizationId, pipelineId);
-    },
-    onSuccess: (_, variables) => {
-      if (organizationId) {
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            variables.pipelineId,
-          ),
-        });
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
-        });
-      }
-    },
-  });
-
   const resumePipelineMutation = useMutation({
     mutationFn: ({ pipelineId }: { pipelineId: string }) => {
       if (!organizationId) {
@@ -265,29 +200,6 @@ export default function DataPipelinesPage() {
           ? error.message
           : "Unable to start the pipeline execution.";
       toast.error("Failed to run pipeline", errorMessage);
-    }
-  };
-
-  const handlePausePipeline = async (
-    pipelineId: string,
-    pipelineName: string,
-  ) => {
-    if (!organizationId) {
-      toast.error("Error", "Organization ID is required");
-      return;
-    }
-    try {
-      await pausePipelineMutation.mutateAsync({ pipelineId });
-      toast.success(
-        "Pipeline paused",
-        `${pipelineName} has been paused successfully.`,
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Unable to pause the pipeline.";
-      toast.error("Failed to pause pipeline", errorMessage);
     }
   };
 

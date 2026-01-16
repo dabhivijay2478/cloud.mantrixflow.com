@@ -98,9 +98,9 @@ export default function NewOrganizationPage() {
         name: newOrganization.name,
         slug: newOrganization.slug,
         createdAt:
-          typeof newOrganization.createdAt === "string"
-            ? newOrganization.createdAt
-            : newOrganization.createdAt.toISOString(),
+          newOrganization.createdAt ||
+          newOrganization.created_at ||
+          new Date().toISOString(),
       });
 
       showSuccessToast("created", "Organization");
