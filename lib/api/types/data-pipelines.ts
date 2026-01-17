@@ -19,8 +19,21 @@ export type PipelineDataSourceType =
 export type SyncMode = "full" | "incremental";
 export type SyncFrequency = "manual" | "hourly" | "daily" | "weekly";
 export type WriteMode = "append" | "upsert" | "replace";
-export type PipelineStatus = "active" | "paused" | "error";
-export type RunStatus = "pending" | "running" | "success" | "failed" | "cancelled";
+export type PipelineStatus =
+  | "idle"
+  | "initializing"
+  | "running"
+  | "listing"
+  | "listening"
+  | "paused"
+  | "failed"
+  | "completed";
+export type RunStatus =
+  | "pending"
+  | "running"
+  | "success"
+  | "failed"
+  | "cancelled";
 export type JobState = "pending" | "running" | "completed" | "failed";
 export type TriggerType = "manual" | "scheduled" | "api";
 
@@ -53,7 +66,16 @@ export interface TransformConfig {
   fields?: string[];
   separator?: string;
   index?: number;
-  operator?: "eq" | "ne" | "gt" | "lt" | "gte" | "lte" | "contains" | "startsWith" | "endsWith";
+  operator?:
+    | "eq"
+    | "ne"
+    | "gt"
+    | "lt"
+    | "gte"
+    | "lte"
+    | "contains"
+    | "startsWith"
+    | "endsWith";
   value?: unknown;
   maskChar?: string;
   visibleChars?: number;
@@ -112,32 +134,32 @@ export interface SourceConfig {
   port?: number;
   database?: string;
   schema?: string;
-  
+
   // MongoDB
   connectionString?: string;
   collection?: string;
-  
+
   // S3
   bucket?: string;
   region?: string;
   prefix?: string;
   fileFormat?: "csv" | "json" | "parquet";
-  
+
   // API
   baseUrl?: string;
   endpoint?: string;
   method?: "GET" | "POST";
   headers?: Record<string, string>;
   rateLimit?: number;
-  
+
   // BigQuery
   projectId?: string;
   dataset?: string;
-  
+
   // Snowflake
   account?: string;
   warehouse?: string;
-  
+
   // Common
   queryTimeout?: number;
 }

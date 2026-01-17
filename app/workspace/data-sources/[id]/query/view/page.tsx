@@ -84,10 +84,14 @@ export default function QueryResultsViewPage() {
   const orgId = currentOrganization?.id;
 
   // Fetch data source, connection and schemas from API
-  const { data: dataSourceData, isLoading: dataSourceLoading } =
-    useDataSource(orgId, dataSourceId);
-  const { data: connection, isLoading: connectionLoading } =
-    useConnection(orgId, dataSourceId);
+  const { data: dataSourceData, isLoading: dataSourceLoading } = useDataSource(
+    orgId,
+    dataSourceId,
+  );
+  const { data: connection, isLoading: connectionLoading } = useConnection(
+    orgId,
+    dataSourceId,
+  );
   const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
     dataSourceId,
     orgId,
@@ -108,18 +112,19 @@ export default function QueryResultsViewPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Convert API data to component format
-  const dataSource = dataSourceData && connection
-    ? {
-        id: dataSourceData.id,
-        name: dataSourceData.name,
-        type: dataSourceData.source_type as "postgres",
-        status:
-          connection.status === "active"
-            ? ("connected" as const)
-            : ("disconnected" as const),
-        tables: [],
-      }
-    : null;
+  const dataSource =
+    dataSourceData && connection
+      ? {
+          id: dataSourceData.id,
+          name: dataSourceData.name,
+          type: dataSourceData.source_type as "postgres",
+          status:
+            connection.status === "active"
+              ? ("connected" as const)
+              : ("disconnected" as const),
+          tables: [],
+        }
+      : null;
 
   useEffect(() => {
     if (typeof window === "undefined") return;

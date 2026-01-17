@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -10,10 +9,17 @@ import {
   XCircle,
   XOctagon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   useCancelPipelineRun,
   usePipelineRun,
@@ -36,7 +42,11 @@ export function PipelineRunTracker({
   onComplete,
   onCancel,
 }: PipelineRunTrackerProps) {
-  const { data: run, isLoading } = usePipelineRun(organizationId, pipelineId, runId);
+  const { data: run, isLoading } = usePipelineRun(
+    organizationId,
+    pipelineId,
+    runId,
+  );
   const cancelRun = useCancelPipelineRun(organizationId, pipelineId);
   const { data: stats } = usePipelineStats(organizationId, pipelineId);
 
@@ -44,7 +54,13 @@ export function PipelineRunTracker({
 
   // Notify parent when run completes
   useEffect(() => {
-    if (run && !hasCompleted && (run.status === "success" || run.status === "failed" || run.status === "cancelled")) {
+    if (
+      run &&
+      !hasCompleted &&
+      (run.status === "success" ||
+        run.status === "failed" ||
+        run.status === "cancelled")
+    ) {
       setHasCompleted(true);
       onComplete?.(run);
     }
@@ -133,7 +149,8 @@ export function PipelineRunTracker({
 
     // Estimate based on rows written vs average
     if (stats?.totalRowsProcessed && run.rowsWritten) {
-      const avgRowsPerRun = stats.totalRowsProcessed / (stats.totalRunsSuccessful || 1);
+      const avgRowsPerRun =
+        stats.totalRowsProcessed / (stats.totalRunsSuccessful || 1);
       return Math.min(Math.round((run.rowsWritten / avgRowsPerRun) * 100), 95);
     }
 
@@ -157,7 +174,9 @@ export function PipelineRunTracker({
   const getElapsedTime = () => {
     if (!run.startedAt) return "-";
     const startTime = new Date(run.startedAt).getTime();
-    const endTime = run.completedAt ? new Date(run.completedAt).getTime() : Date.now();
+    const endTime = run.completedAt
+      ? new Date(run.completedAt).getTime()
+      : Date.now();
     const elapsed = Math.round((endTime - startTime) / 1000);
     return formatDuration(elapsed);
   };
@@ -168,11 +187,15 @@ export function PipelineRunTracker({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-full ${statusConfig.bgColor}`}>
-              <StatusIcon className={`h-5 w-5 ${statusConfig.color} ${run.status === "running" ? "animate-spin" : ""}`} />
+              <StatusIcon
+                className={`h-5 w-5 ${statusConfig.color} ${run.status === "running" ? "animate-spin" : ""}`}
+              />
             </div>
             <div>
               <CardTitle className="text-lg">{statusConfig.label}</CardTitle>
-              <CardDescription className="text-sm">{statusConfig.description}</CardDescription>
+              <CardDescription className="text-sm">
+                {statusConfig.description}
+              </CardDescription>
             </div>
           </div>
           {isRunning && (
@@ -230,7 +253,9 @@ export function PipelineRunTracker({
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Duration</div>
             <div className="text-xl font-semibold">
-              {run.durationSeconds ? formatDuration(run.durationSeconds) : getElapsedTime()}
+              {run.durationSeconds
+                ? formatDuration(run.durationSeconds)
+                : getElapsedTime()}
             </div>
           </div>
         </div>
@@ -257,8 +282,12 @@ export function PipelineRunTracker({
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <div className="font-medium text-red-800 dark:text-red-200">Error Details</div>
-                <div className="text-sm text-red-700 dark:text-red-300">{run.errorMessage}</div>
+                <div className="font-medium text-red-800 dark:text-red-200">
+                  Error Details
+                </div>
+                <div className="text-sm text-red-700 dark:text-red-300">
+                  {run.errorMessage}
+                </div>
                 {run.errorStack && (
                   <details className="mt-2">
                     <summary className="text-xs cursor-pointer text-red-600 dark:text-red-400">

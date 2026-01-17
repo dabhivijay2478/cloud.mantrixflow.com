@@ -89,11 +89,15 @@ export function useConnections(orgId?: string) {
   });
 }
 
-export function useConnection(orgId: string | undefined, id: string | undefined) {
+export function useConnection(
+  orgId: string | undefined,
+  id: string | undefined,
+) {
   return useQuery({
     queryKey: dataSourcesKeys.connections.detail(id || ""),
     queryFn: () => {
-      if (!id || !orgId) throw new Error("Organization ID and Connection ID are required");
+      if (!id || !orgId)
+        throw new Error("Organization ID and Connection ID are required");
       return DataSourcesService.getConnection(orgId, id);
     },
     enabled: !!id && !!orgId,

@@ -20,9 +20,19 @@ export const destinationSchemasKeys = {
   detail: (organizationId: string, schemaId: string) =>
     [...destinationSchemasKeys.details(), organizationId, schemaId] as const,
   validation: (organizationId: string, schemaId: string) =>
-    [...destinationSchemasKeys.all, "validation", organizationId, schemaId] as const,
+    [
+      ...destinationSchemasKeys.all,
+      "validation",
+      organizationId,
+      schemaId,
+    ] as const,
   tableExists: (organizationId: string, schemaId: string) =>
-    [...destinationSchemasKeys.all, "table-exists", organizationId, schemaId] as const,
+    [
+      ...destinationSchemasKeys.all,
+      "table-exists",
+      organizationId,
+      schemaId,
+    ] as const,
 };
 
 // ============================================================================
@@ -53,12 +63,18 @@ export function useDestinationSchema(
   schemaId: string | undefined,
 ) {
   return useQuery({
-    queryKey: destinationSchemasKeys.detail(organizationId || "", schemaId || ""),
+    queryKey: destinationSchemasKeys.detail(
+      organizationId || "",
+      schemaId || "",
+    ),
     queryFn: () => {
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return DestinationSchemasService.getDestinationSchema(organizationId, schemaId);
+      return DestinationSchemasService.getDestinationSchema(
+        organizationId,
+        schemaId,
+      );
     },
     enabled: !!organizationId && !!schemaId,
   });
@@ -74,7 +90,10 @@ export function useCreateDestinationSchema(organizationId: string | undefined) {
       if (!organizationId) {
         throw new Error("Organization ID is required");
       }
-      return DestinationSchemasService.createDestinationSchema(organizationId, data);
+      return DestinationSchemasService.createDestinationSchema(
+        organizationId,
+        data,
+      );
     },
     onSuccess: () => {
       if (organizationId) {
@@ -131,13 +150,19 @@ export function useDeleteDestinationSchema(organizationId: string | undefined) {
       if (!organizationId) {
         throw new Error("Organization ID is required");
       }
-      return DestinationSchemasService.deleteDestinationSchema(organizationId, schemaId);
+      return DestinationSchemasService.deleteDestinationSchema(
+        organizationId,
+        schemaId,
+      );
     },
     onSuccess: (_, deletedSchemaId) => {
       if (organizationId) {
         // Remove from cache
         queryClient.removeQueries({
-          queryKey: destinationSchemasKeys.detail(organizationId, deletedSchemaId),
+          queryKey: destinationSchemasKeys.detail(
+            organizationId,
+            deletedSchemaId,
+          ),
         });
         // Invalidate list
         queryClient.invalidateQueries({
@@ -165,7 +190,10 @@ export function useValidateDestinationSchema(
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return DestinationSchemasService.validateDestinationSchema(organizationId, schemaId);
+      return DestinationSchemasService.validateDestinationSchema(
+        organizationId,
+        schemaId,
+      );
     },
     onSuccess: (result) => {
       if (organizationId && schemaId) {
@@ -195,7 +223,10 @@ export function useValidateDestinationConfig(
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return DestinationSchemasService.validateConfiguration(organizationId, schemaId);
+      return DestinationSchemasService.validateConfiguration(
+        organizationId,
+        schemaId,
+      );
     },
   });
 }
@@ -208,12 +239,18 @@ export function useCheckTableExists(
   schemaId: string | undefined,
 ) {
   return useQuery({
-    queryKey: destinationSchemasKeys.tableExists(organizationId || "", schemaId || ""),
+    queryKey: destinationSchemasKeys.tableExists(
+      organizationId || "",
+      schemaId || "",
+    ),
     queryFn: () => {
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return DestinationSchemasService.checkTableExists(organizationId, schemaId);
+      return DestinationSchemasService.checkTableExists(
+        organizationId,
+        schemaId,
+      );
     },
     enabled: !!organizationId && !!schemaId,
     staleTime: 60000, // 1 minute - table existence doesn't change frequently
@@ -239,7 +276,10 @@ export function useCreateDestinationTable(
       if (organizationId && schemaId) {
         // Invalidate table exists check
         queryClient.invalidateQueries({
-          queryKey: destinationSchemasKeys.tableExists(organizationId, schemaId),
+          queryKey: destinationSchemasKeys.tableExists(
+            organizationId,
+            schemaId,
+          ),
         });
         // Refresh schema
         queryClient.invalidateQueries({

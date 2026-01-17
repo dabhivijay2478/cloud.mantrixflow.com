@@ -124,10 +124,14 @@ export default function DataSourceQueryPage() {
   const orgId = currentOrganization?.id;
 
   // Use real API hooks
-  const { data: dataSourceData, isLoading: dataSourceLoading } =
-    useDataSource(orgId, dataSourceId);
-  const { data: connection, isLoading: connectionLoading } =
-    useConnection(orgId, dataSourceId);
+  const { data: dataSourceData, isLoading: dataSourceLoading } = useDataSource(
+    orgId,
+    dataSourceId,
+  );
+  const { data: connection, isLoading: connectionLoading } = useConnection(
+    orgId,
+    dataSourceId,
+  );
   const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
     dataSourceId,
     orgId,
@@ -137,18 +141,19 @@ export default function DataSourceQueryPage() {
   // Removed dataset tab functionality
 
   // Convert API data to component format
-  const dataSource = dataSourceData && connection
-    ? {
-        id: dataSourceData.id,
-        name: dataSourceData.name,
-        type: dataSourceData.source_type as "postgres",
-        status:
-          connection.status === "active"
-            ? ("connected" as const)
-            : ("disconnected" as const),
-        tables: [], // Not used when using schema-based navigation
-      }
-    : null;
+  const dataSource =
+    dataSourceData && connection
+      ? {
+          id: dataSourceData.id,
+          name: dataSourceData.name,
+          type: dataSourceData.source_type as "postgres",
+          status:
+            connection.status === "active"
+              ? ("connected" as const)
+              : ("disconnected" as const),
+          tables: [], // Not used when using schema-based navigation
+        }
+      : null;
 
   // Track selected schema and table
   const [selectedSchema, setSelectedSchema] = useState<string | undefined>();

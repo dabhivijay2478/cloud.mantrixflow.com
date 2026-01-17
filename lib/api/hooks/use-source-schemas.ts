@@ -24,7 +24,13 @@ export const sourceSchemasKeys = {
   validation: (organizationId: string, schemaId: string) =>
     [...sourceSchemasKeys.all, "validation", organizationId, schemaId] as const,
   preview: (organizationId: string, schemaId: string, limit?: number) =>
-    [...sourceSchemasKeys.all, "preview", organizationId, schemaId, limit] as const,
+    [
+      ...sourceSchemasKeys.all,
+      "preview",
+      organizationId,
+      schemaId,
+      limit,
+    ] as const,
 };
 
 // ============================================================================
@@ -101,7 +107,11 @@ export function useUpdateSourceSchema(
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return SourceSchemasService.updateSourceSchema(organizationId, schemaId, data);
+      return SourceSchemasService.updateSourceSchema(
+        organizationId,
+        schemaId,
+        data,
+      );
     },
     onSuccess: (updatedSchema) => {
       if (organizationId && schemaId) {
@@ -163,7 +173,10 @@ export function useDiscoverSourceSchema(
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return SourceSchemasService.discoverSourceSchema(organizationId, schemaId);
+      return SourceSchemasService.discoverSourceSchema(
+        organizationId,
+        schemaId,
+      );
     },
     onSuccess: (result) => {
       if (organizationId && schemaId) {
@@ -195,7 +208,10 @@ export function useValidateSourceSchema(
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return SourceSchemasService.validateSourceSchema(organizationId, schemaId);
+      return SourceSchemasService.validateSourceSchema(
+        organizationId,
+        schemaId,
+      );
     },
     onSuccess: (result) => {
       if (organizationId && schemaId) {
@@ -218,12 +234,20 @@ export function usePreviewSourceData(
   limit?: number,
 ) {
   return useQuery({
-    queryKey: sourceSchemasKeys.preview(organizationId || "", schemaId || "", limit),
+    queryKey: sourceSchemasKeys.preview(
+      organizationId || "",
+      schemaId || "",
+      limit,
+    ),
     queryFn: () => {
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return SourceSchemasService.previewSourceData(organizationId, schemaId, limit);
+      return SourceSchemasService.previewSourceData(
+        organizationId,
+        schemaId,
+        limit,
+      );
     },
     enabled: !!organizationId && !!schemaId,
     staleTime: 30000, // 30 seconds - preview data is relatively fresh

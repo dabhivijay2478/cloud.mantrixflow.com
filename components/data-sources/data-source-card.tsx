@@ -69,19 +69,21 @@ export function DataSourceCard({
         </Badge>
       )}
       <CardContent className="p-4 flex items-center gap-3">
-        <div className={cn(
-          "shrink-0 w-12 h-12 border rounded-lg flex items-center justify-center transition-colors",
-          disabled 
-            ? "bg-muted/50" 
-            : "bg-muted group-hover:bg-muted/80"
-        )}>
+        <div
+          className={cn(
+            "shrink-0 w-12 h-12 border rounded-lg flex items-center justify-center transition-colors",
+            disabled ? "bg-muted/50" : "bg-muted group-hover:bg-muted/80",
+          )}
+        >
           {getIconComponent(dataSource.iconType, 24)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className={cn(
-            "text-sm font-semibold truncate",
-            disabled ? "text-muted-foreground" : "text-foreground"
-          )}>
+          <div
+            className={cn(
+              "text-sm font-semibold truncate",
+              disabled ? "text-muted-foreground" : "text-foreground",
+            )}
+          >
             {dataSource.name}
           </div>
           {isConnected && connectedData && !disabled && (

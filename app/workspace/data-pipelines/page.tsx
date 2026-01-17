@@ -4,10 +4,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
+  Loader2,
   MoreVertical,
   Pause,
   Play,
   Plus,
+  Radio,
   RefreshCw,
   Settings,
   TestTube,
@@ -52,23 +54,36 @@ export default function DataPipelinesPage() {
   const router = useRouter();
 
   // API hooks
-  const { data: pipelines, isLoading: pipelinesLoading } = usePipelines(organizationId);
+  const { data: pipelines, isLoading: pipelinesLoading } =
+    usePipelines(organizationId);
   const deletePipeline = useDeletePipeline(organizationId);
 
   // Get user info for creators
-  const userIds = pipelines?.map((pipeline) => pipeline.createdBy).filter(Boolean) || [];
+  const userIds =
+    pipelines?.map((pipeline) => pipeline.createdBy).filter(Boolean) || [];
   const { usersMap } = useUsers(userIds);
 
   // Mutation hooks for pipeline actions
   const runPipelineMutation = useMutation({
-    mutationFn: ({ pipelineId, batchSize }: { pipelineId: string; batchSize?: number }) => {
+    mutationFn: ({
+      pipelineId,
+      batchSize,
+    }: {
+      pipelineId: string;
+      batchSize?: number;
+    }) => {
       if (!organizationId) throw new Error("Organization ID is required");
-      return DataPipelinesService.runPipeline(organizationId, pipelineId, { batchSize });
+      return DataPipelinesService.runPipeline(organizationId, pipelineId, {
+        batchSize,
+      });
     },
     onSuccess: (_, variables) => {
       if (organizationId) {
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, variables.pipelineId),
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            variables.pipelineId,
+          ),
         });
         queryClient.invalidateQueries({
           queryKey: dataPipelinesKeys.pipelines.list(organizationId),
@@ -85,7 +100,10 @@ export default function DataPipelinesPage() {
     onSuccess: (_, variables) => {
       if (organizationId) {
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, variables.pipelineId),
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            variables.pipelineId,
+          ),
         });
         queryClient.invalidateQueries({
           queryKey: dataPipelinesKeys.pipelines.list(organizationId),
@@ -102,7 +120,10 @@ export default function DataPipelinesPage() {
     onSuccess: (_, variables) => {
       if (organizationId) {
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, variables.pipelineId),
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            variables.pipelineId,
+          ),
         });
         queryClient.invalidateQueries({
           queryKey: dataPipelinesKeys.pipelines.list(organizationId),
@@ -121,75 +142,105 @@ export default function DataPipelinesPage() {
   const dryRunPipelineMutation = useMutation({
     mutationFn: ({ pipelineId }: { pipelineId: string }) => {
       if (!organizationId) throw new Error("Organization ID is required");
-      return DataPipelinesService.dryRunPipeline(organizationId, pipelineId, { sampleSize: 10 });
+      return DataPipelinesService.dryRunPipeline(organizationId, pipelineId, {
+        sampleSize: 10,
+      });
     },
   });
 
   // Action handlers
-  const handleRunPipeline = async (pipelineId: string, pipelineName: string) => {
+  const handleRunPipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       await runPipelineMutation.mutateAsync({ pipelineId });
       toast.success("Pipeline started", `${pipelineName} is now running.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to start pipeline.";
+      const message =
+        error instanceof Error ? error.message : "Unable to start pipeline.";
       toast.error("Failed to run pipeline", message);
     }
   };
 
-  const handlePausePipeline = async (pipelineId: string, pipelineName: string) => {
+  const handlePausePipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       await pausePipelineMutation.mutateAsync({ pipelineId });
       toast.success("Pipeline paused", `${pipelineName} has been paused.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to pause pipeline.";
+      const message =
+        error instanceof Error ? error.message : "Unable to pause pipeline.";
       toast.error("Failed to pause pipeline", message);
     }
   };
 
-  const handleResumePipeline = async (pipelineId: string, pipelineName: string) => {
+  const handleResumePipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       await resumePipelineMutation.mutateAsync({ pipelineId });
       toast.success("Pipeline resumed", `${pipelineName} has been resumed.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to resume pipeline.";
+      const message =
+        error instanceof Error ? error.message : "Unable to resume pipeline.";
       toast.error("Failed to resume pipeline", message);
     }
   };
 
-  const handleValidatePipeline = async (pipelineId: string, pipelineName: string) => {
+  const handleValidatePipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       const result = await validatePipelineMutation.mutateAsync({ pipelineId });
       if (result.valid) {
-        toast.success("Validation passed", `${pipelineName} configuration is valid.`);
+        toast.success(
+          "Validation passed",
+          `${pipelineName} configuration is valid.`,
+        );
       } else {
         toast.error("Validation failed", result.errors.join(", "));
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to validate pipeline.";
+      const message =
+        error instanceof Error ? error.message : "Unable to validate pipeline.";
       toast.error("Validation error", message);
     }
   };
 
-  const handleDryRunPipeline = async (pipelineId: string, pipelineName: string) => {
+  const handleDryRunPipeline = async (
+    pipelineId: string,
+    pipelineName: string,
+  ) => {
     try {
       const result = await dryRunPipelineMutation.mutateAsync({ pipelineId });
       toast.success(
         "Dry run completed",
-        `${pipelineName}: Would write ${result.wouldWrite} rows from ${result.sourceRowCount || "?"} source rows.`
+        `${pipelineName}: Would write ${result.wouldWrite} rows from ${result.sourceRowCount || "?"} source rows.`,
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to dry run pipeline.";
+      const message =
+        error instanceof Error ? error.message : "Unable to dry run pipeline.";
       toast.error("Dry run failed", message);
     }
   };
 
   const handleDelete = async (pipelineId: string, pipelineName: string) => {
-    if (confirm(`Are you sure you want to delete "${pipelineName}"? This action cannot be undone.`)) {
+    if (
+      confirm(
+        `Are you sure you want to delete "${pipelineName}"? This action cannot be undone.`,
+      )
+    ) {
       try {
         await deletePipeline.mutateAsync(pipelineId);
         toast.success("Pipeline deleted", `${pipelineName} has been deleted.`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to delete pipeline.";
+        const message =
+          error instanceof Error ? error.message : "Unable to delete pipeline.";
         toast.error("Failed to delete pipeline", message);
       }
     }
@@ -198,10 +249,13 @@ export default function DataPipelinesPage() {
   // Status badge renderer
   const getStatusBadge = (pipeline: Pipeline) => {
     const baseClasses = "flex items-center gap-1.5";
-    
+
     if (pipeline.status === "paused") {
       return (
-        <Badge variant="outline" className="text-amber-600 border-amber-300 dark:border-amber-700">
+        <Badge
+          variant="outline"
+          className="text-amber-600 border-amber-300 dark:border-amber-700"
+        >
           <div className={baseClasses}>
             <Pause className="h-3 w-3" />
             Paused
@@ -232,31 +286,89 @@ export default function DataPipelinesPage() {
       );
     }
 
-    if (pipeline.status === "active") {
+    // Handle new lifecycle statuses
+    if (pipeline.status === "idle") {
       return (
-        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+        <Badge className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20">
           <div className={baseClasses}>
-            <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400" />
-            Active
+            <div className="h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-400" />
+            Idle
           </div>
         </Badge>
       );
     }
 
-    if (pipeline.status === "error") {
+    if (pipeline.status === "running" || pipeline.status === "initializing") {
+      return (
+        <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
+          <div className={baseClasses}>
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {pipeline.status === "initializing" ? "Initializing" : "Running"}
+          </div>
+        </Badge>
+      );
+    }
+
+    if (pipeline.status === "listing") {
+      return (
+        <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
+          <div className={baseClasses}>
+            <RefreshCw className="h-3 w-3" />
+            Polling
+          </div>
+        </Badge>
+      );
+    }
+
+    if (pipeline.status === "listening") {
+      return (
+        <Badge className="bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20">
+          <div className={baseClasses}>
+            <Radio className="h-3 w-3" />
+            Listening
+          </div>
+        </Badge>
+      );
+    }
+
+    if (pipeline.status === "completed") {
+      return (
+        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+          <div className={baseClasses}>
+            <CheckCircle2 className="h-3 w-3" />
+            Completed
+          </div>
+        </Badge>
+      );
+    }
+
+    if (pipeline.status === "failed") {
       return (
         <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
           <div className={baseClasses}>
             <XCircle className="h-3 w-3" />
-            Error
+            Failed
           </div>
         </Badge>
       );
     }
 
+    if (pipeline.status === "paused") {
+      return (
+        <Badge className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20">
+          <div className={baseClasses}>
+            <Pause className="h-3 w-3" />
+            Paused
+          </div>
+        </Badge>
+      );
+    }
+
+    // Fallback for any unhandled status (should not happen in normal cases)
+    const statusText = String(pipeline.status || "unknown");
     return (
       <Badge variant="outline" className="text-muted-foreground">
-        Unknown
+        {statusText.charAt(0).toUpperCase() + statusText.slice(1)}
       </Badge>
     );
   };
@@ -298,7 +410,7 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => {
         const source = row.original.sourceSchema;
         const sourceId = row.original.sourceSchemaId;
-        
+
         if (!source && !sourceId) {
           return <span className="text-muted-foreground">-</span>;
         }
@@ -311,6 +423,7 @@ export default function DataPipelinesPage() {
         if (source) {
           return (
             <button
+              type="button"
               onClick={handleClick}
               className="text-left group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors"
             >
@@ -338,6 +451,7 @@ export default function DataPipelinesPage() {
         // Fallback: show just the ID as clickable
         return (
           <button
+            type="button"
             onClick={handleClick}
             className="text-sm text-primary hover:underline"
           >
@@ -365,6 +479,7 @@ export default function DataPipelinesPage() {
         if (dest) {
           return (
             <button
+              type="button"
               onClick={handleClick}
               className="text-left group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors"
             >
@@ -385,6 +500,7 @@ export default function DataPipelinesPage() {
         // Fallback: show just the ID as clickable
         return (
           <button
+            type="button"
             onClick={handleClick}
             className="text-sm text-primary hover:underline"
           >
@@ -434,8 +550,11 @@ export default function DataPipelinesPage() {
         const creatorId = row.original.createdBy;
         if (!creatorId) return <span className="text-muted-foreground">-</span>;
         const creator = usersMap.get(creatorId);
-        const displayName = creator?.fullName || creator?.email?.split("@")[0] || "Unknown";
-        return <span className="text-sm text-muted-foreground">{displayName}</span>;
+        const displayName =
+          creator?.fullName || creator?.email?.split("@")[0] || "Unknown";
+        return (
+          <span className="text-sm text-muted-foreground">{displayName}</span>
+        );
       },
     },
     {
@@ -493,7 +612,12 @@ export default function DataPipelinesPage() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -572,12 +696,20 @@ export default function DataPipelinesPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => queryClient.invalidateQueries({ queryKey: dataPipelinesKeys.pipelines.list(organizationId || "") })}
+              onClick={() =>
+                queryClient.invalidateQueries({
+                  queryKey: dataPipelinesKeys.pipelines.list(
+                    organizationId || "",
+                  ),
+                })
+              }
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
-            <Button onClick={() => router.push("/workspace/data-pipelines/new")}>
+            <Button
+              onClick={() => router.push("/workspace/data-pipelines/new")}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Pipeline
             </Button>
@@ -586,7 +718,11 @@ export default function DataPipelinesPage() {
       />
 
       <DataTable
-        tableId={organizationId ? `data-pipelines-table-${organizationId}` : "data-pipelines-table"}
+        tableId={
+          organizationId
+            ? `data-pipelines-table-${organizationId}`
+            : "data-pipelines-table"
+        }
         columns={columns}
         data={pipelines || []}
         isLoading={pipelinesLoading}

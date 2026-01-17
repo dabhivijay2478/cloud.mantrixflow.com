@@ -65,7 +65,12 @@ export const dataPipelinesKeys = {
   stats: (organizationId: string, pipelineId: string) =>
     [...dataPipelinesKeys.all, "stats", organizationId, pipelineId] as const,
   validation: (organizationId: string, pipelineId: string) =>
-    [...dataPipelinesKeys.all, "validation", organizationId, pipelineId] as const,
+    [
+      ...dataPipelinesKeys.all,
+      "validation",
+      organizationId,
+      pipelineId,
+    ] as const,
 };
 
 // ============================================================================
@@ -148,7 +153,10 @@ export function usePipelineWithSchemas(
       if (!organizationId || !pipelineId) {
         throw new Error("Organization ID and Pipeline ID are required");
       }
-      return DataPipelinesService.getPipelineWithSchemas(organizationId, pipelineId);
+      return DataPipelinesService.getPipelineWithSchemas(
+        organizationId,
+        pipelineId,
+      );
     },
     enabled: !!organizationId && !!pipelineId,
   });
@@ -205,7 +213,10 @@ export function useDeletePipeline(organizationId: string | undefined) {
       if (organizationId) {
         // Remove from cache
         queryClient.removeQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, deletedPipelineId),
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            deletedPipelineId,
+          ),
         });
         // Invalidate list
         queryClient.invalidateQueries({
@@ -233,7 +244,11 @@ export function useRunPipeline(
       if (!organizationId || !pipelineId) {
         throw new Error("Organization ID and Pipeline ID are required");
       }
-      return DataPipelinesService.runPipeline(organizationId, pipelineId, options);
+      return DataPipelinesService.runPipeline(
+        organizationId,
+        pipelineId,
+        options,
+      );
     },
     onSuccess: () => {
       if (organizationId && pipelineId) {
@@ -334,7 +349,11 @@ export function useCancelPipelineRun(
       if (!organizationId || !pipelineId) {
         throw new Error("Organization ID and Pipeline ID are required");
       }
-      return DataPipelinesService.cancelPipelineRun(organizationId, pipelineId, runId);
+      return DataPipelinesService.cancelPipelineRun(
+        organizationId,
+        pipelineId,
+        runId,
+      );
     },
     onSuccess: (updatedRun, runId) => {
       if (organizationId && pipelineId) {
@@ -349,7 +368,10 @@ export function useCancelPipelineRun(
         });
         // Invalidate pipeline to update status
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+          queryKey: dataPipelinesKeys.pipelines.detail(
+            organizationId,
+            pipelineId,
+          ),
         });
       }
     },
@@ -399,7 +421,11 @@ export function useDryRunPipeline(
       if (!organizationId || !pipelineId) {
         throw new Error("Organization ID and Pipeline ID are required");
       }
-      return DataPipelinesService.dryRunPipeline(organizationId, pipelineId, options);
+      return DataPipelinesService.dryRunPipeline(
+        organizationId,
+        pipelineId,
+        options,
+      );
     },
   });
 }

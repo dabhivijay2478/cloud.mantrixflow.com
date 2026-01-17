@@ -71,7 +71,7 @@ export default function DataSourcesPage() {
   // Data source types that are implemented in the backend collector service
   const SUPPORTED_SOURCE_TYPES = [
     "postgres",
-    "mysql", 
+    "mysql",
     "mongodb",
     "s3",
     "api",
@@ -221,12 +221,12 @@ export default function DataSourcesPage() {
 
       // Build config based on data source type
       const config: Record<string, unknown> = {};
-      
+
       // Add all form data to config
       Object.entries(data).forEach(([key, value]) => {
         // Skip metadata fields or fields handled specially
         if (key === "name") return;
-        
+
         // Skip empty values
         if (!value) return;
 
@@ -244,38 +244,48 @@ export default function DataSourcesPage() {
           // Individual fields mode - ensure connection_string is removed
           delete config.connection_string;
         } else if (data.useConnectionString === "true") {
-           // Connection string mode - we can optionally clean up individual fields but backend prioritizes string
-           // Just to be clean:
-           delete config.host;
-           delete config.port;
-           delete config.username;
-           delete config.password;
-           delete config.database; // Check if connection string includes db? Backend string parser might need it or not. 
-           // Usually connection string has it, but sometimes it receives override. 
-           // Let's keep database/authSource if provided, or safer just keep what we have since backend prefers string.
+          // Connection string mode - we can optionally clean up individual fields but backend prioritizes string
+          // Just to be clean:
+          delete config.host;
+          delete config.port;
+          delete config.username;
+          delete config.password;
+          delete config.database; // Check if connection string includes db? Backend string parser might need it or not.
+          // Usually connection string has it, but sometimes it receives override.
+          // Let's keep database/authSource if provided, or safer just keep what we have since backend prefers string.
         }
       }
 
       // Add SSL config for database types that support it
-      if (["postgres", "mysql", "mssql", "redshift", "clickhouse", "mongodb"].includes(dataSource.type)) {
-        // logic for MongoDB TLS is usually part of connection string or options, 
+      if (
+        [
+          "postgres",
+          "mysql",
+          "mssql",
+          "redshift",
+          "clickhouse",
+          "mongodb",
+        ].includes(dataSource.type)
+      ) {
+        // logic for MongoDB TLS is usually part of connection string or options,
         // but if we used the generic SSL select:
         if (data.ssl === "true" || data.tls === "true") {
-             // For Postgres/common libs
-             if (dataSource.type !== "mongodb") {
-                 config.ssl = { enabled: true };
-             }
+          // For Postgres/common libs
+          if (dataSource.type !== "mongodb") {
+            config.ssl = { enabled: true };
+          }
         } else if (data.ssl === "false" || data.tls === "false") {
-            // Explicitly disabled
-             if (dataSource.type !== "mongodb") {
-                 config.ssl = undefined; // defaults to false/undefined usually
-             }
+          // Explicitly disabled
+          if (dataSource.type !== "mongodb") {
+            config.ssl = undefined; // defaults to false/undefined usually
+          }
         }
       }
 
       const connectionData: CreateConnectionDto = {
         name: data.name,
-        connection_type: dataSource.type as CreateConnectionDto["connection_type"],
+        connection_type:
+          dataSource.type as CreateConnectionDto["connection_type"],
         config: config as unknown as CreateConnectionDto["config"],
       };
 

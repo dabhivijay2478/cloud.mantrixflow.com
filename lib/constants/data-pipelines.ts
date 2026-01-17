@@ -3,7 +3,13 @@
  * Shared constants for data pipeline configuration
  */
 
-import type { PipelineDataSourceType, SyncFrequency, SyncMode, TransformationType, WriteMode } from "@/lib/api/types/data-pipelines";
+import type {
+  PipelineDataSourceType,
+  SyncFrequency,
+  SyncMode,
+  TransformationType,
+  WriteMode,
+} from "@/lib/api/types/data-pipelines";
 
 // ============================================================================
 // DATA SOURCE TYPES
@@ -39,10 +45,35 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
     category: "database",
     color: "blue",
     configFields: [
-      { name: "host", label: "Host", type: "text", required: true, placeholder: "localhost" },
-      { name: "port", label: "Port", type: "number", required: true, defaultValue: 5432 },
-      { name: "database", label: "Database", type: "text", required: true, placeholder: "mydb" },
-      { name: "schema", label: "Schema", type: "text", required: false, placeholder: "public", defaultValue: "public" },
+      {
+        name: "host",
+        label: "Host",
+        type: "text",
+        required: true,
+        placeholder: "localhost",
+      },
+      {
+        name: "port",
+        label: "Port",
+        type: "number",
+        required: true,
+        defaultValue: 5432,
+      },
+      {
+        name: "database",
+        label: "Database",
+        type: "text",
+        required: true,
+        placeholder: "mydb",
+      },
+      {
+        name: "schema",
+        label: "Schema",
+        type: "text",
+        required: false,
+        placeholder: "public",
+        defaultValue: "public",
+      },
     ],
   },
   {
@@ -53,9 +84,27 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
     category: "database",
     color: "orange",
     configFields: [
-      { name: "host", label: "Host", type: "text", required: true, placeholder: "localhost" },
-      { name: "port", label: "Port", type: "number", required: true, defaultValue: 3306 },
-      { name: "database", label: "Database", type: "text", required: true, placeholder: "mydb" },
+      {
+        name: "host",
+        label: "Host",
+        type: "text",
+        required: true,
+        placeholder: "localhost",
+      },
+      {
+        name: "port",
+        label: "Port",
+        type: "number",
+        required: true,
+        defaultValue: 3306,
+      },
+      {
+        name: "database",
+        label: "Database",
+        type: "text",
+        required: true,
+        placeholder: "mydb",
+      },
     ],
   },
   {
@@ -66,11 +115,41 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
     category: "database",
     color: "green",
     configFields: [
-      { name: "connectionString", label: "Connection String", type: "text", required: false, placeholder: "mongodb://..." },
-      { name: "host", label: "Host", type: "text", required: false, placeholder: "localhost" },
-      { name: "port", label: "Port", type: "number", required: false, defaultValue: 27017 },
-      { name: "database", label: "Database", type: "text", required: true, placeholder: "mydb" },
-      { name: "collection", label: "Collection", type: "text", required: false, placeholder: "users" },
+      {
+        name: "connectionString",
+        label: "Connection String",
+        type: "text",
+        required: false,
+        placeholder: "mongodb://...",
+      },
+      {
+        name: "host",
+        label: "Host",
+        type: "text",
+        required: false,
+        placeholder: "localhost",
+      },
+      {
+        name: "port",
+        label: "Port",
+        type: "number",
+        required: false,
+        defaultValue: 27017,
+      },
+      {
+        name: "database",
+        label: "Database",
+        type: "text",
+        required: true,
+        placeholder: "mydb",
+      },
+      {
+        name: "collection",
+        label: "Collection",
+        type: "text",
+        required: false,
+        placeholder: "users",
+      },
     ],
   },
   {
@@ -81,9 +160,27 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
     category: "storage",
     color: "yellow",
     configFields: [
-      { name: "bucket", label: "Bucket", type: "text", required: true, placeholder: "my-bucket" },
-      { name: "region", label: "Region", type: "text", required: true, placeholder: "us-east-1" },
-      { name: "prefix", label: "Path Prefix", type: "text", required: false, placeholder: "data/" },
+      {
+        name: "bucket",
+        label: "Bucket",
+        type: "text",
+        required: true,
+        placeholder: "my-bucket",
+      },
+      {
+        name: "region",
+        label: "Region",
+        type: "text",
+        required: true,
+        placeholder: "us-east-1",
+      },
+      {
+        name: "prefix",
+        label: "Path Prefix",
+        type: "text",
+        required: false,
+        placeholder: "data/",
+      },
       {
         name: "fileFormat",
         label: "File Format",
@@ -105,8 +202,20 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
     category: "api",
     color: "purple",
     configFields: [
-      { name: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://api.example.com" },
-      { name: "endpoint", label: "Endpoint", type: "text", required: true, placeholder: "/v1/data" },
+      {
+        name: "baseUrl",
+        label: "Base URL",
+        type: "text",
+        required: true,
+        placeholder: "https://api.example.com",
+      },
+      {
+        name: "endpoint",
+        label: "Endpoint",
+        type: "text",
+        required: true,
+        placeholder: "/v1/data",
+      },
       {
         name: "method",
         label: "HTTP Method",
@@ -117,7 +226,13 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
           { value: "POST", label: "POST" },
         ],
       },
-      { name: "rateLimit", label: "Rate Limit (req/sec)", type: "number", required: false, defaultValue: 10 },
+      {
+        name: "rateLimit",
+        label: "Rate Limit (req/sec)",
+        type: "number",
+        required: false,
+        defaultValue: 10,
+      },
     ],
   },
   {
@@ -128,8 +243,20 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
     category: "warehouse",
     color: "blue",
     configFields: [
-      { name: "projectId", label: "Project ID", type: "text", required: true, placeholder: "my-project" },
-      { name: "dataset", label: "Dataset", type: "text", required: true, placeholder: "my_dataset" },
+      {
+        name: "projectId",
+        label: "Project ID",
+        type: "text",
+        required: true,
+        placeholder: "my-project",
+      },
+      {
+        name: "dataset",
+        label: "Dataset",
+        type: "text",
+        required: true,
+        placeholder: "my_dataset",
+      },
     ],
   },
   {
@@ -140,10 +267,35 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
     category: "warehouse",
     color: "cyan",
     configFields: [
-      { name: "account", label: "Account", type: "text", required: true, placeholder: "org-account" },
-      { name: "warehouse", label: "Warehouse", type: "text", required: true, placeholder: "COMPUTE_WH" },
-      { name: "database", label: "Database", type: "text", required: true, placeholder: "MY_DB" },
-      { name: "schema", label: "Schema", type: "text", required: false, placeholder: "PUBLIC", defaultValue: "PUBLIC" },
+      {
+        name: "account",
+        label: "Account",
+        type: "text",
+        required: true,
+        placeholder: "org-account",
+      },
+      {
+        name: "warehouse",
+        label: "Warehouse",
+        type: "text",
+        required: true,
+        placeholder: "COMPUTE_WH",
+      },
+      {
+        name: "database",
+        label: "Database",
+        type: "text",
+        required: true,
+        placeholder: "MY_DB",
+      },
+      {
+        name: "schema",
+        label: "Schema",
+        type: "text",
+        required: false,
+        placeholder: "PUBLIC",
+        defaultValue: "PUBLIC",
+      },
     ],
   },
 ];
@@ -152,37 +304,85 @@ export const DATA_SOURCE_TYPES: DataSourceTypeConfig[] = [
 // SYNC OPTIONS
 // ============================================================================
 
-export const SYNC_MODES: { value: SyncMode; label: string; description: string }[] = [
-  { value: "full", label: "Full Sync", description: "Sync all data from source on each run" },
-  { value: "incremental", label: "Incremental Sync", description: "Only sync new or changed records" },
+export const SYNC_MODES: {
+  value: SyncMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "full",
+    label: "Full Sync",
+    description: "Sync all data from source on each run",
+  },
+  {
+    value: "incremental",
+    label: "Incremental Sync",
+    description: "Only sync new or changed records",
+  },
 ];
 
-export const SYNC_FREQUENCIES: { value: SyncFrequency; label: string; description: string }[] = [
+export const SYNC_FREQUENCIES: {
+  value: SyncFrequency;
+  label: string;
+  description: string;
+}[] = [
   { value: "manual", label: "Manual", description: "Run manually when needed" },
   { value: "hourly", label: "Hourly", description: "Run every hour" },
   { value: "daily", label: "Daily", description: "Run once per day" },
   { value: "weekly", label: "Weekly", description: "Run once per week" },
 ];
 
-export const WRITE_MODES: { value: WriteMode; label: string; description: string }[] = [
-  { value: "append", label: "Append", description: "Add new rows without modifying existing data" },
-  { value: "upsert", label: "Upsert", description: "Insert or update based on primary key" },
-  { value: "replace", label: "Replace", description: "Drop and recreate table with new data" },
+export const WRITE_MODES: {
+  value: WriteMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "append",
+    label: "Append",
+    description: "Add new rows without modifying existing data",
+  },
+  {
+    value: "upsert",
+    label: "Upsert",
+    description: "Insert or update based on primary key",
+  },
+  {
+    value: "replace",
+    label: "Replace",
+    description: "Drop and recreate table with new data",
+  },
 ];
 
 // ============================================================================
 // TRANSFORMATION TYPES
 // ============================================================================
 
-export const TRANSFORMATION_TYPES: { value: TransformationType; label: string; description: string }[] = [
+export const TRANSFORMATION_TYPES: {
+  value: TransformationType;
+  label: string;
+  description: string;
+}[] = [
   { value: "rename", label: "Rename", description: "Rename a column" },
   { value: "cast", label: "Cast", description: "Convert data type" },
-  { value: "concat", label: "Concatenate", description: "Combine multiple fields" },
+  {
+    value: "concat",
+    label: "Concatenate",
+    description: "Combine multiple fields",
+  },
   { value: "split", label: "Split", description: "Split field into parts" },
   { value: "filter", label: "Filter", description: "Filter rows by condition" },
   { value: "mask", label: "Mask", description: "Mask sensitive data" },
-  { value: "hash", label: "Hash", description: "Hash values for anonymization" },
-  { value: "custom", label: "Custom", description: "Custom transformation logic" },
+  {
+    value: "hash",
+    label: "Hash",
+    description: "Hash values for anonymization",
+  },
+  {
+    value: "custom",
+    label: "Custom",
+    description: "Custom transformation logic",
+  },
 ];
 
 // ============================================================================
@@ -207,7 +407,9 @@ export const RUN_STATUS_COLORS = {
 // UTILITIES
 // ============================================================================
 
-export function getDataSourceConfig(type: PipelineDataSourceType): DataSourceTypeConfig | undefined {
+export function getDataSourceConfig(
+  type: PipelineDataSourceType,
+): DataSourceTypeConfig | undefined {
   return DATA_SOURCE_TYPES.find((ds) => ds.type === type);
 }
 

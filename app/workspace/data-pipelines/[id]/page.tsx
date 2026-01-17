@@ -1,6 +1,5 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -15,10 +14,17 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 import { LoadingState, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useDeletePipeline,
@@ -30,9 +36,9 @@ import {
   useRunPipeline,
   useValidatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import type { PipelineRun } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
-import type { PipelineRun } from "@/lib/api/types/data-pipelines";
 
 export default function PipelineDetailPage() {
   const params = useParams();
@@ -42,8 +48,15 @@ export default function PipelineDetailPage() {
   const organizationId = currentOrganization?.id;
 
   // Fetch pipeline data
-  const { data: pipeline, isLoading: pipelineLoading } = usePipeline(organizationId, pipelineId);
-  const { data: runs, isLoading: runsLoading } = usePipelineRuns(organizationId, pipelineId, 10);
+  const { data: pipeline, isLoading: pipelineLoading } = usePipeline(
+    organizationId,
+    pipelineId,
+  );
+  const { data: runs, isLoading: runsLoading } = usePipelineRuns(
+    organizationId,
+    pipelineId,
+    10,
+  );
   const { data: stats } = usePipelineStats(organizationId, pipelineId);
 
   // Mutations
@@ -62,7 +75,11 @@ export default function PipelineDetailPage() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-xl font-semibold">Pipeline not found</h2>
-          <Button variant="outline" className="mt-4" onClick={() => router.push("/workspace/data-pipelines")}>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => router.push("/workspace/data-pipelines")}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Pipelines
           </Button>
@@ -76,7 +93,10 @@ export default function PipelineDetailPage() {
       await runPipeline.mutateAsync(undefined);
       toast.success("Pipeline started", `${pipeline.name} is now running.`);
     } catch (error) {
-      toast.error("Failed to run", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Failed to run",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 
@@ -85,7 +105,10 @@ export default function PipelineDetailPage() {
       await pausePipeline.mutateAsync();
       toast.success("Pipeline paused", `${pipeline.name} has been paused.`);
     } catch (error) {
-      toast.error("Failed to pause", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Failed to pause",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 
@@ -94,7 +117,10 @@ export default function PipelineDetailPage() {
       await resumePipeline.mutateAsync();
       toast.success("Pipeline resumed", `${pipeline.name} has been resumed.`);
     } catch (error) {
-      toast.error("Failed to resume", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Failed to resume",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 
@@ -107,7 +133,10 @@ export default function PipelineDetailPage() {
         toast.error("Validation failed", result.errors.join(", "));
       }
     } catch (error) {
-      toast.error("Validation error", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Validation error",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 
@@ -118,28 +147,64 @@ export default function PipelineDetailPage() {
         toast.success("Pipeline deleted", `${pipeline.name} has been deleted.`);
         router.push("/workspace/data-pipelines");
       } catch (error) {
-        toast.error("Failed to delete", error instanceof Error ? error.message : "Unknown error");
+        toast.error(
+          "Failed to delete",
+          error instanceof Error ? error.message : "Unknown error",
+        );
       }
     }
   };
 
   const getStatusBadge = () => {
     if (pipeline.status === "paused") {
-      return <Badge variant="outline" className="text-amber-600"><Pause className="h-3 w-3 mr-1" />Paused</Badge>;
+      return (
+        <Badge variant="outline" className="text-amber-600">
+          <Pause className="h-3 w-3 mr-1" />
+          Paused
+        </Badge>
+      );
     }
-    if (pipeline.status === "error") {
-      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Error</Badge>;
+    if (pipeline.status === "failed") {
+      return (
+        <Badge variant="destructive">
+          <XCircle className="h-3 w-3 mr-1" />
+          Error
+        </Badge>
+      );
     }
-    return <Badge className="bg-green-500/10 text-green-700"><CheckCircle2 className="h-3 w-3 mr-1" />Active</Badge>;
+    return (
+      <Badge className="bg-green-500/10 text-green-700">
+        <CheckCircle2 className="h-3 w-3 mr-1" />
+        Active
+      </Badge>
+    );
   };
 
   const getRunStatusBadge = (run: PipelineRun) => {
-    const statusConfig: Record<string, { icon: React.ReactNode; className: string }> = {
-      pending: { icon: <Clock className="h-3 w-3" />, className: "bg-gray-500/10 text-gray-600" },
-      running: { icon: <RefreshCw className="h-3 w-3 animate-spin" />, className: "bg-blue-500/10 text-blue-600" },
-      success: { icon: <CheckCircle2 className="h-3 w-3" />, className: "bg-green-500/10 text-green-600" },
-      failed: { icon: <XCircle className="h-3 w-3" />, className: "bg-red-500/10 text-red-600" },
-      cancelled: { icon: <XCircle className="h-3 w-3" />, className: "bg-amber-500/10 text-amber-600" },
+    const statusConfig: Record<
+      string,
+      { icon: React.ReactNode; className: string }
+    > = {
+      pending: {
+        icon: <Clock className="h-3 w-3" />,
+        className: "bg-gray-500/10 text-gray-600",
+      },
+      running: {
+        icon: <RefreshCw className="h-3 w-3 animate-spin" />,
+        className: "bg-blue-500/10 text-blue-600",
+      },
+      success: {
+        icon: <CheckCircle2 className="h-3 w-3" />,
+        className: "bg-green-500/10 text-green-600",
+      },
+      failed: {
+        icon: <XCircle className="h-3 w-3" />,
+        className: "bg-red-500/10 text-red-600",
+      },
+      cancelled: {
+        icon: <XCircle className="h-3 w-3" />,
+        className: "bg-amber-500/10 text-amber-600",
+      },
     };
     const config = statusConfig[run.status] || statusConfig.pending;
     return (
@@ -155,7 +220,11 @@ export default function PipelineDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/workspace/data-pipelines")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/workspace/data-pipelines")}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -164,7 +233,9 @@ export default function PipelineDetailPage() {
               {getStatusBadge()}
             </div>
             {pipeline.description && (
-              <p className="text-muted-foreground mt-1">{pipeline.description}</p>
+              <p className="text-muted-foreground mt-1">
+                {pipeline.description}
+              </p>
             )}
           </div>
         </div>
@@ -176,7 +247,11 @@ export default function PipelineDetailPage() {
             </Button>
           ) : (
             <>
-              <Button variant="outline" onClick={handlePause} disabled={pausePipeline.isPending}>
+              <Button
+                variant="outline"
+                onClick={handlePause}
+                disabled={pausePipeline.isPending}
+              >
                 <Pause className="h-4 w-4 mr-2" />
                 Pause
               </Button>
@@ -197,7 +272,9 @@ export default function PipelineDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats?.totalRowsProcessed?.toLocaleString() || pipeline.totalRowsProcessed?.toLocaleString() || "0"}
+              {stats?.totalRowsProcessed?.toLocaleString() ||
+                pipeline.totalRowsProcessed?.toLocaleString() ||
+                "0"}
             </div>
           </CardContent>
         </Card>
@@ -250,16 +327,23 @@ export default function PipelineDetailPage() {
             </CardHeader>
             <CardContent>
               {runsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading runs...</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading runs...
+                </div>
               ) : runs && runs.length > 0 ? (
                 <div className="space-y-3">
                   {runs.map((run) => (
-                    <div key={run.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={run.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center gap-4">
                         {getRunStatusBadge(run)}
                         <div>
                           <div className="text-sm font-medium">
-                            {run.startedAt ? new Date(run.startedAt).toLocaleString() : "-"}
+                            {run.startedAt
+                              ? new Date(run.startedAt).toLocaleString()
+                              : "-"}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Triggered: {run.triggerType}
@@ -268,16 +352,30 @@ export default function PipelineDetailPage() {
                       </div>
                       <div className="flex items-center gap-6 text-sm">
                         <div className="text-center">
-                          <div className="font-medium">{run.rowsWritten?.toLocaleString() || 0}</div>
-                          <div className="text-xs text-muted-foreground">Written</div>
+                          <div className="font-medium">
+                            {run.rowsWritten?.toLocaleString() || 0}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Written
+                          </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium">{run.rowsFailed?.toLocaleString() || 0}</div>
-                          <div className="text-xs text-muted-foreground">Failed</div>
+                          <div className="font-medium">
+                            {run.rowsFailed?.toLocaleString() || 0}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Failed
+                          </div>
                         </div>
                         <div className="text-center">
-                          <div className="font-medium">{run.durationSeconds ? `${run.durationSeconds}s` : "-"}</div>
-                          <div className="text-xs text-muted-foreground">Duration</div>
+                          <div className="font-medium">
+                            {run.durationSeconds
+                              ? `${run.durationSeconds}s`
+                              : "-"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Duration
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -303,7 +401,9 @@ export default function PipelineDetailPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Type</span>
-                  <span className="font-medium uppercase">{pipeline.sourceSchema?.sourceType || "-"}</span>
+                  <span className="font-medium uppercase">
+                    {pipeline.sourceSchema?.sourceType || "-"}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Table</span>
@@ -334,7 +434,9 @@ export default function PipelineDetailPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Write Mode</span>
-                  <span className="font-medium capitalize">{pipeline.destinationSchema?.writeMode || "-"}</span>
+                  <span className="font-medium capitalize">
+                    {pipeline.destinationSchema?.writeMode || "-"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -347,16 +449,24 @@ export default function PipelineDetailPage() {
             <CardContent className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Sync Mode</span>
-                <span className="font-medium capitalize">{pipeline.syncMode}</span>
+                <span className="font-medium capitalize">
+                  {pipeline.syncMode}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Schedule</span>
-                <span className="font-medium capitalize">{pipeline.syncFrequency}</span>
+                <span className="font-medium capitalize">
+                  {pipeline.syncFrequency}
+                </span>
               </div>
               {pipeline.syncMode === "incremental" && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Incremental Column</span>
-                  <span className="font-medium">{pipeline.incrementalColumn || "-"}</span>
+                  <span className="text-muted-foreground">
+                    Incremental Column
+                  </span>
+                  <span className="font-medium">
+                    {pipeline.incrementalColumn || "-"}
+                  </span>
                 </div>
               )}
             </CardContent>
@@ -378,7 +488,11 @@ export default function PipelineDetailPage() {
                     Check if the pipeline configuration is valid
                   </div>
                 </div>
-                <Button variant="outline" onClick={handleValidate} disabled={validatePipeline.isPending}>
+                <Button
+                  variant="outline"
+                  onClick={handleValidate}
+                  disabled={validatePipeline.isPending}
+                >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Validate
                 </Button>
@@ -391,7 +505,12 @@ export default function PipelineDetailPage() {
                     Modify pipeline settings and mappings
                   </div>
                 </div>
-                <Button variant="outline" onClick={() => router.push(`/workspace/data-pipelines/${pipelineId}/edit`)}>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    router.push(`/workspace/data-pipelines/${pipelineId}/edit`)
+                  }
+                >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -399,12 +518,18 @@ export default function PipelineDetailPage() {
 
               <div className="flex items-center justify-between p-4 border rounded-lg border-red-200 dark:border-red-900">
                 <div>
-                  <div className="font-medium text-red-600">Delete Pipeline</div>
+                  <div className="font-medium text-red-600">
+                    Delete Pipeline
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     Permanently delete this pipeline and all run history
                   </div>
                 </div>
-                <Button variant="destructive" onClick={handleDelete} disabled={deletePipeline.isPending}>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={deletePipeline.isPending}
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>

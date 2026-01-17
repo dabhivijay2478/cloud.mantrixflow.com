@@ -31,7 +31,10 @@ import { getIconComponent } from "./utils";
 type ConnectionFormValues = Record<string, string>;
 
 // Dynamic schema builder based on data source type and current form values
-const buildConnectionSchema = (dataSourceType: string, formValues: ConnectionFormValues) => {
+const buildConnectionSchema = (
+  dataSourceType: string,
+  formValues: ConnectionFormValues,
+) => {
   const schema = connectionSchemas[dataSourceType];
   if (!schema) {
     return z.object({}).passthrough();
@@ -136,11 +139,14 @@ export function ConnectionSheet({
   // Handle default value setting for selects if needed immediately
   useEffect(() => {
     if (open && schema) {
-      schema.fields.forEach(field => {
+      schema.fields.forEach((field) => {
         // Find fields that have a default valid option if not set
         // Specifically for useConnectionString select in MongoDB
-        if (field.name === 'useConnectionString' && !form.getValues('useConnectionString')) {
-          form.setValue('useConnectionString', 'false');
+        if (
+          field.name === "useConnectionString" &&
+          !form.getValues("useConnectionString")
+        ) {
+          form.setValue("useConnectionString", "false");
         }
       });
     }
@@ -266,7 +272,9 @@ export function ConnectionSheet({
                   // Check if field should be visible
                   if (field.dependsOn) {
                     const dependencyValue = allValues[field.dependsOn.field];
-                    if (String(dependencyValue) !== String(field.dependsOn.value)) {
+                    if (
+                      String(dependencyValue) !== String(field.dependsOn.value)
+                    ) {
                       return null;
                     }
                   }
@@ -274,12 +282,14 @@ export function ConnectionSheet({
                   // Add "Or" divider before individual fields if connection string is supported
                   const showOrDivider =
                     schema.connectionString &&
-                    (field.name === "connectionString" || field.name === "connection_string") &&
+                    (field.name === "connectionString" ||
+                      field.name === "connection_string") &&
                     index > 0;
 
                   const showOrAfterConnectionString =
                     schema.connectionString &&
-                    (field.name === "connectionString" || field.name === "connection_string") &&
+                    (field.name === "connectionString" ||
+                      field.name === "connection_string") &&
                     index < schema.fields.length - 1 &&
                     schema.fields[index + 1]?.name !== "connectionString" &&
                     schema.fields[index + 1]?.name !== "connection_string";

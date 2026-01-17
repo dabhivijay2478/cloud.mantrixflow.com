@@ -92,7 +92,8 @@ export default function EditPipelinePage() {
       // CRITICAL: ALWAYS use "schema.table" format to match TransformStep dropdown
       // The dropdown's destinationTables uses fullName which is ALWAYS "schema.table" format
       const destinationTableName =
-        destinationSchema.destinationTable && destinationSchema.destinationSchema
+        destinationSchema.destinationTable &&
+        destinationSchema.destinationSchema
           ? `${destinationSchema.destinationSchema}.${destinationSchema.destinationTable}`
           : destinationSchema.destinationTable
             ? `public.${destinationSchema.destinationTable}`
@@ -163,7 +164,7 @@ export default function EditPipelinePage() {
       } else {
         // Existing collectors - HYDRATE/ENRICH them with schema data
         // This is the key fix: always apply authoritative data from schemas
-        collectors = collectors.map((c, cIndex) => {
+        collectors = collectors.map((c, _cIndex) => {
           // Ensure emitters exist on the collector
           let collectorEmitters = c.emitters || [];
           if (collectorEmitters.length === 0) {
@@ -173,7 +174,7 @@ export default function EditPipelinePage() {
 
           // Hydrate each transformer with schema data if missing
           const hydratedTransformers = (c.transformers || []).map(
-            (t, tIndex) => {
+            (t, _tIndex) => {
               const transformer = t as typeof t & {
                 destinationTable?: string;
               };
@@ -183,9 +184,7 @@ export default function EditPipelinePage() {
                 ...t,
                 collectorId: t.collectorId || c.id,
                 emitterId:
-                  t.emitterId ||
-                  collectorEmitters[0]?.id ||
-                  defaultEmitterId,
+                  t.emitterId || collectorEmitters[0]?.id || defaultEmitterId,
                 // CRITICAL: Always use schema's destinationTable if transformer doesn't have one
                 destinationTable:
                   transformer.destinationTable || destinationTableName,
@@ -208,8 +207,7 @@ export default function EditPipelinePage() {
                       id: defaultTransformerId,
                       name: "Default Transformer",
                       collectorId: c.id,
-                      emitterId:
-                        collectorEmitters[0]?.id || defaultEmitterId,
+                      emitterId: collectorEmitters[0]?.id || defaultEmitterId,
                       destinationTable: destinationTableName,
                       fieldMappings: schemaFieldMappings,
                     },
@@ -505,7 +503,7 @@ export default function EditPipelinePage() {
       );
     }
 
-    if (pipeline.status === "error") {
+    if (pipeline.status === "failed") {
       return (
         <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
           <div className="flex items-center gap-1.5">
@@ -531,7 +529,7 @@ export default function EditPipelinePage() {
       <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
         <div className="flex items-center gap-1.5">
           <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:text-amber-400" />
-          {pipeline.status === "active" ? "Active" : "Pending"}
+          {pipeline.status === "running" ? "Running" : "Pending"}
         </div>
       </Badge>
     );

@@ -243,9 +243,7 @@ export function WorkspaceSidebar() {
         name: apiOrg.name,
         slug: apiOrg.slug,
         createdAt:
-          apiOrg.createdAt ||
-          apiOrg.created_at ||
-          new Date().toISOString(),
+          apiOrg.createdAt || apiOrg.created_at || new Date().toISOString(),
       }));
 
       // Set all organizations at once
@@ -265,9 +263,9 @@ export function WorkspaceSidebar() {
             name: apiCurrentOrg.name,
             slug: apiCurrentOrg.slug,
             createdAt:
-            apiCurrentOrg.createdAt ||
-            apiCurrentOrg.created_at ||
-            new Date().toISOString(),
+              apiCurrentOrg.createdAt ||
+              apiCurrentOrg.created_at ||
+              new Date().toISOString(),
           });
         } else if (orgsData.length > 0) {
           // Set first organization as current if no current org from API
@@ -423,7 +421,9 @@ export function WorkspaceSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname?.startsWith("/workspace/destination-schemas")}
+                    isActive={pathname?.startsWith(
+                      "/workspace/destination-schemas",
+                    )}
                     tooltip="Destination Schemas"
                     className="cursor-pointer"
                   >

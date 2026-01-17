@@ -5,7 +5,14 @@ export const connectionSchemas: Record<
     fields: Array<{
       name: string;
       label: string;
-      type: "text" | "password" | "number" | "textarea" | "file" | "select" | "checkbox";
+      type:
+        | "text"
+        | "password"
+        | "number"
+        | "textarea"
+        | "file"
+        | "select"
+        | "checkbox";
       placeholder?: string;
       required?: boolean;
       description?: string;
@@ -68,7 +75,8 @@ export const connectionSchemas: Record<
         type: "select",
         placeholder: "Select SSL mode",
         required: false,
-        description: "Enable SSL for secure connections (recommended for cloud databases)",
+        description:
+          "Enable SSL for secure connections (recommended for cloud databases)",
         options: [
           { value: "false", label: "Disabled" },
           { value: "true", label: "Enabled" },
@@ -155,7 +163,8 @@ export const connectionSchemas: Record<
         type: "text",
         placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/mydb",
         required: false,
-        description: "Full MongoDB connection string (supports Atlas SRV format)",
+        description:
+          "Full MongoDB connection string (supports Atlas SRV format)",
         dependsOn: { field: "useConnectionString", value: "true" },
       },
       // Individual fields mode
