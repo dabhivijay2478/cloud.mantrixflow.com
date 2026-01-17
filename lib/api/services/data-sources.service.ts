@@ -336,16 +336,17 @@ export class DataSourcesService {
     // Use discoverSchema to get full schema info including columns
     const result = await DataSourcesService.discoverSchema(orgId, connectionId);
 
-    // biome-ignore lint/suspicious/noExplicitAny: Legacy code
-    let targetTable: any;
+    let targetTable: Table | undefined;
 
     if (schema) {
-      const foundSchema = result.schemas?.find((s: any) => s.name === schema);
-      targetTable = foundSchema?.tables?.find((t: any) => t.name === table);
+      const foundSchema = result.schemas?.find(
+        (s: Schema) => s.name === schema,
+      );
+      targetTable = foundSchema?.tables?.find((t: Table) => t.name === table);
     } else {
       // If no schema specified, search all schemas (or default to public)
       for (const s of result.schemas || []) {
-        targetTable = s.tables?.find((t: any) => t.name === table);
+        targetTable = s.tables?.find((t: Table) => t.name === table);
         if (targetTable) break;
       }
     }
@@ -359,10 +360,12 @@ export class DataSourcesService {
       };
     }
 
+    // Note: discoverSchema doesn't return column details, only table metadata
+    // TODO: Implement proper endpoint to fetch table schema with columns
     return {
-      columns: targetTable.columns || [],
+      columns: [], // Columns not available from discoverSchema result
       table: targetTable.name,
-      schema: schema || "public", // Or find parent schema name if searched
+      schema: targetTable.schema || schema || "public",
       primaryKeys: [], // TODO: Fetch primary keys
     };
   }

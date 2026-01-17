@@ -84,10 +84,7 @@ export default function QueryResultsViewPage() {
   const orgId = currentOrganization?.id;
 
   // Fetch data source, connection and schemas from API
-  const { data: dataSourceData, isLoading: dataSourceLoading } = useDataSource(
-    orgId,
-    dataSourceId,
-  );
+  const { data: dataSourceData } = useDataSource(orgId, dataSourceId);
   const { data: connection, isLoading: connectionLoading } = useConnection(
     orgId,
     dataSourceId,

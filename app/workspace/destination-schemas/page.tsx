@@ -3,7 +3,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
-  Database,
   ExternalLink,
   Loader2,
   MoreVertical,
@@ -81,26 +80,29 @@ export default function DestinationSchemasPage() {
     }
   };
 
-  const handleDelete = useCallback(async (schema: PipelineDestinationSchema) => {
-    if (
-      confirm(
-        `Are you sure you want to delete destination schema "${schema.name || schema.destinationTable}"?`,
-      )
-    ) {
-      try {
-        await deleteSchema.mutateAsync(schema.id);
-        toast.success(
-          "Destination schema deleted",
-          "The destination schema has been removed.",
-        );
-      } catch (error) {
-        toast.error(
-          "Failed to delete",
-          error instanceof Error ? error.message : "Unknown error",
-        );
+  const handleDelete = useCallback(
+    async (schema: PipelineDestinationSchema) => {
+      if (
+        confirm(
+          `Are you sure you want to delete destination schema "${schema.name || schema.destinationTable}"?`,
+        )
+      ) {
+        try {
+          await deleteSchema.mutateAsync(schema.id);
+          toast.success(
+            "Destination schema deleted",
+            "The destination schema has been removed.",
+          );
+        } catch (error) {
+          toast.error(
+            "Failed to delete",
+            error instanceof Error ? error.message : "Unknown error",
+          );
+        }
       }
-    }
-  }, [deleteSchema]);
+    },
+    [deleteSchema],
+  );
 
   const getWriteModeBadge = useCallback((mode: string) => {
     const colors: Record<string, string> = {

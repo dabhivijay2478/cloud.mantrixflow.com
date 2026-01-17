@@ -216,7 +216,7 @@ export default function DataSourcesPage() {
     try {
       // Convert form data to API format
       const host = data.host || "";
-      const isLocalhost =
+      const _isLocalhost =
         host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
 
       // Build config based on data source type

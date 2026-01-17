@@ -26,7 +26,7 @@ export function ExampleDataSourcesPage() {
 
   const createConnection = useCreateConnection(orgId);
   const deleteConnection = useDeleteConnection(orgId);
-  const testConnection = useTestConnectionLegacy();
+  const _testConnection = useTestConnectionLegacy();
 
   const _handleConnect = async (formData: CreateConnectionDto) => {
     try {
@@ -109,7 +109,7 @@ export function ExampleSchemaDiscovery({
 
 // Example 3: Using pipelines
 import type { Pipeline } from "@/lib/api";
-import { usePipelineStats, usePipelines, useRunPipeline } from "@/lib/api";
+import { usePipelines } from "@/lib/api";
 
 export function ExamplePipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();

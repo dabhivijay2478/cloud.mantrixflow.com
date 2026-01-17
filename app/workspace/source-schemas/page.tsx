@@ -2,7 +2,6 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
-  ChevronRight,
   Database,
   Eye,
   MoreVertical,
@@ -16,13 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -78,26 +71,29 @@ export default function SourceSchemasPage() {
     }
   };
 
-  const handleDelete = useCallback(async (schema: PipelineSourceSchema) => {
-    if (
-      confirm(
-        `Are you sure you want to delete source schema "${schema.name || schema.sourceTable}"?`,
-      )
-    ) {
-      try {
-        await deleteSchema.mutateAsync(schema.id);
-        toast.success(
-          "Source schema deleted",
-          "The source schema has been removed.",
-        );
-      } catch (error) {
-        toast.error(
-          "Failed to delete",
-          error instanceof Error ? error.message : "Unknown error",
-        );
+  const handleDelete = useCallback(
+    async (schema: PipelineSourceSchema) => {
+      if (
+        confirm(
+          `Are you sure you want to delete source schema "${schema.name || schema.sourceTable}"?`,
+        )
+      ) {
+        try {
+          await deleteSchema.mutateAsync(schema.id);
+          toast.success(
+            "Source schema deleted",
+            "The source schema has been removed.",
+          );
+        } catch (error) {
+          toast.error(
+            "Failed to delete",
+            error instanceof Error ? error.message : "Unknown error",
+          );
+        }
       }
-    }
-  }, [deleteSchema]);
+    },
+    [deleteSchema],
+  );
 
   const columns: ColumnDef<PipelineSourceSchema>[] = useMemo(
     () => [
@@ -379,10 +375,13 @@ function SourceSchemaPreviewDialog({
                 </thead>
                 <tbody>
                   {previewData.rows.map((row, i) => {
-                    // biome-ignore lint/suspicious/noArrayIndexKey: Preview data is flat
+                    // Create a unique key from row data and index
+                    const rowKey = previewData.columns?.[0]
+                      ? `${String((row as Record<string, unknown>)[previewData.columns[0].name] ?? "")}-${i}`
+                      : `row-${i}`;
                     return (
                       <tr
-                        key={i}
+                        key={rowKey}
                         className="border-b last:border-0 hover:bg-muted/30"
                       >
                         {previewData.columns?.map((col) => (

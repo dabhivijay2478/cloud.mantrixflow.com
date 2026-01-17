@@ -2,20 +2,18 @@
 
 import {
   ArrowLeft,
-  Calendar,
   CheckCircle2,
   Clock,
   Edit,
   Pause,
   Play,
   RefreshCw,
-  Settings,
   Trash2,
   XCircle,
   Zap,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { LoadingState, PageHeader } from "@/components/shared";
+import { LoadingState } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
