@@ -460,7 +460,7 @@ function DestinationSchemaDetailsDialog({
                       </tr>
                     </thead>
                     <tbody>
-                      {schema.columnMappings.map((col, i) => (
+                      {schema.columnMappings.map((col) => (
                         <tr
                           key={`${col.sourceColumn}-${col.destinationColumn}`}
                           className="border-b last:border-0 hover:bg-muted/30"
@@ -534,10 +534,10 @@ function DestinationSchemaDetailsDialog({
                     </div>
                     {schema.validationResult.errors.length > 0 && (
                       <ul className="mt-2 text-sm text-red-700 dark:text-red-300 list-disc list-inside">
-                        {schema.validationResult.errors.map((err, i) => (
+                        {schema.validationResult.errors.map((err, i) => {
                           // biome-ignore lint/suspicious/noArrayIndexKey: Errors list is static
-                          <li key={i}>{err}</li>
-                        ))}
+                          return <li key={i}>{err}</li>;
+                        })}
                       </ul>
                     )}
                   </div>

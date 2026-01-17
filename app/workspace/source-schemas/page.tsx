@@ -378,24 +378,26 @@ function SourceSchemaPreviewDialog({
                   </tr>
                 </thead>
                 <tbody>
-                  {previewData.rows.map((row, i) => (
+                  {previewData.rows.map((row, i) => {
                     // biome-ignore lint/suspicious/noArrayIndexKey: Preview data is flat
-                    <tr
-                      key={i}
-                      className="border-b last:border-0 hover:bg-muted/30"
-                    >
-                      {previewData.columns?.map((col) => (
-                        <td
-                          key={col.name}
-                          className="px-3 py-2 truncate max-w-[200px]"
-                        >
-                          {String(
-                            (row as Record<string, unknown>)[col.name] ?? "-",
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                    return (
+                      <tr
+                        key={i}
+                        className="border-b last:border-0 hover:bg-muted/30"
+                      >
+                        {previewData.columns?.map((col) => (
+                          <td
+                            key={col.name}
+                            className="px-3 py-2 truncate max-w-[200px]"
+                          >
+                            {String(
+                              (row as Record<string, unknown>)[col.name] ?? "-",
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
