@@ -930,9 +930,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                   destinationField.name.toLowerCase() === "id";
                                 const isPrimaryKey =
                                   mapping?.isPrimaryKey || false;
-                                const hasPrimaryKey = !!primaryKeyField;
-                                const canSetPrimaryKey =
-                                  !hasPrimaryKey || isPrimaryKey;
+                                // Allow setting PK on any mapped field - we auto-remove PK from others
+                                const canSetPrimaryKey = !!mapping;
 
                                 return (
                                   <TableRow
@@ -1162,9 +1161,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                           title={
                                             isPrimaryKey
                                               ? "Remove as Primary Key"
-                                              : hasPrimaryKey
-                                                ? "Another field is already set as Primary Key"
-                                                : "Set as Primary Key"
+                                              : "Set as Primary Key"
                                           }
                                         >
                                           <Key
