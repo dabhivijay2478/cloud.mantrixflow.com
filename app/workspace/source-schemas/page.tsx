@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ChevronRight,
@@ -12,7 +12,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,13 +43,32 @@ import { toast } from "@/lib/utils/toast";
 
 export default function SourceSchemasPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
   const { data: schemas, isLoading } = useSourceSchemas(organizationId);
   const deleteSchema = useDeleteSourceSchema(organizationId);
 
-  const [previewSchemaId, setPreviewSchemaId] = useState<string | null>(null);
+  // Support opening preview from URL parameter
+  const schemaIdFromUrl = searchParams.get("schemaId");
+  const [previewSchemaId, setPreviewSchemaId] = useState<string | null>(schemaIdFromUrl);
+
+  // Handle URL parameter changes
+  useEffect(() => {
+    if (schemaIdFromUrl) {
+      setPreviewSchemaId(schemaIdFromUrl);
+    }
+  }, [schemaIdFromUrl]);
+
+  // Clear URL parameter when closing dialog
+  const handleClosePreview = () => {
+    setPreviewSchemaId(null);
+    // Remove schemaId from URL if present
+    if (schemaIdFromUrl) {
+      router.replace("/workspace/source-schemas");
+    }
+  };
 
   const handleDelete = async (schema: PipelineSourceSchema) => {
     if (confirm(`Are you sure you want to delete source schema "${schema.name || schema.sourceTable}"?`)) {
@@ -223,7 +242,7 @@ export default function SourceSchemasPage() {
       <SourceSchemaPreviewDialog
         organizationId={organizationId}
         schemaId={previewSchemaId}
-        onClose={() => setPreviewSchemaId(null)}
+        onClose={handleClosePreview}
       />
     </div>
   );

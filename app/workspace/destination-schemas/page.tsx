@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -13,7 +13,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,13 +46,32 @@ import { toast } from "@/lib/utils/toast";
 
 export default function DestinationSchemasPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
   const { data: schemas, isLoading } = useDestinationSchemas(organizationId);
   const deleteSchema = useDeleteDestinationSchema(organizationId);
 
-  const [detailSchemaId, setDetailSchemaId] = useState<string | null>(null);
+  // Support opening details from URL parameter
+  const schemaIdFromUrl = searchParams.get("schemaId");
+  const [detailSchemaId, setDetailSchemaId] = useState<string | null>(schemaIdFromUrl);
+
+  // Handle URL parameter changes
+  useEffect(() => {
+    if (schemaIdFromUrl) {
+      setDetailSchemaId(schemaIdFromUrl);
+    }
+  }, [schemaIdFromUrl]);
+
+  // Clear URL parameter when closing dialog
+  const handleCloseDetails = () => {
+    setDetailSchemaId(null);
+    // Remove schemaId from URL if present
+    if (schemaIdFromUrl) {
+      router.replace("/workspace/destination-schemas");
+    }
+  };
 
   const handleDelete = async (schema: PipelineDestinationSchema) => {
     if (confirm(`Are you sure you want to delete destination schema "${schema.name || schema.destinationTable}"?`)) {
@@ -232,7 +251,7 @@ export default function DestinationSchemasPage() {
       <DestinationSchemaDetailsDialog
         organizationId={organizationId}
         schema={detailSchema}
-        onClose={() => setDetailSchemaId(null)}
+        onClose={handleCloseDetails}
       />
     </div>
   );

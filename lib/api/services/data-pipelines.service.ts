@@ -10,7 +10,9 @@ import type {
   DryRunPipelineDto,
   DryRunResult,
   Pipeline,
+  PipelineDestinationSchema,
   PipelineRun,
+  PipelineSourceSchema,
   PipelineStats,
   PipelineWithSchemas,
   RunPipelineDto,
@@ -230,6 +232,60 @@ export class DataPipelinesService {
   ): Promise<PipelineStats> {
     return ApiClient.get<PipelineStats>(
       `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/stats`,
+    );
+  }
+
+  // ============================================================================
+  // SOURCE SCHEMA
+  // ============================================================================
+
+  /**
+   * Get source schema by ID
+   */
+  static async getSourceSchema(
+    organizationId: string,
+    schemaId: string,
+  ): Promise<PipelineSourceSchema> {
+    return ApiClient.get<PipelineSourceSchema>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/source-schemas/${schemaId}`,
+    );
+  }
+
+  /**
+   * List source schemas for organization
+   */
+  static async listSourceSchemas(
+    organizationId: string,
+  ): Promise<PipelineSourceSchema[]> {
+    return ApiClient.get<PipelineSourceSchema[]>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/source-schemas`,
+    );
+  }
+
+  // ============================================================================
+  // DESTINATION SCHEMA
+  // ============================================================================
+
+  /**
+   * Get destination schema by ID
+   */
+  static async getDestinationSchema(
+    organizationId: string,
+    schemaId: string,
+  ): Promise<PipelineDestinationSchema> {
+    return ApiClient.get<PipelineDestinationSchema>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/destination-schemas/${schemaId}`,
+    );
+  }
+
+  /**
+   * List destination schemas for organization
+   */
+  static async listDestinationSchemas(
+    organizationId: string,
+  ): Promise<PipelineDestinationSchema[]> {
+    return ApiClient.get<PipelineDestinationSchema[]>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/destination-schemas`,
     );
   }
 }

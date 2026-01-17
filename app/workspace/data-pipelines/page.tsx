@@ -297,16 +297,52 @@ export default function DataPipelinesPage() {
       header: "Source",
       cell: ({ row }) => {
         const source = row.original.sourceSchema;
-        if (!source) return <span className="text-muted-foreground">-</span>;
+        const sourceId = row.original.sourceSchemaId;
+        
+        if (!source && !sourceId) {
+          return <span className="text-muted-foreground">-</span>;
+        }
+
+        const handleClick = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          router.push(`/workspace/source-schemas?schemaId=${sourceId}`);
+        };
+
+        if (source) {
+          return (
+            <button
+              onClick={handleClick}
+              className="text-left group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors"
+            >
+              <div className="flex items-center gap-1.5">
+                <div className="text-sm">
+                  <span className="font-medium text-primary group-hover:underline">
+                    {source.sourceType}
+                  </span>
+                  {source.sourceTable && (
+                    <span className="text-muted-foreground ml-1">
+                      ({source.sourceSchema || "public"}.{source.sourceTable})
+                    </span>
+                  )}
+                </div>
+              </div>
+              {source.name && (
+                <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+                  {source.name}
+                </div>
+              )}
+            </button>
+          );
+        }
+
+        // Fallback: show just the ID as clickable
         return (
-          <div className="text-sm">
-            <span className="font-medium">{source.sourceType}</span>
-            {source.sourceTable && (
-              <span className="text-muted-foreground ml-1">
-                ({source.sourceSchema || "public"}.{source.sourceTable})
-              </span>
-            )}
-          </div>
+          <button
+            onClick={handleClick}
+            className="text-sm text-primary hover:underline"
+          >
+            {sourceId.slice(0, 8)}...
+          </button>
         );
       },
     },
@@ -315,11 +351,45 @@ export default function DataPipelinesPage() {
       header: "Destination",
       cell: ({ row }) => {
         const dest = row.original.destinationSchema;
-        if (!dest) return <span className="text-muted-foreground">-</span>;
+        const destId = row.original.destinationSchemaId;
+
+        if (!dest && !destId) {
+          return <span className="text-muted-foreground">-</span>;
+        }
+
+        const handleClick = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          router.push(`/workspace/destination-schemas?schemaId=${destId}`);
+        };
+
+        if (dest) {
+          return (
+            <button
+              onClick={handleClick}
+              className="text-left group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors"
+            >
+              <div className="text-sm">
+                <span className="font-medium text-primary group-hover:underline">
+                  {dest.destinationSchema || "public"}.{dest.destinationTable}
+                </span>
+              </div>
+              {dest.name && (
+                <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+                  {dest.name}
+                </div>
+              )}
+            </button>
+          );
+        }
+
+        // Fallback: show just the ID as clickable
         return (
-          <div className="text-sm text-muted-foreground">
-            {dest.destinationSchema || "public"}.{dest.destinationTable}
-          </div>
+          <button
+            onClick={handleClick}
+            className="text-sm text-primary hover:underline"
+          >
+            {destId.slice(0, 8)}...
+          </button>
         );
       },
     },
