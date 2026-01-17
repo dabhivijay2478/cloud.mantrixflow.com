@@ -15,16 +15,24 @@ export type DataSourceType =
 
 export interface DataSource {
   id: string;
-  organization_id: string;
+  // Support both snake_case (API) and camelCase
+  organization_id?: string;
+  organizationId: string;
   name: string;
   description?: string;
-  source_type: DataSourceType;
-  is_active: boolean;
+  source_type?: DataSourceType;
+  sourceType: DataSourceType;
+  is_active?: boolean;
+  isActive: boolean;
   metadata?: Record<string, unknown>;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+  created_by?: string;
+  createdBy?: string;
+  created_at?: string;
+  createdAt: string;
+  updated_at?: string;
+  updatedAt: string;
   deleted_at?: string;
+  deletedAt?: string;
   connection?: DataSourceConnection;
 }
 
@@ -217,18 +225,22 @@ export interface TestConnectionResponse {
 
 export interface Connection {
   id: string;
-  orgId: string;
-  userId: string;
+  // Legacy fields
+  orgId?: string;
+  userId?: string;
+  // New fields
+  organizationId?: string;
+  type?: string;
   name: string;
-  status: "active" | "inactive" | "error";
-  port: number;
-  sslEnabled: boolean;
-  sshTunnelEnabled: boolean;
-  connectionPoolSize: number;
-  queryTimeoutSeconds: number;
+  status: "active" | "inactive" | "error" | "connected" | "disconnected";
+  port?: number;
+  sslEnabled?: boolean;
+  sshTunnelEnabled?: boolean;
+  connectionPoolSize?: number;
+  queryTimeoutSeconds?: number;
   lastConnectedAt?: Date | string;
   createdAt: Date | string;
-  updatedAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 // Schema Discovery Types

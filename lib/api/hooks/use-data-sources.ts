@@ -62,7 +62,7 @@ export const dataSourcesKeys = {
 export function useTestConnection() {
   return useMutation({
     mutationFn: (data: TestConnectionDto) =>
-      DataSourcesService.testConnection(data),
+      DataSourcesService.testConnectionLegacy(data),
   });
 }
 
@@ -87,14 +87,14 @@ export function useConnections(orgId?: string) {
   });
 }
 
-export function useConnection(id: string | undefined) {
+export function useConnection(orgId: string | undefined, id: string | undefined) {
   return useQuery({
     queryKey: dataSourcesKeys.connections.detail(id || ""),
     queryFn: () => {
-      if (!id) throw new Error("Connection ID is required");
-      return DataSourcesService.getConnection(id);
+      if (!id || !orgId) throw new Error("Organization ID and Connection ID are required");
+      return DataSourcesService.getConnection(orgId, id);
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
 

@@ -1,15 +1,19 @@
 /**
  * Data Pipelines API Service
  * Service layer for data pipeline endpoints
+ * Updated to match refactored backend API
  */
 
 import { ApiClient } from "../client";
 import type {
   CreatePipelineDto,
+  DryRunPipelineDto,
   DryRunResult,
   Pipeline,
   PipelineRun,
   PipelineStats,
+  PipelineWithSchemas,
+  RunPipelineDto,
   UpdatePipelineDto,
   ValidationResult,
 } from "../types/data-pipelines";
@@ -17,7 +21,13 @@ import type {
 export class DataPipelinesService {
   private static readonly BASE_PATH = "api/organizations";
 
-  // Pipeline Management
+  // ============================================================================
+  // PIPELINE CRUD
+  // ============================================================================
+
+  /**
+   * Create a new pipeline
+   */
   static async createPipeline(
     organizationId: string,
     data: CreatePipelineDto,
@@ -28,12 +38,18 @@ export class DataPipelinesService {
     );
   }
 
+  /**
+   * List all pipelines for organization
+   */
   static async listPipelines(organizationId: string): Promise<Pipeline[]> {
     return ApiClient.get<Pipeline[]>(
       `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines`,
     );
   }
 
+  /**
+   * Get pipeline by ID
+   */
   static async getPipeline(
     organizationId: string,
     pipelineId: string,
@@ -43,6 +59,21 @@ export class DataPipelinesService {
     );
   }
 
+  /**
+   * Get pipeline with source and destination schemas
+   */
+  static async getPipelineWithSchemas(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<PipelineWithSchemas> {
+    return ApiClient.get<PipelineWithSchemas>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/full`,
+    );
+  }
+
+  /**
+   * Update pipeline
+   */
   static async updatePipeline(
     organizationId: string,
     pipelineId: string,
@@ -54,6 +85,9 @@ export class DataPipelinesService {
     );
   }
 
+  /**
+   * Delete pipeline (soft delete)
+   */
   static async deletePipeline(
     organizationId: string,
     pipelineId: string,
@@ -63,25 +97,27 @@ export class DataPipelinesService {
     );
   }
 
-  // Pipeline Execution
+  // ============================================================================
+  // PIPELINE EXECUTION
+  // ============================================================================
+
+  /**
+   * Run pipeline
+   */
   static async runPipeline(
     organizationId: string,
     pipelineId: string,
+    options?: RunPipelineDto,
   ): Promise<PipelineRun> {
     return ApiClient.post<PipelineRun>(
       `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/run`,
+      options || {},
     );
   }
 
-  static async dryRunPipeline(
-    organizationId: string,
-    pipelineId: string,
-  ): Promise<DryRunResult> {
-    return ApiClient.post<DryRunResult>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/dry-run`,
-    );
-  }
-
+  /**
+   * Pause pipeline
+   */
   static async pausePipeline(
     organizationId: string,
     pipelineId: string,
@@ -91,6 +127,9 @@ export class DataPipelinesService {
     );
   }
 
+  /**
+   * Resume pipeline
+   */
   static async resumePipeline(
     organizationId: string,
     pipelineId: string,
@@ -100,7 +139,26 @@ export class DataPipelinesService {
     );
   }
 
-  // Pipeline Configuration
+  /**
+   * Cancel a running pipeline run
+   */
+  static async cancelPipelineRun(
+    organizationId: string,
+    pipelineId: string,
+    runId: string,
+  ): Promise<PipelineRun> {
+    return ApiClient.post<PipelineRun>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/runs/${runId}/cancel`,
+    );
+  }
+
+  // ============================================================================
+  // PIPELINE VALIDATION
+  // ============================================================================
+
+  /**
+   * Validate pipeline configuration
+   */
   static async validatePipeline(
     organizationId: string,
     pipelineId: string,
@@ -110,7 +168,27 @@ export class DataPipelinesService {
     );
   }
 
-  // Pipeline Monitoring
+  /**
+   * Dry run pipeline (test without writing)
+   */
+  static async dryRunPipeline(
+    organizationId: string,
+    pipelineId: string,
+    options?: DryRunPipelineDto,
+  ): Promise<DryRunResult> {
+    return ApiClient.post<DryRunResult>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/dry-run`,
+      options || {},
+    );
+  }
+
+  // ============================================================================
+  // PIPELINE RUNS
+  // ============================================================================
+
+  /**
+   * Get pipeline runs with pagination
+   */
   static async getPipelineRuns(
     organizationId: string,
     pipelineId: string,
@@ -126,6 +204,9 @@ export class DataPipelinesService {
     );
   }
 
+  /**
+   * Get pipeline run by ID
+   */
   static async getPipelineRun(
     organizationId: string,
     pipelineId: string,
@@ -136,6 +217,13 @@ export class DataPipelinesService {
     );
   }
 
+  // ============================================================================
+  // PIPELINE STATISTICS
+  // ============================================================================
+
+  /**
+   * Get pipeline statistics
+   */
   static async getPipelineStats(
     organizationId: string,
     pipelineId: string,

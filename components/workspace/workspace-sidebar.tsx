@@ -10,6 +10,7 @@ import {
   List,
   Plus,
   Settings,
+  Table,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -393,6 +394,42 @@ export function WorkspaceSidebar() {
                     <Link href="/workspace/data-pipelines">
                       <GitBranch className="h-4 w-4" />
                       <span>Data Pipelines</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {/* Source Schemas - Visible to OWNER, ADMIN, EDITOR */}
+              {(currentUserRole === "OWNER" ||
+                currentUserRole === "ADMIN" ||
+                currentUserRole === "EDITOR") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname?.startsWith("/workspace/source-schemas")}
+                    tooltip="Source Schemas"
+                    className="cursor-pointer"
+                  >
+                    <Link href="/workspace/source-schemas">
+                      <Database className="h-4 w-4" />
+                      <span>Source Schemas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {/* Destination Schemas - Visible to OWNER, ADMIN, EDITOR */}
+              {(currentUserRole === "OWNER" ||
+                currentUserRole === "ADMIN" ||
+                currentUserRole === "EDITOR") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname?.startsWith("/workspace/destination-schemas")}
+                    tooltip="Destination Schemas"
+                    className="cursor-pointer"
+                  >
+                    <Link href="/workspace/destination-schemas">
+                      <Table className="h-4 w-4" />
+                      <span>Destination Schemas</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

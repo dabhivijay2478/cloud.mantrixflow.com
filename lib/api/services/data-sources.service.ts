@@ -1,6 +1,6 @@
 /**
  * Data Sources API Service
- * Service layer for PostgreSQL data source endpoints
+ * Service layer for data source endpoints (organization-scoped)
  */
 
 import { ApiClient } from "../client";
@@ -23,112 +23,239 @@ import type {
   TestConnectionResponse,
   UpdateConnectionDto,
   UpdateSyncJobScheduleDto,
+  DataSource,
+  CreateDataSourceDto,
+  UpdateDataSourceDto,
 } from "../types/data-sources";
 
 export class DataSourcesService {
-  private static readonly BASE_PATH = "api/data-sources/postgres";
+  // Base path is now organization-scoped
+  private static basePath(organizationId: string) {
+    return `api/organizations/${organizationId}/data-sources`;
+  }
 
-  // Connection Management
-  static async testConnection(
-    data: TestConnectionDto,
-  ): Promise<TestConnectionResponse> {
-    return ApiClient.post<TestConnectionResponse>(
-      `${DataSourcesService.BASE_PATH}/test-connection`,
-      data,
+  // ==========================================================================
+  // Data Sources CRUD
+  // ==========================================================================
+
+  static async listDataSources(organizationId: string): Promise<DataSource[]> {
+    return ApiClient.get<DataSource[]>(DataSourcesService.basePath(organizationId));
+  }
+
+  static async getDataSource(organizationId: string, id: string): Promise<DataSource> {
+    return ApiClient.get<DataSource>(`${DataSourcesService.basePath(organizationId)}/${id}`);
+  }
+
+  static async createDataSource(
+    organizationId: string,
+    dto: CreateDataSourceDto
+  ): Promise<DataSource> {
+    return ApiClient.post<DataSource>(DataSourcesService.basePath(organizationId), dto);
+  }
+
+  static async updateDataSource(
+    organizationId: string,
+    id: string,
+    dto: UpdateDataSourceDto
+  ): Promise<DataSource> {
+    return ApiClient.put<DataSource>(
+      `${DataSourcesService.basePath(organizationId)}/${id}`,
+      dto
     );
   }
 
+  static async deleteDataSource(
+    organizationId: string,
+    id: string
+  ): Promise<{ deletedId: string }> {
+    return ApiClient.delete<{ deletedId: string }>(
+      `${DataSourcesService.basePath(organizationId)}/${id}`
+    );
+  }
+
+  static async getSupportedTypes(organizationId: string): Promise<string[]> {
+    return ApiClient.get<string[]>(`${DataSourcesService.basePath(organizationId)}/types`);
+  }
+
+  // ==========================================================================
+  // Connection Management (per data source)
+  // ==========================================================================
+
+  static async getConnection(
+    organizationId: string,
+    sourceId: string,
+    includeSensitive = false
+  ): Promise<Connection> {
+    const params = includeSensitive ? "?includeSensitive=true" : "";
+    return ApiClient.get<Connection>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/connection${params}`
+    );
+  }
+
+  static async createOrUpdateConnection(
+    organizationId: string,
+    sourceId: string,
+    dto: CreateConnectionDto
+  ): Promise<Connection> {
+    return ApiClient.post<Connection>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/connection`,
+      dto
+    );
+  }
+
+  static async testConnection(
+    organizationId: string,
+    sourceId: string
+  ): Promise<TestConnectionResponse> {
+    return ApiClient.post<TestConnectionResponse>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/test-connection`
+    );
+  }
+
+  static async discoverSchema(
+    organizationId: string,
+    sourceId: string
+  ): Promise<{ schemas: Schema[]; tables: Table[] }> {
+    return ApiClient.post<{ schemas: Schema[]; tables: Table[] }>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/discover-schema`
+    );
+  }
+
+  // ==========================================================================
+  // Legacy Connection Endpoints (for backward compatibility)
+  // These are deprecated, use organization-scoped endpoints above
+  // ==========================================================================
+
+  private static readonly LEGACY_BASE_PATH = "api/data-sources/postgres";
+
+  /** @deprecated Use organization-scoped endpoints */
+  static async testConnectionLegacy(
+    data: TestConnectionDto
+  ): Promise<TestConnectionResponse> {
+    return ApiClient.post<TestConnectionResponse>(
+      `${DataSourcesService.LEGACY_BASE_PATH}/test-connection`,
+      data
+    );
+  }
+
+  /** @deprecated Use organization-scoped endpoints */
   static async createConnection(
     data: CreateConnectionDto,
-    orgId?: string,
+    orgId?: string
   ): Promise<Connection> {
     if (!orgId) {
       throw new Error("Organization ID is required to create a connection");
     }
     const params = `?orgId=${encodeURIComponent(orgId)}`;
     return ApiClient.post<Connection>(
-      `${DataSourcesService.BASE_PATH}/connections${params}`,
-      data,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections${params}`,
+      data
     );
   }
 
+  /** @deprecated Use listDataSources instead */
   static async listConnections(orgId?: string): Promise<Connection[]> {
+    // Use the new organization-scoped endpoint if orgId is provided
+    if (orgId) {
+      try {
+        const dataSources = await DataSourcesService.listDataSources(orgId);
+        // Map data sources to connection format for backward compatibility
+        return dataSources.map(ds => ({
+          id: ds.id,
+          name: ds.name,
+          type: ds.sourceType,
+          organizationId: ds.organizationId,
+          status: ds.isActive ? "connected" : "disconnected",
+          lastConnectedAt: ds.updatedAt,
+          createdAt: ds.createdAt,
+        } as Connection));
+      } catch {
+        // Fallback to legacy endpoint if new one fails
+        console.warn("Falling back to legacy connections endpoint");
+      }
+    }
+    // Legacy path
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Connection[]>(
-      `${DataSourcesService.BASE_PATH}/connections${params}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections${params}`
     );
   }
 
-  static async getConnection(id: string): Promise<Connection> {
+  /** @deprecated Use getDataSource instead */
+  static async getConnectionLegacy(id: string): Promise<Connection> {
     return ApiClient.get<Connection>(
-      `${DataSourcesService.BASE_PATH}/connections/${id}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${id}`
     );
   }
 
+  /** @deprecated Use organization-scoped endpoints */
   static async updateConnection(
     id: string,
-    data: UpdateConnectionDto,
+    data: UpdateConnectionDto
   ): Promise<Connection> {
     return ApiClient.patch<Connection>(
-      `${DataSourcesService.BASE_PATH}/connections/${id}`,
-      data,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${id}`,
+      data
     );
   }
 
+  /** @deprecated Use deleteDataSource instead */
   static async deleteConnection(
     id: string,
-    orgId?: string,
+    orgId?: string
   ): Promise<{ deletedId: string }> {
-    // Build URL with orgId query parameter if provided
-    let url = `${DataSourcesService.BASE_PATH}/connections/${id}`;
+    let url = `${DataSourcesService.LEGACY_BASE_PATH}/connections/${id}`;
     if (orgId) {
       url += `?orgId=${encodeURIComponent(orgId)}`;
     }
     return ApiClient.delete<{ deletedId: string }>(url);
   }
 
+  // ==========================================================================
   // Schema Discovery
+  // ==========================================================================
+
   static async listDatabases(
     connectionId: string,
-    orgId?: string,
+    orgId?: string
   ): Promise<Database[]> {
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Database[]>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/databases${params}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/databases${params}`
     );
   }
 
   static async listSchemas(
     connectionId: string,
-    orgId?: string,
+    orgId?: string
   ): Promise<Schema[]> {
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Schema[]>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/schemas${params}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/schemas${params}`
     );
   }
 
   static async listSchemasWithTables(
     connectionId: string,
-    orgId?: string,
+    orgId?: string
   ): Promise<Schema[]> {
     const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Schema[]>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/schemas${params}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/schemas${params}`
     );
   }
 
   static async listTables(
     connectionId: string,
     schema?: string,
-    orgId?: string,
+    orgId?: string
   ): Promise<Table[]> {
     const params = new URLSearchParams();
     if (schema) params.append("schema", schema);
     if (orgId) params.append("orgId", orgId);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<Table[]>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/tables${queryString}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/tables${queryString}`
     );
   }
 
@@ -136,125 +263,134 @@ export class DataSourcesService {
     connectionId: string,
     table: string,
     schema?: string,
-    orgId?: string,
+    orgId?: string
   ): Promise<TableSchema> {
     const params = new URLSearchParams();
     if (schema) params.append("schema", schema);
     if (orgId) params.append("orgId", orgId);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<TableSchema>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/tables/${table}/schema${queryString}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/tables/${table}/schema${queryString}`
     );
   }
 
   static async refreshSchema(
-    connectionId: string,
+    connectionId: string
   ): Promise<{ success: boolean }> {
     return ApiClient.post<{ success: boolean }>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/refresh-schema`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/refresh-schema`
     );
   }
 
+  // ==========================================================================
   // Query Execution
+  // ==========================================================================
+
   static async executeQuery(
     connectionId: string,
     data: ExecuteQueryDto,
-    orgId?: string,
+    orgId?: string
   ): Promise<QueryExecutionResponse> {
     if (!orgId) {
       throw new Error("Organization ID is required to execute a query");
     }
     const params = `?orgId=${encodeURIComponent(orgId)}`;
     return ApiClient.post<QueryExecutionResponse>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/query${params}`,
-      data,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/query${params}`,
+      data
     );
   }
 
   static async explainQuery(
     connectionId: string,
-    data: ExecuteQueryDto,
+    data: ExecuteQueryDto
   ): Promise<ExplainQueryResponse> {
     return ApiClient.post<ExplainQueryResponse>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/query/explain`,
-      data,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/query/explain`,
+      data
     );
   }
 
+  // ==========================================================================
   // Data Synchronization
+  // ==========================================================================
+
   static async createSyncJob(
     connectionId: string,
-    data: CreateSyncJobDto,
+    data: CreateSyncJobDto
   ): Promise<SyncJob> {
     return ApiClient.post<SyncJob>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync`,
-      data,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/sync`,
+      data
     );
   }
 
   static async listSyncJobs(connectionId: string): Promise<SyncJob[]> {
     return ApiClient.get<SyncJob[]>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/sync-jobs`
     );
   }
 
   static async getSyncJob(
     connectionId: string,
-    jobId: string,
+    jobId: string
   ): Promise<SyncJob> {
     return ApiClient.get<SyncJob>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}`
     );
   }
 
   static async cancelSyncJob(
     connectionId: string,
-    jobId: string,
+    jobId: string
   ): Promise<{ success: boolean }> {
     return ApiClient.post<{ success: boolean }>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/cancel`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/cancel`
     );
   }
 
   static async updateSyncJobSchedule(
     connectionId: string,
     jobId: string,
-    data: UpdateSyncJobScheduleDto,
+    data: UpdateSyncJobScheduleDto
   ): Promise<SyncJob> {
     return ApiClient.patch<SyncJob>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/schedule`,
-      data,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/sync-jobs/${jobId}/schedule`,
+      data
     );
   }
 
+  // ==========================================================================
   // Monitoring
+  // ==========================================================================
+
   static async getConnectionHealth(
-    connectionId: string,
+    connectionId: string
   ): Promise<ConnectionHealth> {
     return ApiClient.get<ConnectionHealth>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/health`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/health`
     );
   }
 
   static async getQueryLogs(
     connectionId: string,
     limit?: number,
-    offset?: number,
+    offset?: number
   ): Promise<QueryLog[]> {
     const params = new URLSearchParams();
     if (limit) params.append("limit", limit.toString());
     if (offset) params.append("offset", offset.toString());
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<QueryLog[]>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/query-logs${queryString}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/query-logs${queryString}`
     );
   }
 
   static async getConnectionMetrics(
-    connectionId: string,
+    connectionId: string
   ): Promise<ConnectionMetrics> {
     return ApiClient.get<ConnectionMetrics>(
-      `${DataSourcesService.BASE_PATH}/connections/${connectionId}/metrics`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/metrics`
     );
   }
 }

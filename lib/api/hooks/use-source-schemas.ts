@@ -1,6 +1,6 @@
 /**
  * Source Schemas TanStack Query Hooks
- * Reusable hooks for source schema API endpoints
+ * Reusable hooks for pipeline source schema API endpoints
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,22 +13,62 @@ import type {
 // Query Keys
 export const sourceSchemasKeys = {
   all: ["source-schemas"] as const,
-  schemas: {
-    all: ["source-schemas", "schemas"] as const,
-    lists: () => [...sourceSchemasKeys.schemas.all, "list"] as const,
-    list: (organizationId: string) =>
-      [...sourceSchemasKeys.schemas.lists(), organizationId] as const,
-    details: () => [...sourceSchemasKeys.schemas.all, "detail"] as const,
-    detail: (organizationId: string, sourceSchemaId: string) =>
-      [
-        ...sourceSchemasKeys.schemas.details(),
-        organizationId,
-        sourceSchemaId,
-      ] as const,
-  },
+  lists: () => [...sourceSchemasKeys.all, "list"] as const,
+  list: (organizationId: string) =>
+    [...sourceSchemasKeys.lists(), organizationId] as const,
+  details: () => [...sourceSchemasKeys.all, "detail"] as const,
+  detail: (organizationId: string, schemaId: string) =>
+    [...sourceSchemasKeys.details(), organizationId, schemaId] as const,
+  discovery: (organizationId: string, schemaId: string) =>
+    [...sourceSchemasKeys.all, "discovery", organizationId, schemaId] as const,
+  validation: (organizationId: string, schemaId: string) =>
+    [...sourceSchemasKeys.all, "validation", organizationId, schemaId] as const,
+  preview: (organizationId: string, schemaId: string, limit?: number) =>
+    [...sourceSchemasKeys.all, "preview", organizationId, schemaId, limit] as const,
 };
 
-// Source Schema Management Hooks
+// ============================================================================
+// CRUD Hooks
+// ============================================================================
+
+/**
+ * List source schemas for organization
+ */
+export function useSourceSchemas(organizationId: string | undefined) {
+  return useQuery({
+    queryKey: sourceSchemasKeys.list(organizationId || ""),
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return SourceSchemasService.listSourceSchemas(organizationId);
+    },
+    enabled: !!organizationId,
+  });
+}
+
+/**
+ * Get source schema by ID
+ */
+export function useSourceSchema(
+  organizationId: string | undefined,
+  schemaId: string | undefined,
+) {
+  return useQuery({
+    queryKey: sourceSchemasKeys.detail(organizationId || "", schemaId || ""),
+    queryFn: () => {
+      if (!organizationId || !schemaId) {
+        throw new Error("Organization ID and Schema ID are required");
+      }
+      return SourceSchemasService.getSourceSchema(organizationId, schemaId);
+    },
+    enabled: !!organizationId && !!schemaId,
+  });
+}
+
+/**
+ * Create source schema
+ */
 export function useCreateSourceSchema(organizationId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -41,127 +81,168 @@ export function useCreateSourceSchema(organizationId: string | undefined) {
     onSuccess: () => {
       if (organizationId) {
         queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.schemas.list(organizationId),
+          queryKey: sourceSchemasKeys.list(organizationId),
         });
       }
     },
   });
 }
 
-export function useSourceSchemas(organizationId: string | undefined) {
-  return useQuery({
-    queryKey: sourceSchemasKeys.schemas.list(organizationId || ""),
-    queryFn: () => {
-      if (!organizationId) {
-        throw new Error("Organization ID is required");
-      }
-      return SourceSchemasService.listSourceSchemas(organizationId);
-    },
-    enabled: !!organizationId,
-  });
-}
-
-export function useSourceSchema(
-  organizationId: string | undefined,
-  sourceSchemaId: string | undefined,
-) {
-  return useQuery({
-    queryKey: sourceSchemasKeys.schemas.detail(
-      organizationId || "",
-      sourceSchemaId || "",
-    ),
-    queryFn: () => {
-      if (!organizationId || !sourceSchemaId) {
-        throw new Error("Organization ID and Source Schema ID are required");
-      }
-      return SourceSchemasService.getSourceSchema(
-        organizationId,
-        sourceSchemaId,
-      );
-    },
-    enabled: !!organizationId && !!sourceSchemaId,
-  });
-}
-
+/**
+ * Update source schema
+ */
 export function useUpdateSourceSchema(
   organizationId: string | undefined,
-  sourceSchemaId: string | undefined,
+  schemaId: string | undefined,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: UpdateSourceSchemaDto) => {
-      if (!organizationId || !sourceSchemaId) {
-        throw new Error("Organization ID and Source Schema ID are required");
+      if (!organizationId || !schemaId) {
+        throw new Error("Organization ID and Schema ID are required");
       }
-      return SourceSchemasService.updateSourceSchema(
-        organizationId,
-        sourceSchemaId,
-        data,
-      );
+      return SourceSchemasService.updateSourceSchema(organizationId, schemaId, data);
     },
-    onSuccess: () => {
-      if (organizationId && sourceSchemaId) {
+    onSuccess: (updatedSchema) => {
+      if (organizationId && schemaId) {
+        // Update cache with new data
+        queryClient.setQueryData(
+          sourceSchemasKeys.detail(organizationId, schemaId),
+          updatedSchema,
+        );
+        // Invalidate list to reflect changes
         queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.schemas.detail(
-            organizationId,
-            sourceSchemaId,
-          ),
-        });
-        queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.schemas.list(organizationId),
+          queryKey: sourceSchemasKeys.list(organizationId),
         });
       }
     },
   });
 }
 
+/**
+ * Delete source schema
+ */
 export function useDeleteSourceSchema(organizationId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (sourceSchemaId: string) => {
+    mutationFn: (schemaId: string) => {
       if (!organizationId) {
         throw new Error("Organization ID is required");
       }
-      return SourceSchemasService.deleteSourceSchema(
-        organizationId,
-        sourceSchemaId,
-      );
+      return SourceSchemasService.deleteSourceSchema(organizationId, schemaId);
     },
-    onSuccess: () => {
+    onSuccess: (_, deletedSchemaId) => {
       if (organizationId) {
+        // Remove from cache
+        queryClient.removeQueries({
+          queryKey: sourceSchemasKeys.detail(organizationId, deletedSchemaId),
+        });
+        // Invalidate list
         queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.schemas.list(organizationId),
+          queryKey: sourceSchemasKeys.list(organizationId),
         });
       }
     },
   });
 }
 
-// Source Schema Discovery Hook
+// ============================================================================
+// Schema Discovery & Validation Hooks
+// ============================================================================
+
+/**
+ * Discover schema from source (columns, primary keys, row count)
+ */
 export function useDiscoverSourceSchema(
   organizationId: string | undefined,
-  sourceSchemaId: string | undefined,
+  schemaId: string | undefined,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => {
-      if (!organizationId || !sourceSchemaId) {
-        throw new Error("Organization ID and Source Schema ID are required");
+      if (!organizationId || !schemaId) {
+        throw new Error("Organization ID and Schema ID are required");
       }
-      return SourceSchemasService.discoverSourceSchema(
-        organizationId,
-        sourceSchemaId,
-      );
+      return SourceSchemasService.discoverSourceSchema(organizationId, schemaId);
     },
-    onSuccess: () => {
-      if (organizationId && sourceSchemaId) {
-        queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.schemas.detail(
-            organizationId,
-            sourceSchemaId,
-          ),
-        });
+    onSuccess: (result) => {
+      if (organizationId && schemaId) {
+        // Update schema cache with discovered data
+        queryClient.setQueryData(
+          sourceSchemasKeys.detail(organizationId, schemaId),
+          result.schema,
+        );
+        // Cache discovery result
+        queryClient.setQueryData(
+          sourceSchemasKeys.discovery(organizationId, schemaId),
+          result.discovered,
+        );
       }
     },
+  });
+}
+
+/**
+ * Validate source schema configuration
+ */
+export function useValidateSourceSchema(
+  organizationId: string | undefined,
+  schemaId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      if (!organizationId || !schemaId) {
+        throw new Error("Organization ID and Schema ID are required");
+      }
+      return SourceSchemasService.validateSourceSchema(organizationId, schemaId);
+    },
+    onSuccess: (result) => {
+      if (organizationId && schemaId) {
+        // Cache validation result
+        queryClient.setQueryData(
+          sourceSchemasKeys.validation(organizationId, schemaId),
+          result,
+        );
+      }
+    },
+  });
+}
+
+/**
+ * Preview sample data from source
+ */
+export function usePreviewSourceData(
+  organizationId: string | undefined,
+  schemaId: string | undefined,
+  limit?: number,
+) {
+  return useQuery({
+    queryKey: sourceSchemasKeys.preview(organizationId || "", schemaId || "", limit),
+    queryFn: () => {
+      if (!organizationId || !schemaId) {
+        throw new Error("Organization ID and Schema ID are required");
+      }
+      return SourceSchemasService.previewSourceData(organizationId, schemaId, limit);
+    },
+    enabled: !!organizationId && !!schemaId,
+    staleTime: 30000, // 30 seconds - preview data is relatively fresh
+  });
+}
+
+/**
+ * Get cached discovery result
+ */
+export function useSourceSchemaDiscovery(
+  organizationId: string | undefined,
+  schemaId: string | undefined,
+) {
+  return useQuery({
+    queryKey: sourceSchemasKeys.discovery(organizationId || "", schemaId || ""),
+    queryFn: () => {
+      // This is a cache-only query; use discoverSourceSchema mutation to populate
+      return null;
+    },
+    enabled: false, // Only read from cache
   });
 }
