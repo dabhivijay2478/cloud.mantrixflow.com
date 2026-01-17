@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase/client";
  * If no protocol is provided, defaults to https://
  */
 const normalizeApiUrl = (url: string): string => {
-  if (!url) return "http://localhost:8000";
+  if (!url) return "http://localhost:5000";
 
   // Remove trailing slashes
   const trimmed = url.trim().replace(/\/+$/, "");
@@ -25,7 +25,7 @@ const normalizeApiUrl = (url: string): string => {
 };
 
 const API_BASE_URL = normalizeApiUrl(
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
 );
 
 /**

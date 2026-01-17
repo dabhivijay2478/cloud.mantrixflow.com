@@ -166,6 +166,7 @@ export interface UpdateDataSourceDto {
 }
 
 export interface CreateConnectionDto {
+  name: string;
   connection_type: DataSourceType;
   config: ConnectionConfig;
 }

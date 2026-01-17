@@ -20,6 +20,7 @@ interface DataSourceCardProps {
     selectedTable?: string;
   };
   onClick: () => void;
+  disabled?: boolean;
 }
 
 export function DataSourceCard({
@@ -27,18 +28,30 @@ export function DataSourceCard({
   isConnected,
   connectedData,
   onClick,
+  disabled = false,
 }: DataSourceCardProps) {
   const router = useRouter();
 
   return (
     <Card
       className={cn(
-        "group relative cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] border",
-        isConnected && "ring-2 ring-primary/20 border-primary/30",
+        "group relative transition-all border",
+        disabled
+          ? "cursor-not-allowed opacity-50 bg-muted/30"
+          : "cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]",
+        isConnected && !disabled && "ring-2 ring-primary/20 border-primary/30",
       )}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
     >
-      {isConnected && (
+      {disabled && (
+        <Badge
+          className="absolute top-2 right-2 bg-muted text-muted-foreground border shadow-sm z-10 text-xs"
+          variant="outline"
+        >
+          Coming Soon
+        </Badge>
+      )}
+      {isConnected && !disabled && (
         <Badge
           className="absolute top-2 right-2 bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-0 shadow-sm z-10"
           variant="default"
@@ -47,7 +60,7 @@ export function DataSourceCard({
           Connected
         </Badge>
       )}
-      {dataSource.enterprise && (
+      {dataSource.enterprise && !disabled && (
         <Badge
           className="absolute top-2 left-2 bg-foreground text-background text-xs shadow-sm z-10 font-semibold"
           variant="default"
@@ -56,14 +69,22 @@ export function DataSourceCard({
         </Badge>
       )}
       <CardContent className="p-4 flex items-center gap-3">
-        <div className="shrink-0 w-12 h-12 bg-muted border rounded-lg flex items-center justify-center transition-colors group-hover:bg-muted/80">
+        <div className={cn(
+          "shrink-0 w-12 h-12 border rounded-lg flex items-center justify-center transition-colors",
+          disabled 
+            ? "bg-muted/50" 
+            : "bg-muted group-hover:bg-muted/80"
+        )}>
           {getIconComponent(dataSource.iconType, 24)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-foreground truncate">
+          <div className={cn(
+            "text-sm font-semibold truncate",
+            disabled ? "text-muted-foreground" : "text-foreground"
+          )}>
             {dataSource.name}
           </div>
-          {isConnected && connectedData && (
+          {isConnected && connectedData && !disabled && (
             <div className="text-xs text-muted-foreground truncate mt-1">
               {(() => {
                 const selectedTables =
@@ -77,8 +98,13 @@ export function DataSourceCard({
               })()}
             </div>
           )}
+          {disabled && (
+            <div className="text-xs text-muted-foreground/75 truncate mt-1">
+              Not yet available
+            </div>
+          )}
         </div>
-        {isConnected && (
+        {isConnected && !disabled && (
           <Button
             variant="ghost"
             size="sm"

@@ -59,10 +59,12 @@ export const dataSourcesKeys = {
 };
 
 // Connection Management Hooks
-export function useTestConnection() {
+export function useTestConnection(orgId?: string) {
   return useMutation({
-    mutationFn: (data: TestConnectionDto) =>
-      DataSourcesService.testConnectionLegacy(data),
+    mutationFn: (data: TestConnectionDto) => {
+      if (!orgId) throw new Error("Organization ID is required");
+      return DataSourcesService.testConnectionLegacy(orgId, data);
+    },
   });
 }
 

@@ -82,126 +82,184 @@ export default function EditPipelinePage() {
   // Load pipeline configuration from API response
   useEffect(() => {
     if (pipeline && sourceSchema && destinationSchema) {
-      // Try to parse collectors from transformations JSONB field first
-      // If not available, reconstruct from source and destination schemas
+      // Parse existing transformations from JSONB field
       const transformations =
         pipeline.transformations as unknown as TransformationsData;
       let collectors = transformations?.collectors || [];
-      const emitters = transformations?.emitters || [];
+      const existingEmitters = transformations?.emitters || [];
 
-      // If no collectors in transformations, reconstruct from schemas
-      if (collectors.length === 0 && sourceSchema && destinationSchema) {
-        // Reconstruct collector from source schema
-        const sourceTableName = sourceSchema.sourceTable
-          ? sourceSchema.sourceSchema && sourceSchema.sourceSchema !== "public"
-            ? `${sourceSchema.sourceSchema}.${sourceSchema.sourceTable}`
-            : sourceSchema.sourceTable
-          : "";
+      // Build the authoritative destination table name from destinationSchema
+      // CRITICAL: ALWAYS use "schema.table" format to match TransformStep dropdown
+      // The dropdown's destinationTables uses fullName which is ALWAYS "schema.table" format
+      const destinationTableName =
+        destinationSchema.destinationTable && destinationSchema.destinationSchema
+          ? `${destinationSchema.destinationSchema}.${destinationSchema.destinationTable}`
+          : destinationSchema.destinationTable
+            ? `public.${destinationSchema.destinationTable}`
+            : "";
 
-        // Reconstruct transformers from destination schema column mappings
+      // Build the authoritative source table name from sourceSchema
+      // Use same "schema.table" format for consistency
+      const sourceTableName =
+        sourceSchema.sourceTable && sourceSchema.sourceSchema
+          ? `${sourceSchema.sourceSchema}.${sourceSchema.sourceTable}`
+          : sourceSchema.sourceTable
+            ? `public.${sourceSchema.sourceTable}`
+            : "";
+
+      // Build field mappings from destinationSchema (authoritative source)
+      const schemaFieldMappings =
+        destinationSchema.columnMappings?.map((cm) => ({
+          source: cm.sourceColumn,
+          destination: cm.destinationColumn,
+          isPrimaryKey: cm.isPrimaryKey || false,
+        })) || [];
+
+      // Generate stable IDs (or use existing ones from transformations)
+      const baseTimestamp = Date.now();
+      const defaultCollectorId =
+        collectors[0]?.id || `collector_${baseTimestamp}`;
+      const defaultTransformerId =
+        collectors[0]?.transformers?.[0]?.id || `transformer_${baseTimestamp}`;
+      const defaultEmitterId =
+        collectors[0]?.emitters?.[0]?.id ||
+        collectors[0]?.transformers?.[0]?.emitterId ||
+        `emitter_${baseTimestamp}`;
+
+      // Build the authoritative Emitter from destinationSchema
+      const reconstructedEmitter: Emitter = {
+        id: defaultEmitterId,
+        transformId: defaultTransformerId,
+        destinationId: destinationSchema.dataSourceId || "",
+        destinationName: "Destination",
+        destinationType: "postgres",
+      };
+
+      if (collectors.length === 0) {
+        // No existing collectors - fully reconstruct from schemas
         const transformers =
-          destinationSchema.columnMappings &&
-          destinationSchema.columnMappings.length > 0
+          schemaFieldMappings.length > 0
             ? [
                 {
-                  id: `transformer_${Date.now()}`,
+                  id: defaultTransformerId,
                   name: "Default Transformer",
-                  collectorId: `collector_${Date.now()}`,
-                  emitterId: `emitter_${Date.now()}`,
-                  fieldMappings: destinationSchema.columnMappings.map((cm) => ({
-                    source: cm.sourceColumn,
-                    destination: cm.destinationColumn,
-                    isPrimaryKey: cm.isPrimaryKey || false,
-                  })),
+                  collectorId: defaultCollectorId,
+                  emitterId: defaultEmitterId,
+                  destinationTable: destinationTableName,
+                  fieldMappings: schemaFieldMappings,
                 },
               ]
             : [];
 
         collectors = [
           {
-            id: `collector_${Date.now()}`,
+            id: defaultCollectorId,
             sourceId: sourceSchema.dataSourceId || "",
             selectedTables: sourceTableName ? [sourceTableName] : [],
             transformers: transformers,
+            emitters: [reconstructedEmitter],
           },
         ];
+      } else {
+        // Existing collectors - HYDRATE/ENRICH them with schema data
+        // This is the key fix: always apply authoritative data from schemas
+        collectors = collectors.map((c, cIndex) => {
+          // Ensure emitters exist on the collector
+          let collectorEmitters = c.emitters || [];
+          if (collectorEmitters.length === 0) {
+            // No emitters stored - add the reconstructed one
+            collectorEmitters = [reconstructedEmitter];
+          }
+
+          // Hydrate each transformer with schema data if missing
+          const hydratedTransformers = (c.transformers || []).map(
+            (t, tIndex) => {
+              const transformer = t as typeof t & {
+                destinationTable?: string;
+              };
+
+              // Use existing values if present, otherwise fall back to schema data
+              return {
+                ...t,
+                collectorId: t.collectorId || c.id,
+                emitterId:
+                  t.emitterId ||
+                  collectorEmitters[0]?.id ||
+                  defaultEmitterId,
+                // CRITICAL: Always use schema's destinationTable if transformer doesn't have one
+                destinationTable:
+                  transformer.destinationTable || destinationTableName,
+                // CRITICAL: Always use schema's fieldMappings if transformer doesn't have any
+                fieldMappings:
+                  t.fieldMappings && t.fieldMappings.length > 0
+                    ? t.fieldMappings
+                    : schemaFieldMappings,
+              };
+            },
+          );
+
+          // If no transformers exist, create one from schema
+          const finalTransformers =
+            hydratedTransformers.length > 0
+              ? hydratedTransformers
+              : schemaFieldMappings.length > 0
+                ? [
+                    {
+                      id: defaultTransformerId,
+                      name: "Default Transformer",
+                      collectorId: c.id,
+                      emitterId:
+                        collectorEmitters[0]?.id || defaultEmitterId,
+                      destinationTable: destinationTableName,
+                      fieldMappings: schemaFieldMappings,
+                    },
+                  ]
+                : [];
+
+          return {
+            ...c,
+            sourceId: c.sourceId || sourceSchema.dataSourceId || "",
+            selectedTables:
+              c.selectedTables && c.selectedTables.length > 0
+                ? c.selectedTables
+                : sourceTableName
+                  ? [sourceTableName]
+                  : [],
+            emitters: collectorEmitters,
+            transformers: finalTransformers,
+          };
+        });
       }
 
       console.log("Pipeline data loaded for edit:", {
         transformations,
         collectors,
-        emitters,
-        pipeline,
+        existingEmitters,
+        destinationTableName,
+        sourceTableName,
+        schemaFieldMappingsCount: schemaFieldMappings.length,
         collectorsCount: collectors.length,
-        emittersCount: emitters.length,
-        collectorsWithEmitters: collectors.map((c) => ({
+        collectorsWithData: collectors.map((c) => ({
           id: c.id,
-          hasEmitters: !!(c.emitters && c.emitters.length > 0),
+          sourceId: c.sourceId,
+          selectedTablesCount: c.selectedTables?.length || 0,
           emittersCount: c.emitters?.length || 0,
           transformersCount: (c.transformers || []).length,
-          transformers: (c.transformers || []).map((t) => ({
-            id: t.id,
-            name: t.name,
-            emitterId: t.emitterId,
-            fieldMappingsCount: t.fieldMappings?.length || 0,
-            fieldMappings: t.fieldMappings,
-          })),
+          transformers: (c.transformers || []).map((t) => {
+            const transformer = t as typeof t & { destinationTable?: string };
+            return {
+              id: t.id,
+              name: t.name,
+              emitterId: t.emitterId,
+              destinationTable: transformer.destinationTable,
+              fieldMappingsCount: t.fieldMappings?.length || 0,
+            };
+          }),
         })),
       });
 
-      // Map emitters to collectors
-      // Strategy 1: If emitters are stored directly on collectors (from new pipeline flow)
-      // Strategy 2: If emitters are in separate array, map via transformers
-      const collectorEmittersMap = new Map<string, Emitter[]>();
-
-      collectors.forEach((c) => {
-        // First, check if emitters are already on the collector (from new pipeline creation)
-        if (c.emitters && Array.isArray(c.emitters) && c.emitters.length > 0) {
-          collectorEmittersMap.set(c.id, c.emitters);
-        } else {
-          // Otherwise, map emitters via transformer relationships
-          const collectorEmitterIds = new Set<string>();
-          (c.transformers || []).forEach((t) => {
-            if (t.emitterId) {
-              collectorEmitterIds.add(t.emitterId);
-            }
-          });
-
-          // Find emitters that belong to this collector
-          const collectorEmitters = emitters.filter((e) =>
-            collectorEmitterIds.has(e.id),
-          );
-          if (collectorEmitters.length > 0) {
-            collectorEmittersMap.set(c.id, collectorEmitters);
-          }
-        }
-      });
-
-      // Build the config with emitters attached to collectors
-      const configWithEmitters: CollectorConfig[] = collectors.map((c) => ({
-        id: c.id,
-        sourceId: c.sourceId,
-        selectedTables: c.selectedTables || [],
-        emitters: collectorEmittersMap.get(c.id) || [],
-        transformers: (c.transformers || []).map((t) => ({
-          id: t.id,
-          name: t.name,
-          collectorId: t.collectorId || c.id,
-          emitterId: t.emitterId || "",
-          fieldMappings: Array.isArray(t.fieldMappings)
-            ? t.fieldMappings
-            : typeof t.fieldMappings === "object" && t.fieldMappings !== null
-              ? Object.entries(t.fieldMappings).map(
-                  ([source, destination]) => ({
-                    source,
-                    destination: String(destination),
-                  }),
-                )
-              : [],
-        })),
-      }));
-
-      setConfig({ collectors: configWithEmitters });
+      // Set the hydrated config - collectors now have all data populated
+      setConfig({ collectors: collectors as unknown as CollectorConfig[] });
     }
   }, [pipeline, sourceSchema, destinationSchema]);
 

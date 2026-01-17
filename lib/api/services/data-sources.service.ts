@@ -50,7 +50,14 @@ export class DataSourcesService {
     organizationId: string,
     dto: CreateDataSourceDto
   ): Promise<DataSource> {
-    return ApiClient.post<DataSource>(DataSourcesService.basePath(organizationId), dto);
+    // Explicitly map frontend DTO (snake_case) to backend DTO (camelCase)
+    const payload = {
+      name: dto.name,
+      description: dto.description,
+      sourceType: dto.source_type,
+      metadata: dto.metadata,
+    };
+    return ApiClient.post<DataSource>(DataSourcesService.basePath(organizationId), payload);
   }
 
   static async updateDataSource(
@@ -99,7 +106,10 @@ export class DataSourcesService {
   ): Promise<Connection> {
     return ApiClient.post<Connection>(
       `${DataSourcesService.basePath(organizationId)}/${sourceId}/connection`,
-      dto
+      {
+        connectionType: dto.connection_type,
+        config: dto.config,
+      }
     );
   }
 
@@ -129,11 +139,13 @@ export class DataSourcesService {
   private static readonly LEGACY_BASE_PATH = "api/data-sources/postgres";
 
   /** @deprecated Use organization-scoped endpoints */
+  /** @deprecated Use organization-scoped endpoints */
   static async testConnectionLegacy(
+    organizationId: string,
     data: TestConnectionDto
   ): Promise<TestConnectionResponse> {
     return ApiClient.post<TestConnectionResponse>(
-      `${DataSourcesService.LEGACY_BASE_PATH}/test-connection`,
+      `${DataSourcesService.basePath(organizationId)}/test-connection`,
       data
     );
   }
@@ -146,11 +158,45 @@ export class DataSourcesService {
     if (!orgId) {
       throw new Error("Organization ID is required to create a connection");
     }
-    const params = `?orgId=${encodeURIComponent(orgId)}`;
-    return ApiClient.post<Connection>(
-      `${DataSourcesService.LEGACY_BASE_PATH}/connections${params}`,
-      data
+
+    // 1. Create Data Source
+    const dataSource = await DataSourcesService.createDataSource(orgId, {
+      name: data.name,
+      source_type: data.connection_type,
+      description: `Connection for ${data.name || data.connection_type}`,
+    });
+
+    // 2. Configure Connection
+    // Map snake_case from frontend DTO to camelCase for backend if needed
+    // or pass as is if backend controller uses same DTO
+    const connectionResult = await DataSourcesService.createOrUpdateConnection(
+      orgId, 
+      dataSource.id, 
+      {
+        ...data,
+      } as CreateConnectionDto
     );
+    
+    const connection = connectionResult as any; // Cast to access properties not in Connection interface
+
+    // 3. Return combined object matching Connection interface
+    // Note: Frontend uses DataSource ID as Connection ID in listings
+    return {
+      id: dataSource.id,
+      organizationId: dataSource.organizationId,
+      name: dataSource.name,
+      type: dataSource.sourceType,
+      status: connection.status,
+      // map other fields
+      created_at: dataSource.createdAt,
+      createdAt: dataSource.createdAt,
+      updated_at: dataSource.updatedAt,
+      updatedAt: dataSource.updatedAt,
+      // @ts-ignore
+      connection_type: connection.connection_type,
+      // @ts-ignore
+      config: connection.config
+    } as unknown as Connection;
   }
 
   /** @deprecated Use listDataSources instead */
@@ -229,20 +275,18 @@ export class DataSourcesService {
     connectionId: string,
     orgId?: string
   ): Promise<Schema[]> {
-    const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
-    return ApiClient.get<Schema[]>(
-      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/schemas${params}`
-    );
+    if (!orgId) throw new Error("Organization ID is required");
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
+    return result.schemas || [];
   }
 
   static async listSchemasWithTables(
     connectionId: string,
     orgId?: string
   ): Promise<Schema[]> {
-    const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
-    return ApiClient.get<Schema[]>(
-      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/schemas${params}`
-    );
+    if (!orgId) throw new Error("Organization ID is required");
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
+    return result.schemas || [];
   }
 
   static async listTables(
@@ -250,13 +294,17 @@ export class DataSourcesService {
     schema?: string,
     orgId?: string
   ): Promise<Table[]> {
-    const params = new URLSearchParams();
-    if (schema) params.append("schema", schema);
-    if (orgId) params.append("orgId", orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : "";
-    return ApiClient.get<Table[]>(
-      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/tables${queryString}`
-    );
+    if (!orgId) throw new Error("Organization ID is required");
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
+    
+    if (schema) {
+      const foundSchema = result.schemas?.find((s: any) => s.name === schema);
+      return foundSchema ? foundSchema.tables || [] : [];
+    }
+    
+    // If no schema specified, flatten all tables? Or return empty?
+    // Legacy behavior was listing tables for a schema.
+    return result.schemas?.flatMap((s: any) => s.tables) || [];
   }
 
   static async getTableSchema(
@@ -265,13 +313,39 @@ export class DataSourcesService {
     schema?: string,
     orgId?: string
   ): Promise<TableSchema> {
-    const params = new URLSearchParams();
-    if (schema) params.append("schema", schema);
-    if (orgId) params.append("orgId", orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : "";
-    return ApiClient.get<TableSchema>(
-      `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/tables/${table}/schema${queryString}`
-    );
+    if (!orgId) throw new Error("Organization ID is required");
+    
+    // Use discoverSchema to get full schema info including columns
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
+    
+    let targetTable: any;
+    
+    if (schema) {
+      const foundSchema = result.schemas?.find((s: any) => s.name === schema);
+      targetTable = foundSchema?.tables?.find((t: any) => t.name === table);
+    } else {
+      // If no schema specified, search all schemas (or default to public)
+      for (const s of (result.schemas || [])) {
+        targetTable = s.tables?.find((t: any) => t.name === table);
+        if (targetTable) break;
+      }
+    }
+
+    if (!targetTable) {
+        return { 
+          columns: [],
+          table: table,
+          schema: schema || 'unknown',
+          primaryKeys: []
+        };
+    }
+
+    return {
+      columns: targetTable.columns || [],
+      table: targetTable.name,
+      schema: schema || 'public', // Or find parent schema name if searched
+      primaryKeys: [] // TODO: Fetch primary keys
+    };
   }
 
   static async refreshSchema(

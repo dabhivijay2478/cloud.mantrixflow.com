@@ -5,11 +5,12 @@ export const connectionSchemas: Record<
     fields: Array<{
       name: string;
       label: string;
-      type: "text" | "password" | "number" | "textarea" | "file" | "select";
+      type: "text" | "password" | "number" | "textarea" | "file" | "select" | "checkbox";
       placeholder?: string;
       required?: boolean;
       description?: string;
       options?: Array<{ value: string; label: string }>;
+      dependsOn?: { field: string; value: string | boolean };
     }>;
     connectionString?: boolean;
     testConnection?: boolean;
@@ -26,25 +27,12 @@ export const connectionSchemas: Record<
         description: "A friendly name to identify this connection",
       },
       {
-        name: "databaseType",
-        label: "Database Type",
-        type: "select",
-        placeholder: "Select database type",
-        required: true,
-        description:
-          "Select the type of PostgreSQL database you're connecting to",
-        options: [
-          { value: "other", label: "Other PostgreSQL" },
-          { value: "neon", label: "Neon" },
-          { value: "supabase", label: "Supabase" },
-        ],
-      },
-      {
         name: "host",
         label: "Host",
         type: "text",
-        placeholder: "localhost",
+        placeholder: "localhost or db.example.com",
         required: true,
+        description: "Database server hostname or IP address",
       },
       {
         name: "port",
@@ -57,14 +45,14 @@ export const connectionSchemas: Record<
         name: "database",
         label: "Database",
         type: "text",
-        placeholder: "mydb",
+        placeholder: "postgres",
         required: true,
       },
       {
         name: "username",
         label: "Username",
         type: "text",
-        placeholder: "user",
+        placeholder: "postgres",
         required: true,
       },
       {
@@ -74,12 +62,32 @@ export const connectionSchemas: Record<
         placeholder: "••••••••",
         required: true,
       },
+      {
+        name: "ssl",
+        label: "Enable SSL",
+        type: "select",
+        placeholder: "Select SSL mode",
+        required: false,
+        description: "Enable SSL for secure connections (recommended for cloud databases)",
+        options: [
+          { value: "false", label: "Disabled" },
+          { value: "true", label: "Enabled" },
+        ],
+      },
     ],
     connectionString: false,
     testConnection: true,
   },
   mysql: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My MySQL Connection",
+        required: true,
+        description: "A friendly name to identify this connection",
+      },
       {
         name: "host",
         label: "Host",
@@ -105,7 +113,7 @@ export const connectionSchemas: Record<
         name: "username",
         label: "Username",
         type: "text",
-        placeholder: "user",
+        placeholder: "root",
         required: true,
       },
       {
@@ -122,18 +130,51 @@ export const connectionSchemas: Record<
   mongodb: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My MongoDB Connection",
+        required: true,
+        description: "A friendly name to identify this connection",
+      },
+      {
+        name: "useConnectionString",
+        label: "Connection Method",
+        type: "select",
+        required: true,
+        description: "Choose how to connect to MongoDB",
+        options: [
+          { value: "false", label: "Individual Fields" },
+          { value: "true", label: "Connection String (Atlas/SRV)" },
+        ],
+      },
+      // Connection string mode
+      {
+        name: "connection_string",
+        label: "Connection String",
+        type: "text",
+        placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/mydb",
+        required: false,
+        description: "Full MongoDB connection string (supports Atlas SRV format)",
+        dependsOn: { field: "useConnectionString", value: "true" },
+      },
+      // Individual fields mode
+      {
         name: "host",
         label: "Host",
         type: "text",
-        placeholder: "localhost",
-        required: true,
+        placeholder: "localhost or cluster.mongodb.net",
+        required: false,
+        dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
         name: "port",
         label: "Port",
         type: "number",
         placeholder: "27017",
-        required: true,
+        required: false,
+        description: "Default: 27017 (not needed for Atlas SRV)",
+        dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
         name: "database",
@@ -141,6 +182,7 @@ export const connectionSchemas: Record<
         type: "text",
         placeholder: "mydb",
         required: true,
+        description: "The database name to connect to",
       },
       {
         name: "username",
@@ -148,6 +190,8 @@ export const connectionSchemas: Record<
         type: "text",
         placeholder: "user",
         required: false,
+        description: "Leave empty for unauthenticated connections",
+        dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
         name: "password",
@@ -155,6 +199,37 @@ export const connectionSchemas: Record<
         type: "password",
         placeholder: "••••••••",
         required: false,
+        dependsOn: { field: "useConnectionString", value: "false" },
+      },
+      {
+        name: "authSource",
+        label: "Auth Database",
+        type: "text",
+        placeholder: "admin",
+        required: false,
+        description: "The database to authenticate against (default: admin)",
+        dependsOn: { field: "useConnectionString", value: "false" },
+      },
+      {
+        name: "replicaSet",
+        label: "Replica Set",
+        type: "text",
+        placeholder: "rs0",
+        required: false,
+        description: "Replica set name (optional)",
+        dependsOn: { field: "useConnectionString", value: "false" },
+      },
+      {
+        name: "tls",
+        label: "Enable TLS/SSL",
+        type: "select",
+        required: false,
+        description: "Enable TLS for secure connections",
+        options: [
+          { value: "false", label: "Disabled" },
+          { value: "true", label: "Enabled" },
+        ],
+        dependsOn: { field: "useConnectionString", value: "false" },
       },
     ],
     connectionString: true,

@@ -30,8 +30,8 @@ import { getIconComponent } from "./utils";
 
 type ConnectionFormValues = Record<string, string>;
 
-// Dynamic schema builder based on data source type
-const buildConnectionSchema = (dataSourceType: string) => {
+// Dynamic schema builder based on data source type and current form values
+const buildConnectionSchema = (dataSourceType: string, formValues: ConnectionFormValues) => {
   const schema = connectionSchemas[dataSourceType];
   if (!schema) {
     return z.object({}).passthrough();
@@ -41,7 +41,14 @@ const buildConnectionSchema = (dataSourceType: string) => {
 
   // Add all fields from schema
   schema.fields.forEach((field) => {
-    if (field.required) {
+    // Check if field is visible/active based on dependsOn
+    let isVisible = true;
+    if (field.dependsOn) {
+      const dependencyValue = formValues[field.dependsOn.field];
+      isVisible = String(dependencyValue) === String(field.dependsOn.value);
+    }
+
+    if (field.required && isVisible) {
       schemaObject[field.name] = z
         .string()
         .min(1, `${field.label} is required`);
@@ -50,24 +57,7 @@ const buildConnectionSchema = (dataSourceType: string) => {
     }
   });
 
-  // Validation for postgres and neon-postgres (no connection string support)
-  // All required fields must be present
-
-  return z.object(schemaObject).refine(
-    (data) => {
-      // All required fields must be present
-      return schema.fields.every((field) => {
-        if (!field.required) return true;
-        return (
-          data[field.name as keyof typeof data] &&
-          String(data[field.name as keyof typeof data]).trim().length > 0
-        );
-      });
-    },
-    {
-      message: "Please provide all required connection details",
-    },
-  );
+  return z.object(schemaObject);
 };
 
 interface ConnectionSheetProps {
@@ -114,7 +104,8 @@ export function ConnectionSheet({
       if (!dataSourceId || !dataSource) {
         return { values: values as ConnectionFormValues, errors: {} };
       }
-      const schema = buildConnectionSchema(dataSource.type);
+      // Pass current values to schema builder for dynamic validation
+      const schema = buildConnectionSchema(dataSource.type, values);
       const result = schema.safeParse(values);
       if (result.success) {
         return { values: result.data as ConnectionFormValues, errors: {} };
@@ -131,6 +122,9 @@ export function ConnectionSheet({
     defaultValues: getDefaultValues(),
   });
 
+  // Watch all values to trigger re-renders for dependency logic
+  const allValues = form.watch();
+
   // Reset form when data source changes
   useEffect(() => {
     if (dataSourceId && open) {
@@ -138,6 +132,19 @@ export function ConnectionSheet({
       setConnectionTestResult(null);
     }
   }, [dataSourceId, open, form, getDefaultValues]);
+
+  // Handle default value setting for selects if needed immediately
+  useEffect(() => {
+    if (open && schema) {
+      schema.fields.forEach(field => {
+        // Find fields that have a default valid option if not set
+        // Specifically for useConnectionString select in MongoDB
+        if (field.name === 'useConnectionString' && !form.getValues('useConnectionString')) {
+          form.setValue('useConnectionString', 'false');
+        }
+      });
+    }
+  }, [open, schema, form]);
 
   const handleTestConnection = async () => {
     if (!dataSourceId || !dataSource) return;
@@ -204,7 +211,11 @@ export function ConnectionSheet({
     setLoading(true);
     try {
       await onConnect(data);
-      handleClose();
+      if (onOpenChange) {
+        onOpenChange(false);
+      }
+      setConnectionTestResult(null);
+      form.reset();
     } catch (error) {
       console.error(error);
     } finally {
@@ -252,17 +263,26 @@ export function ConnectionSheet({
             >
               <div className="grid gap-4">
                 {schema.fields.map((field, index) => {
+                  // Check if field should be visible
+                  if (field.dependsOn) {
+                    const dependencyValue = allValues[field.dependsOn.field];
+                    if (String(dependencyValue) !== String(field.dependsOn.value)) {
+                      return null;
+                    }
+                  }
+
                   // Add "Or" divider before individual fields if connection string is supported
                   const showOrDivider =
                     schema.connectionString &&
-                    field.name === "connectionString" &&
+                    (field.name === "connectionString" || field.name === "connection_string") &&
                     index > 0;
 
                   const showOrAfterConnectionString =
                     schema.connectionString &&
-                    field.name === "connectionString" &&
+                    (field.name === "connectionString" || field.name === "connection_string") &&
                     index < schema.fields.length - 1 &&
-                    schema.fields[index + 1]?.name !== "connectionString";
+                    schema.fields[index + 1]?.name !== "connectionString" &&
+                    schema.fields[index + 1]?.name !== "connection_string";
 
                   return (
                     <div key={field.name}>
@@ -297,7 +317,8 @@ export function ConnectionSheet({
                             className={cn(
                               field.name === "credentials" ||
                                 field.name === "headers" ||
-                                field.name === "connectionString"
+                                field.name === "connectionString" ||
+                                field.name === "connection_string"
                                 ? "font-mono text-sm"
                                 : "",
                             )}

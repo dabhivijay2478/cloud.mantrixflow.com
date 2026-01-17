@@ -63,15 +63,27 @@ export default function DataSourcesPage() {
     useConnections(organizationId);
   const createConnection = useCreateConnection(organizationId);
   const deleteConnection = useDeleteConnection(organizationId);
-  // Use legacy testConnection hook that doesn't require orgId/dataSourceId
-  const testConnection = useTestConnectionLegacy();
+  // Use legacy testConnection hook (now updated to use org-scoped endpoint)
+  const testConnection = useTestConnectionLegacy(organizationId);
 
   const isLoading = connectionsLoading;
 
-  // Filter to show PostgreSQL data sources
-  const enabledDataSources = allDataSources.filter(
-    (ds) => ds.type === "postgres",
-  );
+  // Data source types that are implemented in the backend collector service
+  const SUPPORTED_SOURCE_TYPES = [
+    "postgres",
+    "mysql", 
+    "mongodb",
+    "s3",
+    "api",
+    "bigquery",
+    "snowflake",
+  ];
+
+  // Show all data sources but mark unsupported ones as disabled
+  const enabledDataSources = allDataSources.map((ds) => ({
+    ...ds,
+    disabled: !SUPPORTED_SOURCE_TYPES.includes(ds.type),
+  }));
 
   // Get all unique user IDs from connections for fetching user names
   const userIds = useMemo(
@@ -203,28 +215,68 @@ export default function DataSourcesPage() {
 
     try {
       // Convert form data to API format
-      // Determine database type and auto-configure SSL
-      const databaseType = data.databaseType || "other";
-      const isNeon = databaseType === "neon";
-      const isSupabase = databaseType === "supabase";
       const host = data.host || "";
       const isLocalhost =
         host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
 
+      // Build config based on data source type
+      const config: Record<string, unknown> = {};
+      
+      // Add all form data to config
+      Object.entries(data).forEach(([key, value]) => {
+        // Skip metadata fields or fields handled specially
+        if (key === "name") return;
+        
+        // Skip empty values
+        if (!value) return;
+
+        // Convert numeric strings to numbers for known numeric fields
+        if (key === "port") {
+          config[key] = parseInt(value, 10);
+        } else {
+          config[key] = value;
+        }
+      });
+
+      // Special handling for MongoDB
+      if (dataSource.type === "mongodb") {
+        if (data.useConnectionString === "false") {
+          // Individual fields mode - ensure connection_string is removed
+          delete config.connection_string;
+        } else if (data.useConnectionString === "true") {
+           // Connection string mode - we can optionally clean up individual fields but backend prioritizes string
+           // Just to be clean:
+           delete config.host;
+           delete config.port;
+           delete config.username;
+           delete config.password;
+           delete config.database; // Check if connection string includes db? Backend string parser might need it or not. 
+           // Usually connection string has it, but sometimes it receives override. 
+           // Let's keep database/authSource if provided, or safer just keep what we have since backend prefers string.
+        }
+      }
+
+      // Add SSL config for database types that support it
+      if (["postgres", "mysql", "mssql", "redshift", "clickhouse", "mongodb"].includes(dataSource.type)) {
+        // logic for MongoDB TLS is usually part of connection string or options, 
+        // but if we used the generic SSL select:
+        if (data.ssl === "true" || data.tls === "true") {
+             // For Postgres/common libs
+             if (dataSource.type !== "mongodb") {
+                 config.ssl = { enabled: true };
+             }
+        } else if (data.ssl === "false" || data.tls === "false") {
+            // Explicitly disabled
+             if (dataSource.type !== "mongodb") {
+                 config.ssl = undefined; // defaults to false/undefined usually
+             }
+        }
+      }
+
       const connectionData: CreateConnectionDto = {
-        connection_type: "postgres",
-        config: {
-          host: host,
-          port: data.port ? parseInt(data.port, 10) : 5432,
-          database: data.database || "",
-          username: data.username || "",
-          password: data.password || "",
-          // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
-          ssl:
-            !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
-              ? { enabled: true }
-              : undefined,
-        },
+        name: data.name,
+        connection_type: dataSource.type as CreateConnectionDto["connection_type"],
+        config: config as unknown as CreateConnectionDto["config"],
       };
 
       if (!organizationId) {

@@ -508,6 +508,22 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   };
 
   const handleEditTransform = (transform: TransformConfig) => {
+    console.log("handleEditTransform - Setting form state:", {
+      transformId: transform.id,
+      collectorId: transform.collectorId,
+      emitterId: transform.emitterId,
+      name: transform.name,
+      destinationTable: transform.destinationTable,
+      fieldMappingsCount: transform.fieldMappings?.length || 0,
+      fieldMappings: transform.fieldMappings,
+      availableEmittersCount: allEmitters.length,
+      allEmitters: allEmitters.map((e) => ({
+        id: e.id,
+        collectorId: e.collectorId,
+        destinationId: e.destinationId,
+        destinationName: e.destinationName,
+      })),
+    });
     setEditingTransform(transform.id);
     setSelectedCollectorId(transform.collectorId);
     setSelectedEmitterId(transform.emitterId);
