@@ -4,3 +4,4 @@
  */
 
 export { PipelineRunTracker } from "./pipeline-run-tracker";
+export { ScheduleEditor } from "./schedule-editor";

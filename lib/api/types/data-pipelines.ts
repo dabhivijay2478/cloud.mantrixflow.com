@@ -37,6 +37,15 @@ export type RunStatus =
 export type JobState = "pending" | "running" | "completed" | "failed";
 export type TriggerType = "manual" | "scheduled" | "api";
 
+export type ScheduleType =
+  | "none"
+  | "minutes"
+  | "hourly"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "custom_cron";
+
 export type TransformationType =
   | "rename"
   | "cast"
@@ -113,6 +122,10 @@ export interface UpdatePipelineDto {
   incrementalColumn?: string;
   syncFrequency?: SyncFrequency;
   transformations?: Transformation[];
+  // Scheduling fields
+  scheduleType?: ScheduleType;
+  scheduleValue?: string;
+  scheduleTimezone?: string;
 }
 
 export interface RunPipelineDto {
@@ -277,6 +290,12 @@ export interface Pipeline {
   totalRowsProcessed?: number | null;
   totalRunsSuccessful?: number | null;
   totalRunsFailed?: number | null;
+  // Scheduling fields
+  scheduleType?: ScheduleType | null;
+  scheduleValue?: string | null;
+  scheduleTimezone?: string | null;
+  lastScheduledRunAt?: string | null;
+  nextScheduledRunAt?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

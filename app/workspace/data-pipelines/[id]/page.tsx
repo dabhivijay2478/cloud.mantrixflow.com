@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -11,6 +12,7 @@ import {
   Trash2,
   XCircle,
   Zap,
+  Save,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { LoadingState } from "@/components/shared";
@@ -33,10 +35,12 @@ import {
   useResumePipeline,
   useRunPipeline,
   useValidatePipeline,
+  useUpdatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
-import type { PipelineRun } from "@/lib/api/types/data-pipelines";
+import type { PipelineRun, ScheduleType } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
+import { ScheduleEditor } from "@/components/data-pipelines";
 
 export default function PipelineDetailPage() {
   const params = useParams();
@@ -45,8 +49,16 @@ export default function PipelineDetailPage() {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
+  // Schedule editing state
+  const [scheduleConfig, setScheduleConfig] = useState<{
+    scheduleType: ScheduleType;
+    scheduleValue: string;
+    scheduleTimezone: string;
+  } | null>(null);
+  const [isScheduleModified, setIsScheduleModified] = useState(false);
+
   // Fetch pipeline data with schemas
-  const { data: pipelineData, isLoading: pipelineLoading } = usePipelineWithSchemas(
+  const { data: pipelineData, isLoading: pipelineLoading, refetch } = usePipelineWithSchemas(
     organizationId,
     pipelineId,
   );
@@ -68,6 +80,35 @@ export default function PipelineDetailPage() {
   const resumePipeline = useResumePipeline(organizationId, pipelineId);
   const validatePipeline = useValidatePipeline(organizationId, pipelineId);
   const deletePipeline = useDeletePipeline(organizationId);
+  const updatePipeline = useUpdatePipeline(organizationId, pipelineId);
+
+  // Handle schedule save
+  const handleSaveSchedule = async () => {
+    if (!scheduleConfig) return;
+    
+    try {
+      await updatePipeline.mutateAsync({
+        scheduleType: scheduleConfig.scheduleType,
+        scheduleValue: scheduleConfig.scheduleValue,
+        scheduleTimezone: scheduleConfig.scheduleTimezone,
+      });
+      toast.success("Schedule updated", "Pipeline schedule has been updated successfully.");
+      setIsScheduleModified(false);
+      refetch();
+    } catch (error) {
+      toast.error("Failed to update schedule", error instanceof Error ? error.message : "Unknown error");
+    }
+  };
+
+  // Handle schedule change
+  const handleScheduleChange = (config: {
+    scheduleType: ScheduleType;
+    scheduleValue: string;
+    scheduleTimezone: string;
+  }) => {
+    setScheduleConfig(config);
+    setIsScheduleModified(true);
+  };
 
   if (pipelineLoading) {
     return <LoadingState fullScreen message="Loading pipeline..." />;
@@ -457,11 +498,47 @@ export default function PipelineDetailPage() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Schedule</span>
+                <span className="text-muted-foreground">Schedule Type</span>
                 <span className="font-medium capitalize">
-                  {pipeline.syncFrequency}
+                  {pipeline.scheduleType === "none" || !pipeline.scheduleType
+                    ? "Manual"
+                    : pipeline.scheduleType === "custom_cron"
+                      ? "Custom Cron"
+                      : pipeline.scheduleType}
                 </span>
               </div>
+              {pipeline.scheduleType && pipeline.scheduleType !== "none" && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Schedule Value</span>
+                    <span className="font-medium">
+                      {pipeline.scheduleValue || "-"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Timezone</span>
+                    <span className="font-medium">
+                      {pipeline.scheduleTimezone || "UTC"}
+                    </span>
+                  </div>
+                  {pipeline.nextScheduledRunAt && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Next Run</span>
+                      <span className="font-medium text-primary">
+                        {new Date(pipeline.nextScheduledRunAt).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {pipeline.lastScheduledRunAt && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Last Scheduled Run</span>
+                      <span className="font-medium">
+                        {new Date(pipeline.lastScheduledRunAt).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
               {pipeline.syncMode === "incremental" && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
@@ -478,6 +555,42 @@ export default function PipelineDetailPage() {
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
+          {/* Schedule Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Schedule Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure automatic pipeline runs on a schedule
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ScheduleEditor
+                scheduleType={(scheduleConfig?.scheduleType || pipeline.scheduleType || "none") as ScheduleType}
+                scheduleValue={scheduleConfig?.scheduleValue || pipeline.scheduleValue || ""}
+                scheduleTimezone={scheduleConfig?.scheduleTimezone || pipeline.scheduleTimezone || "UTC"}
+                onChange={handleScheduleChange}
+              />
+              {isScheduleModified && (
+                <div className="flex justify-end pt-4 border-t">
+                  <Button
+                    onClick={handleSaveSchedule}
+                    disabled={updatePipeline.isPending}
+                  >
+                    {updatePipeline.isPending ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Save Schedule
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Actions</CardTitle>
