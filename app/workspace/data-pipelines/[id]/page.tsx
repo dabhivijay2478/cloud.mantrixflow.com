@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -109,6 +109,24 @@ export default function PipelineDetailPage() {
     setScheduleConfig(config);
     setIsScheduleModified(true);
   };
+
+  // Auto-refresh for scheduled pipelines
+  // Refresh data every 60 seconds if pipeline has a schedule
+  useEffect(() => {
+    if (!pipeline) return;
+    
+    const isScheduled = pipeline.scheduleType && pipeline.scheduleType !== "none";
+    
+    if (!isScheduled) return;
+    
+    // Refresh every 60 seconds for scheduled pipelines
+    const refreshInterval = setInterval(() => {
+      console.log("[AutoRefresh] Refreshing pipeline data for scheduled pipeline...");
+      refetch();
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [pipeline?.scheduleType, refetch]);
 
   if (pipelineLoading) {
     return <LoadingState fullScreen message="Loading pipeline..." />;

@@ -229,54 +229,102 @@ export function ScheduleEditor({
 
       {/* Schedule-specific options */}
       {localType === "minutes" && (
-        <div className="space-y-2">
-          <Label>Run every (minutes)</Label>
-          <Select
-            value={minutesInterval}
-            onValueChange={(value) => {
-              setMinutesInterval(value);
-              emitChange("minutes", value, timezone);
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="5">Every 5 minutes</SelectItem>
-              <SelectItem value="10">Every 10 minutes</SelectItem>
-              <SelectItem value="15">Every 15 minutes</SelectItem>
-              <SelectItem value="30">Every 30 minutes</SelectItem>
-              <SelectItem value="45">Every 45 minutes</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Run every (minutes)</Label>
+            <Select
+              value={minutesInterval}
+              onValueChange={(value) => {
+                setMinutesInterval(value);
+                emitChange("minutes", value, timezone);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">Every 5 minutes</SelectItem>
+                <SelectItem value="10">Every 10 minutes</SelectItem>
+                <SelectItem value="15">Every 15 minutes</SelectItem>
+                <SelectItem value="30">Every 30 minutes</SelectItem>
+                <SelectItem value="45">Every 45 minutes</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Timezone</Label>
+            <Select
+              value={timezone}
+              onValueChange={(value) => {
+                setTimezone(value);
+                emitChange("minutes", minutesInterval, value);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 
       {localType === "hourly" && (
-        <div className="space-y-2">
-          <Label>Run every (hours)</Label>
-          <Select
-            value={hourlyInterval}
-            onValueChange={(value) => {
-              setHourlyInterval(value);
-              emitChange("hourly", value, timezone);
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">Every hour</SelectItem>
-              <SelectItem value="2">Every 2 hours</SelectItem>
-              <SelectItem value="3">Every 3 hours</SelectItem>
-              <SelectItem value="4">Every 4 hours</SelectItem>
-              <SelectItem value="6">Every 6 hours</SelectItem>
-              <SelectItem value="8">Every 8 hours</SelectItem>
-              <SelectItem value="12">Every 12 hours</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Run every (hours)</Label>
+            <Select
+              value={hourlyInterval}
+              onValueChange={(value) => {
+                setHourlyInterval(value);
+                emitChange("hourly", value, timezone);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Every hour</SelectItem>
+                <SelectItem value="2">Every 2 hours</SelectItem>
+                <SelectItem value="3">Every 3 hours</SelectItem>
+                <SelectItem value="4">Every 4 hours</SelectItem>
+                <SelectItem value="6">Every 6 hours</SelectItem>
+                <SelectItem value="8">Every 8 hours</SelectItem>
+                <SelectItem value="12">Every 12 hours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Timezone</Label>
+            <Select
+              value={timezone}
+              onValueChange={(value) => {
+                setTimezone(value);
+                emitChange("hourly", hourlyInterval, value);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 
