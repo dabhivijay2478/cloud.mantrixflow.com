@@ -563,6 +563,10 @@ export default function DataPipelinesPage() {
       cell: ({ row }) => {
         const pipeline = row.original;
         const isPaused = pipeline.status === "paused";
+        const isRunning =
+          pipeline.status === "running" ||
+          pipeline.status === "initializing" ||
+          pipeline.status === "listening";
         const isLoading =
           runPipelineMutation.isPending ||
           pausePipelineMutation.isPending ||
@@ -588,6 +592,25 @@ export default function DataPipelinesPage() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Resume pipeline</TooltipContent>
+                </Tooltip>
+              ) : isRunning ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePausePipeline(pipeline.id, pipeline.name);
+                      }}
+                      disabled={isLoading}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                    >
+                      <Pause className="h-4 w-4 mr-1" />
+                      Pause
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Pause running pipeline</TooltipContent>
                 </Tooltip>
               ) : (
                 <Tooltip>
@@ -652,7 +675,7 @@ export default function DataPipelinesPage() {
                   Dry Run
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {!isPaused && (
+                {!isPaused && !isRunning && (
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();

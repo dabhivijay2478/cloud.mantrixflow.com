@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useDeletePipeline,
   usePausePipeline,
-  usePipeline,
+  usePipelineWithSchemas,
   usePipelineRuns,
   usePipelineStats,
   useResumePipeline,
@@ -45,11 +45,16 @@ export default function PipelineDetailPage() {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
-  // Fetch pipeline data
-  const { data: pipeline, isLoading: pipelineLoading } = usePipeline(
+  // Fetch pipeline data with schemas
+  const { data: pipelineData, isLoading: pipelineLoading } = usePipelineWithSchemas(
     organizationId,
     pipelineId,
   );
+  const pipeline = pipelineData ? {
+    ...pipelineData.pipeline,
+    sourceSchema: pipelineData.sourceSchema,
+    destinationSchema: pipelineData.destinationSchema,
+  } : null;
   const { data: runs, isLoading: runsLoading } = usePipelineRuns(
     organizationId,
     pipelineId,
