@@ -137,8 +137,8 @@ export class DataSourcesService {
   static async discoverSchema(
     organizationId: string,
     sourceId: string,
-  ): Promise<{ schemas: Schema[]; tables: Table[] }> {
-    return ApiClient.post<{ schemas: Schema[]; tables: Table[] }>(
+  ): Promise<{ schemas?: Schema[]; tables?: Table[]; databases?: any[]; type?: string }> {
+    return ApiClient.post<{ schemas?: Schema[]; tables?: Table[]; databases?: any[]; type?: string }>(
       `${DataSourcesService.basePath(organizationId)}/${sourceId}/discover-schema`,
     );
   }
@@ -293,7 +293,24 @@ export class DataSourcesService {
   ): Promise<Schema[]> {
     if (!orgId) throw new Error("Organization ID is required");
     const result = await DataSourcesService.discoverSchema(orgId, connectionId);
-    return result.schemas || [];
+    
+    // SQL databases return schemas
+    if (result.schemas) {
+      return result.schemas;
+    }
+    
+    // MongoDB returns databases - convert to schema format
+    if (result.databases) {
+      return result.databases.map((db: any) => ({
+        name: db.name,
+        tables: (db.collections || []).map((coll: any) => ({
+          name: coll.name,
+          type: coll.type || 'collection',
+        })),
+      }));
+    }
+    
+    return [];
   }
 
   static async listSchemasWithTables(
@@ -302,7 +319,29 @@ export class DataSourcesService {
   ): Promise<Schema[]> {
     if (!orgId) throw new Error("Organization ID is required");
     const result = await DataSourcesService.discoverSchema(orgId, connectionId);
-    return result.schemas || [];
+
+    // Handle SQL databases (schemas with tables)
+    if (result.schemas && result.schemas.length > 0) {
+      return result.schemas;
+    }
+
+    // Handle MongoDB/NoSQL (databases with collections)
+    // Convert to schema/tables format for UI compatibility
+    if (result.databases && result.databases.length > 0) {
+      return result.databases.map((db: any) => ({
+        name: db.name,
+        tables: (db.collections || []).map((coll: any) => ({
+          name: coll.name,
+          type: coll.type || "collection",
+          // Add MongoDB-specific info
+          documentCount: coll.documentCount,
+          columns: coll.fields || [],
+        })),
+      }));
+    }
+
+    // Fallback for unsupported types - return empty
+    return [];
   }
 
   static async listTables(
@@ -336,9 +375,45 @@ export class DataSourcesService {
     // Use discoverSchema to get full schema info including columns
     const result = await DataSourcesService.discoverSchema(orgId, connectionId);
 
+    // Normalize MongoDB response to match expected structure
+    if (result.type === "mongodb" && result.databases) {
+      // biome-ignore lint/suspicious/noExplicitAny: Normalizing backend response
+      result.schemas = result.databases.map((db: any) => ({
+        name: db.name,
+        tables: db.collections?.map((coll: any) => ({
+          name: coll.name,
+          columns: coll.fields?.map((f: any) => ({
+            name: f.name,
+            dataType: f.type,
+            nullable: f.nullable,
+            isPrimaryKey: f.name === "_id", // MongoDB _id is always primary key
+          })),
+        })),
+      }));
+    }
+
     let targetTable: Table | undefined;
 
-    if (schema) {
+    // Handle MongoDB: table might be "database.collection" or just "collection"
+    if (result.type === "mongodb") {
+      if (table.includes(".")) {
+        // Format: "database.collection"
+        const [dbName, collName] = table.split(".");
+        const foundSchema = result.schemas?.find((s: Schema) => s.name === dbName);
+        targetTable = foundSchema?.tables?.find((t: Table) => t.name === collName);
+      } else if (schema) {
+        // Format: schema="database", table="collection"
+        const foundSchema = result.schemas?.find((s: Schema) => s.name === schema);
+        targetTable = foundSchema?.tables?.find((t: Table) => t.name === table);
+      } else {
+        // No schema/database specified - search all databases for the collection
+        for (const s of result.schemas || []) {
+          targetTable = s.tables?.find((t: Table) => t.name === table);
+          if (targetTable) break;
+        }
+      }
+    } else if (schema) {
+      // For SQL databases: schema.table format
       const foundSchema = result.schemas?.find(
         (s: Schema) => s.name === schema,
       );
@@ -360,13 +435,38 @@ export class DataSourcesService {
       };
     }
 
-    // Note: discoverSchema doesn't return column details, only table metadata
-    // TODO: Implement proper endpoint to fetch table schema with columns
+    // Extract columns from discovered schema
+    // For PostgreSQL/MySQL: columns are in targetTable.columns
+    // For MongoDB: columns are in coll.fields (already normalized above)
+    const columns = targetTable.columns || [];
+    
+    // Extract primary keys if available
+    const primaryKeys: string[] = [];
+    if (targetTable.primaryKeys && Array.isArray(targetTable.primaryKeys)) {
+      primaryKeys.push(...targetTable.primaryKeys);
+    } else if (columns) {
+      // Try to find primary key columns by checking isPrimaryKey flag
+      const pkColumns = columns.filter((col: any) => col.isPrimaryKey || col.primaryKey);
+      primaryKeys.push(...pkColumns.map((col: any) => col.name));
+    }
+
+    const mappedColumns = columns.map((col: any) => ({
+      name: col.name,
+      dataType: col.type || col.dataType || "unknown",
+      nullable: col.nullable !== false,
+      isPrimaryKey: col.isPrimaryKey || primaryKeys.includes(col.name),
+    }));
+
+    console.log(`getTableSchema: Found ${mappedColumns.length} columns for ${schema || 'no-schema'}.${table}`, {
+      columns: mappedColumns.map((c: any) => c.name),
+      primaryKeys,
+    });
+
     return {
-      columns: [], // Columns not available from discoverSchema result
+      columns: mappedColumns,
       table: targetTable.name,
       schema: targetTable.schema || schema || "public",
-      primaryKeys: [], // TODO: Fetch primary keys
+      primaryKeys,
     };
   }
 

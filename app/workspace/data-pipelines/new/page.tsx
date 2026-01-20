@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/shared";
 import { useCreatePipeline } from "@/lib/api/hooks/use-data-pipelines";
 import { useCreateDestinationSchema } from "@/lib/api/hooks/use-destination-schemas";
 import { useCreateSourceSchema } from "@/lib/api/hooks/use-source-schemas";
+import { useConnections } from "@/lib/api/hooks/use-data-sources";
+import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
@@ -29,6 +31,7 @@ export default function NewPipelinePage() {
   const createSourceSchemaMutation = useCreateSourceSchema(organizationId);
   const createDestinationSchemaMutation =
     useCreateDestinationSchema(organizationId);
+  const { data: connections } = useConnections(organizationId);
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
     collectors: [],
@@ -197,16 +200,66 @@ export default function NewPipelinePage() {
         return;
       }
 
-      // Parse table name (format: "schema.table" or just "table")
-      const tableParts = firstTable.includes(".")
-        ? firstTable.split(".")
-        : ["public", firstTable];
-      const sourceSchemaName = tableParts[0] || "public";
-      const sourceTableName = tableParts[1] || tableParts[0] || firstTable;
+      // Get data source to determine source type
+      let sourceType = "postgres"; // Default fallback
+      try {
+        const dataSource = await DataSourcesService.getDataSource(
+          organizationId!,
+          primarySourceId,
+        );
+        // Handle both camelCase and snake_case from API
+        sourceType = dataSource.sourceType || (dataSource as any).source_type || "postgres";
+      } catch (error) {
+        console.error("Failed to fetch data source, using default type:", error);
+        // Try to get from connections cache if available
+        const cachedConnection = connections?.find((c) => c.id === primarySourceId);
+        if (cachedConnection?.type) {
+          sourceType = cachedConnection.type;
+        } else {
+          // Last resort: show error to user
+          toast.error(
+            "Failed to determine source type",
+            "Could not fetch data source information. Please try again.",
+          );
+          setIsCreating(false);
+          return;
+        }
+      }
+
+      // Parse table name based on source type
+      // For MongoDB: format is "database.collection" or just "collection"
+      // For SQL: format is "schema.table" or just "table"
+      const isMongoDB = sourceType === "mongodb";
+      let sourceSchemaName: string | undefined;
+      let sourceTableName: string;
+
+      if (firstTable.includes(".")) {
+        const parts = firstTable.split(".");
+        if (isMongoDB) {
+          // MongoDB: "database.collection"
+          sourceSchemaName = parts[0]; // database name
+          sourceTableName = parts[1]; // collection name
+        } else {
+          // SQL: "schema.table"
+          sourceSchemaName = parts[0] || "public";
+          sourceTableName = parts[1] || parts[0] || firstTable;
+        }
+      } else {
+        // No prefix - handle based on source type
+        if (isMongoDB) {
+          // MongoDB: just collection name, no database specified
+          sourceSchemaName = undefined; // Will search all databases
+          sourceTableName = firstTable;
+        } else {
+          // SQL: just table name, default to public schema
+          sourceSchemaName = "public";
+          sourceTableName = firstTable;
+        }
+      }
 
       // Create source schema
       const sourceSchema = await createSourceSchemaMutation.mutateAsync({
-        sourceType: "postgres", // Default to postgres, could be determined from data source
+        sourceType: sourceType as any, // Use actual data source type
         dataSourceId: primarySourceId,
         sourceSchema: sourceSchemaName,
         sourceTable: sourceTableName,

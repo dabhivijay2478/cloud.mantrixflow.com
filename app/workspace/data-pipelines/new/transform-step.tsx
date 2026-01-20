@@ -10,6 +10,7 @@ import {
   Map as MapIcon,
   Pause,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -74,7 +75,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: "postgres" as const,
+      type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb" | "s3" | "api" | "bigquery" | "snowflake" | "redshift" | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)
@@ -93,6 +94,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [transformName, setTransformName] = useState("");
   const [fieldMappings, setFieldMappings] = useState<
     Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
+  >([]);
+  const [generatedDestinationFields, setGeneratedDestinationFields] = useState<
+    Array<{ name: string; type: string; table: string }>
   >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
 
@@ -208,6 +212,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     );
   }, [destinationSchemas]);
 
+  // Get source data source type to handle MongoDB differently
+  const sourceDataSource = useMemo(() => {
+    if (!selectedCollector) return null;
+    return dataSources.find((ds) => ds.id === selectedCollector.sourceId);
+  }, [selectedCollector, dataSources]);
+
   // Parse selected tables and prepare queries for source (collector)
   const sourceTableQueries = useMemo(() => {
     if (
@@ -219,29 +229,57 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     }
 
     return selectedCollector.selectedTables.map((tableName) => {
-      const parts = tableName.includes(".")
-        ? tableName.split(".")
-        : ["public", tableName];
-      const schema = parts[0];
-      const table = parts[1];
-
-      return {
-        tableName,
-        schema,
-        table,
-        connectionId: selectedCollector.sourceId,
-      };
+      // For MongoDB: format is "database.collection" or just "collection"
+      // For SQL: format is "schema.table" or just "table"
+      const isMongoDB = sourceDataSource?.type === "mongodb";
+      
+      if (tableName.includes(".")) {
+        const parts = tableName.split(".");
+        return {
+          tableName,
+          schema: parts[0], // database for MongoDB, schema for SQL
+          table: parts[1], // collection for MongoDB, table for SQL
+          connectionId: selectedCollector.sourceId,
+          isMongoDB,
+        };
+      } else {
+        // No schema/database prefix
+        return {
+          tableName,
+          schema: isMongoDB ? undefined : "public", // MongoDB: search all, SQL: default to public
+          table: tableName,
+          connectionId: selectedCollector.sourceId,
+          isMongoDB,
+        };
+      }
     });
-  }, [selectedCollector]);
+  }, [selectedCollector, sourceDataSource]);
 
   // Fetch schemas for source tables
   const sourceSchemaQueries = useQueries({
     queries: sourceTableQueries.map(
-      ({ tableName: _tableName, schema, table, connectionId }) => ({
-        queryKey: ["table-schema", connectionId, table, schema, "source"],
-        queryFn: () =>
-          DataSourcesService.getTableSchema(connectionId, table, schema, orgId),
+      ({ tableName: _tableName, schema, table, connectionId, isMongoDB }) => ({
+        queryKey: ["table-schema", connectionId, table, schema || "none", "source", isMongoDB ? "mongodb" : "sql"],
+        queryFn: async () => {
+          try {
+            const result = await DataSourcesService.getTableSchema(
+              connectionId, 
+              table, 
+              schema, 
+              orgId
+            );
+            console.log(`Fetched schema for ${table}:`, {
+              columnsCount: result.columns?.length || 0,
+              columns: result.columns?.map((c: any) => c.name),
+            });
+            return result;
+          } catch (error) {
+            console.error(`Failed to fetch schema for ${table}:`, error);
+            throw error;
+          }
+        },
         enabled: !!connectionId && !!table && !!orgId,
+        retry: 2,
       }),
     ),
   });
@@ -251,18 +289,43 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const fields: Array<{ name: string; type: string; table: string }> = [];
 
     sourceSchemaQueries.forEach((query, index) => {
-      if (query.data?.columns) {
+      if (query.isLoading) {
+        console.log(`Loading schema for table ${sourceTableQueries[index]?.tableName}...`);
+        return;
+      }
+      
+      if (query.error) {
+        console.error(`Error loading schema for table ${sourceTableQueries[index]?.tableName}:`, query.error);
+        return;
+      }
+
+      if (query.data?.columns && query.data.columns.length > 0) {
         const tableInfo = sourceTableQueries[index];
-        query.data.columns.forEach((col) => {
+        query.data.columns.forEach((col: any) => {
+          // For MongoDB, use field name directly (may include nested paths like "address.city")
+          // For SQL, prefix with table name
+          const fieldName = tableInfo.isMongoDB 
+            ? col.name 
+            : `${tableInfo.tableName}.${col.name}`;
+          
           fields.push({
-            name: `${tableInfo.tableName}.${col.name}`,
-            type: col.dataType || "unknown",
+            name: fieldName,
+            type: col.dataType || col.type || "unknown",
             table: tableInfo.tableName,
           });
+        });
+        
+        console.log(`Added ${query.data.columns.length} fields from ${tableInfo.tableName}`);
+      } else {
+        console.warn(`No columns found for table ${sourceTableQueries[index]?.tableName}`, {
+          data: query.data,
+          hasData: !!query.data,
+          columnsLength: query.data?.columns?.length,
         });
       }
     });
 
+    console.log(`Total source fields: ${fields.length}`, fields.map(f => f.name));
     return fields;
   }, [sourceSchemaQueries, sourceTableQueries]);
 
@@ -319,28 +382,64 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     ],
   });
 
-  // Build destination fields from fetched table schema
+  // Build destination fields from fetched table schema + generated fields
   const destinationFields = useMemo(() => {
-    if (!destinationTableQuery) return [];
+    if (!destinationTableQuery) return generatedDestinationFields;
     const queryResult = destinationSchemaQuery[0];
-    if (!queryResult?.data?.columns) return [];
-
-    return queryResult.data.columns.map((col) => {
-      // Handle both Column objects and string arrays
-      if (typeof col === "string") {
+    
+    // If we have actual table columns, use them
+    if (queryResult?.data?.columns && queryResult.data.columns.length > 0) {
+      return queryResult.data.columns.map((col) => {
+        // Handle both Column objects and string arrays
+        if (typeof col === "string") {
+          return {
+            name: col,
+            type: "unknown",
+            table: destinationTableQuery.tableName || "",
+          };
+        }
         return {
-          name: col,
-          type: "unknown",
+          name: col.name,
+          type: col.dataType || "unknown",
           table: destinationTableQuery.tableName || "",
         };
-      }
+      });
+    }
+
+    // Otherwise use generated fields
+    return generatedDestinationFields;
+  }, [destinationSchemaQuery, destinationTableQuery, generatedDestinationFields]);
+
+  const handleAutoGenerate = () => {
+    if (sourceFields.length === 0) return;
+
+    // 1. Generate destination fields from source fields
+    // Flatten fields: "address.city" -> "address_city"
+    const newGenerations = sourceFields.map((sf) => ({
+      name: sf.name.replace(/\./g, "_"),
+      type: sf.type,
+      table: selectedDestinationTable || "generated",
+    }));
+
+    setGeneratedDestinationFields(newGenerations);
+
+    // 2. Create Mappings
+    const newMappings = newGenerations.map((df, index) => {
+      const sourceField = sourceFields[index];
+      // Determine if ID/PK
+      const isId =
+        sourceField.name === "_id" ||
+        sourceField.name.toLowerCase() === "id";
+      
       return {
-        name: col.name,
-        type: col.dataType || "unknown",
-        table: destinationTableQuery.tableName || "",
+        source: sourceField.name,
+        destination: df.name,
+        isPrimaryKey: isId,
       };
     });
-  }, [destinationSchemaQuery, destinationTableQuery]);
+
+    setFieldMappings(newMappings);
+  };
 
   const handleFieldMapping = (
     sourceField: string,
@@ -875,19 +974,53 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
           {selectedCollectorId && selectedEmitterId && (
             <div className="space-y-4">
+              {/* Debug info */}
+              {process.env.NODE_ENV === "development" && (
+                <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                  <div>Source Fields: {sourceFields.length}</div>
+                  <div>Destination Fields: {destinationFields.length}</div>
+                  <div>Source Queries: {sourceSchemaQueries.length} (loading: {sourceSchemaQueries.filter(q => q.isLoading).length}, errors: {sourceSchemaQueries.filter(q => q.error).length})</div>
+                  <div>Destination Query: {destinationSchemaQuery[0]?.isLoading ? "loading" : destinationSchemaQuery[0]?.error ? "error" : "ready"}</div>
+                </div>
+              )}
+
               {/* Side-by-side Field Mapping */}
               {selectedDestinationTable && (
                 <div>
                   {/* Mapping Configuration - Destination to Source */}
                   <div className="mt-6 space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <Label className="text-base font-semibold">
-                        Map Source Fields to Destination Fields
-                      </Label>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {fieldMappings.length} mapping
-                        {fieldMappings.length !== 1 ? "s" : ""} created
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-base font-semibold">
+                          Map Source Fields to Destination Fields
+                        </Label>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {fieldMappings.length} mapping
+                          {fieldMappings.length !== 1 ? "s" : ""} created
+                        </Badge>
+                        {sourceFields.length === 0 && (
+                          <Badge variant="destructive" className="text-xs shrink-0">
+                            No source fields found
+                          </Badge>
+                        )}
+                        {destinationFields.length === 0 && (
+                          <Badge variant="destructive" className="text-xs shrink-0">
+                            No destination fields found
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {sourceFields.length > 0 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleAutoGenerate}
+                          className="h-8 gap-1.5"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Auto Map
+                        </Button>
+                      )}
                     </div>
                     {/* Table Layout */}
                     <div className="border rounded-lg overflow-hidden">
@@ -913,15 +1046,33 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {destinationFields.map(
-                              (
-                                destinationField: {
-                                  name: string;
-                                  type: string;
-                                  table: string;
-                                },
-                                index: number,
-                              ) => {
+                            {destinationFields.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                  {destinationSchemaQuery[0]?.isLoading ? (
+                                    <div className="flex items-center gap-2 justify-center">
+                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent"></div>
+                                      Loading destination fields...
+                                    </div>
+                                  ) : destinationSchemaQuery[0]?.error ? (
+                                    <div className="text-destructive">
+                                      Error loading destination fields. Please check the destination table selection.
+                                    </div>
+                                  ) : (
+                                    "No destination fields available. Please select a destination table."
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              destinationFields.map(
+                                (
+                                  destinationField: {
+                                    name: string;
+                                    type: string;
+                                    table: string;
+                                  },
+                                  index: number,
+                                ) => {
                                 const mapping = fieldMappings.find(
                                   (m) =>
                                     m.destination === destinationField.name,
@@ -1047,54 +1198,71 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                           </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
-                                          {sourceFields.map((field) => {
-                                            // Allow same source field to be mapped to multiple destinations
-                                            const mappedToOther =
-                                              fieldMappings.filter(
-                                                (m) =>
-                                                  m.source === field.name &&
-                                                  m.destination !==
-                                                    destinationField.name,
-                                              );
-                                            const isCurrentlyMapped =
-                                              fieldMappings.some(
-                                                (m) =>
-                                                  m.source === field.name &&
-                                                  m.destination ===
-                                                    destinationField.name,
-                                              );
-                                            return (
-                                              <SelectItem
-                                                key={field.name}
-                                                value={field.name}
-                                              >
-                                                <div className="flex items-center gap-2 w-full">
-                                                  <span className="font-medium truncate">
-                                                    {field.name}
-                                                  </span>
-                                                  <span className="text-xs text-muted-foreground shrink-0">
-                                                    ({field.type})
-                                                  </span>
-                                                  {mappedToOther.length > 0 && (
-                                                    <Badge
-                                                      variant="secondary"
-                                                      className="text-xs ml-auto shrink-0"
-                                                    >
-                                                      +{mappedToOther.length}
-                                                    </Badge>
-                                                  )}
-                                                  {isCurrentlyMapped && (
-                                                    <Badge
-                                                      variant="default"
-                                                      className="text-xs ml-auto shrink-0"
-                                                    >
-                                                      Current
-                                                    </Badge>
-                                                  )}
+                                          {sourceFields.length === 0 ? (
+                                            <div className="p-4 text-center text-sm text-muted-foreground">
+                                              {sourceSchemaQueries.some(q => q.isLoading) ? (
+                                                <div className="flex items-center gap-2 justify-center">
+                                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent"></div>
+                                                  Loading source fields...
                                                 </div>
-                                              </SelectItem>
-                                            );
-                                          })}
+                                              ) : sourceSchemaQueries.some(q => q.error) ? (
+                                                <div className="text-destructive">
+                                                  Error loading source fields. Please check the collector configuration.
+                                                </div>
+                                              ) : (
+                                                "No source fields available. Please ensure the collector has selected tables and schema discovery is complete."
+                                              )}
+                                            </div>
+                                          ) : (
+                                            sourceFields.map((field) => {
+                                              // Allow same source field to be mapped to multiple destinations
+                                              const mappedToOther =
+                                                fieldMappings.filter(
+                                                  (m) =>
+                                                    m.source === field.name &&
+                                                    m.destination !==
+                                                      destinationField.name,
+                                                );
+                                              const isCurrentlyMapped =
+                                                fieldMappings.some(
+                                                  (m) =>
+                                                    m.source === field.name &&
+                                                    m.destination ===
+                                                      destinationField.name,
+                                                );
+                                              return (
+                                                <SelectItem
+                                                  key={field.name}
+                                                  value={field.name}
+                                                >
+                                                  <div className="flex items-center gap-2 w-full">
+                                                    <span className="font-medium truncate">
+                                                      {field.name}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground shrink-0">
+                                                      ({field.type})
+                                                    </span>
+                                                    {mappedToOther.length > 0 && (
+                                                      <Badge
+                                                        variant="secondary"
+                                                        className="text-xs ml-auto shrink-0"
+                                                      >
+                                                        +{mappedToOther.length}
+                                                      </Badge>
+                                                    )}
+                                                    {isCurrentlyMapped && (
+                                                      <Badge
+                                                        variant="default"
+                                                        className="text-xs ml-auto shrink-0"
+                                                      >
+                                                        Current
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                </SelectItem>
+                                              );
+                                            })
+                                          )}
                                         </SelectContent>
                                       </Select>
                                     </TableCell>
@@ -1207,6 +1375,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                   </TableRow>
                                 );
                               },
+                            )
                             )}
                           </TableBody>
                         </Table>

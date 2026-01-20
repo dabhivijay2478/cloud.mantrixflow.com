@@ -152,19 +152,19 @@ export const connectionSchemas: Record<
         required: true,
         description: "Choose how to connect to MongoDB",
         options: [
-          { value: "false", label: "Individual Fields" },
           { value: "true", label: "Connection String (Atlas/SRV)" },
+          { value: "false", label: "Individual Fields" },
         ],
       },
-      // Connection string mode
+      // Connection string mode - only need connection string
       {
         name: "connection_string",
         label: "Connection String",
-        type: "text",
+        type: "password",
         placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/mydb",
-        required: false,
+        required: true,
         description:
-          "Full MongoDB connection string (supports Atlas SRV format)",
+          "Full MongoDB connection string (supports Atlas SRV format). The database name can be included in the connection string.",
         dependsOn: { field: "useConnectionString", value: "true" },
       },
       // Individual fields mode
@@ -173,7 +173,7 @@ export const connectionSchemas: Record<
         label: "Host",
         type: "text",
         placeholder: "localhost or cluster.mongodb.net",
-        required: false,
+        required: true,
         dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
@@ -182,7 +182,7 @@ export const connectionSchemas: Record<
         type: "number",
         placeholder: "27017",
         required: false,
-        description: "Default: 27017 (not needed for Atlas SRV)",
+        description: "Default: 27017",
         dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
@@ -192,6 +192,7 @@ export const connectionSchemas: Record<
         placeholder: "mydb",
         required: true,
         description: "The database name to connect to",
+        dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
         name: "username",

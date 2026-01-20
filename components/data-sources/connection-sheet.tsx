@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -86,6 +86,16 @@ export function ConnectionSheet({
     message: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  // Track which password fields have visibility toggled
+  const [visiblePasswordFields, setVisiblePasswordFields] = useState<Record<string, boolean>>({});
+
+  // Toggle password field visibility
+  const togglePasswordVisibility = (fieldName: string) => {
+    setVisiblePasswordFields(prev => ({
+      ...prev,
+      [fieldName]: !prev[fieldName]
+    }));
+  };
 
   const dataSource = dataSourceId
     ? allDataSources.find((ds) => ds.id === dataSourceId)
@@ -354,16 +364,38 @@ export function ConnectionSheet({
                               ))}
                             </SelectContent>
                           </Select>
+                        ) : field.type === "password" ? (
+                          <div className="relative">
+                            <Input
+                              id={field.name}
+                              type={visiblePasswordFields[field.name] ? "text" : "password"}
+                              placeholder={field.placeholder}
+                              {...form.register(field.name)}
+                              className={cn(
+                                "h-10 pr-10",
+                                "font-mono",
+                              )}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => togglePasswordVisibility(field.name)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                              tabIndex={-1}
+                            >
+                              {visiblePasswordFields[field.name] ? (
+                                <Eye className="h-4 w-4" />
+                              ) : (
+                                <EyeOff className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         ) : (
                           <Input
                             id={field.name}
                             type={field.type}
                             placeholder={field.placeholder}
                             {...form.register(field.name)}
-                            className={cn(
-                              "h-10",
-                              field.type === "password" && "font-mono",
-                            )}
+                            className="h-10"
                           />
                         )}
                         {field.description && (

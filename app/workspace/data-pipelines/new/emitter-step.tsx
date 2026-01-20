@@ -67,7 +67,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: "postgres" as const,
+      type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb" | "s3" | "api" | "bigquery" | "snowflake" | "redshift" | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)

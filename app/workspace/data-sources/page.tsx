@@ -320,29 +320,219 @@ export default function DataSourcesPage() {
     data: ConnectionFormValues,
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const _dataSource = enabledDataSources.find(
+      // Find the data source to get its type
+      const dataSource = enabledDataSources.find(
         (ds) => ds.id === connectingDataSourceId,
       );
-      const databaseType = data.databaseType || "other";
-      const isNeon = databaseType === "neon";
-      const isSupabase = databaseType === "supabase";
-      const host = data.host || "";
-      const isLocalhost =
-        host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
+      
+      // Get the source type from the data source definition
+      // Use type first (from allDataSources), then id as fallback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dsAny = dataSource as any;
+      const sourceType: string = dsAny?.type || dsAny?.id || 'postgres';
+      
+      // Build test data based on source type
+      let testData: TestConnectionDto;
+      
+      switch (sourceType) {
+        // MongoDB - supports connection string OR individual fields (not both)
+        case 'mongodb': {
+          const useConnectionString = data.useConnectionString === 'true' || !!data.connection_string;
+          
+          if (useConnectionString && data.connection_string) {
+            // Connection string mode - only send the connection string
+            testData = {
+              type: 'mongodb',
+              connection_string: data.connection_string,
+            };
+          } else {
+            // Individual fields mode
+            testData = {
+              type: 'mongodb',
+              host: data.host || '',
+              port: data.port ? parseInt(data.port, 10) : 27017,
+              database: data.database || '',
+              username: data.username || '',
+              password: data.password || '',
+              auth_source: data.authSource || '',
+              replica_set: data.replicaSet || '',
+              tls: data.tls === 'true',
+            };
+          }
+          break;
+        }
+        
+        // S3 and S3 Data Lake
+        case 's3':
+        case 's3-datalake': {
+          testData = {
+            type: 's3',
+            bucket: data.bucket || '',
+            region: data.region || '',
+            access_key_id: data.accessKeyId || '',
+            secret_access_key: data.secretAccessKey || '',
+            path_prefix: data.prefix || '',
+          };
+          break;
+        }
+        
+        // Azure Blob Storage
+        case 'azure-blob-storage': {
+          testData = {
+            type: 'azure-blob-storage',
+            account: data.accountName || '',
+            bucket: data.containerName || '', // container = bucket equivalent
+            access_key_id: data.accountKey || '',
+          };
+          break;
+        }
+        
+        // BigQuery
+        case 'bigquery': {
+          let credentials = {};
+          try {
+            credentials = data.credentials ? JSON.parse(data.credentials) : {};
+          } catch {
+            // Invalid JSON, pass as string
+            credentials = { raw: data.credentials };
+          }
+          testData = {
+            type: 'bigquery',
+            project_id: data.projectId || '',
+            dataset: data.datasetId || '',
+            credentials,
+          };
+          break;
+        }
+        
+        // Snowflake and Snowflake Cortex
+        case 'snowflake':
+        case 'snowflake-cortex': {
+          testData = {
+            type: 'snowflake',
+            account: data.account || '',
+            warehouse: data.warehouse || '',
+            database: data.database || '',
+            schema: data.schema || '',
+            username: data.username || '',
+            password: data.password || '',
+            role: data.role || '',
+          };
+          break;
+        }
+        
+        // Databricks
+        case 'databricks': {
+          testData = {
+            type: 'databricks',
+            host: data.serverHostname || '',
+            api_key: data.personalAccessToken || '',
+            headers: { 'http_path': data.httpPath || '' },
+          };
+          break;
+        }
+        
+        // REST API
+        case 'api': {
+          let headers = {};
+          try {
+            headers = data.headers ? JSON.parse(data.headers) : {};
+          } catch {
+            headers = {};
+          }
+          testData = {
+            type: 'api',
+            base_url: data.endpoint || '',
+            api_key: data.apiKey || '',
+            headers,
+          };
+          break;
+        }
+        
+        // Customer.io
+        case 'customer-io': {
+          testData = {
+            type: 'customer-io',
+            api_key: data.appApiKey || '',
+            project_id: data.siteId || '',
+          };
+          break;
+        }
+        
+        // Pinecone
+        case 'pinecone': {
+          testData = {
+            type: 'pinecone',
+            api_key: data.apiKey || '',
+            region: data.environment || '',
+            dataset: data.indexName || '', // index = dataset equivalent
+          };
+          break;
+        }
+        
+        // Milvus
+        case 'milvus': {
+          testData = {
+            type: 'milvus',
+            host: data.host || '',
+            port: data.port ? parseInt(data.port, 10) : 19530,
+            username: data.username || '',
+            password: data.password || '',
+          };
+          break;
+        }
+        
+        // Weaviate
+        case 'weaviate': {
+          testData = {
+            type: 'weaviate',
+            base_url: data.url || '',
+            api_key: data.apiKey || '',
+          };
+          break;
+        }
+        
+        // SQL Databases: PostgreSQL, MySQL, MSSQL, Redshift, ClickHouse, PGVector
+        case 'postgres':
+        case 'mysql':
+        case 'mssql':
+        case 'redshift':
+        case 'clickhouse':
+        case 'pgvector':
+        default: {
+          const databaseType = data.databaseType || "other";
+          const isNeon = databaseType === "neon";
+          const isSupabase = databaseType === "supabase";
+          const host = data.host || "";
+          const isLocalhost =
+            host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
+          
+          // Default ports based on database type
+          const defaultPorts: Record<string, number> = {
+            postgres: 5432,
+            mysql: 3306,
+            mssql: 1433,
+            redshift: 5439,
+            clickhouse: 9000,
+            pgvector: 5432,
+          };
 
-      const testData: TestConnectionDto = {
-        host: host,
-        port: data.port ? parseInt(data.port, 10) : 5432,
-        database: data.database || "",
-        username: data.username || "",
-        password: data.password || "",
-        // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
-        ssl:
-          !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
-            ? { enabled: true }
-            : undefined,
-        databaseType: databaseType,
-      };
+          testData = {
+            type: sourceType,
+            host: host,
+            port: data.port ? parseInt(data.port, 10) : (defaultPorts[sourceType] || 5432),
+            database: data.database || "",
+            username: data.username || "",
+            password: data.password || "",
+            ssl:
+              !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
+                ? { enabled: true }
+                : undefined,
+            databaseType: databaseType,
+          };
+          break;
+        }
+      }
 
       const result = await testConnection.mutateAsync(testData);
       return {
