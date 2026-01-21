@@ -69,21 +69,20 @@ export default function DataSourcesPage() {
   const isLoading = connectionsLoading;
 
   // Data source types that are implemented in the backend collector service
+  // Only PostgreSQL, MySQL, and MongoDB are supported
   const SUPPORTED_SOURCE_TYPES = [
     "postgres",
     "mysql",
     "mongodb",
-    "s3",
-    "api",
-    "bigquery",
-    "snowflake",
-  ];
+  ] as const;
 
-  // Show all data sources but mark unsupported ones as disabled
-  const enabledDataSources = allDataSources.map((ds) => ({
-    ...ds,
-    disabled: !SUPPORTED_SOURCE_TYPES.includes(ds.type),
-  }));
+  // Filter to only show supported data sources (hide all others)
+  const enabledDataSources = allDataSources
+    .filter((ds) => SUPPORTED_SOURCE_TYPES.includes(ds.type as any))
+    .map((ds) => ({
+      ...ds,
+      disabled: false, // All shown sources are enabled
+    }));
 
   // Get all unique user IDs from connections for fetching user names
   const userIds = useMemo(

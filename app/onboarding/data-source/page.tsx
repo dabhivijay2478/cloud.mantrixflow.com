@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
+// Only PostgreSQL, MySQL, and MongoDB are supported
 const dataSourceTypes = [
   {
     id: "postgres",
@@ -42,41 +43,6 @@ const dataSourceTypes = [
     icon: Database,
     description: "Connect to your MongoDB database",
     color: "text-green-600",
-  },
-  {
-    id: "bigquery",
-    name: "BigQuery",
-    icon: Cloud,
-    description: "Connect to Google BigQuery",
-    color: "text-blue-500",
-  },
-  {
-    id: "snowflake",
-    name: "Snowflake",
-    icon: Cloud,
-    description: "Connect to Snowflake data warehouse",
-    color: "text-blue-400",
-  },
-  {
-    id: "google-sheets",
-    name: "Google Sheets",
-    icon: FileSpreadsheet,
-    description: "Import data from Google Sheets",
-    color: "text-green-500",
-  },
-  {
-    id: "excel",
-    name: "Excel / CSV",
-    icon: FileSpreadsheet,
-    description: "Upload Excel or CSV files",
-    color: "text-green-600",
-  },
-  {
-    id: "api",
-    name: "REST API",
-    icon: Globe,
-    description: "Connect to a REST API endpoint",
-    color: "text-purple-600",
   },
 ];
 

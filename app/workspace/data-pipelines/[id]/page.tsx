@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -15,6 +15,7 @@ import {
   Save,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
+import { io, Socket } from "socket.io-client";
 import { LoadingState } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,23 +111,137 @@ export default function PipelineDetailPage() {
     setIsScheduleModified(true);
   };
 
-  // Auto-refresh for scheduled pipelines
-  // Refresh data every 60 seconds if pipeline has a schedule
-  useEffect(() => {
-    if (!pipeline) return;
-    
-    const isScheduled = pipeline.scheduleType && pipeline.scheduleType !== "none";
-    
-    if (!isScheduled) return;
-    
-    // Refresh every 60 seconds for scheduled pipelines
-    const refreshInterval = setInterval(() => {
-      console.log("[AutoRefresh] Refreshing pipeline data for scheduled pipeline...");
-      refetch();
-    }, 60000); // 60 seconds
+  // Real-time updates via Socket.io
+  // ROOT FIX: No polling - all updates come via Socket.io from Postgres NOTIFY
+  const socketRef = useRef<Socket | null>(null);
+  const [realTimeStatus, setRealTimeStatus] = useState<string | null>(null);
+  const [realTimeRowsProcessed, setRealTimeRowsProcessed] = useState<number | null>(null);
+  const [newRowsCount, setNewRowsCount] = useState<number>(0);
 
-    return () => clearInterval(refreshInterval);
-  }, [pipeline?.scheduleType, refetch]);
+  useEffect(() => {
+    if (!pipelineId || !organizationId) return;
+
+    // Get API URL from environment or use default
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const socketUrl = apiUrl.replace('/api', ''); // Remove /api prefix if present
+
+    // Connect to Socket.io
+    const socket = io(`${socketUrl}/pipelines`, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+    });
+
+    socketRef.current = socket;
+
+    // Join pipeline room
+    socket.emit('join_pipeline', {
+      pipelineId,
+      organizationId,
+    });
+
+    // Listen for pipeline updates
+    socket.on('update', (data: {
+      type: 'pipeline';
+      pipeline_id: string;
+      status?: string;
+      last_run_status?: string;
+      total_rows_processed?: number;
+      last_sync_at?: string;
+      checkpoint?: any;
+    }) => {
+      if (data.pipeline_id === pipelineId) {
+        // Update real-time state
+        if (data.status) {
+          setRealTimeStatus(data.status);
+        }
+        if (data.total_rows_processed !== undefined) {
+          const previousRows = realTimeRowsProcessed || pipeline?.totalRowsProcessed || 0;
+          const newRows = data.total_rows_processed - previousRows;
+          if (newRows > 0) {
+            setNewRowsCount((prev) => prev + newRows);
+            toast.success(
+              "New rows processed",
+              `+${newRows.toLocaleString()} new rows synced`,
+            );
+          }
+          setRealTimeRowsProcessed(data.total_rows_processed);
+        }
+
+        // Refetch to get latest data
+        refetch();
+      }
+    });
+
+    // Listen for run updates
+    socket.on('run_update', (data: {
+      type: 'run';
+      run_id: string;
+      pipeline_id: string;
+      status?: string;
+      rows_written?: number;
+      rows_read?: number;
+      rows_failed?: number;
+      error_message?: string;
+    }) => {
+      if (data.pipeline_id === pipelineId) {
+        // Show progress updates
+        if (data.status === 'running' && data.rows_written) {
+          toast.info(
+            "Pipeline running",
+            `${data.rows_written.toLocaleString()} rows written so far...`,
+          );
+        } else if (data.status === 'success') {
+          toast.success(
+            "Pipeline completed",
+            `Successfully processed ${data.rows_written?.toLocaleString() || 0} rows`,
+          );
+          refetch();
+        } else if (data.status === 'failed') {
+          toast.error(
+            "Pipeline failed",
+            data.error_message || "Unknown error",
+          );
+          refetch();
+        }
+
+        // Refetch runs to show latest
+        refetch();
+      }
+    });
+
+    // Handle connection events
+    socket.on('joined', () => {
+      console.log('[Socket.io] Joined pipeline room:', pipelineId);
+    });
+
+    socket.on('connect', () => {
+      console.log('[Socket.io] Connected to pipeline updates');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('[Socket.io] Disconnected from pipeline updates');
+    });
+
+    socket.on('error', (error: any) => {
+      console.error('[Socket.io] Error:', error);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.emit('leave_pipeline', { pipelineId });
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [pipelineId, organizationId, refetch]);
+
+  // Reset new rows count when pipeline changes
+  useEffect(() => {
+    setNewRowsCount(0);
+    setRealTimeStatus(null);
+    setRealTimeRowsProcessed(null);
+  }, [pipelineId]);
 
   if (pipelineLoading) {
     return <LoadingState fullScreen message="Loading pipeline..." />;
@@ -293,6 +408,17 @@ export default function PipelineDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{pipeline.name}</h1>
               {getStatusBadge()}
+              {realTimeStatus && realTimeStatus !== pipeline.status && (
+                <Badge variant="outline" className="text-blue-600 animate-pulse">
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  {realTimeStatus}
+                </Badge>
+              )}
+              {newRowsCount > 0 && (
+                <Badge className="bg-green-500/10 text-green-700">
+                  +{newRowsCount.toLocaleString()} new rows
+                </Badge>
+              )}
             </div>
             {pipeline.description && (
               <p className="text-muted-foreground mt-1">
@@ -334,10 +460,16 @@ export default function PipelineDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats?.totalRowsProcessed?.toLocaleString() ||
+              {realTimeRowsProcessed?.toLocaleString() ||
+                stats?.totalRowsProcessed?.toLocaleString() ||
                 pipeline.totalRowsProcessed?.toLocaleString() ||
                 "0"}
             </div>
+            {realTimeRowsProcessed && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Live updates enabled
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
