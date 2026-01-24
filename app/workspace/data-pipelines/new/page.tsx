@@ -273,15 +273,16 @@ export default function NewPipelinePage() {
       // Extract destination information from transformers
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => t.fieldMappings && t.fieldMappings.length > 0);
+        .find((t) => (t.transformScript && t.transformScript.trim()) || (t.fieldMappings && t.fieldMappings.length > 0));
 
-      if (
-        !firstTransformer?.fieldMappings ||
-        firstTransformer.fieldMappings.length === 0
-      ) {
+      // Check if transformer has either transformScript or fieldMappings
+      const hasTransformScript = firstTransformer?.transformScript && firstTransformer.transformScript.trim();
+      const hasFieldMappings = firstTransformer?.fieldMappings && firstTransformer.fieldMappings.length > 0;
+
+      if (!hasTransformScript && !hasFieldMappings) {
         toast.error(
-          "No field mappings",
-          "Please configure field mappings in the transform step.",
+          "No transformation configured",
+          "Please configure either a Python transform script or field mappings in the transform step.",
         );
         setIsCreating(false);
         return;
@@ -305,25 +306,10 @@ export default function NewPipelinePage() {
       const destTableName =
         destTableParts[1] || destTableParts[0] || destinationTable;
 
-      // Convert field mappings to column mappings format
-      // Field mappings may have isPrimaryKey flag
-      const columnMappings = firstTransformer.fieldMappings.map((fm) => {
-        const mapping = fm as {
-          source: string;
-          destination: string;
-          isPrimaryKey?: boolean;
-        };
-        return {
-          sourceColumn: mapping.source,
-          destinationColumn: mapping.destination,
-          dataType: "text", // Default type, could be enhanced with type detection
-          nullable: true,
-          isPrimaryKey: mapping.isPrimaryKey || false,
-        };
-      });
+      // Transform script is already in firstTransformer.transformScript
 
-      // Extract primary keys from field mappings
-      const primaryKeyFields = firstTransformer.fieldMappings
+      // Extract primary keys from field mappings (if using field mappings mode)
+      const primaryKeyFields = hasFieldMappings ? firstTransformer.fieldMappings
         .filter((fm) => {
           const mapping = fm as { isPrimaryKey?: boolean };
           return mapping.isPrimaryKey === true;
@@ -331,7 +317,7 @@ export default function NewPipelinePage() {
         .map((fm) => {
           const mapping = fm as { destination: string };
           return mapping.destination;
-        });
+        }) : [];
 
       // Determine write mode (default to append, could be enhanced)
       const writeMode: "append" | "upsert" | "replace" =
@@ -343,7 +329,7 @@ export default function NewPipelinePage() {
           dataSourceId: destinationConnectionId,
           destinationSchema: destSchemaName,
           destinationTable: destTableName,
-          columnMappings: columnMappings,
+          transformScript: hasTransformScript ? firstTransformer.transformScript : (hasFieldMappings ? undefined : ''),
           writeMode: writeMode,
           upsertKey: primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
           name: `Destination: ${destTableName}`,

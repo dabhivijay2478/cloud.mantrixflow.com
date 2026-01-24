@@ -130,10 +130,35 @@ export class DataSourcesService {
     sourceId: string,
     includeSensitive = false,
   ): Promise<Connection> {
-    const params = includeSensitive ? "?includeSensitive=true" : "";
-    return ApiClient.get<Connection>(
-      `${DataSourcesService.basePath(organizationId)}/${sourceId}/connection${params}`,
+    // Call Python API directly to fetch from Supabase
+    const { PythonETLService } = await import('./python-etl.service');
+    const connection = await PythonETLService.getConnection(
+      organizationId,
+      sourceId,
+      includeSensitive,
     );
+    
+    if (!connection) {
+      throw new Error('Connection not found for this data source');
+    }
+    
+    // Get data source to get name
+    const dataSource = await DataSourcesService.getDataSource(organizationId, sourceId);
+    
+    // Map Python API response to Connection format
+    // biome-ignore lint/suspicious/noExplicitAny: Connection type doesn't include config but we need it
+    return {
+      id: connection.id,
+      organizationId,
+      name: dataSource.name,
+      type: connection.connection_type as any,
+      status: connection.status as any,
+      config: connection.config,
+      created_at: connection.created_at,
+      createdAt: connection.created_at,
+      updated_at: connection.updated_at,
+      updatedAt: connection.updated_at,
+    } as any as Connection;
   }
 
   /**
@@ -200,7 +225,9 @@ export class DataSourcesService {
     // Get connection config first
     const connection = await DataSourcesService.getConnection(organizationId, sourceId, true);
     
-    if (!connection || !connection.config) {
+    // biome-ignore lint/suspicious/noExplicitAny: Connection type may not include config in TypeScript but Python API returns it
+    const connectionWithConfig = connection as any;
+    if (!connection || !connectionWithConfig.config) {
       throw new Error('Connection not configured for this data source');
     }
 
@@ -214,7 +241,7 @@ export class DataSourcesService {
     
     const discovered = await PythonETLService.discoverSchema(sourceType, {
       source_type: sourceType,
-      connection_config: connection.config as Record<string, any>,
+      connection_config: connectionWithConfig.config as Record<string, any>,
       source_config: {},
       table_name: options?.tableName,
       schema_name: options?.schemaName,
@@ -255,6 +282,10 @@ export class DataSourcesService {
   /** 
    * Test connection - calls Python API directly
    * Python handles connection testing for all data source types
+   */
+  /**
+   * Test connection - calls Python API directly
+   * Frontend should use this method for testing connections
    */
   static async testConnectionLegacy(
     organizationId: string,
@@ -438,28 +469,24 @@ export class DataSourcesService {
     orgId?: string,
   ): Promise<Schema[]> {
     if (!orgId) throw new Error("Organization ID is required");
-    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
-
-    // Handle SQL databases (schemas with tables)
+    
+    // Call Python API directly to get schemas and tables
+    const { PythonETLService } = await import('./python-etl.service');
+    const result = await PythonETLService.listSchemasWithTables(orgId, connectionId);
+    
+    // Map Python API response to Schema[] format
     if (result.schemas && result.schemas.length > 0) {
-      return result.schemas;
-    }
-
-    // Handle MongoDB/NoSQL (databases with collections)
-    // Convert to schema/tables format for UI compatibility
-    if (result.databases && result.databases.length > 0) {
-      return result.databases.map((db: any) => ({
-        name: db.name,
-        tables: (db.collections || []).map((coll: any) => ({
-          name: coll.name,
-          type: coll.type || "collection",
-          // Add MongoDB-specific info
-          documentCount: coll.documentCount,
-          columns: coll.fields || [],
+      return result.schemas.map((schema) => ({
+        name: schema.name,
+        tables: schema.tables.map((table) => ({
+          name: table.name,
+          schema: table.schema,
+          type: table.type as 'table' | 'view' | 'materialized_view',
+          rowCount: table.rowCount,
         })),
       }));
     }
-
+    
     // Fallback for unsupported types - return empty
     return [];
   }
@@ -556,14 +583,16 @@ export class DataSourcesService {
     }
 
     // Extract columns from discovered schema
-    // For PostgreSQL/MySQL: columns are in targetTable.columns
+    // For PostgreSQL/MySQL: columns are in targetTable.columns (if available from Python API)
     // For MongoDB: columns are in coll.fields (already normalized above)
-    const columns = targetTable.columns || [];
+    // biome-ignore lint/suspicious/noExplicitAny: Table type doesn't include columns/primaryKeys but Python API returns them
+    const tableWithExtras = targetTable as any;
+    const columns = tableWithExtras.columns || [];
     
     // Extract primary keys if available
     const primaryKeys: string[] = [];
-    if (targetTable.primaryKeys && Array.isArray(targetTable.primaryKeys)) {
-      primaryKeys.push(...targetTable.primaryKeys);
+    if (tableWithExtras.primaryKeys && Array.isArray(tableWithExtras.primaryKeys)) {
+      primaryKeys.push(...tableWithExtras.primaryKeys);
     } else if (columns) {
       // Try to find primary key columns by checking isPrimaryKey flag
       const pkColumns = columns.filter((col: any) => col.isPrimaryKey || col.primaryKey);

@@ -228,7 +228,7 @@ export interface PipelineDestinationSchema {
   destinationSchema: string;
   destinationTable: string;
   destinationTableExists: boolean;
-  columnMappings?: ColumnMapping[] | null;
+  transformScript?: string | null;
   writeMode: WriteMode;
   upsertKey?: string[] | null;
   name?: string | null;
@@ -246,7 +246,7 @@ export interface CreateDestinationSchemaDto {
   destinationSchema?: string;
   destinationTable: string;
   destinationTableExists?: boolean;
-  columnMappings?: ColumnMapping[];
+  transformScript?: string; // Custom Python transform script
   writeMode?: WriteMode;
   upsertKey?: string[];
   name?: string;
@@ -256,7 +256,7 @@ export interface UpdateDestinationSchemaDto {
   name?: string;
   destinationSchema?: string;
   destinationTable?: string;
-  columnMappings?: ColumnMapping[];
+  transformScript?: string;
   writeMode?: WriteMode;
   upsertKey?: string[];
   isActive?: boolean;

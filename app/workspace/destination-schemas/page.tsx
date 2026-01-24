@@ -142,13 +142,19 @@ export default function DestinationSchemasPage() {
         },
       },
       {
-        accessorKey: "columnMappings",
-        header: "Columns",
+        accessorKey: "transformScript",
+        header: "Transform Script",
         cell: ({ row }) => {
-          const count = row.original.columnMappings?.length || 0;
+          const hasScript = row.original.transformScript && row.original.transformScript.trim();
           return (
             <span className="text-sm text-muted-foreground">
-              {count > 0 ? `${count} columns` : "-"}
+              {hasScript ? (
+                <Badge variant="outline" className="text-green-600">
+                  Configured
+                </Badge>
+              ) : (
+                "-"
+              )}
             </span>
           );
         },
@@ -281,7 +287,7 @@ export default function DestinationSchemasPage() {
         filterPlaceholder="Filter destination schemas..."
         defaultVisibleColumns={[
           "name",
-          "columnMappings",
+          "transformScript",
           "writeMode",
           "destinationTableExists",
           "isActive",
@@ -430,83 +436,24 @@ function DestinationSchemaDetailsDialog({
             </CardContent>
           </Card>
 
-          {/* Column Mappings */}
+          {/* Transform Script */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Column Mappings</CardTitle>
+              <CardTitle className="text-base">Transform Script</CardTitle>
               <CardDescription>
-                {schema.columnMappings?.length || 0} columns configured
+                Python script for data transformation
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {schema.columnMappings && schema.columnMappings.length > 0 ? (
+              {schema.transformScript && schema.transformScript.trim() ? (
                 <div className="border rounded-lg overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium border-b">
-                          Source
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium border-b">
-                          Destination
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium border-b">
-                          Type
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium border-b">
-                          Nullable
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium border-b">
-                          Primary Key
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {schema.columnMappings.map((col) => (
-                        <tr
-                          key={`${col.sourceColumn}-${col.destinationColumn}`}
-                          className="border-b last:border-0 hover:bg-muted/30"
-                        >
-                          <td className="px-3 py-2 font-mono text-xs">
-                            {col.sourceColumn}
-                          </td>
-                          <td className="px-3 py-2 font-mono text-xs">
-                            {col.destinationColumn}
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {col.dataType}
-                          </td>
-                          <td className="px-3 py-2">
-                            {col.nullable ? (
-                              <Badge
-                                variant="outline"
-                                className="text-green-600"
-                              >
-                                Yes
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-red-600">
-                                No
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-3 py-2">
-                            {col.isPrimaryKey ? (
-                              <Badge className="bg-purple-500/10 text-purple-700">
-                                PK
-                              </Badge>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <pre className="p-4 text-xs font-mono bg-muted/30 max-h-96 overflow-auto">
+                    {schema.transformScript}
+                  </pre>
                 </div>
               ) : (
                 <div className="py-8 text-center text-muted-foreground">
-                  No column mappings configured
+                  No transform script configured
                 </div>
               )}
             </CardContent>

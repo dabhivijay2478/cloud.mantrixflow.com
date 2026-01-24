@@ -12,6 +12,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
+  Code,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
@@ -34,6 +35,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PythonScriptEditor } from "@/components/data-pipelines/python-script-editor";
 import {
   useConnections,
   useSchemasWithTables,
@@ -57,7 +60,8 @@ export interface TransformConfig {
     source: string;
     destination: string;
     isPrimaryKey?: boolean;
-  }>; // JSON array format with primary key flag
+  }>; // JSON array format with primary key flag (legacy - use transformScript instead)
+  transformScript?: string; // Custom Python transform script (preferred)
   destinationTable?: string; // Selected destination table (schema.table format)
   primaryKeyField?: string; // Explicitly defined primary key field name
   status?: "published" | "paused";
@@ -99,6 +103,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     Array<{ name: string; type: string; table: string }>
   >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
+  const [transformScript, setTransformScript] = useState<string>("");
+  const [transformMode, setTransformMode] = useState<"mappings" | "script">("script");
 
   // Debug: Log when collectors prop changes
   useEffect(() => {
@@ -520,31 +526,37 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     )
       return;
 
-    // Validate that field mappings exist and are not empty
-    if (
-      !fieldMappings ||
-      !Array.isArray(fieldMappings) ||
-      fieldMappings.length === 0
-    ) {
-      // Show error - field mappings are required
-      alert(
-        "Please configure at least one field mapping before saving the transformer.",
-      );
-      return;
+    // Validate based on transform mode
+    if (transformMode === "script") {
+      if (!transformScript || !transformScript.trim()) {
+        alert("Please provide a Python transform script.");
+        return;
+      }
+    } else {
+      // Validate that field mappings exist and are not empty
+      if (
+        !fieldMappings ||
+        !Array.isArray(fieldMappings) ||
+        fieldMappings.length === 0
+      ) {
+        alert(
+          "Please configure at least one field mapping before saving the transformer.",
+        );
+        return;
+      }
     }
 
-    // Ensure fieldMappings is always an array and not empty
+    // Ensure fieldMappings is always an array
     const validFieldMappings =
-      Array.isArray(fieldMappings) && fieldMappings.length > 0
-        ? fieldMappings
-        : [];
+      Array.isArray(fieldMappings) ? fieldMappings : [];
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings: validFieldMappings, // Always ensure it's a valid array
+      fieldMappings: transformMode === "mappings" ? validFieldMappings : [],
+      transformScript: transformMode === "script" ? transformScript : undefined,
       destinationTable: selectedDestinationTable, // Store selected destination table
       primaryKeyField:
         primaryKeyField ||
@@ -574,6 +586,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedDestinationTable("");
     setTransformName("");
     setFieldMappings([]);
+    setTransformScript("");
+    setTransformMode("script");
   };
 
   const handleDeleteTransform = (collectorId: string, transformId: string) => {
@@ -636,6 +650,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         )?.destination ||
         "",
     );
+    setTransformScript(transform.transformScript || "");
+    setTransformMode(transform.transformScript ? "script" : "mappings");
     setShowAddDialog(true);
   };
 
@@ -972,7 +988,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             )}
           </div>
 
-          {selectedCollectorId && selectedEmitterId && (
+          {selectedCollectorId && selectedEmitterId && selectedDestinationTable && (
             <div className="space-y-4">
               {/* Debug info */}
               {process.env.NODE_ENV === "development" && (
@@ -984,8 +1000,79 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 </div>
               )}
 
-              {/* Side-by-side Field Mapping */}
-              {selectedDestinationTable && (
+              {/* Transform Mode Tabs */}
+              <Tabs value={transformMode} onValueChange={(v) => setTransformMode(v as "mappings" | "script")}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="script" className="flex items-center gap-2">
+                    <Code className="h-4 w-4" />
+                    Python Script
+                  </TabsTrigger>
+                  <TabsTrigger value="mappings" className="flex items-center gap-2">
+                    <MapIcon className="h-4 w-4" />
+                    Field Mappings
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Python Script Editor */}
+                <TabsContent value="script" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Transform Script
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Write a Python function that transforms source records. Use <code className="px-1 py-0.5 bg-muted rounded">record.get("source_field")</code> to read from source data.
+                    </p>
+                    <PythonScriptEditor
+                      value={transformScript}
+                      onChange={setTransformScript}
+                      sampleRecord={
+                        sourceFields.length > 0
+                          ? sourceFields.reduce((acc, field) => {
+                              // Create a sample record with example values based on field type
+                              // Handle nested fields (e.g., "address.city")
+                              const fieldPath = field.name.split(".");
+                              const fieldName = fieldPath[fieldPath.length - 1];
+                              
+                              const exampleValue =
+                                field.type === "integer" || field.type === "number"
+                                  ? 123
+                                  : field.type === "boolean"
+                                    ? true
+                                    : field.type === "date" || field.type === "timestamp"
+                                      ? "2024-01-01"
+                                      : fieldName.toLowerCase().includes("email")
+                                        ? "example@email.com"
+                                        : fieldName.toLowerCase().includes("url")
+                                          ? "https://example.com"
+                                          : `Sample ${fieldName}`;
+                              
+                              // Set nested value
+                              if (fieldPath.length > 1) {
+                                let current = acc;
+                                for (let i = 0; i < fieldPath.length - 1; i++) {
+                                  if (!current[fieldPath[i]]) {
+                                    current[fieldPath[i]] = {};
+                                  }
+                                  current = current[fieldPath[i]];
+                                }
+                                current[fieldName] = exampleValue;
+                              } else {
+                                acc[field.name] = exampleValue;
+                              }
+                              
+                              return acc;
+                            }, {} as Record<string, any>)
+                          : undefined
+                      }
+                      height="500px"
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Field Mappings (existing UI) */}
+                <TabsContent value="mappings" className="mt-4">
+                  {/* Side-by-side Field Mapping */}
+                  {selectedDestinationTable && (
                 <div>
                   {/* Mapping Configuration - Destination to Source */}
                   <div className="mt-6 space-y-3">
@@ -1383,7 +1470,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     </div>
                   </div>
                 </div>
-              )}
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </div>

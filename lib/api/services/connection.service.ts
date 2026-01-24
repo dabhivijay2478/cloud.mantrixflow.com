@@ -51,16 +51,35 @@ export class ConnectionService {
 
   /**
    * Get connection for a data source (with masked sensitive fields)
+   * Calls Python API directly to fetch from Supabase
    */
   static async getConnection(
     organizationId: string,
     dataSourceId: string,
     includeSensitive: boolean = false,
   ): Promise<DataSourceConnection | null> {
-    const params = includeSensitive ? "?includeSensitive=true" : "";
-    return ApiClient.get<DataSourceConnection | null>(
-      `${ConnectionService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/connection${params}`,
+    // Call Python API directly
+    const { PythonETLService } = await import('./python-etl.service');
+    const connection = await PythonETLService.getConnection(
+      organizationId,
+      dataSourceId,
+      includeSensitive,
     );
+    
+    if (!connection) {
+      return null;
+    }
+    
+    // Map Python API response to DataSourceConnection format
+    return {
+      id: connection.id,
+      data_source_id: connection.data_source_id,
+      connection_type: connection.connection_type as any,
+      config: connection.config,
+      status: connection.status as any,
+      last_connected_at: connection.last_connected_at,
+      last_error: connection.last_error,
+    };
   }
 
   /**
@@ -78,15 +97,42 @@ export class ConnectionService {
   }
 
   /**
-   * Test connection for a data source
+   * Test connection for a data source - calls Python API directly
+   * NOTE: This method is deprecated. Use PythonETLService.testConnection directly instead.
+   * Kept for backward compatibility.
    */
   static async testConnection(
     organizationId: string,
     dataSourceId: string,
   ): Promise<TestConnectionResult> {
-    return ApiClient.post<TestConnectionResult>(
-      `${ConnectionService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/test-connection`,
-    );
+    // Get connection config first
+    const connection = await ConnectionService.getConnection(organizationId, dataSourceId, true);
+    
+    if (!connection || !connection.config) {
+      throw new Error('Connection not configured for this data source');
+    }
+
+    // Get data source to determine source type
+    const { DataSourceService } = await import('./data-source.service');
+    const dataSource = await DataSourceService.getDataSource(organizationId, dataSourceId);
+    const sourceType = dataSource.sourceType?.toLowerCase() || 'postgresql';
+
+    // Call Python service directly
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    const result = await PythonETLService.testConnection({
+      type: sourceType,
+      ...(connection.config as Record<string, any>),
+    });
+
+    return {
+      success: result.success,
+      message: result.message,
+      error: result.error,
+      version: result.version,
+      responseTimeMs: result.response_time_ms,
+      details: result.details,
+    };
   }
 
   /**

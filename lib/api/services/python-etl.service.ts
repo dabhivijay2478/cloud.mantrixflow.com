@@ -51,8 +51,7 @@ export interface CollectResponse {
 
 export interface TransformRequest {
   rows: any[];
-  column_mappings: ColumnMapping[];
-  transformations?: any[];
+  transform_script: string;
 }
 
 export interface TransformResponse {
@@ -69,7 +68,6 @@ export interface EmitRequest {
   rows: any[];
   write_mode?: 'append' | 'upsert' | 'replace';
   upsert_key?: string[];
-  column_mappings?: ColumnMapping[];
 }
 
 export interface EmitResponse {
@@ -417,6 +415,94 @@ export class PythonETLService {
       {
         method: 'POST',
         body: JSON.stringify(requestData),
+      },
+    );
+  }
+
+  /**
+   * Get connection details for a data source
+   * Calls Python API to fetch from Supabase
+   */
+  static async getConnection(
+    organizationId: string,
+    dataSourceId: string,
+    includeSensitive: boolean = false,
+  ): Promise<{
+    id: string;
+    data_source_id: string;
+    connection_type: string;
+    config: Record<string, any>;
+    status: string;
+    last_connected_at?: string;
+    last_error?: string;
+    created_at: string;
+    updated_at: string;
+  } | null> {
+    const params = includeSensitive ? '?includeSensitive=true' : '';
+    return PythonETLService.request<{
+      id: string;
+      data_source_id: string;
+      connection_type: string;
+      config: Record<string, any>;
+      status: string;
+      last_connected_at?: string;
+      last_error?: string;
+      created_at: string;
+      updated_at: string;
+    } | null>(
+      `/organizations/${organizationId}/data-sources/${dataSourceId}/connection${params}`,
+      {
+        method: 'GET',
+      },
+    );
+  }
+
+  /**
+   * List all schemas and tables for a data source
+   * Calls Python API to discover schemas using tap-postgres
+   */
+  static async listSchemasWithTables(
+    organizationId: string,
+    dataSourceId: string,
+  ): Promise<{
+    schemas: Array<{
+      name: string;
+      tables: Array<{
+        name: string;
+        schema: string;
+        type: 'table' | 'view' | 'materialized_view';
+        rowCount?: number;
+        columns?: Array<{
+          name: string;
+          type: string;
+          nullable: boolean;
+        }>;
+        primaryKeys?: string[];
+      }>;
+    }>;
+    type: string;
+  }> {
+    return PythonETLService.request<{
+      schemas: Array<{
+        name: string;
+        tables: Array<{
+          name: string;
+          schema: string;
+          type: 'table' | 'view' | 'materialized_view';
+          rowCount?: number;
+          columns?: Array<{
+            name: string;
+            type: string;
+            nullable: boolean;
+          }>;
+          primaryKeys?: string[];
+        }>;
+      }>;
+      type: string;
+    }>(
+      `/organizations/${organizationId}/data-sources/${dataSourceId}/schemas`,
+      {
+        method: 'GET',
       },
     );
   }

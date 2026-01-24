@@ -108,13 +108,9 @@ export default function EditPipelinePage() {
             ? `public.${sourceSchema.sourceTable}`
             : "";
 
-      // Build field mappings from destinationSchema (authoritative source)
-      const schemaFieldMappings =
-        destinationSchema.columnMappings?.map((cm) => ({
-          source: cm.sourceColumn,
-          destination: cm.destinationColumn,
-          isPrimaryKey: cm.isPrimaryKey || false,
-        })) || [];
+      // Build field mappings from destinationSchema transformScript
+      // Note: Transform script is the authoritative source, field mappings are derived from UI
+      const schemaFieldMappings: Array<{ source: string; destination: string; isPrimaryKey: boolean }> = [];
 
       // Generate stable IDs (or use existing ones from transformations)
       const baseTimestamp = Date.now();
@@ -392,48 +388,34 @@ export default function EditPipelinePage() {
         const destTableName =
           destTableParts[1] || destTableParts[0] || destinationTable;
 
-        // Convert field mappings to column mappings
-        const columnMappings = firstTransformer.fieldMappings.map((fm) => {
-          const mapping = fm as {
-            source: string;
-            destination: string;
-            isPrimaryKey?: boolean;
-          };
-          return {
-            sourceColumn: mapping.source,
-            destinationColumn: mapping.destination,
-            dataType: "text", // Default type
-            nullable: true,
-            isPrimaryKey: mapping.isPrimaryKey || false,
-          };
-        });
-
-        // Extract primary keys
+        // Extract primary keys from field mappings if available
         const primaryKeyFields = firstTransformer.fieldMappings
-          .filter((fm) => {
+          ?.filter((fm) => {
             const mapping = fm as { isPrimaryKey?: boolean };
             return mapping.isPrimaryKey === true;
           })
           .map((fm) => {
             const mapping = fm as { destination: string };
             return mapping.destination;
-          });
+          }) || [];
 
         const writeMode: "append" | "upsert" | "replace" =
           primaryKeyFields.length > 0 ? "upsert" : "append";
+
+        // Get transform script from transformer
+        const transformScript = firstTransformer.transformScript || destinationSchema.transformScript || '';
 
         // Only update if changed
         if (
           destinationSchema.destinationSchema !== destSchemaName ||
           destinationSchema.destinationTable !== destTableName ||
-          JSON.stringify(destinationSchema.columnMappings) !==
-            JSON.stringify(columnMappings) ||
+          destinationSchema.transformScript !== transformScript ||
           destinationSchema.writeMode !== writeMode
         ) {
           await updateDestinationSchemaMutation.mutateAsync({
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            columnMappings: columnMappings,
+            transformScript: transformScript,
             writeMode: writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
