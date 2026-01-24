@@ -45,16 +45,37 @@ export class DataSourceService {
   }
 
   /**
-   * Create a new data source
+   * Create a new data source - calls Python API directly
+   * Python handles validation and creates the data source in Supabase
    */
   static async createDataSource(
     organizationId: string,
     data: CreateDataSourceDto,
   ): Promise<DataSource> {
-    return ApiClient.post<DataSource>(
-      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources`,
-      data,
-    );
+    // Call Python API directly for creation
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    const result = await PythonETLService.createDataSource(organizationId, {
+      name: data.name,
+      description: data.description,
+      source_type: data.source_type,
+      metadata: data.metadata,
+    });
+    
+    // Map Python response (snake_case) to frontend format (camelCase)
+    return {
+      id: result.id,
+      organizationId: result.organization_id,
+      name: result.name,
+      description: result.description,
+      sourceType: result.source_type,
+      isActive: result.is_active,
+      metadata: result.metadata,
+      createdBy: result.created_by,
+      createdAt: result.created_at,
+      updatedAt: result.updated_at,
+      deletedAt: null,
+    } as DataSource;
   }
 
   /**
@@ -72,15 +93,18 @@ export class DataSourceService {
   }
 
   /**
-   * Delete a data source (soft delete)
+   * Delete a data source - calls Python API directly
+   * Python handles validation and calls NestJS for actual database deletion
    */
   static async deleteDataSource(
     organizationId: string,
     dataSourceId: string,
   ): Promise<{ deletedId: string }> {
-    return ApiClient.delete<{ deletedId: string }>(
-      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}`,
-    );
+    // Call Python API directly for deletion
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    const result = await PythonETLService.deleteDataSource(organizationId, dataSourceId);
+    return { deletedId: result.deleted_id || dataSourceId };
   }
 
   /**

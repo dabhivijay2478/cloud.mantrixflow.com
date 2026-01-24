@@ -57,17 +57,36 @@ export class DataSourcesService {
     organizationId: string,
     dto: CreateDataSourceDto,
   ): Promise<DataSource> {
-    // Explicitly map frontend DTO (snake_case) to backend DTO (camelCase)
-    const payload = {
+    // Call Python API directly for creation
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    console.log('[DataSourcesService] Creating data source via Python service', {
+      organizationId,
+      name: dto.name,
+      source_type: dto.source_type,
+    });
+    
+    const result = await PythonETLService.createDataSource(organizationId, {
       name: dto.name,
       description: dto.description,
-      sourceType: dto.source_type,
+      source_type: dto.source_type,
       metadata: dto.metadata,
-    };
-    return ApiClient.post<DataSource>(
-      DataSourcesService.basePath(organizationId),
-      payload,
-    );
+    });
+    
+    // Map Python response (snake_case) to frontend format (camelCase)
+    return {
+      id: result.id,
+      organizationId: result.organization_id,
+      name: result.name,
+      description: result.description,
+      sourceType: result.source_type,
+      isActive: result.is_active,
+      metadata: result.metadata,
+      createdBy: result.created_by,
+      createdAt: result.created_at,
+      updatedAt: result.updated_at,
+      deletedAt: null,
+    } as DataSource;
   }
 
   static async updateDataSource(
@@ -81,13 +100,19 @@ export class DataSourcesService {
     );
   }
 
+  /**
+   * Delete data source - calls Python API directly
+   * Python handles validation and calls NestJS for actual database deletion
+   */
   static async deleteDataSource(
     organizationId: string,
     id: string,
   ): Promise<{ deletedId: string }> {
-    return ApiClient.delete<{ deletedId: string }>(
-      `${DataSourcesService.basePath(organizationId)}/${id}`,
-    );
+    // Call Python API directly for deletion
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    const result = await PythonETLService.deleteDataSource(organizationId, id);
+    return { deletedId: result.deleted_id || id };
   }
 
   static async getSupportedTypes(organizationId: string): Promise<string[]> {
@@ -111,36 +136,112 @@ export class DataSourcesService {
     );
   }
 
+  /**
+   * Create or update connection for a data source - calls Python API directly
+   * Python handles validation and creates/updates the connection in Supabase
+   */
   static async createOrUpdateConnection(
     organizationId: string,
     sourceId: string,
     dto: CreateConnectionDto,
   ): Promise<Connection> {
-    return ApiClient.post<Connection>(
-      `${DataSourcesService.basePath(organizationId)}/${sourceId}/connection`,
-      {
-        connectionType: dto.connection_type,
-        config: dto.config,
-      },
-    );
+    // Call Python API directly for creation/update
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    console.log('[DataSourcesService] Creating/updating connection via Python service', {
+      organizationId,
+      sourceId,
+      connection_type: dto.connection_type,
+    });
+    
+    const result = await PythonETLService.createOrUpdateConnection(organizationId, sourceId, {
+      connection_type: dto.connection_type,
+      config: dto.config as Record<string, any>,
+    });
+    
+    // Map Python response to Connection format
+    return {
+      id: result.id,
+      organizationId,
+      name: dto.name, // Name comes from DTO, not from Python response
+      type: result.connection_type,
+      status: result.status,
+      config: result.config,
+      created_at: result.created_at,
+      createdAt: result.created_at,
+      updated_at: result.updated_at,
+      updatedAt: result.updated_at,
+    } as Connection;
   }
 
   static async testConnection(
     organizationId: string,
     sourceId: string,
   ): Promise<TestConnectionResponse> {
-    return ApiClient.post<TestConnectionResponse>(
-      `${DataSourcesService.basePath(organizationId)}/${sourceId}/test-connection`,
-    );
+    // This endpoint tests an existing connection by data source ID
+    // For now, we'll need to get the connection config first, then test it
+    // TODO: Implement fetching connection config and testing it via Python API
+    throw new Error('Test connection by source ID not yet implemented. Use testConnectionLegacy with connection config instead.');
   }
 
+  /**
+   * Discover schema for a data source - calls Python API directly
+   * Python handles schema discovery for all data source types
+   */
   static async discoverSchema(
     organizationId: string,
     sourceId: string,
+    options?: {
+      tableName?: string;
+      schemaName?: string;
+      query?: string;
+    },
   ): Promise<{ schemas?: Schema[]; tables?: Table[]; databases?: any[]; type?: string }> {
-    return ApiClient.post<{ schemas?: Schema[]; tables?: Table[]; databases?: any[]; type?: string }>(
-      `${DataSourcesService.basePath(organizationId)}/${sourceId}/discover-schema`,
-    );
+    // Get connection config first
+    const connection = await DataSourcesService.getConnection(organizationId, sourceId, true);
+    
+    if (!connection || !connection.config) {
+      throw new Error('Connection not configured for this data source');
+    }
+
+    // Get data source to determine source type
+    const dataSource = await DataSourcesService.getDataSource(organizationId, sourceId);
+    const sourceType = dataSource.sourceType?.toLowerCase() === 'postgres' ? 'postgresql' : 
+                      (dataSource.sourceType?.toLowerCase() || 'postgresql');
+
+    // Call Python service directly for schema discovery
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    const discovered = await PythonETLService.discoverSchema(sourceType, {
+      source_type: sourceType,
+      connection_config: connection.config as Record<string, any>,
+      source_config: {},
+      table_name: options?.tableName,
+      schema_name: options?.schemaName,
+      query: options?.query,
+    });
+
+    // Map Python response to expected format
+    // The response format depends on the source type
+    if (sourceType === 'mongodb') {
+      // MongoDB returns databases and collections
+      return {
+        databases: discovered.columns as any[], // MongoDB uses columns field for collections
+        type: 'mongodb',
+      };
+    } else {
+      // SQL databases return tables
+      return {
+        tables: discovered.columns.map((col: any) => ({
+          name: col.name,
+          schema: options?.schemaName || 'public',
+          type: col.dataType,
+          columns: [col],
+        })) as Table[],
+        schemas: options?.schemaName ? [{ name: options.schemaName }] : undefined,
+        type: sourceType,
+      };
+    }
   }
 
   // ==========================================================================
@@ -151,15 +252,25 @@ export class DataSourcesService {
   private static readonly LEGACY_BASE_PATH = "api/data-sources/postgres";
 
   /** @deprecated Use organization-scoped endpoints */
-  /** @deprecated Use organization-scoped endpoints */
+  /** 
+   * Test connection - calls Python API directly
+   * Python handles connection testing for all data source types
+   */
   static async testConnectionLegacy(
     organizationId: string,
     data: TestConnectionDto,
   ): Promise<TestConnectionResponse> {
-    return ApiClient.post<TestConnectionResponse>(
-      `${DataSourcesService.basePath(organizationId)}/test-connection`,
-      data,
-    );
+    // Call Python API directly for connection testing
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    const result = await PythonETLService.testConnection(data);
+    
+    return {
+      success: result.success,
+      error: result.error,
+      version: result.version,
+      responseTimeMs: result.response_time_ms,
+    };
   }
 
   /** @deprecated Use organization-scoped endpoints */
@@ -262,15 +373,24 @@ export class DataSourcesService {
   }
 
   /** @deprecated Use deleteDataSource instead */
+  /** 
+   * Delete connection - calls Python API directly
+   * Python handles validation and calls NestJS for actual database deletion
+   */
   static async deleteConnection(
     id: string,
     orgId?: string,
   ): Promise<{ deletedId: string }> {
-    let url = `${DataSourcesService.LEGACY_BASE_PATH}/connections/${id}`;
-    if (orgId) {
-      url += `?orgId=${encodeURIComponent(orgId)}`;
+    if (!orgId) {
+      throw new Error('Organization ID is required to delete connection');
     }
-    return ApiClient.delete<{ deletedId: string }>(url);
+    
+    // Call Python API directly for deletion
+    const { PythonETLService } = await import('./python-etl.service');
+    
+    // For legacy API, connection ID is the same as data source ID
+    const result = await PythonETLService.deleteConnection(orgId, id, id);
+    return { deletedId: result.deleted_id || id };
   }
 
   // ==========================================================================
