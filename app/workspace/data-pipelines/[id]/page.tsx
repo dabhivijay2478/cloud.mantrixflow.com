@@ -7,6 +7,7 @@ import {
   Clock,
   Database,
   Edit,
+  Loader2,
   Pause,
   Play,
   RefreshCw,
@@ -432,10 +433,15 @@ export default function PipelineDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {pipeline.status === "paused" ? (
+          {pipeline.status === "running" ? (
+            <Button disabled variant="outline">
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Running...
+            </Button>
+          ) : pipeline.status === "paused" ? (
             <Button onClick={handleResume} disabled={resumePipeline.isPending}>
               <Play className="h-4 w-4 mr-2" />
-              Resume
+              Resume Auto-Sync
             </Button>
           ) : (
             <>
@@ -445,11 +451,11 @@ export default function PipelineDetailPage() {
                 disabled={pausePipeline.isPending}
               >
                 <Pause className="h-4 w-4 mr-2" />
-                Pause
+                Pause Auto-Sync
               </Button>
-              <Button onClick={handleRun} disabled={runPipeline.isPending}>
+              <Button onClick={handleRun} disabled={runPipeline.isPending} variant="secondary">
                 <Zap className="h-4 w-4 mr-2" />
-                Run Now
+                Sync Now
               </Button>
             </>
           )}
@@ -709,13 +715,6 @@ export default function PipelineDetailPage() {
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
-          {/* CDC Settings */}
-          <CDCSettingsCard 
-            pipeline={pipeline} 
-            onUpdate={() => refetch()} 
-            updatePipeline={updatePipeline}
-          />
-
           {/* Schedule Configuration */}
           <Card>
             <CardHeader>
@@ -819,76 +818,3 @@ export default function PipelineDetailPage() {
   );
 }
 
-/**
- * CDC Status Card Component
- * Shows current CDC status - no configuration needed (auto-detected)
- */
-function CDCSettingsCard({ 
-  pipeline, 
-  onUpdate, 
-  updatePipeline 
-}: { 
-  pipeline: any; 
-  onUpdate: () => void;
-  updatePipeline: any;
-}) {
-  const checkpoint = pipeline.checkpoint as any;
-  const watermarkField = checkpoint?.watermarkField || pipeline.incrementalColumn;
-  const lastSyncValue = checkpoint?.lastSyncValue || pipeline.lastSyncValue;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          CDC Status
-        </CardTitle>
-        <CardDescription>
-          Change Data Capture is automatically enabled. First run performs full sync, then all subsequent runs are incremental.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-            <div>
-              <div className="font-medium">CDC Mode</div>
-              <div className="text-sm text-muted-foreground">
-                {pipeline.status === 'listing' 
-                  ? 'Active - Automatically detecting and syncing new changes'
-                  : pipeline.status === 'running'
-                  ? 'Running - Full sync in progress'
-                  : 'Inactive - Will activate after first full sync'}
-              </div>
-            </div>
-            <Badge variant={pipeline.status === 'listing' ? 'default' : 'outline'}>
-              {pipeline.status === 'listing' ? 'Active' : pipeline.status || 'Inactive'}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Current status */}
-        <div className="pt-4 border-t space-y-2">
-          <h4 className="text-sm font-medium">CDC Configuration</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-muted-foreground">Status:</div>
-            <div className="font-medium capitalize">{pipeline.status || 'idle'}</div>
-            <div className="text-muted-foreground">Auto-detected Column:</div>
-            <div className="font-medium font-mono text-xs">{watermarkField || 'Not detected yet'}</div>
-            <div className="text-muted-foreground">Last Sync Value:</div>
-            <div className="font-medium font-mono text-xs">{lastSyncValue || '-'}</div>
-            <div className="text-muted-foreground">Checkpoint:</div>
-            <div className="font-medium">{pipeline.checkpoint ? 'Saved' : 'None (first run pending)'}</div>
-          </div>
-        </div>
-
-        <div className="pt-2 border-t">
-          <p className="text-xs text-muted-foreground">
-            💡 <strong>How it works:</strong> The system automatically detects the best timestamp column (like `updated_at`) 
-            from your source table. After the first full sync completes, the pipeline enters CDC mode and will automatically 
-            sync only new or changed records on every run.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

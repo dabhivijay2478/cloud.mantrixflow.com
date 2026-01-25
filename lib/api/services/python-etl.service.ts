@@ -506,4 +506,170 @@ export class PythonETLService {
       },
     );
   }
+
+  /**
+   * Create a pipeline with source and destination schemas
+   * Python API handles the complete pipeline creation flow
+   */
+  static async createPipeline(
+    organizationId: string,
+    data: {
+      name: string;
+      description?: string;
+      source_schema: {
+        source_type: string;
+        data_source_id: string;
+        source_schema?: string;
+        source_table: string;
+        source_query?: string;
+        name?: string;
+        is_active?: boolean;
+      };
+      destination_schema: {
+        data_source_id: string;
+        destination_schema?: string;
+        destination_table: string;
+        transform_script: string;
+        write_mode?: 'append' | 'upsert' | 'replace';
+        upsert_key?: string[];
+        name?: string;
+        is_active?: boolean;
+      };
+      sync_mode?: 'full' | 'incremental' | 'cdc';
+      sync_frequency?: 'manual' | 'minutes' | 'hourly' | 'daily' | 'weekly';
+      incremental_column?: string;
+      schedule_type?: 'none' | 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom_cron';
+      schedule_value?: string;
+      schedule_timezone?: string;
+      transformations?: any[];
+    },
+  ): Promise<{
+    id: string;
+    organizationId: string;
+    createdBy: string;
+    name: string;
+    description?: string;
+    sourceSchemaId: string;
+    destinationSchemaId: string;
+    transformations?: any[];
+    syncMode: string;
+    incrementalColumn?: string;
+    syncFrequency: string;
+    scheduleType: string;
+    scheduleValue?: string;
+    scheduleTimezone: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string;
+  }> {
+    return PythonETLService.request(
+      `/organizations/${organizationId}/pipelines`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    );
+  }
+
+  /**
+   * Update a pipeline
+   * Python API handles pipeline updates
+   */
+  static async updatePipeline(
+    organizationId: string,
+    pipelineId: string,
+    data: {
+      name?: string;
+      description?: string;
+      sync_mode?: 'full' | 'incremental' | 'cdc';
+      sync_frequency?: 'manual' | 'minutes' | 'hourly' | 'daily' | 'weekly';
+      incremental_column?: string;
+      schedule_type?: 'none' | 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom_cron';
+      schedule_value?: string;
+      schedule_timezone?: string;
+      transformations?: any[];
+    },
+  ): Promise<{
+    id: string;
+    organizationId: string;
+    createdBy: string;
+    name: string;
+    description?: string;
+    sourceSchemaId: string;
+    destinationSchemaId: string;
+    transformations?: any[];
+    syncMode: string;
+    incrementalColumn?: string;
+    syncFrequency: string;
+    scheduleType: string;
+    scheduleValue?: string;
+    scheduleTimezone: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string;
+  }> {
+    return PythonETLService.request(
+      `/organizations/${organizationId}/pipelines/${pipelineId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      },
+    );
+  }
+
+  /**
+   * Run a pipeline directly via Python API
+   * This bypasses NestJS proxy to avoid timeout issues
+   */
+  static async runPipeline(
+    organizationId: string,
+    pipelineId: string,
+    options?: {
+      syncMode?: 'full' | 'incremental';
+      limit?: number;
+    },
+  ): Promise<{
+    success: boolean;
+    runId: string;
+    pipelineId: string;
+    status: string;
+    rowsRead: number;
+    rowsWritten: number;
+    rowsSkipped: number;
+    rowsFailed: number;
+    errors: any[];
+  }> {
+    return PythonETLService.request(
+      `/organizations/${organizationId}/pipelines/${pipelineId}/run`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          sync_mode: options?.syncMode || 'full',
+          limit: options?.limit,
+        }),
+      },
+    );
+  }
+
+  /**
+   * Pause a running pipeline
+   */
+  static async pausePipeline(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<{
+    success: boolean;
+    pipelineId: string;
+    status: string;
+  }> {
+    return PythonETLService.request(
+      `/organizations/${organizationId}/pipelines/${pipelineId}/pause`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+  }
 }

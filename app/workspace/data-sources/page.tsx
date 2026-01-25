@@ -39,9 +39,9 @@ import {
   type TestConnectionDto,
   useConnections,
   useCreateConnection,
-  useDeleteConnection,
   useUsers,
 } from "@/lib/api";
+import { useDeleteDataSource } from "@/lib/api/hooks/use-data-source";
 import { useTestConnection as useTestConnectionLegacy } from "@/lib/api/hooks/use-data-sources";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -62,7 +62,8 @@ export default function DataSourcesPage() {
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
   const createConnection = useCreateConnection(organizationId);
-  const deleteConnection = useDeleteConnection(organizationId);
+  // Use NestJS API for data source deletion
+  const deleteDataSource = useDeleteDataSource(organizationId);
   // Use legacy testConnection hook (now updated to use org-scoped endpoint)
   const testConnection = useTestConnectionLegacy(organizationId);
 
@@ -563,7 +564,8 @@ export default function DataSourcesPage() {
     onConfirm: async () => {
       if (!dataSourceToDelete) return;
       try {
-        await deleteConnection.mutateAsync(dataSourceToDelete.id);
+        // Use NestJS API for data source deletion
+        await deleteDataSource.mutateAsync(dataSourceToDelete.id);
         showSuccessToast("deleted", "Data Source");
         setDataSourceToDelete(null);
       } catch (error) {
@@ -924,7 +926,7 @@ export default function DataSourcesPage() {
         itemName={deleteConfirm.confirmProps.itemName}
         itemValue={deleteConfirm.confirmProps.itemValue}
         onConfirm={deleteConfirm.confirmProps.onConfirm}
-        isLoading={deleteConnection.isPending}
+        isLoading={deleteDataSource.isPending}
       />
     </div>
   );

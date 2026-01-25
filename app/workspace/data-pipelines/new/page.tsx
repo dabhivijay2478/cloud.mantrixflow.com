@@ -3,9 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
-import { useCreatePipeline } from "@/lib/api/hooks/use-data-pipelines";
-import { useCreateDestinationSchema } from "@/lib/api/hooks/use-destination-schemas";
-import { useCreateSourceSchema } from "@/lib/api/hooks/use-source-schemas";
+// Pipeline creation now handled by Python API - no need for these hooks
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -27,10 +25,7 @@ export default function NewPipelinePage() {
   const router = useRouter();
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
-  const createPipelineMutation = useCreatePipeline(organizationId);
-  const createSourceSchemaMutation = useCreateSourceSchema(organizationId);
-  const createDestinationSchemaMutation =
-    useCreateDestinationSchema(organizationId);
+  // Pipeline creation now handled by Python API directly
   const { data: connections } = useConnections(organizationId);
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
@@ -71,48 +66,23 @@ export default function NewPipelinePage() {
     // This fixes the issue where newly created transformers aren't detected on first save
     const collectorsToUse = collectorsOverride || config.collectors;
 
-    // Validate that at least one transformer with field mappings exists
-    // Check all collectors and their transformers, ensuring fieldMappings is properly structured
+    // Validate that at least one transformer with transform script exists
+    // Only script-based transformations are allowed for now (field mappings are commented out)
     const hasValidTransformers = collectorsToUse.some((collector) => {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
 
       return collector.transformers.some((t) => {
-        // Check if fieldMappings exists and is a non-empty array
-        const fieldMappings = t.fieldMappings;
-        if (!fieldMappings) {
-          return false;
-        }
-
-        // Handle both array format and object format
-        if (Array.isArray(fieldMappings)) {
-          return (
-            fieldMappings.length > 0 &&
-            fieldMappings.some((fm) => {
-              // Ensure each mapping has required fields
-              return (
-                fm &&
-                typeof fm === "object" &&
-                ("source" in fm || "destination" in fm)
-              );
-            })
-          );
-        }
-
-        // If it's an object, check if it has any entries
-        if (typeof fieldMappings === "object") {
-          return Object.keys(fieldMappings).length > 0;
-        }
-
-        return false;
+        // Check if transformScript exists and is not empty
+        return t.transformScript && t.transformScript.trim().length > 0;
       });
     });
 
     if (!hasValidTransformers) {
       toast.error(
-        "Missing field mappings",
-        "Please configure at least one transformer with field mappings before creating the pipeline.",
+        "Missing transform script",
+        "Please configure at least one transformer with a Python transform script before creating the pipeline.",
       );
       return;
     }
@@ -257,32 +227,22 @@ export default function NewPipelinePage() {
         }
       }
 
-      // Create source schema
-      const sourceSchema = await createSourceSchemaMutation.mutateAsync({
-        sourceType: sourceType as any, // Use actual data source type
-        dataSourceId: primarySourceId,
-        sourceSchema: sourceSchemaName,
-        sourceTable: sourceTableName,
-        name: `Source: ${sourceTableName}`,
-      });
-
-      // Step 2: Create destination schema from emitter/transformer data
       // Get destination connection ID from emitters
       const destinationConnectionId = allDestinationIds[0];
 
       // Extract destination information from transformers
+      // Only script-based transformations are allowed for now
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => (t.transformScript && t.transformScript.trim()) || (t.fieldMappings && t.fieldMappings.length > 0));
+        .find((t) => t.transformScript && t.transformScript.trim());
 
-      // Check if transformer has either transformScript or fieldMappings
+      // Check if transformer has transformScript
       const hasTransformScript = firstTransformer?.transformScript && firstTransformer.transformScript.trim();
-      const hasFieldMappings = firstTransformer?.fieldMappings && firstTransformer.fieldMappings.length > 0;
 
-      if (!hasTransformScript && !hasFieldMappings) {
+      if (!hasTransformScript) {
         toast.error(
           "No transformation configured",
-          "Please configure either a Python transform script or field mappings in the transform step.",
+          "Please configure a Python transform script in the transform step.",
         );
         setIsCreating(false);
         return;
@@ -308,42 +268,41 @@ export default function NewPipelinePage() {
 
       // Transform script is already in firstTransformer.transformScript
 
-      // Extract primary keys from field mappings (if using field mappings mode)
-      const primaryKeyFields = hasFieldMappings ? firstTransformer.fieldMappings
-        .filter((fm) => {
-          const mapping = fm as { isPrimaryKey?: boolean };
-          return mapping.isPrimaryKey === true;
-        })
-        .map((fm) => {
-          const mapping = fm as { destination: string };
-          return mapping.destination;
-        }) : [];
+      // Extract primary keys from field mappings (commented out - field mappings not used for now)
+      const primaryKeyFields: string[] = []; // Empty for now - can be extracted from script if needed
 
       // Determine write mode (default to append, could be enhanced)
       const writeMode: "append" | "upsert" | "replace" =
         primaryKeyFields.length > 0 ? "upsert" : "append";
 
-      // Create destination schema
-      const destinationSchema =
-        await createDestinationSchemaMutation.mutateAsync({
-          dataSourceId: destinationConnectionId,
-          destinationSchema: destSchemaName,
-          destinationTable: destTableName,
-          transformScript: hasTransformScript ? firstTransformer.transformScript : (hasFieldMappings ? undefined : ''),
-          writeMode: writeMode,
-          upsertKey: primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
-          name: `Destination: ${destTableName}`,
-        });
-
-      // Step 3: Create pipeline with schema IDs
-      await createPipelineMutation.mutateAsync({
+      // Create pipeline using Python API (handles source schema, destination schema, and pipeline creation)
+      const { PythonETLService } = await import('@/lib/api/services/python-etl.service');
+      
+      await PythonETLService.createPipeline(organizationId!, {
         name: `Pipeline ${new Date().toLocaleDateString()}`,
         description: `Pipeline with ${collectorsToUse.length} collector(s)`,
-        sourceSchemaId: sourceSchema.id,
-        destinationSchemaId: destinationSchema.id,
-        syncMode: "full",
-        syncFrequency: "manual",
-        // Transformations can be extracted from the collectors/transformers structure
+        source_schema: {
+          source_type: sourceType,
+          data_source_id: primarySourceId,
+          source_schema: sourceSchemaName,
+          source_table: sourceTableName,
+          name: `Source: ${sourceTableName}`,
+          is_active: true,
+        },
+        destination_schema: {
+          data_source_id: destinationConnectionId,
+          destination_schema: destSchemaName,
+          destination_table: destTableName,
+          transform_script: firstTransformer.transformScript || '',
+          write_mode: writeMode,
+          upsert_key: primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
+          name: `Destination: ${destTableName}`,
+          is_active: true,
+        },
+        sync_mode: "incremental",  // Auto CDC - first run is full, subsequent runs are incremental
+        sync_frequency: "minutes",  // Auto-run every 2 minutes for CDC
+        schedule_type: "minutes",
+        schedule_value: "2",  // 2 minutes default for CDC polling
         transformations: [],
       });
 

@@ -93,18 +93,18 @@ export class DataSourceService {
   }
 
   /**
-   * Delete a data source - calls Python API directly
-   * Python handles validation and calls NestJS for actual database deletion
+   * Delete a data source - calls NestJS API directly
+   * NestJS handles data source deletion
    */
   static async deleteDataSource(
     organizationId: string,
     dataSourceId: string,
   ): Promise<{ deletedId: string }> {
-    // Call Python API directly for deletion
-    const { PythonETLService } = await import('./python-etl.service');
-    
-    const result = await PythonETLService.deleteDataSource(organizationId, dataSourceId);
-    return { deletedId: result.deleted_id || dataSourceId };
+    // Call NestJS API directly for deletion
+    const response = await ApiClient.delete<{ deletedId: string }>(
+      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}`,
+    );
+    return { deletedId: response.deletedId || dataSourceId };
   }
 
   /**

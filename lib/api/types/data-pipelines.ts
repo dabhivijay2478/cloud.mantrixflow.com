@@ -17,7 +17,7 @@ export type PipelineDataSourceType =
   | "snowflake";
 
 export type SyncMode = "full" | "incremental";
-export type SyncFrequency = "manual" | "hourly" | "daily" | "weekly";
+export type SyncFrequency = "manual" | "minutes" | "hourly" | "daily" | "weekly";
 export type WriteMode = "append" | "upsert" | "replace";
 export type PipelineStatus =
   | "idle"

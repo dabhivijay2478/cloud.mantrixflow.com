@@ -3,7 +3,7 @@
  * Service layer for data source endpoints (organization-scoped)
  */
 
-import { ApiClient } from "../client";
+import { ApiClient, type ApiDeleteResponse } from "../client";
 import type {
   Connection,
   ConnectionHealth,
@@ -101,18 +101,18 @@ export class DataSourcesService {
   }
 
   /**
-   * Delete data source - calls Python API directly
-   * Python handles validation and calls NestJS for actual database deletion
+   * Delete data source - calls NestJS API directly
+   * NestJS handles data source deletion
    */
   static async deleteDataSource(
     organizationId: string,
     id: string,
   ): Promise<{ deletedId: string }> {
-    // Call Python API directly for deletion
-    const { PythonETLService } = await import('./python-etl.service');
-    
-    const result = await PythonETLService.deleteDataSource(organizationId, id);
-    return { deletedId: result.deleted_id || id };
+    // Call NestJS API directly for deletion
+    const response = await ApiClient.delete<{ deletedId: string; meta: any }>(
+      `${DataSourcesService.basePath(organizationId)}/${id}`,
+    );
+    return { deletedId: response.deletedId || id };
   }
 
   static async getSupportedTypes(organizationId: string): Promise<string[]> {

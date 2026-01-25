@@ -10,6 +10,8 @@ import {
   Table,
   Trash2,
   X,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
@@ -30,7 +32,10 @@ import {
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
+import { useConnection } from "@/lib/api/hooks/use-connection";
+import { PythonETLService } from "@/lib/api/services/python-etl.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface CollectorConfig {
   id: string;
@@ -50,6 +55,9 @@ export interface CollectorConfig {
     collectorId?: string;
     emitterId?: string;
     fieldMappings?: Array<{ source: string; destination: string }>; // JSON array format
+    transformScript?: string; // Custom Python transform script (preferred over field mappings)
+    destinationTable?: string; // Selected destination table (schema.table format)
+    primaryKeyField?: string; // Explicitly defined primary key field name
   }>;
 }
 
@@ -93,6 +101,19 @@ export function CollectorStep({
   const [editingCollector, setEditingCollector] = useState<string | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  } | null>(null);
+
+  // Get connection details for testing
+  const { data: connection } = useConnection(
+    organizationId,
+    selectedSourceId,
+    true, // includeSensitive to get full config for testing
+  );
 
   // Update collectors when initialCollectors prop changes (for edit mode)
   useEffect(() => {
@@ -174,6 +195,53 @@ export function CollectorStep({
   const handleContinue = () => {
     if (collectors.length > 0) {
       onComplete(collectors);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!selectedSourceId || !connection?.config || !organizationId) {
+      setConnectionTestResult({
+        success: false,
+        error: "Please select a data source with a configured connection",
+      });
+      return;
+    }
+
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+
+    try {
+      const selectedSource = dataSources.find((ds) => ds.id === selectedSourceId);
+      const sourceType = selectedSource?.type || "postgres";
+
+      // Map connection config to test connection format
+      const testConfig: any = {
+        type: sourceType,
+        ...connection.config,
+      };
+
+      // Normalize field names
+      if (connection.config.username && !testConfig.username) {
+        testConfig.username = connection.config.username;
+      }
+      if (connection.config.user && !testConfig.user) {
+        testConfig.user = connection.config.user;
+      }
+
+      const result = await PythonETLService.testConnection(testConfig);
+
+      setConnectionTestResult({
+        success: result.success,
+        message: result.message || "Connection successful",
+        error: result.error,
+      });
+    } catch (error: any) {
+      setConnectionTestResult({
+        success: false,
+        error: error.message || "Failed to test connection",
+      });
+    } finally {
+      setTestingConnection(false);
     }
   };
 
@@ -344,12 +412,37 @@ export function CollectorStep({
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="data-source-select">Data Source</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="data-source-select">Data Source</Label>
+              {selectedSourceId && connection?.config && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                  className="h-8"
+                >
+                  {testingConnection ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-3 w-3" />
+                      Test Connection
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
             <Select
               value={selectedSourceId}
               onValueChange={(value) => {
                 setSelectedSourceId(value);
                 setSelectedTables([]);
+                setConnectionTestResult(null);
               }}
             >
               <SelectTrigger id="data-source-select" className="w-full">
@@ -395,6 +488,31 @@ export function CollectorStep({
                 )}
               </SelectContent>
             </Select>
+            {connectionTestResult && (
+              <Alert
+                variant={connectionTestResult.success ? "default" : "destructive"}
+              >
+                {connectionTestResult.success ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+                <AlertDescription>
+                  {connectionTestResult.success
+                    ? connectionTestResult.message
+                    : connectionTestResult.error}
+                </AlertDescription>
+              </Alert>
+            )}
+            {selectedSourceId && !connection?.config && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Connection not configured for this data source. Please configure
+                  the connection in Data Sources settings first.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           {selectedSourceId && (

@@ -288,11 +288,31 @@ export default function DataPipelinesPage() {
 
     // Handle new lifecycle statuses
     if (pipeline.status === "idle") {
+      // Check if auto-sync is enabled and has run before
+      const hasAutoSync = 
+        pipeline.syncMode === "incremental" ||
+        (pipeline.scheduleType && pipeline.scheduleType !== "none") ||
+        pipeline.syncFrequency === "minutes";
+      const hasRun = 
+        (pipeline.totalRowsProcessed && pipeline.totalRowsProcessed > 0) ||
+        pipeline.lastRunAt;
+      
+      if (hasAutoSync && hasRun) {
+        return (
+          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+            <div className={baseClasses}>
+              <RefreshCw className="h-3 w-3" />
+              Auto-syncing
+            </div>
+          </Badge>
+        );
+      }
+      
       return (
         <Badge className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20">
           <div className={baseClasses}>
             <div className="h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-400" />
-            Idle
+            {hasAutoSync ? "Ready" : "Idle"}
           </div>
         </Badge>
       );
@@ -374,16 +394,30 @@ export default function DataPipelinesPage() {
   };
 
   // Sync frequency badge
-  const getSyncFrequencyBadge = (frequency: string) => {
+  const getSyncFrequencyBadge = (pipeline: Pipeline) => {
+    const frequency = pipeline.syncFrequency;
+    const scheduleType = pipeline.scheduleType;
+    const scheduleValue = pipeline.scheduleValue;
+    
     const colors: Record<string, string> = {
       manual: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
+      minutes: "bg-green-500/10 text-green-700 dark:text-green-400",
       hourly: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
       daily: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
       weekly: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
     };
+    
+    // Format display text
+    let displayText = frequency?.charAt(0).toUpperCase() + frequency?.slice(1) || "Manual";
+    if (frequency === "minutes" || scheduleType === "minutes") {
+      displayText = `Every ${scheduleValue || "2"} min`;
+    } else if (scheduleType && scheduleType !== "none") {
+      displayText = scheduleType.charAt(0).toUpperCase() + scheduleType.slice(1);
+    }
+    
     return (
-      <Badge className={colors[frequency] || colors.manual}>
-        {frequency.charAt(0).toUpperCase() + frequency.slice(1)}
+      <Badge className={colors[frequency || "manual"] || colors.manual}>
+        {displayText}
       </Badge>
     );
   };
@@ -517,7 +551,7 @@ export default function DataPipelinesPage() {
     {
       accessorKey: "syncFrequency",
       header: "Schedule",
-      cell: ({ row }) => getSyncFrequencyBadge(row.original.syncFrequency),
+      cell: ({ row }) => getSyncFrequencyBadge(row.original),
     },
     {
       accessorKey: "totalRowsProcessed",
@@ -571,6 +605,17 @@ export default function DataPipelinesPage() {
           runPipelineMutation.isPending ||
           pausePipelineMutation.isPending ||
           resumePipelineMutation.isPending;
+        
+        // Check if auto-sync is enabled (incremental mode or has schedule)
+        const hasAutoSync = 
+          pipeline.syncMode === "incremental" ||
+          (pipeline.scheduleType && pipeline.scheduleType !== "none") ||
+          pipeline.syncFrequency === "minutes";
+        
+        // Check if first run completed (has processed rows or last run exists)
+        const hasRun = 
+          (pipeline.totalRowsProcessed && pipeline.totalRowsProcessed > 0) ||
+          pipeline.lastRunAt;
 
         return (
           <div className="flex items-center justify-end gap-2">
@@ -591,7 +636,7 @@ export default function DataPipelinesPage() {
                       Resume
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Resume pipeline</TooltipContent>
+                  <TooltipContent>Resume auto-sync</TooltipContent>
                 </Tooltip>
               ) : isRunning ? (
                 <Tooltip>
@@ -606,13 +651,33 @@ export default function DataPipelinesPage() {
                       disabled={isLoading}
                       className="text-amber-600 border-amber-300 hover:bg-amber-50"
                     >
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Running
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Pipeline is syncing</TooltipContent>
+                </Tooltip>
+              ) : hasAutoSync && hasRun ? (
+                // Auto-sync enabled and has run before - show Pause button
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePausePipeline(pipeline.id, pipeline.name);
+                      }}
+                      disabled={isLoading}
+                    >
                       <Pause className="h-4 w-4 mr-1" />
                       Pause
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Pause running pipeline</TooltipContent>
+                  <TooltipContent>Pause auto-sync (checking every 2 min)</TooltipContent>
                 </Tooltip>
               ) : (
+                // First time or manual mode - show Run button
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -625,10 +690,14 @@ export default function DataPipelinesPage() {
                       disabled={isLoading}
                     >
                       <Zap className="h-4 w-4 mr-1" />
-                      Run
+                      {hasAutoSync ? "Start" : "Run"}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Execute pipeline now</TooltipContent>
+                  <TooltipContent>
+                    {hasAutoSync 
+                      ? "Start auto-sync (first full sync, then incremental)" 
+                      : "Execute pipeline now"}
+                  </TooltipContent>
                 </Tooltip>
               )}
             </TooltipProvider>
@@ -675,7 +744,18 @@ export default function DataPipelinesPage() {
                   Dry Run
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {!isPaused && !isRunning && (
+                {isPaused ? (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleResumePipeline(pipeline.id, pipeline.name);
+                    }}
+                    className="text-green-600 focus:text-green-600"
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Resume Auto-Sync
+                  </DropdownMenuItem>
+                ) : !isRunning && hasRun && (
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -684,9 +764,21 @@ export default function DataPipelinesPage() {
                     className="text-amber-600 focus:text-amber-600"
                   >
                     <Pause className="mr-2 h-4 w-4" />
-                    Pause
+                    Pause Auto-Sync
                   </DropdownMenuItem>
                 )}
+                {!isRunning && !hasRun && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRunPipeline(pipeline.id, pipeline.name);
+                    }}
+                  >
+                    <Zap className="mr-2 h-4 w-4" />
+                    Start Sync
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();

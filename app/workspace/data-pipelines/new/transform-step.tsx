@@ -527,24 +527,31 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       return;
 
     // Validate based on transform mode
-    if (transformMode === "script") {
-      if (!transformScript || !transformScript.trim()) {
-        alert("Please provide a Python transform script.");
-        return;
-      }
-    } else {
-      // Validate that field mappings exist and are not empty
-      if (
-        !fieldMappings ||
-        !Array.isArray(fieldMappings) ||
-        fieldMappings.length === 0
-      ) {
-        alert(
-          "Please configure at least one field mapping before saving the transformer.",
-        );
-        return;
-      }
+    // Only script mode is allowed for now - field mappings are commented out
+    if (!transformScript || !transformScript.trim()) {
+      alert("Please provide a Python transform script.");
+      return;
     }
+    
+    // Field mappings validation commented out - only scripts allowed for now
+    // if (transformMode === "script") {
+    //   if (!transformScript || !transformScript.trim()) {
+    //     alert("Please provide a Python transform script.");
+    //     return;
+    //   }
+    // } else {
+    //   // Validate that field mappings exist and are not empty
+    //   if (
+    //     !fieldMappings ||
+    //     !Array.isArray(fieldMappings) ||
+    //     fieldMappings.length === 0
+    //   ) {
+    //     alert(
+    //       "Please configure at least one field mapping before saving the transformer.",
+    //     );
+    //     return;
+    //   }
+    // }
 
     // Ensure fieldMappings is always an array
     const validFieldMappings =
@@ -555,8 +562,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings: transformMode === "mappings" ? validFieldMappings : [],
-      transformScript: transformMode === "script" ? transformScript : undefined,
+      fieldMappings: [], // Field mappings disabled for now - only scripts allowed
+      transformScript: transformScript, // Always use script mode
       destinationTable: selectedDestinationTable, // Store selected destination table
       primaryKeyField:
         primaryKeyField ||
@@ -651,22 +658,19 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         "",
     );
     setTransformScript(transform.transformScript || "");
-    setTransformMode(transform.transformScript ? "script" : "mappings");
+    setTransformMode("script"); // Always use script mode - field mappings disabled
     setShowAddDialog(true);
   };
 
   const handleContinue = () => {
-    // Validate that at least one transformer has field mappings
+    // Validate that at least one transformer has transform script
+    // Field mappings validation removed - only scripts allowed for now
     const hasValidTransformers = collectors.some((collector) => {
       return (
         collector.transformers &&
         collector.transformers.length > 0 &&
         collector.transformers.some((t) => {
-          return (
-            t.fieldMappings &&
-            Array.isArray(t.fieldMappings) &&
-            t.fieldMappings.length > 0
-          );
+          return t.transformScript && t.transformScript.trim().length > 0;
         })
       );
     });
@@ -675,7 +679,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       // This validation is handled in the parent component (page.tsx)
       // We'll still allow continue but the parent will catch it
       console.warn(
-        "No transformers with field mappings found. Pipeline creation will fail.",
+        "No transformers with transform scripts found. Pipeline creation will fail.",
       );
     }
 
@@ -711,12 +715,22 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         <Badge variant="outline">{row.original.emitterName}</Badge>
       ),
     },
+    // Field mappings column commented out - only scripts allowed for now
+    // {
+    //   accessorKey: "fieldMappings",
+    //   header: "Fields Mapped",
+    //   cell: ({ row }) => (
+    //     <Badge variant="secondary">
+    //       {row.original.fieldMappings?.length || 0} fields
+    //     </Badge>
+    //   ),
+    // },
     {
-      accessorKey: "fieldMappings",
-      header: "Fields Mapped",
+      accessorKey: "transformScript",
+      header: "Script",
       cell: ({ row }) => (
         <Badge variant="secondary">
-          {row.original.fieldMappings?.length || 0} fields
+          {row.original.transformScript ? "Configured" : "Not configured"}
         </Badge>
       ),
     },
@@ -795,7 +809,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           "name",
           "collectorName",
           "emitterName",
-          "fieldMappings",
+          "transformScript",
           "actions",
         ]}
         fixedColumns={["name", "actions"]}
@@ -819,7 +833,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !selectedCollectorId ||
                 !selectedEmitterId ||
                 !transformName ||
-                !selectedDestinationTable
+                !selectedDestinationTable ||
+                !transformScript ||
+                !transformScript.trim()
               }
               className="w-full sm:w-auto cursor-pointer"
             >
@@ -1000,17 +1016,19 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 </div>
               )}
 
-              {/* Transform Mode Tabs */}
-              <Tabs value={transformMode} onValueChange={(v) => setTransformMode(v as "mappings" | "script")}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="script" className="flex items-center gap-2">
+              {/* Transform Mode Tabs - Only script mode allowed for now */}
+              {/* Field mappings tab commented out - only scripts allowed */}
+              <Tabs value="script" onValueChange={() => {}}>
+                <TabsList className="grid w-full grid-cols-1">
+                  <TabsTrigger value="script" className="flex items-center gap-2" disabled>
                     <Code className="h-4 w-4" />
                     Python Script
                   </TabsTrigger>
-                  <TabsTrigger value="mappings" className="flex items-center gap-2">
+                  {/* Field Mappings tab commented out for now */}
+                  {/* <TabsTrigger value="mappings" className="flex items-center gap-2">
                     <MapIcon className="h-4 w-4" />
                     Field Mappings
-                  </TabsTrigger>
+                  </TabsTrigger> */}
                 </TabsList>
 
                 {/* Python Script Editor */}
@@ -1069,409 +1087,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   </div>
                 </TabsContent>
 
-                {/* Field Mappings (existing UI) */}
-                <TabsContent value="mappings" className="mt-4">
-                  {/* Side-by-side Field Mapping */}
-                  {selectedDestinationTable && (
-                <div>
-                  {/* Mapping Configuration - Destination to Source */}
-                  <div className="mt-6 space-y-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-base font-semibold">
-                          Map Source Fields to Destination Fields
-                        </Label>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {fieldMappings.length} mapping
-                          {fieldMappings.length !== 1 ? "s" : ""} created
-                        </Badge>
-                        {sourceFields.length === 0 && (
-                          <Badge variant="destructive" className="text-xs shrink-0">
-                            No source fields found
-                          </Badge>
-                        )}
-                        {destinationFields.length === 0 && (
-                          <Badge variant="destructive" className="text-xs shrink-0">
-                            No destination fields found
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {sourceFields.length > 0 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={handleAutoGenerate}
-                          className="h-8 gap-1.5"
-                        >
-                          <Sparkles className="h-3.5 w-3.5" />
-                          Auto Map
-                        </Button>
-                      )}
-                    </div>
-                    {/* Table Layout */}
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="max-h-[500px] md:max-h-[600px] overflow-y-auto">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10 border-b">
-                            <TableRow>
-                              <TableHead className="w-12 text-center">
-                                #
-                              </TableHead>
-                              <TableHead className="min-w-[200px]">
-                                Destination Field
-                              </TableHead>
-                              <TableHead className="min-w-[250px]">
-                                Source Field
-                              </TableHead>
-                              <TableHead className="w-32 text-center">
-                                Primary Key
-                              </TableHead>
-                              <TableHead className="w-20 text-center">
-                                Actions
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {destinationFields.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                  {destinationSchemaQuery[0]?.isLoading ? (
-                                    <div className="flex items-center gap-2 justify-center">
-                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent"></div>
-                                      Loading destination fields...
-                                    </div>
-                                  ) : destinationSchemaQuery[0]?.error ? (
-                                    <div className="text-destructive">
-                                      Error loading destination fields. Please check the destination table selection.
-                                    </div>
-                                  ) : (
-                                    "No destination fields available. Please select a destination table."
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              destinationFields.map(
-                                (
-                                  destinationField: {
-                                    name: string;
-                                    type: string;
-                                    table: string;
-                                  },
-                                  index: number,
-                                ) => {
-                                const mapping = fieldMappings.find(
-                                  (m) =>
-                                    m.destination === destinationField.name,
-                                );
-                                const isIdField =
-                                  destinationField.name.toLowerCase() === "id";
-                                const isPrimaryKey =
-                                  mapping?.isPrimaryKey || false;
-                                // Allow setting PK on any mapped field - we auto-remove PK from others
-                                const canSetPrimaryKey = !!mapping;
-
-                                return (
-                                  <TableRow
-                                    key={destinationField.name}
-                                    className={`${
-                                      mapping
-                                        ? isPrimaryKey
-                                          ? "bg-primary/5 hover:bg-primary/10"
-                                          : "bg-blue-50/30 dark:bg-blue-950/10 hover:bg-blue-50/50 dark:hover:bg-blue-950/20"
-                                        : isIdField
-                                          ? "bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50/70 dark:hover:bg-amber-950/30"
-                                          : "hover:bg-muted/50"
-                                    } transition-colors`}
-                                  >
-                                    {/* Row Number */}
-                                    <TableCell className="text-center text-muted-foreground font-medium">
-                                      {index + 1}
-                                    </TableCell>
-
-                                    {/* Destination Field */}
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <div
-                                          className={`h-8 w-8 rounded-md flex items-center justify-center shrink-0 ${
-                                            isIdField
-                                              ? "bg-amber-100 dark:bg-amber-900/40"
-                                              : isPrimaryKey
-                                                ? "bg-primary/20"
-                                                : "bg-green-100 dark:bg-green-900/40"
-                                          }`}
-                                        >
-                                          <Database
-                                            className={`h-4 w-4 ${
-                                              isIdField
-                                                ? "text-amber-600 dark:text-amber-400"
-                                                : isPrimaryKey
-                                                  ? "text-primary"
-                                                  : "text-green-600 dark:text-green-400"
-                                            }`}
-                                          />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <p className="font-semibold text-sm truncate">
-                                              {destinationField.name}
-                                            </p>
-                                            {isPrimaryKey && (
-                                              <Badge
-                                                variant="default"
-                                                className="h-5 px-1.5 text-[10px] shrink-0"
-                                              >
-                                                PK
-                                              </Badge>
-                                            )}
-                                            {isIdField && !mapping && (
-                                              <Badge
-                                                variant="outline"
-                                                className="h-5 px-1.5 text-[10px] shrink-0 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700"
-                                              >
-                                                Required
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                                            {destinationField.type}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </TableCell>
-
-                                    {/* Source Field Select */}
-                                    <TableCell>
-                                      <Select
-                                        value={mapping?.source || undefined}
-                                        onValueChange={(value) => {
-                                          if (value?.trim()) {
-                                            handleFieldMapping(
-                                              value,
-                                              destinationField.name,
-                                            );
-                                          }
-                                        }}
-                                        required={isIdField}
-                                      >
-                                        <SelectTrigger
-                                          className={`w-full ${
-                                            isIdField && !mapping
-                                              ? "border-amber-300 dark:border-amber-700"
-                                              : mapping
-                                                ? "border-primary/50"
-                                                : ""
-                                          }`}
-                                        >
-                                          <SelectValue
-                                            placeholder={
-                                              isIdField
-                                                ? "Select ID field (required)"
-                                                : "Select source field"
-                                            }
-                                          >
-                                            {mapping && (
-                                              <div className="flex flex-col items-start gap-0.5 text-left">
-                                                <span className="font-medium text-sm">
-                                                  {mapping.source
-                                                    .split(".")
-                                                    .pop() || mapping.source}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                                  {mapping.source}
-                                                </span>
-                                              </div>
-                                            )}
-                                          </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {sourceFields.length === 0 ? (
-                                            <div className="p-4 text-center text-sm text-muted-foreground">
-                                              {sourceSchemaQueries.some(q => q.isLoading) ? (
-                                                <div className="flex items-center gap-2 justify-center">
-                                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent"></div>
-                                                  Loading source fields...
-                                                </div>
-                                              ) : sourceSchemaQueries.some(q => q.error) ? (
-                                                <div className="text-destructive">
-                                                  Error loading source fields. Please check the collector configuration.
-                                                </div>
-                                              ) : (
-                                                "No source fields available. Please ensure the collector has selected tables and schema discovery is complete."
-                                              )}
-                                            </div>
-                                          ) : (
-                                            sourceFields.map((field) => {
-                                              // Allow same source field to be mapped to multiple destinations
-                                              const mappedToOther =
-                                                fieldMappings.filter(
-                                                  (m) =>
-                                                    m.source === field.name &&
-                                                    m.destination !==
-                                                      destinationField.name,
-                                                );
-                                              const isCurrentlyMapped =
-                                                fieldMappings.some(
-                                                  (m) =>
-                                                    m.source === field.name &&
-                                                    m.destination ===
-                                                      destinationField.name,
-                                                );
-                                              return (
-                                                <SelectItem
-                                                  key={field.name}
-                                                  value={field.name}
-                                                >
-                                                  <div className="flex items-center gap-2 w-full">
-                                                    <span className="font-medium truncate">
-                                                      {field.name}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground shrink-0">
-                                                      ({field.type})
-                                                    </span>
-                                                    {mappedToOther.length > 0 && (
-                                                      <Badge
-                                                        variant="secondary"
-                                                        className="text-xs ml-auto shrink-0"
-                                                      >
-                                                        +{mappedToOther.length}
-                                                      </Badge>
-                                                    )}
-                                                    {isCurrentlyMapped && (
-                                                      <Badge
-                                                        variant="default"
-                                                        className="text-xs ml-auto shrink-0"
-                                                      >
-                                                        Current
-                                                      </Badge>
-                                                    )}
-                                                  </div>
-                                                </SelectItem>
-                                              );
-                                            })
-                                          )}
-                                        </SelectContent>
-                                      </Select>
-                                    </TableCell>
-
-                                    {/* Primary Key Toggle */}
-                                    <TableCell className="text-center">
-                                      {mapping ? (
-                                        <Button
-                                          variant={
-                                            isPrimaryKey ? "default" : "outline"
-                                          }
-                                          size="sm"
-                                          className={`h-8 w-8 p-0 ${
-                                            isPrimaryKey
-                                              ? "bg-primary hover:bg-primary/90"
-                                              : canSetPrimaryKey
-                                                ? "hover:border-primary/50"
-                                                : "opacity-50 cursor-not-allowed"
-                                          }`}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (!canSetPrimaryKey) return;
-
-                                            const willBePrimaryKey =
-                                              !mapping.isPrimaryKey;
-
-                                            setFieldMappings((prev) =>
-                                              prev.map((m) => {
-                                                // Toggle PK for this field
-                                                if (
-                                                  m.destination ===
-                                                  destinationField.name
-                                                ) {
-                                                  return {
-                                                    ...m,
-                                                    isPrimaryKey:
-                                                      willBePrimaryKey,
-                                                  };
-                                                }
-                                                // Remove PK from all other fields if setting this as PK
-                                                if (
-                                                  willBePrimaryKey &&
-                                                  m.isPrimaryKey
-                                                ) {
-                                                  return {
-                                                    ...m,
-                                                    isPrimaryKey: false,
-                                                  };
-                                                }
-                                                return m;
-                                              }),
-                                            );
-
-                                            // Update primary key field state
-                                            if (willBePrimaryKey) {
-                                              setPrimaryKeyField(
-                                                destinationField.name,
-                                              );
-                                            } else {
-                                              setPrimaryKeyField("");
-                                            }
-                                          }}
-                                          disabled={!canSetPrimaryKey}
-                                          title={
-                                            isPrimaryKey
-                                              ? "Remove as Primary Key"
-                                              : "Set as Primary Key"
-                                          }
-                                        >
-                                          <Key
-                                            className={`h-4 w-4 ${
-                                              isPrimaryKey
-                                                ? "text-primary-foreground"
-                                                : ""
-                                            }`}
-                                          />
-                                        </Button>
-                                      ) : (
-                                        <span className="text-xs text-muted-foreground">
-                                          -
-                                        </span>
-                                      )}
-                                    </TableCell>
-
-                                    {/* Delete Action */}
-                                    <TableCell className="text-center">
-                                      {mapping ? (
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                          onClick={() => {
-                                            if (mapping.isPrimaryKey) {
-                                              setPrimaryKeyField("");
-                                            }
-                                            handleRemoveMapping(
-                                              destinationField.name,
-                                            );
-                                          }}
-                                          title="Remove mapping"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      ) : (
-                                        <span className="text-xs text-muted-foreground">
-                                          -
-                                        </span>
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              },
-                            )
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                  )}
-                </TabsContent>
+                {/* Field Mappings tab commented out - only scripts allowed for now */}
               </Tabs>
             </div>
           )}
