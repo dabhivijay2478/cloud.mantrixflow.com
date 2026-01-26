@@ -4,15 +4,16 @@ import { useQueries } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
+  Code,
   Database,
   Edit,
-  Key,
   Map as MapIcon,
   Pause,
   Plus,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { PythonScriptEditor } from "@/components/data-pipelines/python-script-editor";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,14 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useConnections,
   useSchemasWithTables,
@@ -56,7 +50,8 @@ export interface TransformConfig {
     source: string;
     destination: string;
     isPrimaryKey?: boolean;
-  }>; // JSON array format with primary key flag
+  }>; // JSON array format with primary key flag (legacy - use transformScript instead)
+  transformScript?: string; // Custom Python transform script (preferred)
   destinationTable?: string; // Selected destination table (schema.table format)
   primaryKeyField?: string; // Explicitly defined primary key field name
   status?: "published" | "paused";
@@ -74,7 +69,16 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: "postgres" as const,
+      type: (conn.type || "postgres") as
+        | "postgres"
+        | "mysql"
+        | "mongodb"
+        | "s3"
+        | "api"
+        | "bigquery"
+        | "snowflake"
+        | "redshift"
+        | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)
@@ -94,7 +98,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [fieldMappings, setFieldMappings] = useState<
     Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
   >([]);
+  const [generatedDestinationFields, setGeneratedDestinationFields] = useState<
+    Array<{ name: string; type: string; table: string }>
+  >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
+  const [transformScript, setTransformScript] = useState<string>("");
+  const [_transformMode, setTransformMode] = useState<"mappings" | "script">(
+    "script",
+  );
 
   // Debug: Log when collectors prop changes
   useEffect(() => {
@@ -208,6 +219,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     );
   }, [destinationSchemas]);
 
+  // Get source data source type to handle MongoDB differently
+  const sourceDataSource = useMemo(() => {
+    if (!selectedCollector) return null;
+    return dataSources.find((ds) => ds.id === selectedCollector.sourceId);
+  }, [selectedCollector, dataSources]);
+
   // Parse selected tables and prepare queries for source (collector)
   const sourceTableQueries = useMemo(() => {
     if (
@@ -219,29 +236,64 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     }
 
     return selectedCollector.selectedTables.map((tableName) => {
-      const parts = tableName.includes(".")
-        ? tableName.split(".")
-        : ["public", tableName];
-      const schema = parts[0];
-      const table = parts[1];
+      // For MongoDB: format is "database.collection" or just "collection"
+      // For SQL: format is "schema.table" or just "table"
+      const isMongoDB = sourceDataSource?.type === "mongodb";
 
-      return {
-        tableName,
-        schema,
-        table,
-        connectionId: selectedCollector.sourceId,
-      };
+      if (tableName.includes(".")) {
+        const parts = tableName.split(".");
+        return {
+          tableName,
+          schema: parts[0], // database for MongoDB, schema for SQL
+          table: parts[1], // collection for MongoDB, table for SQL
+          connectionId: selectedCollector.sourceId,
+          isMongoDB,
+        };
+      } else {
+        // No schema/database prefix
+        return {
+          tableName,
+          schema: isMongoDB ? undefined : "public", // MongoDB: search all, SQL: default to public
+          table: tableName,
+          connectionId: selectedCollector.sourceId,
+          isMongoDB,
+        };
+      }
     });
-  }, [selectedCollector]);
+  }, [selectedCollector, sourceDataSource]);
 
   // Fetch schemas for source tables
   const sourceSchemaQueries = useQueries({
     queries: sourceTableQueries.map(
-      ({ tableName: _tableName, schema, table, connectionId }) => ({
-        queryKey: ["table-schema", connectionId, table, schema, "source"],
-        queryFn: () =>
-          DataSourcesService.getTableSchema(connectionId, table, schema, orgId),
+      ({ tableName: _tableName, schema, table, connectionId, isMongoDB }) => ({
+        queryKey: [
+          "table-schema",
+          connectionId,
+          table,
+          schema || "none",
+          "source",
+          isMongoDB ? "mongodb" : "sql",
+        ],
+        queryFn: async () => {
+          try {
+            const result = await DataSourcesService.getTableSchema(
+              connectionId,
+              table,
+              schema,
+              orgId,
+            );
+            console.log(`Fetched schema for ${table}:`, {
+              columnsCount: result.columns?.length || 0,
+              columns: result.columns?.map((c: { name: string }) => c.name),
+            });
+            return result;
+          } catch (error) {
+            console.error(`Failed to fetch schema for ${table}:`, error);
+            throw error;
+          }
+        },
         enabled: !!connectionId && !!table && !!orgId,
+        retry: 2,
       }),
     ),
   });
@@ -251,18 +303,56 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const fields: Array<{ name: string; type: string; table: string }> = [];
 
     sourceSchemaQueries.forEach((query, index) => {
-      if (query.data?.columns) {
+      if (query.isLoading) {
+        console.log(
+          `Loading schema for table ${sourceTableQueries[index]?.tableName}...`,
+        );
+        return;
+      }
+
+      if (query.error) {
+        console.error(
+          `Error loading schema for table ${sourceTableQueries[index]?.tableName}:`,
+          query.error,
+        );
+        return;
+      }
+
+      if (query.data?.columns && query.data.columns.length > 0) {
         const tableInfo = sourceTableQueries[index];
         query.data.columns.forEach((col) => {
+          // For MongoDB, use field name directly (may include nested paths like "address.city")
+          // For SQL, prefix with table name
+          const fieldName = tableInfo.isMongoDB
+            ? col.name
+            : `${tableInfo.tableName}.${col.name}`;
+
           fields.push({
-            name: `${tableInfo.tableName}.${col.name}`,
+            name: fieldName,
             type: col.dataType || "unknown",
             table: tableInfo.tableName,
           });
         });
+
+        console.log(
+          `Added ${query.data.columns.length} fields from ${tableInfo.tableName}`,
+        );
+      } else {
+        console.warn(
+          `No columns found for table ${sourceTableQueries[index]?.tableName}`,
+          {
+            data: query.data,
+            hasData: !!query.data,
+            columnsLength: query.data?.columns?.length,
+          },
+        );
       }
     });
 
+    console.log(
+      `Total source fields: ${fields.length}`,
+      fields.map((f) => f.name),
+    );
     return fields;
   }, [sourceSchemaQueries, sourceTableQueries]);
 
@@ -319,30 +409,69 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     ],
   });
 
-  // Build destination fields from fetched table schema
+  // Build destination fields from fetched table schema + generated fields
   const destinationFields = useMemo(() => {
-    if (!destinationTableQuery) return [];
+    if (!destinationTableQuery) return generatedDestinationFields;
     const queryResult = destinationSchemaQuery[0];
-    if (!queryResult?.data?.columns) return [];
 
-    return queryResult.data.columns.map((col) => {
-      // Handle both Column objects and string arrays
-      if (typeof col === "string") {
+    // If we have actual table columns, use them
+    if (queryResult?.data?.columns && queryResult.data.columns.length > 0) {
+      return queryResult.data.columns.map((col) => {
+        // Handle both Column objects and string arrays
+        if (typeof col === "string") {
+          return {
+            name: col,
+            type: "unknown",
+            table: destinationTableQuery.tableName || "",
+          };
+        }
         return {
-          name: col,
-          type: "unknown",
+          name: col.name,
+          type: col.dataType || "unknown",
           table: destinationTableQuery.tableName || "",
         };
-      }
+      });
+    }
+
+    // Otherwise use generated fields
+    return generatedDestinationFields;
+  }, [
+    destinationSchemaQuery,
+    destinationTableQuery,
+    generatedDestinationFields,
+  ]);
+
+  const _handleAutoGenerate = () => {
+    if (sourceFields.length === 0) return;
+
+    // 1. Generate destination fields from source fields
+    // Flatten fields: "address.city" -> "address_city"
+    const newGenerations = sourceFields.map((sf) => ({
+      name: sf.name.replace(/\./g, "_"),
+      type: sf.type,
+      table: selectedDestinationTable || "generated",
+    }));
+
+    setGeneratedDestinationFields(newGenerations);
+
+    // 2. Create Mappings
+    const newMappings = newGenerations.map((df, index) => {
+      const sourceField = sourceFields[index];
+      // Determine if ID/PK
+      const isId =
+        sourceField.name === "_id" || sourceField.name.toLowerCase() === "id";
+
       return {
-        name: col.name,
-        type: col.dataType || "unknown",
-        table: destinationTableQuery.tableName || "",
+        source: sourceField.name,
+        destination: df.name,
+        isPrimaryKey: isId,
       };
     });
-  }, [destinationSchemaQuery, destinationTableQuery]);
 
-  const handleFieldMapping = (
+    setFieldMappings(newMappings);
+  };
+
+  const _handleFieldMapping = (
     sourceField: string,
     destinationField: string,
   ) => {
@@ -406,7 +535,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     });
   };
 
-  const handleRemoveMapping = (destinationField: string) => {
+  const _handleRemoveMapping = (destinationField: string) => {
     setFieldMappings((prev) =>
       prev.filter((m) => m.destination !== destinationField),
     );
@@ -421,31 +550,45 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     )
       return;
 
-    // Validate that field mappings exist and are not empty
-    if (
-      !fieldMappings ||
-      !Array.isArray(fieldMappings) ||
-      fieldMappings.length === 0
-    ) {
-      // Show error - field mappings are required
-      alert(
-        "Please configure at least one field mapping before saving the transformer.",
-      );
+    // Validate based on transform mode
+    // Only script mode is allowed for now - field mappings are commented out
+    if (!transformScript || !transformScript.trim()) {
+      alert("Please provide a Python transform script.");
       return;
     }
 
-    // Ensure fieldMappings is always an array and not empty
-    const validFieldMappings =
-      Array.isArray(fieldMappings) && fieldMappings.length > 0
-        ? fieldMappings
-        : [];
+    // Field mappings validation commented out - only scripts allowed for now
+    // if (transformMode === "script") {
+    //   if (!transformScript || !transformScript.trim()) {
+    //     alert("Please provide a Python transform script.");
+    //     return;
+    //   }
+    // } else {
+    //   // Validate that field mappings exist and are not empty
+    //   if (
+    //     !fieldMappings ||
+    //     !Array.isArray(fieldMappings) ||
+    //     fieldMappings.length === 0
+    //   ) {
+    //     alert(
+    //       "Please configure at least one field mapping before saving the transformer.",
+    //     );
+    //     return;
+    //   }
+    // }
+
+    // Ensure fieldMappings is always an array
+    const validFieldMappings = Array.isArray(fieldMappings)
+      ? fieldMappings
+      : [];
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings: validFieldMappings, // Always ensure it's a valid array
+      fieldMappings: [], // Field mappings disabled for now - only scripts allowed
+      transformScript: transformScript, // Always use script mode
       destinationTable: selectedDestinationTable, // Store selected destination table
       primaryKeyField:
         primaryKeyField ||
@@ -475,6 +618,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedDestinationTable("");
     setTransformName("");
     setFieldMappings([]);
+    setTransformScript("");
+    setTransformMode("script");
   };
 
   const handleDeleteTransform = (collectorId: string, transformId: string) => {
@@ -508,6 +653,22 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   };
 
   const handleEditTransform = (transform: TransformConfig) => {
+    console.log("handleEditTransform - Setting form state:", {
+      transformId: transform.id,
+      collectorId: transform.collectorId,
+      emitterId: transform.emitterId,
+      name: transform.name,
+      destinationTable: transform.destinationTable,
+      fieldMappingsCount: transform.fieldMappings?.length || 0,
+      fieldMappings: transform.fieldMappings,
+      availableEmittersCount: allEmitters.length,
+      allEmitters: allEmitters.map((e) => ({
+        id: e.id,
+        collectorId: e.collectorId,
+        destinationId: e.destinationId,
+        destinationName: e.destinationName,
+      })),
+    });
     setEditingTransform(transform.id);
     setSelectedCollectorId(transform.collectorId);
     setSelectedEmitterId(transform.emitterId);
@@ -521,21 +682,20 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         )?.destination ||
         "",
     );
+    setTransformScript(transform.transformScript || "");
+    setTransformMode("script"); // Always use script mode - field mappings disabled
     setShowAddDialog(true);
   };
 
   const handleContinue = () => {
-    // Validate that at least one transformer has field mappings
+    // Validate that at least one transformer has transform script
+    // Field mappings validation removed - only scripts allowed for now
     const hasValidTransformers = collectors.some((collector) => {
       return (
         collector.transformers &&
         collector.transformers.length > 0 &&
         collector.transformers.some((t) => {
-          return (
-            t.fieldMappings &&
-            Array.isArray(t.fieldMappings) &&
-            t.fieldMappings.length > 0
-          );
+          return t.transformScript && t.transformScript.trim().length > 0;
         })
       );
     });
@@ -544,7 +704,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       // This validation is handled in the parent component (page.tsx)
       // We'll still allow continue but the parent will catch it
       console.warn(
-        "No transformers with field mappings found. Pipeline creation will fail.",
+        "No transformers with transform scripts found. Pipeline creation will fail.",
       );
     }
 
@@ -580,12 +740,22 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         <Badge variant="outline">{row.original.emitterName}</Badge>
       ),
     },
+    // Field mappings column commented out - only scripts allowed for now
+    // {
+    //   accessorKey: "fieldMappings",
+    //   header: "Fields Mapped",
+    //   cell: ({ row }) => (
+    //     <Badge variant="secondary">
+    //       {row.original.fieldMappings?.length || 0} fields
+    //     </Badge>
+    //   ),
+    // },
     {
-      accessorKey: "fieldMappings",
-      header: "Fields Mapped",
+      accessorKey: "transformScript",
+      header: "Script",
       cell: ({ row }) => (
         <Badge variant="secondary">
-          {row.original.fieldMappings?.length || 0} fields
+          {row.original.transformScript ? "Configured" : "Not configured"}
         </Badge>
       ),
     },
@@ -664,7 +834,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           "name",
           "collectorName",
           "emitterName",
-          "fieldMappings",
+          "transformScript",
           "actions",
         ]}
         fixedColumns={["name", "actions"]}
@@ -688,7 +858,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !selectedCollectorId ||
                 !selectedEmitterId ||
                 !transformName ||
-                !selectedDestinationTable
+                !selectedDestinationTable ||
+                !transformScript ||
+                !transformScript.trim()
               }
               className="w-full sm:w-auto cursor-pointer"
             >
@@ -857,353 +1029,130 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             )}
           </div>
 
-          {selectedCollectorId && selectedEmitterId && (
-            <div className="space-y-4">
-              {/* Side-by-side Field Mapping */}
-              {selectedDestinationTable && (
-                <div>
-                  {/* Mapping Configuration - Destination to Source */}
-                  <div className="mt-6 space-y-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <Label className="text-base font-semibold">
-                        Map Source Fields to Destination Fields
-                      </Label>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {fieldMappings.length} mapping
-                        {fieldMappings.length !== 1 ? "s" : ""} created
-                      </Badge>
+          {selectedCollectorId &&
+            selectedEmitterId &&
+            selectedDestinationTable && (
+              <div className="space-y-4">
+                {/* Debug info */}
+                {process.env.NODE_ENV === "development" && (
+                  <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                    <div>Source Fields: {sourceFields.length}</div>
+                    <div>Destination Fields: {destinationFields.length}</div>
+                    <div>
+                      Source Queries: {sourceSchemaQueries.length} (loading:{" "}
+                      {sourceSchemaQueries.filter((q) => q.isLoading).length},
+                      errors:{" "}
+                      {sourceSchemaQueries.filter((q) => q.error).length})
                     </div>
-                    {/* Table Layout */}
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="max-h-[500px] md:max-h-[600px] overflow-y-auto">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10 border-b">
-                            <TableRow>
-                              <TableHead className="w-12 text-center">
-                                #
-                              </TableHead>
-                              <TableHead className="min-w-[200px]">
-                                Destination Field
-                              </TableHead>
-                              <TableHead className="min-w-[250px]">
-                                Source Field
-                              </TableHead>
-                              <TableHead className="w-32 text-center">
-                                Primary Key
-                              </TableHead>
-                              <TableHead className="w-20 text-center">
-                                Actions
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {destinationFields.map(
-                              (
-                                destinationField: {
-                                  name: string;
-                                  type: string;
-                                  table: string;
-                                },
-                                index: number,
-                              ) => {
-                                const mapping = fieldMappings.find(
-                                  (m) =>
-                                    m.destination === destinationField.name,
-                                );
-                                const isIdField =
-                                  destinationField.name.toLowerCase() === "id";
-                                const isPrimaryKey =
-                                  mapping?.isPrimaryKey || false;
-                                const hasPrimaryKey = !!primaryKeyField;
-                                const canSetPrimaryKey =
-                                  !hasPrimaryKey || isPrimaryKey;
-
-                                return (
-                                  <TableRow
-                                    key={destinationField.name}
-                                    className={`${
-                                      mapping
-                                        ? isPrimaryKey
-                                          ? "bg-primary/5 hover:bg-primary/10"
-                                          : "bg-blue-50/30 dark:bg-blue-950/10 hover:bg-blue-50/50 dark:hover:bg-blue-950/20"
-                                        : isIdField
-                                          ? "bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50/70 dark:hover:bg-amber-950/30"
-                                          : "hover:bg-muted/50"
-                                    } transition-colors`}
-                                  >
-                                    {/* Row Number */}
-                                    <TableCell className="text-center text-muted-foreground font-medium">
-                                      {index + 1}
-                                    </TableCell>
-
-                                    {/* Destination Field */}
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <div
-                                          className={`h-8 w-8 rounded-md flex items-center justify-center shrink-0 ${
-                                            isIdField
-                                              ? "bg-amber-100 dark:bg-amber-900/40"
-                                              : isPrimaryKey
-                                                ? "bg-primary/20"
-                                                : "bg-green-100 dark:bg-green-900/40"
-                                          }`}
-                                        >
-                                          <Database
-                                            className={`h-4 w-4 ${
-                                              isIdField
-                                                ? "text-amber-600 dark:text-amber-400"
-                                                : isPrimaryKey
-                                                  ? "text-primary"
-                                                  : "text-green-600 dark:text-green-400"
-                                            }`}
-                                          />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <p className="font-semibold text-sm truncate">
-                                              {destinationField.name}
-                                            </p>
-                                            {isPrimaryKey && (
-                                              <Badge
-                                                variant="default"
-                                                className="h-5 px-1.5 text-[10px] shrink-0"
-                                              >
-                                                PK
-                                              </Badge>
-                                            )}
-                                            {isIdField && !mapping && (
-                                              <Badge
-                                                variant="outline"
-                                                className="h-5 px-1.5 text-[10px] shrink-0 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700"
-                                              >
-                                                Required
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                                            {destinationField.type}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </TableCell>
-
-                                    {/* Source Field Select */}
-                                    <TableCell>
-                                      <Select
-                                        value={mapping?.source || undefined}
-                                        onValueChange={(value) => {
-                                          if (value?.trim()) {
-                                            handleFieldMapping(
-                                              value,
-                                              destinationField.name,
-                                            );
-                                          }
-                                        }}
-                                        required={isIdField}
-                                      >
-                                        <SelectTrigger
-                                          className={`w-full ${
-                                            isIdField && !mapping
-                                              ? "border-amber-300 dark:border-amber-700"
-                                              : mapping
-                                                ? "border-primary/50"
-                                                : ""
-                                          }`}
-                                        >
-                                          <SelectValue
-                                            placeholder={
-                                              isIdField
-                                                ? "Select ID field (required)"
-                                                : "Select source field"
-                                            }
-                                          >
-                                            {mapping && (
-                                              <div className="flex flex-col items-start gap-0.5 text-left">
-                                                <span className="font-medium text-sm">
-                                                  {mapping.source
-                                                    .split(".")
-                                                    .pop() || mapping.source}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                                  {mapping.source}
-                                                </span>
-                                              </div>
-                                            )}
-                                          </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {sourceFields.map((field) => {
-                                            // Allow same source field to be mapped to multiple destinations
-                                            const mappedToOther =
-                                              fieldMappings.filter(
-                                                (m) =>
-                                                  m.source === field.name &&
-                                                  m.destination !==
-                                                    destinationField.name,
-                                              );
-                                            const isCurrentlyMapped =
-                                              fieldMappings.some(
-                                                (m) =>
-                                                  m.source === field.name &&
-                                                  m.destination ===
-                                                    destinationField.name,
-                                              );
-                                            return (
-                                              <SelectItem
-                                                key={field.name}
-                                                value={field.name}
-                                              >
-                                                <div className="flex items-center gap-2 w-full">
-                                                  <span className="font-medium truncate">
-                                                    {field.name}
-                                                  </span>
-                                                  <span className="text-xs text-muted-foreground shrink-0">
-                                                    ({field.type})
-                                                  </span>
-                                                  {mappedToOther.length > 0 && (
-                                                    <Badge
-                                                      variant="secondary"
-                                                      className="text-xs ml-auto shrink-0"
-                                                    >
-                                                      +{mappedToOther.length}
-                                                    </Badge>
-                                                  )}
-                                                  {isCurrentlyMapped && (
-                                                    <Badge
-                                                      variant="default"
-                                                      className="text-xs ml-auto shrink-0"
-                                                    >
-                                                      Current
-                                                    </Badge>
-                                                  )}
-                                                </div>
-                                              </SelectItem>
-                                            );
-                                          })}
-                                        </SelectContent>
-                                      </Select>
-                                    </TableCell>
-
-                                    {/* Primary Key Toggle */}
-                                    <TableCell className="text-center">
-                                      {mapping ? (
-                                        <Button
-                                          variant={
-                                            isPrimaryKey ? "default" : "outline"
-                                          }
-                                          size="sm"
-                                          className={`h-8 w-8 p-0 ${
-                                            isPrimaryKey
-                                              ? "bg-primary hover:bg-primary/90"
-                                              : canSetPrimaryKey
-                                                ? "hover:border-primary/50"
-                                                : "opacity-50 cursor-not-allowed"
-                                          }`}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (!canSetPrimaryKey) return;
-
-                                            const willBePrimaryKey =
-                                              !mapping.isPrimaryKey;
-
-                                            setFieldMappings((prev) =>
-                                              prev.map((m) => {
-                                                // Toggle PK for this field
-                                                if (
-                                                  m.destination ===
-                                                  destinationField.name
-                                                ) {
-                                                  return {
-                                                    ...m,
-                                                    isPrimaryKey:
-                                                      willBePrimaryKey,
-                                                  };
-                                                }
-                                                // Remove PK from all other fields if setting this as PK
-                                                if (
-                                                  willBePrimaryKey &&
-                                                  m.isPrimaryKey
-                                                ) {
-                                                  return {
-                                                    ...m,
-                                                    isPrimaryKey: false,
-                                                  };
-                                                }
-                                                return m;
-                                              }),
-                                            );
-
-                                            // Update primary key field state
-                                            if (willBePrimaryKey) {
-                                              setPrimaryKeyField(
-                                                destinationField.name,
-                                              );
-                                            } else {
-                                              setPrimaryKeyField("");
-                                            }
-                                          }}
-                                          disabled={!canSetPrimaryKey}
-                                          title={
-                                            isPrimaryKey
-                                              ? "Remove as Primary Key"
-                                              : hasPrimaryKey
-                                                ? "Another field is already set as Primary Key"
-                                                : "Set as Primary Key"
-                                          }
-                                        >
-                                          <Key
-                                            className={`h-4 w-4 ${
-                                              isPrimaryKey
-                                                ? "text-primary-foreground"
-                                                : ""
-                                            }`}
-                                          />
-                                        </Button>
-                                      ) : (
-                                        <span className="text-xs text-muted-foreground">
-                                          -
-                                        </span>
-                                      )}
-                                    </TableCell>
-
-                                    {/* Delete Action */}
-                                    <TableCell className="text-center">
-                                      {mapping ? (
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                          onClick={() => {
-                                            if (mapping.isPrimaryKey) {
-                                              setPrimaryKeyField("");
-                                            }
-                                            handleRemoveMapping(
-                                              destinationField.name,
-                                            );
-                                          }}
-                                          title="Remove mapping"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      ) : (
-                                        <span className="text-xs text-muted-foreground">
-                                          -
-                                        </span>
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              },
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
+                    <div>
+                      Destination Query:{" "}
+                      {destinationSchemaQuery[0]?.isLoading
+                        ? "loading"
+                        : destinationSchemaQuery[0]?.error
+                          ? "error"
+                          : "ready"}
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+
+                {/* Transform Mode Tabs - Only script mode allowed for now */}
+                {/* Field mappings tab commented out - only scripts allowed */}
+                <Tabs value="script" onValueChange={() => {}}>
+                  <TabsList className="grid w-full grid-cols-1">
+                    <TabsTrigger
+                      value="script"
+                      className="flex items-center gap-2"
+                      disabled
+                    >
+                      <Code className="h-4 w-4" />
+                      Python Script
+                    </TabsTrigger>
+                    {/* Field Mappings tab commented out for now */}
+                    {/* <TabsTrigger value="mappings" className="flex items-center gap-2">
+                    <MapIcon className="h-4 w-4" />
+                    Field Mappings
+                  </TabsTrigger> */}
+                  </TabsList>
+
+                  {/* Python Script Editor */}
+                  <TabsContent value="script" className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Transform Script
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Write a Python function that transforms source records.
+                        Use{" "}
+                        <code className="px-1 py-0.5 bg-muted rounded">
+                          record.get("source_field")
+                        </code>{" "}
+                        to read from source data.
+                      </p>
+                      <PythonScriptEditor
+                        value={transformScript}
+                        onChange={setTransformScript}
+                        sampleRecord={
+                          sourceFields.length > 0
+                            ? sourceFields.reduce(
+                                (acc, field) => {
+                                  // Create a sample record with example values based on field type
+                                  // Handle nested fields (e.g., "address.city")
+                                  const fieldPath = field.name.split(".");
+                                  const fieldName =
+                                    fieldPath[fieldPath.length - 1];
+
+                                  const exampleValue =
+                                    field.type === "integer" ||
+                                    field.type === "number"
+                                      ? 123
+                                      : field.type === "boolean"
+                                        ? true
+                                        : field.type === "date" ||
+                                            field.type === "timestamp"
+                                          ? "2024-01-01"
+                                          : fieldName
+                                                .toLowerCase()
+                                                .includes("email")
+                                            ? "example@email.com"
+                                            : fieldName
+                                                  .toLowerCase()
+                                                  .includes("url")
+                                              ? "https://example.com"
+                                              : `Sample ${fieldName}`;
+
+                                  // Set nested value
+                                  if (fieldPath.length > 1) {
+                                    let current = acc;
+                                    for (
+                                      let i = 0;
+                                      i < fieldPath.length - 1;
+                                      i++
+                                    ) {
+                                      if (!current[fieldPath[i]]) {
+                                        current[fieldPath[i]] = {};
+                                      }
+                                      current = current[fieldPath[i]] as Record<string, unknown>;
+                                    }
+                                    current[fieldName] = exampleValue;
+                                  } else {
+                                    acc[field.name] = exampleValue;
+                                  }
+
+                                  return acc;
+                                },
+                                {} as Record<string, unknown>,
+                              )
+                            : undefined
+                        }
+                        height="500px"
+                      />
+                    </div>
+                  </TabsContent>
+
+                  {/* Field Mappings tab commented out - only scripts allowed for now */}
+                </Tabs>
+              </div>
+            )}
         </div>
       </FormSheet>
 

@@ -9,6 +9,7 @@ import type {
   InviteMemberDto,
   Organization,
   OrganizationMember,
+  TransferOwnershipDto,
   UpdateMemberDto,
   UpdateOrganizationDto,
 } from "../types/organizations";
@@ -82,11 +83,6 @@ export class OrganizationsService {
     data: InviteMemberDto,
     options?: { token?: string | null },
   ): Promise<OrganizationMember> {
-    console.log("[OrganizationsService] inviteMember called:", {
-      organizationId,
-      hasToken: !!options?.token,
-      tokenLength: options?.token?.length || 0,
-    });
     return ApiClient.post<OrganizationMember>(
       `${OrganizationsService.BASE_PATH}/${organizationId}/members/invite`,
       data,
@@ -128,6 +124,20 @@ export class OrganizationsService {
   ): Promise<{ deletedId: string }> {
     return ApiClient.delete<{ deletedId: string }>(
       `${OrganizationsService.BASE_PATH}/${organizationId}/members/${memberId}`,
+    );
+  }
+
+  /**
+   * Transfer organization ownership
+   * AUTHORIZATION: Only OWNER can transfer ownership
+   */
+  static async transferOwnership(
+    organizationId: string,
+    data: TransferOwnershipDto,
+  ): Promise<Organization> {
+    return ApiClient.post<Organization>(
+      `${OrganizationsService.BASE_PATH}/${organizationId}/transfer-ownership`,
+      data,
     );
   }
 }

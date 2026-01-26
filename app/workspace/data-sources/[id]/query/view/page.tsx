@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   useConnection,
+  useDataSource,
   useExecuteQuery,
   useSchemasWithTables,
 } from "@/lib/api";
@@ -82,9 +83,12 @@ export default function QueryResultsViewPage() {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
 
-  // Fetch connection and schemas from API
-  const { data: connection, isLoading: connectionLoading } =
-    useConnection(dataSourceId);
+  // Fetch data source, connection and schemas from API
+  const { data: dataSourceData } = useDataSource(orgId, dataSourceId);
+  const { data: connection, isLoading: connectionLoading } = useConnection(
+    orgId,
+    dataSourceId,
+  );
   const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
     dataSourceId,
     orgId,
@@ -104,19 +108,20 @@ export default function QueryResultsViewPage() {
   const [selectedTable, setSelectedTable] = useState<string | undefined>();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Convert API connection to component format
-  const dataSource = connection
-    ? {
-        id: connection.id,
-        name: connection.name,
-        type: "postgres" as const,
-        status:
-          connection.status === "active"
-            ? ("connected" as const)
-            : ("disconnected" as const),
-        tables: [],
-      }
-    : null;
+  // Convert API data to component format
+  const dataSource =
+    dataSourceData && connection
+      ? {
+          id: dataSourceData.id,
+          name: dataSourceData.name,
+          type: dataSourceData.source_type as "postgres",
+          status:
+            connection.status === "active"
+              ? ("connected" as const)
+              : ("disconnected" as const),
+          tables: [],
+        }
+      : null;
 
   useEffect(() => {
     if (typeof window === "undefined") return;

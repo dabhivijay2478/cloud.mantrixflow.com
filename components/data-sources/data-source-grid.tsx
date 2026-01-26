@@ -9,6 +9,7 @@ interface DataSourceGridProps {
     type: string;
     iconType: string;
     enterprise?: boolean;
+    disabled?: boolean;
   }>;
   isConnected: (id: string) => boolean;
   getConnectedDataSource: (id: string) => DataSource | undefined;
@@ -28,6 +29,7 @@ export function DataSourceGrid({
       {sourcesToShow.map((dataSource) => {
         const connected = isConnected(dataSource.id);
         const connectedData = getConnectedDataSource(dataSource.id);
+        const isDisabled = "disabled" in dataSource && dataSource.disabled;
 
         return (
           <DataSourceCard
@@ -35,7 +37,8 @@ export function DataSourceGrid({
             dataSource={dataSource}
             isConnected={connected}
             connectedData={connectedData}
-            onClick={() => onDataSourceClick(dataSource.id)}
+            onClick={() => !isDisabled && onDataSourceClick(dataSource.id)}
+            disabled={isDisabled}
           />
         );
       })}

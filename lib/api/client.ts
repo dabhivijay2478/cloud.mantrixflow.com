@@ -82,7 +82,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
     try {
       if (isJson) {
         const errorData = await response.json();
-        console.error("[API Client] Error response:", errorData);
         error = {
           code: errorData.error?.code || "UNKNOWN_ERROR",
           message:
@@ -95,7 +94,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
         };
       } else {
         const text = await response.text();
-        console.error("[API Client] Error response (text):", text);
         error = {
           code: "HTTP_ERROR",
           message: text || `HTTP ${response.status}: ${response.statusText}`,
@@ -103,7 +101,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
         };
       }
     } catch (parseError) {
-      console.error("[API Client] Failed to parse error response:", parseError);
       error = {
         code: "PARSE_ERROR",
         message: `HTTP ${response.status}: ${response.statusText}`,
@@ -124,27 +121,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
   if (isJson) {
     try {
       const data = await response.json();
-      console.log(
-        "[API Client] Response data:",
-        JSON.stringify(data).substring(0, 200),
-      );
 
       // If response has the standard API response structure, extract data
       if (data && typeof data === "object") {
         if (data.data !== undefined && data.meta) {
-          console.log(
-            "[API Client] Extracting data from standard response structure",
-          );
           return data.data as T;
         }
         // If response is the data directly (some endpoints return data directly)
         if (!data.meta && !data.error) {
-          console.log("[API Client] Returning data directly");
           return data as T;
         }
         // If response has error in it even though status is OK
         if (data.error) {
-          console.error("[API Client] Response contains error:", data.error);
           throw new ApiClientError(
             data.error.code || "API_ERROR",
             data.error.message || "An error occurred",
@@ -156,7 +144,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
       }
       return data as T;
     } catch (parseError) {
-      console.error("[API Client] Failed to parse JSON response:", parseError);
       if (parseError instanceof ApiClientError) {
         throw parseError;
       }
@@ -213,11 +200,6 @@ export class ApiClient {
     try {
       const url = getApiUrl(endpoint);
       const { token, ...fetchOptions } = options;
-      console.log("[API Client] post method called:", {
-        endpoint,
-        hasToken: token !== undefined,
-        tokenValue: token ? `${token.substring(0, 20)}...` : token,
-      });
       const finalOptions = await createFetchOptions(
         {
           ...fetchOptions,
@@ -227,16 +209,9 @@ export class ApiClient {
         token,
       );
 
-      console.log("[API Client] POST request:", { endpoint, url, body });
       const response = await fetch(url, finalOptions);
-      console.log(
-        "[API Client] Response status:",
-        response.status,
-        response.statusText,
-      );
       return handleResponse<T>(response);
     } catch (error) {
-      console.error("[API Client] POST request failed:", error);
       if (error instanceof ApiClientError) {
         throw error;
       }

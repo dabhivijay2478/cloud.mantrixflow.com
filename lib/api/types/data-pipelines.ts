@@ -1,7 +1,69 @@
 /**
  * Data Pipelines API Types
- * Type definitions for data pipeline endpoints
+ * Type definitions for data pipeline endpoints (synced with backend DTOs)
  */
+
+// ============================================================================
+// ENUMS (matching backend)
+// ============================================================================
+
+export type PipelineDataSourceType =
+  | "postgres"
+  | "mysql"
+  | "mongodb"
+  | "s3"
+  | "api"
+  | "bigquery"
+  | "snowflake";
+
+export type SyncMode = "full" | "incremental";
+export type SyncFrequency =
+  | "manual"
+  | "minutes"
+  | "hourly"
+  | "daily"
+  | "weekly";
+export type WriteMode = "append" | "upsert" | "replace";
+export type PipelineStatus =
+  | "idle"
+  | "initializing"
+  | "running"
+  | "listing"
+  | "listening"
+  | "paused"
+  | "failed"
+  | "completed";
+export type RunStatus =
+  | "pending"
+  | "running"
+  | "success"
+  | "failed"
+  | "cancelled";
+export type JobState = "pending" | "running" | "completed" | "failed";
+export type TriggerType = "manual" | "scheduled" | "api";
+
+export type ScheduleType =
+  | "none"
+  | "minutes"
+  | "hourly"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "custom_cron";
+
+export type TransformationType =
+  | "rename"
+  | "cast"
+  | "concat"
+  | "split"
+  | "custom"
+  | "filter"
+  | "mask"
+  | "hash";
+
+// ============================================================================
+// COLUMN MAPPING & TRANSFORMATION
+// ============================================================================
 
 export interface ColumnMapping {
   sourceColumn: string;
@@ -13,176 +75,360 @@ export interface ColumnMapping {
   maxLength?: number;
 }
 
+export interface TransformConfig {
+  targetType?: string;
+  fields?: string[];
+  separator?: string;
+  index?: number;
+  operator?:
+    | "eq"
+    | "ne"
+    | "gt"
+    | "lt"
+    | "gte"
+    | "lte"
+    | "contains"
+    | "startsWith"
+    | "endsWith";
+  value?: unknown;
+  maskChar?: string;
+  visibleChars?: number;
+  algorithm?: "md5" | "sha256" | "sha512";
+  expression?: string;
+}
+
 export interface Transformation {
   sourceColumn: string;
-  transformType: "rename" | "cast" | "concat" | "split" | "custom";
-  transformConfig: Record<string, unknown>;
+  transformType: TransformationType;
+  transformConfig: TransformConfig;
   destinationColumn: string;
 }
+
+// ============================================================================
+// PIPELINE DTOs
+// ============================================================================
 
 export interface CreatePipelineDto {
   name: string;
   description?: string;
-  sourceType: string;
-  sourceConnectionId?: string;
-  sourceConfig?: Record<string, unknown>;
-  sourceSchema?: string;
-  sourceTable?: string;
-  sourceQuery?: string;
-  destinationConnectionId: string;
-  destinationSchema?: string;
-  destinationTable: string;
-  columnMappings?: ColumnMapping[];
+  sourceSchemaId: string;
+  destinationSchemaId: string;
   transformations?: Transformation[];
-  writeMode?: "append" | "upsert" | "replace";
-  upsertKey?: string[];
-  syncMode?: "full" | "incremental";
+  syncMode?: SyncMode;
   incrementalColumn?: string;
-  syncFrequency?: "manual" | "15min" | "1hour" | "24hours";
-  collectors?: Array<{
-    id: string;
-    sourceId: string;
-    selectedTables: string[];
-    transformers?: Array<{
-      id: string;
-      name: string;
-      fieldMappings?: Record<string, string>;
-      jsonSchema?: string;
-    }>;
-  }>;
-  emitters?: Array<{
-    id: string;
-    transformId: string;
-    destinationId: string;
-    destinationName: string;
-    destinationType: string;
-    connectionConfig: Record<string, string>;
-  }>;
+  syncFrequency?: SyncFrequency;
 }
 
 export interface UpdatePipelineDto {
   name?: string;
   description?: string;
-  sourceType?: string;
-  sourceConnectionId?: string;
-  destinationConnectionId?: string;
-  destinationSchema?: string;
-  destinationTable?: string;
-  columnMappings?: ColumnMapping[];
-  transformations?: Transformation[];
-  writeMode?: "append" | "upsert" | "replace";
-  upsertKey?: string[];
-  syncMode?: "full" | "incremental";
+  status?: PipelineStatus;
+  syncMode?: SyncMode;
   incrementalColumn?: string;
-  syncFrequency?: "manual" | "15min" | "1hour" | "24hours";
-  status?: "active" | "paused";
-  collectors?: Array<{
-    id: string;
-    sourceId: string;
-    selectedTables: string[];
-    transformers?: Array<{
-      id: string;
-      name: string;
-      collectorId?: string;
-      emitterId?: string;
-      fieldMappings?: Array<{ source: string; destination: string }>;
-    }>;
-  }>;
-  emitters?: Array<{
-    id: string;
-    transformId: string;
-    destinationId: string;
-    destinationName: string;
-    destinationType: string;
-    connectionConfig?: Record<string, string>;
-  }>;
+  syncFrequency?: SyncFrequency;
+  transformations?: Transformation[];
+  // Scheduling fields
+  scheduleType?: ScheduleType;
+  scheduleValue?: string;
+  scheduleTimezone?: string;
 }
 
-export interface Pipeline {
+export interface RunPipelineDto {
+  triggerType?: TriggerType;
+  batchSize?: number;
+}
+
+export interface DryRunPipelineDto {
+  sampleSize?: number;
+}
+
+// ============================================================================
+// SOURCE SCHEMA
+// ============================================================================
+
+export interface SourceConfig {
+  // Database (Postgres, MySQL)
+  host?: string;
+  port?: number;
+  database?: string;
+  schema?: string;
+
+  // MongoDB
+  connectionString?: string;
+  collection?: string;
+
+  // S3
+  bucket?: string;
+  region?: string;
+  prefix?: string;
+  fileFormat?: "csv" | "json" | "parquet";
+
+  // API
+  baseUrl?: string;
+  endpoint?: string;
+  method?: "GET" | "POST";
+  headers?: Record<string, string>;
+  rateLimit?: number;
+
+  // BigQuery
+  projectId?: string;
+  dataset?: string;
+
+  // Snowflake
+  account?: string;
+  warehouse?: string;
+
+  // Common
+  queryTimeout?: number;
+}
+
+export interface PipelineSourceSchema {
   id: string;
-  orgId: string;
-  userId: string;
-  name: string;
-  description?: string;
-  sourceType: string;
-  sourceConnectionId?: string;
-  sourceConfig?: Record<string, unknown>;
+  organizationId: string;
+  dataSourceId?: string | null;
+  sourceType: PipelineDataSourceType;
+  sourceConfig?: SourceConfig | null;
+  sourceSchema?: string | null;
+  sourceTable?: string | null;
+  sourceQuery?: string | null;
+  name?: string | null;
+  isActive: boolean;
+  discoveredColumns?: ColumnInfo[] | null;
+  primaryKeys?: string[] | null;
+  estimatedRowCount?: number | null;
+  lastDiscoveredAt?: string | null;
+  validationResult?: ValidationResult | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface CreateSourceSchemaDto {
+  sourceType: PipelineDataSourceType;
+  dataSourceId?: string;
+  sourceConfig?: SourceConfig;
   sourceSchema?: string;
   sourceTable?: string;
   sourceQuery?: string;
-  destinationConnectionId: string;
+  name?: string;
+}
+
+export interface UpdateSourceSchemaDto {
+  name?: string;
+  sourceSchema?: string;
+  sourceTable?: string;
+  sourceQuery?: string;
+  sourceConfig?: SourceConfig;
+  isActive?: boolean;
+}
+
+// ============================================================================
+// DESTINATION SCHEMA
+// ============================================================================
+
+export interface PipelineDestinationSchema {
+  id: string;
+  organizationId: string;
+  dataSourceId: string;
   destinationSchema: string;
   destinationTable: string;
-  columnMappings?: ColumnMapping[];
-  transformations?: Transformation[];
-  writeMode: "append" | "upsert" | "replace";
-  upsertKey?: string[];
-  syncMode: "full" | "incremental";
-  incrementalColumn?: string;
-  syncFrequency: "manual" | "15min" | "1hour" | "24hours";
-  status: "active" | "paused" | "error";
-  lastRunAt?: Date | string;
-  lastRunStatus?: "running" | "success" | "failed";
-  migrationState?: "pending" | "running" | "listing" | "completed" | "error";
-  nextRunAt?: Date | string;
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  destinationTableExists: boolean;
+  transformScript?: string | null;
+  writeMode: WriteMode;
+  upsertKey?: string[] | null;
+  name?: string | null;
+  isActive: boolean;
+  validationResult?: SchemaValidationResult | null;
+  lastValidatedAt?: string | null;
+  lastSyncedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
 }
+
+export interface CreateDestinationSchemaDto {
+  dataSourceId: string;
+  destinationSchema?: string;
+  destinationTable: string;
+  destinationTableExists?: boolean;
+  transformScript?: string; // Custom Python transform script
+  writeMode?: WriteMode;
+  upsertKey?: string[];
+  name?: string;
+}
+
+export interface UpdateDestinationSchemaDto {
+  name?: string;
+  destinationSchema?: string;
+  destinationTable?: string;
+  transformScript?: string;
+  writeMode?: WriteMode;
+  upsertKey?: string[];
+  isActive?: boolean;
+}
+
+// ============================================================================
+// PIPELINE
+// ============================================================================
+
+export interface Pipeline {
+  id: string;
+  organizationId: string;
+  createdBy: string;
+  name: string;
+  description?: string | null;
+  sourceSchemaId: string;
+  destinationSchemaId: string;
+  sourceSchema?: PipelineSourceSchema;
+  destinationSchema?: PipelineDestinationSchema;
+  transformations?: Transformation[] | null;
+  syncMode: SyncMode;
+  incrementalColumn?: string | null;
+  lastSyncValue?: string | null;
+  syncFrequency: SyncFrequency;
+  status: PipelineStatus;
+  migrationState?: string | null;
+  nextSyncAt?: string | null;
+  lastRunAt?: string | null;
+  lastRunStatus?: "success" | "failed" | null;
+  lastError?: string | null;
+  totalRowsProcessed?: number | null;
+  totalRunsSuccessful?: number | null;
+  totalRunsFailed?: number | null;
+  // Scheduling fields
+  scheduleType?: ScheduleType | null;
+  scheduleValue?: string | null;
+  scheduleTimezone?: string | null;
+  lastScheduledRunAt?: string | null;
+  nextScheduledRunAt?: string | null;
+  checkpoint?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface PipelineWithSchemas {
+  pipeline: Pipeline;
+  sourceSchema: PipelineSourceSchema;
+  destinationSchema: PipelineDestinationSchema;
+}
+
+// ============================================================================
+// PIPELINE RUN
+// ============================================================================
 
 export interface PipelineRun {
   id: string;
   pipelineId: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled";
-  rowsProcessed?: number;
-  rowsWritten?: number;
-  executionTimeMs?: number;
-  error?: string;
-  startedAt?: Date | string;
-  completedAt?: Date | string;
-  createdAt: Date | string;
+  organizationId: string;
+  triggeredBy: string;
+  triggerType: TriggerType;
+  status: RunStatus;
+  jobState: JobState;
+  rowsRead?: number | null;
+  rowsWritten?: number | null;
+  rowsSkipped?: number | null;
+  rowsFailed?: number | null;
+  durationSeconds?: number | null;
+  errorMessage?: string | null;
+  errorStack?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
+// ============================================================================
+// RESPONSES & RESULTS
+// ============================================================================
+
 export interface PipelineStats {
-  totalRuns: number;
-  successfulRuns: number;
-  failedRuns: number;
   totalRowsProcessed: number;
-  totalRowsWritten: number;
-  averageExecutionTimeMs: number;
-  lastRunAt?: Date | string;
-  lastRunStatus?: string;
+  totalRunsSuccessful: number;
+  totalRunsFailed: number;
+  lastSuccessfulRun?: string | null;
+  averageDuration: number;
 }
 
 export interface ValidationResult {
   valid: boolean;
-  errors?: Array<{
-    field: string;
-    message: string;
-  }>;
-  warnings?: Array<{
-    field: string;
-    message: string;
-  }>;
-}
-
-export interface AutoMapResponse {
-  columnMappings: ColumnMapping[];
-  confidence: number;
+  errors: string[];
   warnings?: string[];
 }
 
+export interface SchemaValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings?: string[];
+  missingColumns?: string[];
+  typeMismatches?: Array<{
+    column: string;
+    expected: string;
+    actual: string;
+  }>;
+}
+
 export interface DryRunResult {
+  wouldWrite: number;
+  sourceRowCount?: number;
+  sampleRows: unknown[];
+  transformedSample?: unknown[];
+  errors: string[];
+}
+
+export interface ColumnInfo {
+  name: string;
+  type: string;
+  nullable: boolean;
+  primaryKey?: boolean;
+  defaultValue?: string | null;
+  maxLength?: number;
+}
+
+export interface DiscoveredSchema {
+  columns: ColumnInfo[];
+  primaryKeys: string[];
+  estimatedRowCount?: number;
+}
+
+export interface DiscoverSchemaResult {
+  schema: PipelineSourceSchema;
+  discovered: DiscoveredSchema;
+}
+
+export interface TableExistsResult {
+  exists: boolean;
+}
+
+export interface CreateTableResult {
+  created: boolean;
+  tableName: string;
+}
+
+export interface PreviewDataResult {
+  rows: unknown[];
+  columns: ColumnInfo[];
+}
+
+// ============================================================================
+// API RESPONSE WRAPPERS
+// ============================================================================
+
+export interface ApiResponse<T> {
   success: boolean;
-  rowsToProcess?: number;
-  estimatedTimeMs?: number;
-  schemaValidation?: {
-    valid: boolean;
-    errors?: string[];
-  };
-  preview?: {
-    columns: string[];
-    rows: unknown[][];
-    rowCount: number;
-  };
+  data?: T;
+  message?: string;
   error?: string;
+}
+
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  message?: string;
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
 }

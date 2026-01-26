@@ -34,9 +34,9 @@ export async function syncUserAfterAuth(): Promise<void> {
         ...user.app_metadata,
       },
     });
-  } catch (error) {
-    console.error("Failed to sync user:", error);
+  } catch {
     // Don't throw - this is a background sync operation
+    // Error is silently handled as this is a background operation
   }
 }
 
@@ -67,7 +67,6 @@ export async function refreshSupabaseUser(): Promise<void> {
     } = await supabase.auth.getUser();
 
     if (getUserError) {
-      console.error("Failed to refresh user:", getUserError);
       return;
     }
 
@@ -75,7 +74,7 @@ export async function refreshSupabaseUser(): Promise<void> {
     if (user) {
       useAuthStore.getState().setUser(user);
     }
-  } catch (error) {
-    console.error("Failed to refresh Supabase user:", error);
+  } catch {
+    // Error is silently handled
   }
 }

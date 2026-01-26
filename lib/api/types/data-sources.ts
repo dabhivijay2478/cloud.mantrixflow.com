@@ -1,9 +1,193 @@
 /**
  * Data Sources API Types
- * Type definitions for PostgreSQL data source endpoints
+ * Type definitions for data source endpoints (new dynamic schema)
  */
 
-// Connection Configuration Types
+export type DataSourceType =
+  | "postgres"
+  | "mysql"
+  | "mongodb"
+  | "s3"
+  | "api"
+  | "bigquery"
+  | "snowflake"
+  | "redshift";
+
+export interface DataSource {
+  id: string;
+  // Support both snake_case (API) and camelCase
+  organization_id?: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  source_type?: DataSourceType;
+  sourceType: DataSourceType;
+  is_active?: boolean;
+  isActive: boolean;
+  metadata?: Record<string, unknown>;
+  created_by?: string;
+  createdBy?: string;
+  created_at?: string;
+  createdAt: string;
+  updated_at?: string;
+  updatedAt: string;
+  deleted_at?: string;
+  deletedAt?: string;
+  connection?: DataSourceConnection;
+}
+
+export interface DataSourceConnection {
+  id: string;
+  data_source_id: string;
+  connection_type: DataSourceType;
+  config: ConnectionConfig;
+  status: "active" | "inactive" | "error" | "testing";
+  last_connected_at?: string;
+  last_error?: string;
+  test_result?: TestConnectionResult;
+  schema_cache?: Record<string, unknown>;
+  schema_cached_at?: string;
+}
+
+export type ConnectionConfig =
+  | PostgresConfig
+  | MySQLConfig
+  | MongoDBConfig
+  | S3Config
+  | APIConfig
+  | BigQueryConfig
+  | SnowflakeConfig;
+
+export interface PostgresConfig {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password: string;
+  ssl?: {
+    enabled: boolean;
+    ca_cert?: string;
+    client_cert?: string;
+    client_key?: string;
+    reject_unauthorized?: boolean;
+  };
+  ssh_tunnel?: {
+    enabled: boolean;
+    host?: string;
+    port?: number;
+    username?: string;
+    private_key?: string;
+  };
+  pool?: {
+    size: number;
+    timeout_seconds: number;
+  };
+}
+
+export interface MySQLConfig {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password: string;
+  ssl?: {
+    enabled: boolean;
+    ca_cert?: string;
+  };
+  charset?: string;
+}
+
+export interface MongoDBConfig {
+  connection_string?: string;
+  host?: string;
+  port?: number;
+  database: string;
+  username?: string;
+  password?: string;
+  auth_source?: string;
+  replica_set?: string;
+  tls?: boolean;
+}
+
+export interface S3Config {
+  bucket: string;
+  region: string;
+  access_key_id: string;
+  secret_access_key: string;
+  path_prefix?: string;
+  use_ssl?: boolean;
+}
+
+export interface APIConfig {
+  base_url: string;
+  auth_type: "none" | "basic" | "bearer" | "api_key" | "oauth2";
+  auth_token?: string;
+  api_key?: string;
+  api_key_header?: string;
+  username?: string;
+  password?: string;
+  headers?: Record<string, string>;
+  rate_limit?: {
+    requests_per_second: number;
+  };
+}
+
+export interface BigQueryConfig {
+  project_id: string;
+  dataset: string;
+  credentials: {
+    private_key: string;
+    client_email: string;
+  };
+}
+
+export interface SnowflakeConfig {
+  account: string;
+  username: string;
+  password: string;
+  warehouse: string;
+  database: string;
+  schema: string;
+  role?: string;
+}
+
+// DTOs for API requests
+export interface CreateDataSourceDto {
+  name: string;
+  description?: string;
+  source_type: DataSourceType;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateDataSourceDto {
+  name?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CreateConnectionDto {
+  name: string;
+  connection_type: DataSourceType;
+  config: ConnectionConfig;
+}
+
+export interface UpdateConnectionDto {
+  connection_type?: DataSourceType;
+  config?: Partial<ConnectionConfig>;
+}
+
+export interface TestConnectionResult {
+  success: boolean;
+  message: string;
+  details?: {
+    version?: string;
+    response_time_ms?: number;
+    database_name?: string;
+  };
+  error?: string;
+}
+
+// Legacy types (for backward compatibility with old postgres endpoints)
 export interface SSLConfig {
   enabled: boolean;
   caCert?: string;
@@ -19,6 +203,10 @@ export interface SSHTunnelConfig {
 }
 
 export interface TestConnectionDto {
+  // Connection type (postgres, mysql, mongodb, s3, api, etc.)
+  type?: string;
+
+  // SQL Databases (PostgreSQL, MySQL)
   connectionString?: string;
   host?: string;
   port?: number;
@@ -30,7 +218,38 @@ export interface TestConnectionDto {
   connectionTimeout?: number;
   queryTimeout?: number;
   poolSize?: number;
-  databaseType?: string; // "neon", "supabase", "other"
+  databaseType?: string;
+
+  // MongoDB
+  connection_string?: string; // MongoDB Atlas SRV format
+  auth_source?: string;
+  replica_set?: string;
+  tls?: boolean;
+
+  // S3
+  bucket?: string;
+  region?: string;
+  access_key_id?: string;
+  secret_access_key?: string;
+  path_prefix?: string;
+
+  // REST API
+  base_url?: string;
+  auth_type?: string;
+  auth_token?: string;
+  api_key?: string;
+  headers?: Record<string, string>;
+
+  // BigQuery
+  project_id?: string;
+  dataset?: string;
+  credentials?: Record<string, unknown>;
+
+  // Snowflake
+  account?: string;
+  warehouse?: string;
+  schema?: string;
+  role?: string;
 }
 
 export interface TestConnectionResponse {
@@ -40,30 +259,24 @@ export interface TestConnectionResponse {
   responseTimeMs?: number;
 }
 
-export interface CreateConnectionDto {
-  name: string;
-  config: TestConnectionDto;
-}
-
-export interface UpdateConnectionDto {
-  name?: string;
-  config?: Partial<TestConnectionDto>;
-}
-
 export interface Connection {
   id: string;
-  orgId: string;
-  userId: string;
+  // Legacy fields
+  orgId?: string;
+  userId?: string;
+  // New fields
+  organizationId?: string;
+  type?: string;
   name: string;
-  status: "active" | "inactive" | "error";
-  port: number;
-  sslEnabled: boolean;
-  sshTunnelEnabled: boolean;
-  connectionPoolSize: number;
-  queryTimeoutSeconds: number;
+  status: "active" | "inactive" | "error" | "connected" | "disconnected";
+  port?: number;
+  sslEnabled?: boolean;
+  sshTunnelEnabled?: boolean;
+  connectionPoolSize?: number;
+  queryTimeoutSeconds?: number;
   lastConnectedAt?: Date | string;
   createdAt: Date | string;
-  updatedAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 // Schema Discovery Types
@@ -211,4 +424,13 @@ export interface ConnectionMetrics {
     queries: number;
     averageExecutionTimeMs: number;
   };
+}
+
+// Supported types response
+export interface SupportedDataSourceType {
+  type: DataSourceType;
+  name: string;
+  description: string;
+  icon?: string;
+  config_schema: Record<string, unknown>;
 }

@@ -2,7 +2,9 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  AlertCircle,
   ArrowRight,
+  CheckCircle2,
   Database,
   Edit,
   Loader2,
@@ -14,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { DataTable, FormSheet } from "@/components/shared";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,10 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useConnection } from "@/lib/api/hooks/use-connection";
 import {
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
+import { PythonETLService } from "@/lib/api/services/python-etl.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export interface CollectorConfig {
@@ -50,6 +55,9 @@ export interface CollectorConfig {
     collectorId?: string;
     emitterId?: string;
     fieldMappings?: Array<{ source: string; destination: string }>; // JSON array format
+    transformScript?: string; // Custom Python transform script (preferred over field mappings)
+    destinationTable?: string; // Selected destination table (schema.table format)
+    primaryKeyField?: string; // Explicitly defined primary key field name
   }>;
 }
 
@@ -64,23 +72,34 @@ export function CollectorStep({
 }: CollectorStepProps) {
   // Get current organization from workspace store
   const { currentOrganization, datasets } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
 
   // Fetch connections from API
+  // Note: Currently using legacy postgres connections API
+  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
   const { data: connections, isLoading: connectionsLoading } =
-    useConnections(orgId);
+    useConnections(organizationId);
 
   // Convert API connections to DataSource format for compatibility
   const dataSources =
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: "postgres" as const,
+      type: (conn.type || "postgres") as
+        | "postgres"
+        | "mysql"
+        | "mongodb"
+        | "s3"
+        | "api"
+        | "bigquery"
+        | "snowflake"
+        | "redshift"
+        | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)
           : ("disconnected" as const),
-      organizationId: conn.orgId,
+      organizationId: conn.orgId || organizationId,
       connectedAt: conn.lastConnectedAt || undefined,
       tables: [], // Will be populated when needed
     })) || [];
@@ -91,6 +110,19 @@ export function CollectorStep({
   const [editingCollector, setEditingCollector] = useState<string | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  } | null>(null);
+
+  // Get connection details for testing
+  const { data: connection } = useConnection(
+    organizationId,
+    selectedSourceId,
+    true, // includeSensitive to get full config for testing
+  );
 
   // Update collectors when initialCollectors prop changes (for edit mode)
   useEffect(() => {
@@ -107,7 +139,7 @@ export function CollectorStep({
   // Fetch schemas with tables for the selected source
   const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
     selectedSourceId,
-    orgId,
+    organizationId,
   );
 
   // Flatten all tables from all schemas
@@ -172,6 +204,61 @@ export function CollectorStep({
   const handleContinue = () => {
     if (collectors.length > 0) {
       onComplete(collectors);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!selectedSourceId || !connection?.config || !organizationId) {
+      setConnectionTestResult({
+        success: false,
+        error: "Please select a data source with a configured connection",
+      });
+      return;
+    }
+
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+
+    try {
+      const selectedSource = dataSources.find(
+        (ds) => ds.id === selectedSourceId,
+      );
+      const sourceType = selectedSource?.type || "postgres";
+
+      // Map connection config to test connection format
+      const testConfig = {
+        type: sourceType,
+        ...(connection.config as unknown as Record<string, unknown>),
+      } as {
+        type: string;
+        [key: string]: unknown;
+      };
+
+      // Normalize field names (safely access union type properties)
+      const config = connection.config as unknown as Record<string, unknown>;
+      if (config.username && !testConfig.username) {
+        testConfig.username = config.username;
+      }
+      if (config.user && !testConfig.user) {
+        testConfig.user = config.user;
+      }
+
+      const result = await PythonETLService.testConnection(testConfig);
+
+      setConnectionTestResult({
+        success: result.success,
+        message: result.message || "Connection successful",
+        error: result.error,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      setConnectionTestResult({
+        success: false,
+        error: errorMessage || "Failed to test connection",
+      });
+    } finally {
+      setTestingConnection(false);
     }
   };
 
@@ -258,7 +345,7 @@ export function CollectorStep({
   ];
 
   // Show loading or no org message
-  if (!orgId) {
+  if (!organizationId) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -342,12 +429,37 @@ export function CollectorStep({
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="data-source-select">Data Source</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="data-source-select">Data Source</Label>
+              {selectedSourceId && connection?.config && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                  className="h-8"
+                >
+                  {testingConnection ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-3 w-3" />
+                      Test Connection
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
             <Select
               value={selectedSourceId}
               onValueChange={(value) => {
                 setSelectedSourceId(value);
                 setSelectedTables([]);
+                setConnectionTestResult(null);
               }}
             >
               <SelectTrigger id="data-source-select" className="w-full">
@@ -393,6 +505,33 @@ export function CollectorStep({
                 )}
               </SelectContent>
             </Select>
+            {connectionTestResult && (
+              <Alert
+                variant={
+                  connectionTestResult.success ? "default" : "destructive"
+                }
+              >
+                {connectionTestResult.success ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+                <AlertDescription>
+                  {connectionTestResult.success
+                    ? connectionTestResult.message
+                    : connectionTestResult.error}
+                </AlertDescription>
+              </Alert>
+            )}
+            {selectedSourceId && !connection?.config && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Connection not configured for this data source. Please
+                  configure the connection in Data Sources settings first.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           {selectedSourceId && (

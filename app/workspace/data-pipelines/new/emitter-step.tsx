@@ -2,15 +2,18 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  AlertCircle,
   ArrowRight,
   CheckCircle2,
   Database,
   Edit,
+  Loader2,
   Plus,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useConnections } from "@/lib/api";
+import { useConnection } from "@/lib/api/hooks/use-connection";
+import { PythonETLService } from "@/lib/api/services/python-etl.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import type { CollectorConfig } from "./collector-step";
@@ -44,11 +49,13 @@ export interface EmitterConfig {
 
 export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
 
   // Fetch connections from API instead of workspace store
+  // Note: Currently using legacy postgres connections API
+  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
   const { data: connections, isLoading: connectionsLoading } =
-    useConnections(orgId);
+    useConnections(organizationId);
 
   // Convert API connections to destination format
   // All connections from the PostgreSQL endpoint are PostgreSQL connections
@@ -65,12 +72,21 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: "postgres" as const,
+      type: (conn.type || "postgres") as
+        | "postgres"
+        | "mysql"
+        | "mongodb"
+        | "s3"
+        | "api"
+        | "bigquery"
+        | "snowflake"
+        | "redshift"
+        | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)
           : ("disconnected" as const),
-      organizationId: conn.orgId,
+      organizationId: conn.orgId || organizationId,
       connectedAt: conn.lastConnectedAt || undefined,
       tables: [],
     })) || [];
@@ -80,6 +96,19 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const [selectedDestinationId, setSelectedDestinationId] =
     useState<string>("");
   const [_configValues, setConfigValues] = useState<Record<string, string>>({});
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  } | null>(null);
+
+  // Get connection details for testing destination
+  const { data: destinationConnection } = useConnection(
+    organizationId,
+    selectedDestinationId,
+    true, // includeSensitive to get full config for testing
+  );
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
@@ -152,6 +181,65 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       return collector;
     });
     onComplete(updatedCollectors);
+  };
+
+  const handleTestConnection = async () => {
+    if (
+      !selectedDestinationId ||
+      !destinationConnection?.config ||
+      !organizationId
+    ) {
+      setConnectionTestResult({
+        success: false,
+        error: "Please select a destination with a configured connection",
+      });
+      return;
+    }
+
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+
+    try {
+      const selectedDestination = dataSources.find(
+        (ds) => ds.id === selectedDestinationId,
+      );
+      const sourceType = selectedDestination?.type || "postgres";
+
+      // Map connection config to test connection format
+      const testConfig = {
+        type: sourceType,
+        ...(destinationConnection.config as unknown as Record<string, unknown>),
+      } as {
+        type: string;
+        [key: string]: unknown;
+      };
+
+      // Normalize field names (safely access union type properties)
+      const config = destinationConnection.config as unknown as Record<string, unknown>;
+      if (config.username && !testConfig.username) {
+        testConfig.username = config.username;
+      }
+      if (config.user && !testConfig.user) {
+        testConfig.user = config.user;
+      }
+
+      const result = await PythonETLService.testConnection(testConfig);
+
+      setConnectionTestResult({
+        success: result.success,
+        message: result.message || "Connection successful",
+        error: result.error,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      setConnectionTestResult({
+        success: false,
+        error: errorMessage || "Failed to test connection",
+      });
+    } finally {
+      setTestingConnection(false);
+    }
   };
 
   const handleEditEmitter = (
@@ -390,8 +478,32 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
           {selectedCollectorId && (
             <div className="space-y-2">
-              <Label>Destination</Label>
-              {!orgId ? (
+              <div className="flex items-center justify-between">
+                <Label>Destination</Label>
+                {selectedDestinationId && destinationConnection?.config && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTestConnection}
+                    disabled={testingConnection}
+                    className="h-8"
+                  >
+                    {testingConnection ? (
+                      <>
+                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-3 w-3" />
+                        Test Connection
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+              {!organizationId ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   No organization selected. Please select an organization from
                   the sidebar.
@@ -406,56 +518,87 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                   PostgreSQL data source first.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {availableDestinations.map((destination) => {
-                    const Icon = destination.icon;
-                    const isSelected = selectedDestinationId === destination.id;
-                    return (
-                      <Card
-                        key={destination.id}
-                        className={cn(
-                          "cursor-pointer transition-all hover:shadow-md",
-                          isSelected && "ring-2 ring-primary border-primary",
-                        )}
-                        onClick={() => {
-                          setSelectedDestinationId(destination.id);
-                          setConfigValues({});
-                        }}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "h-10 w-10 rounded-lg flex items-center justify-center",
-                                isSelected ? "bg-primary/10" : "bg-muted",
-                              )}
-                            >
-                              <Icon
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {availableDestinations.map((destination) => {
+                      const Icon = destination.icon;
+                      const isSelected =
+                        selectedDestinationId === destination.id;
+                      return (
+                        <Card
+                          key={destination.id}
+                          className={cn(
+                            "cursor-pointer transition-all hover:shadow-md",
+                            isSelected && "ring-2 ring-primary border-primary",
+                          )}
+                          onClick={() => {
+                            setSelectedDestinationId(destination.id);
+                            setConfigValues({});
+                            setConnectionTestResult(null);
+                          }}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div
                                 className={cn(
-                                  "h-5 w-5",
-                                  isSelected
-                                    ? "text-primary"
-                                    : "text-muted-foreground",
+                                  "h-10 w-10 rounded-lg flex items-center justify-center",
+                                  isSelected ? "bg-primary/10" : "bg-muted",
                                 )}
-                              />
+                              >
+                                <Icon
+                                  className={cn(
+                                    "h-5 w-5",
+                                    isSelected
+                                      ? "text-primary"
+                                      : "text-muted-foreground",
+                                  )}
+                                />
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {destination.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {destination.type}
+                                </p>
+                              </div>
+                              {isSelected && (
+                                <CheckCircle2 className="h-5 w-5 text-primary shrink-0 ml-auto" />
+                              )}
                             </div>
-                            <div>
-                              <p className="font-medium text-sm">
-                                {destination.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {destination.type}
-                              </p>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 ml-auto" />
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                  {connectionTestResult && (
+                    <Alert
+                      variant={
+                        connectionTestResult.success ? "default" : "destructive"
+                      }
+                    >
+                      {connectionTestResult.success ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4" />
+                      )}
+                      <AlertDescription>
+                        {connectionTestResult.success
+                          ? connectionTestResult.message
+                          : connectionTestResult.error}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {selectedDestinationId && !destinationConnection?.config && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Connection not configured for this destination. Please
+                        configure the connection in Data Sources settings first.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
               )}
             </div>
           )}

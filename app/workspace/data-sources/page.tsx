@@ -39,10 +39,10 @@ import {
   type TestConnectionDto,
   useConnections,
   useCreateConnection,
-  useDeleteConnection,
-  useTestConnection,
   useUsers,
 } from "@/lib/api";
+import { useDeleteDataSource } from "@/lib/api/hooks/use-data-source";
+import { useTestConnection as useTestConnectionLegacy } from "@/lib/api/hooks/use-data-sources";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
@@ -52,48 +52,37 @@ type ConnectionFormValues = Record<string, string>;
 export default function DataSourcesPage() {
   // Get current organization from workspace store (set by sidebar selector)
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
+  const organizationId = currentOrganization?.id;
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get("search") || undefined;
 
-  // Debug logging
-  useEffect(() => {
-    if (currentOrganization) {
-      console.log("Current Organization from store:", currentOrganization);
-      console.log("Organization ID:", orgId);
-    } else {
-      console.warn("No organization selected in workspace store");
-    }
-  }, [currentOrganization, orgId]);
-
   // Use real API hooks instead of workspace store
-  const {
-    data: connections,
-    isLoading: connectionsLoading,
-    error: connectionsError,
-  } = useConnections(orgId);
-  const createConnection = useCreateConnection(orgId);
-  const deleteConnection = useDeleteConnection(orgId);
-  const testConnection = useTestConnection();
-
-  // Debug logging for connections
-  useEffect(() => {
-    if (connections !== undefined) {
-      console.log("Connections loaded:", connections);
-      console.log("Connections count:", connections?.length || 0);
-      console.log("Query orgId used:", orgId);
-    }
-    if (connectionsError) {
-      console.error("Connections error:", connectionsError);
-    }
-  }, [connections, connectionsError, orgId]);
+  // Note: Currently using legacy postgres connections API
+  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
+  const { data: connections, isLoading: connectionsLoading } =
+    useConnections(organizationId);
+  const createConnection = useCreateConnection(organizationId);
+  // Use NestJS API for data source deletion
+  const deleteDataSource = useDeleteDataSource(organizationId);
+  // Use legacy testConnection hook (now updated to use org-scoped endpoint)
+  const testConnection = useTestConnectionLegacy(organizationId);
 
   const isLoading = connectionsLoading;
 
-  // Filter to show PostgreSQL data sources
-  const enabledDataSources = allDataSources.filter(
-    (ds) => ds.type === "postgres",
-  );
+  // Data source types that are implemented in the backend collector service
+  // Only PostgreSQL, MySQL, and MongoDB are supported
+  const SUPPORTED_SOURCE_TYPES = ["postgres", "mysql", "mongodb"] as const;
+  type SupportedSourceType = (typeof SUPPORTED_SOURCE_TYPES)[number];
+
+  // Filter to only show supported data sources (hide all others)
+  const enabledDataSources = allDataSources
+    .filter((ds) =>
+      SUPPORTED_SOURCE_TYPES.includes(ds.type as SupportedSourceType),
+    )
+    .map((ds) => ({
+      ...ds,
+      disabled: false, // All shown sources are enabled
+    })) as Array<typeof allDataSources[number] & { disabled: boolean }>;
 
   // Get all unique user IDs from connections for fetching user names
   const userIds = useMemo(
@@ -220,44 +209,86 @@ export default function DataSourcesPage() {
 
     const dataSource = enabledDataSources.find(
       (ds) => ds.id === connectingDataSourceId,
-    );
+    ) as (typeof allDataSources[number] & { disabled: boolean }) | undefined;
     if (!dataSource) return;
 
     try {
       // Convert form data to API format
-      // Determine database type and auto-configure SSL
-      const databaseType = data.databaseType || "other";
-      const isNeon = databaseType === "neon";
-      const isSupabase = databaseType === "supabase";
       const host = data.host || "";
-      const isLocalhost =
+      const _isLocalhost =
         host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
 
-      const connectionData: CreateConnectionDto = {
-        name: data.name || dataSource.name,
-        config: {
-          host: host,
-          port: data.port ? parseInt(data.port, 10) : 5432,
-          database: data.database || "",
-          username: data.username || "",
-          password: data.password || "",
-          // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
-          ssl:
-            !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
-              ? { enabled: true, rejectUnauthorized: !isLocalhost }
-              : undefined,
-          // Pass database type as metadata for backend processing
-          databaseType: databaseType,
-        },
-      };
+      // Build config based on data source type
+      const config: Record<string, unknown> = {};
 
-      // Ensure orgId is passed - log for debugging
-      console.log("[DataSourcesPage] Creating connection with orgId:", orgId);
-      console.log("[DataSourcesPage] Connection data:", {
-        name: connectionData.name,
+      // Add all form data to config
+      Object.entries(data).forEach(([key, value]) => {
+        // Skip metadata fields or fields handled specially
+        if (key === "name") return;
+
+        // Skip empty values
+        if (!value) return;
+
+        // Convert numeric strings to numbers for known numeric fields
+        if (key === "port") {
+          config[key] = parseInt(value, 10);
+        } else {
+          config[key] = value;
+        }
       });
 
-      if (!orgId) {
+      // Special handling for MongoDB
+      if (dataSource.type === "mongodb") {
+        if (data.useConnectionString === "false") {
+          // Individual fields mode - ensure connection_string is removed
+          delete config.connection_string;
+        } else if (data.useConnectionString === "true") {
+          // Connection string mode - we can optionally clean up individual fields but backend prioritizes string
+          // Just to be clean:
+          delete config.host;
+          delete config.port;
+          delete config.username;
+          delete config.password;
+          delete config.database; // Check if connection string includes db? Backend string parser might need it or not.
+          // Usually connection string has it, but sometimes it receives override.
+          // Let's keep database/authSource if provided, or safer just keep what we have since backend prefers string.
+        }
+      }
+
+      // Add SSL config for database types that support it
+      if (
+        [
+          "postgres",
+          "mysql",
+          "mssql",
+          "redshift",
+          "clickhouse",
+          "mongodb",
+        ].includes(dataSource.type)
+      ) {
+        // logic for MongoDB TLS is usually part of connection string or options,
+        // but if we used the generic SSL select:
+        if (data.ssl === "true" || data.tls === "true") {
+          // For Postgres/common libs
+          if (dataSource.type !== "mongodb") {
+            config.ssl = { enabled: true };
+          }
+        } else if (data.ssl === "false" || data.tls === "false") {
+          // Explicitly disabled
+          if (dataSource.type !== "mongodb") {
+            config.ssl = undefined; // defaults to false/undefined usually
+          }
+        }
+      }
+
+      const connectionData: CreateConnectionDto = {
+        name: data.name,
+        connection_type:
+          dataSource.type as CreateConnectionDto["connection_type"],
+        config: config as unknown as CreateConnectionDto["config"],
+      };
+
+      if (!organizationId) {
         showErrorToast(
           "notFound",
           "Organization",
@@ -281,7 +312,6 @@ export default function DataSourcesPage() {
           ? error.message
           : "Unable to connect the data source. Please try again.";
       showErrorToast("connectFailed", "Data Source", errorMessage);
-      console.error(error);
     }
   };
 
@@ -289,29 +319,221 @@ export default function DataSourcesPage() {
     data: ConnectionFormValues,
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const _dataSource = enabledDataSources.find(
+      // Find the data source to get its type
+      const foundDataSource = enabledDataSources.find(
         (ds) => ds.id === connectingDataSourceId,
       );
-      const databaseType = data.databaseType || "other";
-      const isNeon = databaseType === "neon";
-      const isSupabase = databaseType === "supabase";
-      const host = data.host || "";
-      const isLocalhost =
-        host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
+      
+      // Get the source type from the data source definition
+      // Use type first (from allDataSources), then id as fallback
+      let sourceType: string = "postgres";
+      if (foundDataSource) {
+        // Type assertion to help TypeScript understand the structure
+        const ds = foundDataSource as { type: string; id: string };
+        sourceType = ds.type || ds.id;
+      }
 
-      const testData: TestConnectionDto = {
-        host: host,
-        port: data.port ? parseInt(data.port, 10) : 5432,
-        database: data.database || "",
-        username: data.username || "",
-        password: data.password || "",
-        // Don't auto-enable SSL for localhost, only for Neon/Supabase remote hosts
-        ssl:
-          !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
-            ? { enabled: true, rejectUnauthorized: !isLocalhost }
-            : undefined,
-        databaseType: databaseType,
-      };
+      // Build test data based on source type
+      let testData: TestConnectionDto;
+
+      switch (sourceType) {
+        // MongoDB - supports connection string OR individual fields (not both)
+        case "mongodb": {
+          const useConnectionString =
+            data.useConnectionString === "true" || !!data.connection_string;
+
+          if (useConnectionString && data.connection_string) {
+            // Connection string mode - only send the connection string
+            testData = {
+              type: "mongodb",
+              connection_string: data.connection_string,
+            };
+          } else {
+            // Individual fields mode
+            testData = {
+              type: "mongodb",
+              host: data.host || "",
+              port: data.port ? parseInt(data.port, 10) : 27017,
+              database: data.database || "",
+              username: data.username || "",
+              password: data.password || "",
+              auth_source: data.authSource || "",
+              replica_set: data.replicaSet || "",
+              tls: data.tls === "true",
+            };
+          }
+          break;
+        }
+
+        // S3 and S3 Data Lake
+        case "s3":
+        case "s3-datalake": {
+          testData = {
+            type: "s3",
+            bucket: data.bucket || "",
+            region: data.region || "",
+            access_key_id: data.accessKeyId || "",
+            secret_access_key: data.secretAccessKey || "",
+            path_prefix: data.prefix || "",
+          };
+          break;
+        }
+
+        // Azure Blob Storage
+        case "azure-blob-storage": {
+          testData = {
+            type: "azure-blob-storage",
+            account: data.accountName || "",
+            bucket: data.containerName || "", // container = bucket equivalent
+            access_key_id: data.accountKey || "",
+          };
+          break;
+        }
+
+        // BigQuery
+        case "bigquery": {
+          let credentials = {};
+          try {
+            credentials = data.credentials ? JSON.parse(data.credentials) : {};
+          } catch {
+            // Invalid JSON, pass as string
+            credentials = { raw: data.credentials };
+          }
+          testData = {
+            type: "bigquery",
+            project_id: data.projectId || "",
+            dataset: data.datasetId || "",
+            credentials,
+          };
+          break;
+        }
+
+        // Snowflake and Snowflake Cortex
+        case "snowflake":
+        case "snowflake-cortex": {
+          testData = {
+            type: "snowflake",
+            account: data.account || "",
+            warehouse: data.warehouse || "",
+            database: data.database || "",
+            schema: data.schema || "",
+            username: data.username || "",
+            password: data.password || "",
+            role: data.role || "",
+          };
+          break;
+        }
+
+        // Databricks
+        case "databricks": {
+          testData = {
+            type: "databricks",
+            host: data.serverHostname || "",
+            api_key: data.personalAccessToken || "",
+            headers: { http_path: data.httpPath || "" },
+          };
+          break;
+        }
+
+        // REST API
+        case "api": {
+          let headers = {};
+          try {
+            headers = data.headers ? JSON.parse(data.headers) : {};
+          } catch {
+            headers = {};
+          }
+          testData = {
+            type: "api",
+            base_url: data.endpoint || "",
+            api_key: data.apiKey || "",
+            headers,
+          };
+          break;
+        }
+
+        // Customer.io
+        case "customer-io": {
+          testData = {
+            type: "customer-io",
+            api_key: data.appApiKey || "",
+            project_id: data.siteId || "",
+          };
+          break;
+        }
+
+        // Pinecone
+        case "pinecone": {
+          testData = {
+            type: "pinecone",
+            api_key: data.apiKey || "",
+            region: data.environment || "",
+            dataset: data.indexName || "", // index = dataset equivalent
+          };
+          break;
+        }
+
+        // Milvus
+        case "milvus": {
+          testData = {
+            type: "milvus",
+            host: data.host || "",
+            port: data.port ? parseInt(data.port, 10) : 19530,
+            username: data.username || "",
+            password: data.password || "",
+          };
+          break;
+        }
+
+        // Weaviate
+        case "weaviate": {
+          testData = {
+            type: "weaviate",
+            base_url: data.url || "",
+            api_key: data.apiKey || "",
+          };
+          break;
+        }
+
+        // SQL Databases: PostgreSQL, MySQL, MSSQL, Redshift, ClickHouse, PGVector
+        default: {
+          const databaseType = data.databaseType || "other";
+          const isNeon = databaseType === "neon";
+          const isSupabase = databaseType === "supabase";
+          const host = data.host || "";
+          const isLocalhost =
+            host === "localhost" ||
+            host === "127.0.0.1" ||
+            host.startsWith("127.");
+
+          // Default ports based on database type
+          const defaultPorts: Record<string, number> = {
+            postgres: 5432,
+            mysql: 3306,
+            mssql: 1433,
+            redshift: 5439,
+            clickhouse: 9000,
+            pgvector: 5432,
+          };
+
+          testData = {
+            type: sourceType,
+            host: host,
+            port: data.port
+              ? parseInt(data.port, 10)
+              : defaultPorts[sourceType] || 5432,
+            database: data.database || "",
+            username: data.username || "",
+            password: data.password || "",
+            ssl:
+              !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
+                ? { enabled: true }
+                : undefined,
+            databaseType: databaseType,
+          };
+          break;
+        }
+      }
 
       const result = await testConnection.mutateAsync(testData);
       return {
@@ -343,7 +565,8 @@ export default function DataSourcesPage() {
     onConfirm: async () => {
       if (!dataSourceToDelete) return;
       try {
-        await deleteConnection.mutateAsync(dataSourceToDelete.id);
+        // Use NestJS API for data source deletion
+        await deleteDataSource.mutateAsync(dataSourceToDelete.id);
         showSuccessToast("deleted", "Data Source");
         setDataSourceToDelete(null);
       } catch (error) {
@@ -617,7 +840,7 @@ export default function DataSourcesPage() {
         }
       />
 
-      {!orgId ? (
+      {!organizationId ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-2">
             <p className="text-sm font-medium text-muted-foreground">
@@ -645,7 +868,11 @@ export default function DataSourcesPage() {
         />
       ) : (
         <DataTable
-          tableId={orgId ? `data-sources-table-${orgId}` : "data-sources-table"}
+          tableId={
+            organizationId
+              ? `data-sources-table-${organizationId}`
+              : "data-sources-table"
+          }
           columns={columns}
           data={filteredDataSources}
           isLoading={false}
@@ -700,7 +927,7 @@ export default function DataSourcesPage() {
         itemName={deleteConfirm.confirmProps.itemName}
         itemValue={deleteConfirm.confirmProps.itemValue}
         onConfirm={deleteConfirm.confirmProps.onConfirm}
-        isLoading={deleteConnection.isPending}
+        isLoading={deleteDataSource.isPending}
       />
     </div>
   );

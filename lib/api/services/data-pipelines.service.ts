@@ -1,112 +1,274 @@
 /**
  * Data Pipelines API Service
  * Service layer for data pipeline endpoints
+ * Updated to match refactored backend API
  */
 
 import { ApiClient } from "../client";
 import type {
-  AutoMapResponse,
   CreatePipelineDto,
+  DryRunPipelineDto,
   DryRunResult,
   Pipeline,
+  PipelineDestinationSchema,
   PipelineRun,
+  PipelineSourceSchema,
   PipelineStats,
+  PipelineWithSchemas,
+  RunPipelineDto,
+  RunStatus,
   UpdatePipelineDto,
   ValidationResult,
 } from "../types/data-pipelines";
 
 export class DataPipelinesService {
-  private static readonly BASE_PATH = "api/data-pipelines";
+  private static readonly BASE_PATH = "api/organizations";
 
-  // Pipeline Management
+  // ============================================================================
+  // PIPELINE CRUD
+  // ============================================================================
+
+  /**
+   * Create a new pipeline - calls Python API directly
+   * Python API handles source schema, destination schema, and pipeline creation
+   */
   static async createPipeline(
-    data: CreatePipelineDto,
-    orgId?: string,
+    _organizationId: string,
+    _data: CreatePipelineDto,
   ): Promise<Pipeline> {
-    const params = new URLSearchParams();
-    if (orgId) params.append("orgId", orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : "";
-    return ApiClient.post<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}${queryString}`,
-      data,
+    // Call Python API directly for pipeline creation
+    // Note: Python API expects a different format with source_schema and destination_schema
+    // This method signature is kept for backward compatibility but should be updated
+    // to match the Python API format in the future
+    throw new Error(
+      "Use PythonETLService.createPipeline directly with source_schema and destination_schema",
     );
   }
 
-  static async listPipelines(orgId?: string): Promise<Pipeline[]> {
-    const params = new URLSearchParams();
-    if (orgId) params.append("orgId", orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : "";
+  /**
+   * List all pipelines for organization
+   */
+  static async listPipelines(organizationId: string): Promise<Pipeline[]> {
     return ApiClient.get<Pipeline[]>(
-      `${DataPipelinesService.BASE_PATH}${queryString}`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines`,
     );
   }
 
-  static async getPipeline(id: string, orgId?: string): Promise<Pipeline> {
-    const params = new URLSearchParams();
-    if (orgId) params.append("orgId", orgId);
-    const queryString = params.toString() ? `?${params.toString()}` : "";
+  /**
+   * Get pipeline by ID
+   */
+  static async getPipeline(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<Pipeline> {
     return ApiClient.get<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${id}${queryString}`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}`,
     );
   }
 
+  /**
+   * Get pipeline with source and destination schemas
+   */
+  static async getPipelineWithSchemas(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<PipelineWithSchemas> {
+    return ApiClient.get<PipelineWithSchemas>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/full`,
+    );
+  }
+
+  /**
+   * Update pipeline - calls Python API directly
+   * Python API handles pipeline updates
+   */
   static async updatePipeline(
-    id: string,
+    organizationId: string,
+    pipelineId: string,
     data: UpdatePipelineDto,
   ): Promise<Pipeline> {
-    return ApiClient.patch<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${id}`,
-      data,
+    // Call Python API directly for pipeline updates
+    const { PythonETLService } = await import("./python-etl.service");
+
+    // Map frontend DTO to Python API format
+    const pythonData: Record<string, unknown> = {};
+    if (data.name !== undefined) pythonData.name = data.name;
+    if (data.description !== undefined)
+      pythonData.description = data.description;
+    if (data.syncMode !== undefined) pythonData.sync_mode = data.syncMode;
+    if (data.syncFrequency !== undefined)
+      pythonData.sync_frequency = data.syncFrequency;
+    if (data.incrementalColumn !== undefined)
+      pythonData.incremental_column = data.incrementalColumn;
+    if (data.scheduleType !== undefined)
+      pythonData.schedule_type = data.scheduleType;
+    if (data.scheduleValue !== undefined)
+      pythonData.schedule_value = data.scheduleValue;
+    if (data.scheduleTimezone !== undefined)
+      pythonData.schedule_timezone = data.scheduleTimezone;
+    if (data.transformations !== undefined)
+      pythonData.transformations = data.transformations as unknown as Record<string, unknown>[];
+
+    const result = await PythonETLService.updatePipeline(
+      organizationId,
+      pipelineId,
+      pythonData,
     );
+    
+    return result as unknown as Pipeline;
   }
 
-  static async deletePipeline(id: string): Promise<{ deletedId: string }> {
+  /**
+   * Delete pipeline (soft delete)
+   */
+  static async deletePipeline(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<{ deletedId: string }> {
     return ApiClient.delete<{ deletedId: string }>(
-      `${DataPipelinesService.BASE_PATH}/${id}`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}`,
     );
   }
 
-  // Pipeline Execution
-  static async runPipeline(id: string): Promise<PipelineRun> {
+  // ============================================================================
+  // PIPELINE EXECUTION - Uses Python API directly to avoid NestJS proxy timeout
+  // ============================================================================
+
+  /**
+   * Run pipeline - calls Python API directly to avoid timeout issues
+   */
+  static async runPipeline(
+    organizationId: string,
+    pipelineId: string,
+    options?: RunPipelineDto,
+  ): Promise<PipelineRun> {
+    // Call Python API directly to bypass NestJS proxy and avoid timeout issues
+    const { PythonETLService } = await import("./python-etl.service");
+
+    const result = await PythonETLService.runPipeline(
+      organizationId,
+      pipelineId,
+      {
+        syncMode: "full",
+        limit: options?.batchSize,
+      },
+    );
+
+    // Map Python response to PipelineRun format
+    return {
+      id: result.runId,
+      pipelineId: result.pipelineId,
+      organizationId: organizationId,
+      triggeredBy: "system", // Default value since Python API doesn't provide this
+      triggerType: "manual",
+      status: (result.status === "completed" ? "success" : result.status) as RunStatus,
+      jobState: (result.status === "completed" ? "completed" : result.status === "failed" ? "failed" : result.status === "running" ? "running" : "pending") as "pending" | "running" | "completed" | "failed",
+      rowsRead: result.rowsRead,
+      rowsWritten: result.rowsWritten,
+      rowsSkipped: result.rowsSkipped,
+      rowsFailed: result.rowsFailed,
+      errorMessage:
+        result.errors?.length > 0 ? result.errors[0]?.error : undefined,
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Pause pipeline - calls Python API directly
+   */
+  static async pausePipeline(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<Pipeline> {
+    // Call Python API directly
+    const { PythonETLService } = await import("./python-etl.service");
+
+    const result = await PythonETLService.pausePipeline(
+      organizationId,
+      pipelineId,
+    );
+
+    // Return minimal pipeline object with updated status
+    return {
+      id: result.pipelineId,
+      organizationId: organizationId,
+      status: result.status as
+        | "idle"
+        | "running"
+        | "paused"
+        | "failed"
+        | "completed",
+    } as Pipeline;
+  }
+
+  /**
+   * Resume pipeline - calls NestJS API (may need to add Python endpoint later)
+   */
+  static async resumePipeline(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<Pipeline> {
+    return ApiClient.post<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/resume`,
+    );
+  }
+
+  /**
+   * Cancel a running pipeline run
+   */
+  static async cancelPipelineRun(
+    organizationId: string,
+    pipelineId: string,
+    runId: string,
+  ): Promise<PipelineRun> {
     return ApiClient.post<PipelineRun>(
-      `${DataPipelinesService.BASE_PATH}/${id}/run`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/runs/${runId}/cancel`,
     );
   }
 
-  static async dryRunPipeline(id: string): Promise<DryRunResult> {
-    return ApiClient.post<DryRunResult>(
-      `${DataPipelinesService.BASE_PATH}/${id}/dry-run`,
-    );
-  }
+  // ============================================================================
+  // PIPELINE VALIDATION
+  // ============================================================================
 
-  static async pausePipeline(id: string): Promise<Pipeline> {
-    return ApiClient.post<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${id}/pause`,
-    );
-  }
-
-  static async resumePipeline(id: string): Promise<Pipeline> {
-    return ApiClient.post<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${id}/resume`,
-    );
-  }
-
-  // Pipeline Configuration
-  static async validatePipeline(id: string): Promise<ValidationResult> {
+  /**
+   * Validate pipeline configuration
+   */
+  static async validatePipeline(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<ValidationResult> {
     return ApiClient.post<ValidationResult>(
-      `${DataPipelinesService.BASE_PATH}/${id}/validate`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/validate`,
     );
   }
 
-  static async autoMapColumns(id: string): Promise<AutoMapResponse> {
-    return ApiClient.post<AutoMapResponse>(
-      `${DataPipelinesService.BASE_PATH}/${id}/auto-map`,
+  /**
+   * Dry run pipeline (test without writing)
+   */
+  static async dryRunPipeline(
+    organizationId: string,
+    pipelineId: string,
+    options?: DryRunPipelineDto,
+  ): Promise<DryRunResult> {
+    return ApiClient.post<DryRunResult>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/dry-run`,
+      options || {},
     );
   }
 
-  // Pipeline Monitoring
+  // ============================================================================
+  // PIPELINE RUNS
+  // ============================================================================
+
+  /**
+   * Get pipeline runs with pagination
+   */
   static async getPipelineRuns(
-    id: string,
+    organizationId: string,
+    pipelineId: string,
     limit?: number,
     offset?: number,
   ): Promise<PipelineRun[]> {
@@ -115,19 +277,90 @@ export class DataPipelinesService {
     if (offset) params.append("offset", offset.toString());
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<PipelineRun[]>(
-      `${DataPipelinesService.BASE_PATH}/${id}/runs${queryString}`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/runs${queryString}`,
     );
   }
 
-  static async getPipelineRun(id: string, runId: string): Promise<PipelineRun> {
+  /**
+   * Get pipeline run by ID
+   */
+  static async getPipelineRun(
+    organizationId: string,
+    pipelineId: string,
+    runId: string,
+  ): Promise<PipelineRun> {
     return ApiClient.get<PipelineRun>(
-      `${DataPipelinesService.BASE_PATH}/${id}/runs/${runId}`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/runs/${runId}`,
     );
   }
 
-  static async getPipelineStats(id: string): Promise<PipelineStats> {
+  // ============================================================================
+  // PIPELINE STATISTICS
+  // ============================================================================
+
+  /**
+   * Get pipeline statistics
+   */
+  static async getPipelineStats(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<PipelineStats> {
     return ApiClient.get<PipelineStats>(
-      `${DataPipelinesService.BASE_PATH}/${id}/stats`,
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/stats`,
+    );
+  }
+
+  // ============================================================================
+  // SOURCE SCHEMA
+  // ============================================================================
+
+  /**
+   * Get source schema by ID
+   */
+  static async getSourceSchema(
+    organizationId: string,
+    schemaId: string,
+  ): Promise<PipelineSourceSchema> {
+    return ApiClient.get<PipelineSourceSchema>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/source-schemas/${schemaId}`,
+    );
+  }
+
+  /**
+   * List source schemas for organization
+   */
+  static async listSourceSchemas(
+    organizationId: string,
+  ): Promise<PipelineSourceSchema[]> {
+    return ApiClient.get<PipelineSourceSchema[]>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/source-schemas`,
+    );
+  }
+
+  // ============================================================================
+  // DESTINATION SCHEMA
+  // ============================================================================
+
+  /**
+   * Get destination schema by ID
+   */
+  static async getDestinationSchema(
+    organizationId: string,
+    schemaId: string,
+  ): Promise<PipelineDestinationSchema> {
+    return ApiClient.get<PipelineDestinationSchema>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/destination-schemas/${schemaId}`,
+    );
+  }
+
+  /**
+   * List destination schemas for organization
+   */
+  static async listDestinationSchemas(
+    organizationId: string,
+  ): Promise<PipelineDestinationSchema[]> {
+    return ApiClient.get<PipelineDestinationSchema[]>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/destination-schemas`,
     );
   }
 }

@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
-import { useCreatePipeline } from "@/lib/api/hooks/use-data-pipelines";
+// Pipeline creation now handled by Python API - no need for these hooks
+import { useConnections } from "@/lib/api/hooks/use-data-sources";
+import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
@@ -22,8 +24,9 @@ type Transformer = CollectorConfig["transformers"][number];
 export default function NewPipelinePage() {
   const router = useRouter();
   const { currentOrganization } = useWorkspaceStore();
-  const orgId = currentOrganization?.id;
-  const createPipelineMutation = useCreatePipeline();
+  const organizationId = currentOrganization?.id;
+  // Pipeline creation now handled by Python API directly
+  const { data: connections } = useConnections(organizationId);
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
     collectors: [],
@@ -63,61 +66,33 @@ export default function NewPipelinePage() {
     // This fixes the issue where newly created transformers aren't detected on first save
     const collectorsToUse = collectorsOverride || config.collectors;
 
-    // Validate that at least one transformer with field mappings exists
-    // Check all collectors and their transformers, ensuring fieldMappings is properly structured
+    // Validate that at least one transformer with transform script exists
+    // Only script-based transformations are allowed for now (field mappings are commented out)
     const hasValidTransformers = collectorsToUse.some((collector) => {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
 
       return collector.transformers.some((t) => {
-        // Check if fieldMappings exists and is a non-empty array
-        const fieldMappings = t.fieldMappings;
-        if (!fieldMappings) {
-          return false;
-        }
-
-        // Handle both array format and object format
-        if (Array.isArray(fieldMappings)) {
-          return (
-            fieldMappings.length > 0 &&
-            fieldMappings.some((fm) => {
-              // Ensure each mapping has required fields
-              return (
-                fm &&
-                typeof fm === "object" &&
-                ("source" in fm || "destination" in fm)
-              );
-            })
-          );
-        }
-
-        // If it's an object, check if it has any entries
-        if (typeof fieldMappings === "object") {
-          return Object.keys(fieldMappings).length > 0;
-        }
-
-        return false;
+        // Check if transformScript exists and is not empty
+        return t.transformScript && t.transformScript.trim().length > 0;
       });
     });
 
     if (!hasValidTransformers) {
       toast.error(
-        "Missing field mappings",
-        "Please configure at least one transformer with field mappings before creating the pipeline.",
+        "Missing transform script",
+        "Please configure at least one transformer with a Python transform script before creating the pipeline.",
       );
       return;
     }
 
     // Prevent double submission
     if (isCreating) {
-      console.warn(
-        "Pipeline creation already in progress, ignoring duplicate request",
-      );
       return;
     }
 
-    if (!orgId) {
+    if (!organizationId) {
       toast.error(
         "No organization selected",
         "Please select an organization from the sidebar.",
@@ -177,133 +152,176 @@ export default function NewPipelinePage() {
       return;
     }
 
-    // Map transformers to emitters - set transformId on emitters
-    const transformersWithEmitters = collectorsToUse.flatMap((c) =>
-      (c.transformers || []).map((t) => ({
-        ...t,
-        collectorId: t.collectorId || c.id,
-        emitterId: t.emitterId || "",
-      })),
-    );
-
-    // Map emitters to the format expected by the API
-    // Set transformId for emitters that are referenced by transformers
-    const emitters = allEmitters.map((e) => {
-      // Find transformer that references this emitter
-      const transformer = transformersWithEmitters.find(
-        (t) => t.emitterId === e.id,
-      );
-      return {
-        id: e.id,
-        transformId: transformer?.id || "", // Set transformId if transformer references this emitter
-        destinationId: e.destinationId,
-        destinationName: e.destinationName,
-        destinationType: e.destinationType,
-        connectionConfig: e.connectionConfig || {}, // Include connectionConfig (required by API)
-      };
-    });
+    // Note: emitters mapping is no longer needed for schema-based API
+    // The destination schema is created directly from transformer field mappings
 
     try {
-      // Use the first collector's source as the primary source
+      // Step 1: Create source schema from collector data
       const firstCollector = collectorsToUse[0];
       const primarySourceId = firstCollector.sourceId;
+      const firstTable = firstCollector.selectedTables[0];
+
+      if (!firstTable) {
+        toast.error(
+          "No table selected",
+          "Please select at least one table in the collector step.",
+        );
+        setIsCreating(false);
+        return;
+      }
+
+      // Get data source to determine source type
+      let sourceType = "postgres"; // Default fallback
+      try {
+        if (!organizationId) {
+          throw new Error("Organization ID is required");
+        }
+        const dataSource = await DataSourcesService.getDataSource(
+          organizationId,
+          primarySourceId,
+        );
+        // Handle both camelCase and snake_case from API
+        sourceType =
+          dataSource.sourceType ||
+          (dataSource as { source_type?: string }).source_type ||
+          "postgres";
+      } catch (error) {
+        console.error(
+          "Failed to fetch data source, using default type:",
+          error,
+        );
+        // Try to get from connections cache if available
+        const cachedConnection = connections?.find(
+          (c) => c.id === primarySourceId,
+        );
+        if (cachedConnection?.type) {
+          sourceType = cachedConnection.type;
+        } else {
+          // Last resort: show error to user
+          toast.error(
+            "Failed to determine source type",
+            "Could not fetch data source information. Please try again.",
+          );
+          setIsCreating(false);
+          return;
+        }
+      }
+
+      // Parse table name based on source type
+      // For MongoDB: format is "database.collection" or just "collection"
+      // For SQL: format is "schema.table" or just "table"
+      const isMongoDB = sourceType === "mongodb";
+      let sourceSchemaName: string | undefined;
+      let sourceTableName: string;
+
+      if (firstTable.includes(".")) {
+        const parts = firstTable.split(".");
+        if (isMongoDB) {
+          // MongoDB: "database.collection"
+          sourceSchemaName = parts[0]; // database name
+          sourceTableName = parts[1]; // collection name
+        } else {
+          // SQL: "schema.table"
+          sourceSchemaName = parts[0] || "public";
+          sourceTableName = parts[1] || parts[0] || firstTable;
+        }
+      } else {
+        // No prefix - handle based on source type
+        if (isMongoDB) {
+          // MongoDB: just collection name, no database specified
+          sourceSchemaName = undefined; // Will search all databases
+          sourceTableName = firstTable;
+        } else {
+          // SQL: just table name, default to public schema
+          sourceSchemaName = "public";
+          sourceTableName = firstTable;
+        }
+      }
 
       // Get destination connection ID from emitters
       const destinationConnectionId = allDestinationIds[0];
 
-      // Extract destination table from transformers (use first transformer's destinationTable if available)
-      // Format: "schema.table" or just "table" (defaults to "public")
-      let destinationTable = `pipeline_${Date.now()}`;
-      let destinationSchema = "public";
-
+      // Extract destination information from transformers
+      // Only script-based transformations are allowed for now
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find(
-          (t): t is Transformer & { destinationTable: string } =>
-            !!(t as { destinationTable?: string }).destinationTable,
-        );
+        .find((t) => t.transformScript?.trim());
 
-      if (firstTransformer?.destinationTable) {
-        const tableParts = firstTransformer.destinationTable.includes(".")
-          ? firstTransformer.destinationTable.split(".")
-          : ["public", firstTransformer.destinationTable];
-        destinationSchema = tableParts[0] || "public";
-        destinationTable =
-          tableParts[1] || tableParts[0] || `pipeline_${Date.now()}`;
+      // Check if transformer has transformScript
+      const hasTransformScript = firstTransformer?.transformScript?.trim();
+
+      if (!hasTransformScript) {
+        toast.error(
+          "No transformation configured",
+          "Please configure a Python transform script in the transform step.",
+        );
+        setIsCreating(false);
+        return;
       }
 
-      await createPipelineMutation.mutateAsync({
-        data: {
-          name: `Pipeline ${new Date().toLocaleDateString()}`,
-          description: `Pipeline with ${collectorsToUse.length} collector(s)`,
-          sourceType: "postgres",
-          sourceConnectionId: primarySourceId,
-          destinationConnectionId: destinationConnectionId,
-          destinationSchema: destinationSchema,
-          destinationTable: destinationTable,
-          syncMode: "full",
-          syncFrequency: "manual",
-          writeMode: "append",
-          collectors: collectorsToUse.map((c) => ({
-            id: c.id,
-            sourceId: c.sourceId,
-            selectedTables: c.selectedTables,
-            transformers: (c.transformers || [])
-              .filter((t) => {
-                // Only include transformers that have valid field mappings
-                const fieldMappings = t.fieldMappings;
-                if (!fieldMappings) {
-                  return false;
-                }
+      // Extract destination table from transformer (may be stored in destinationTable field)
+      // Format: "schema.table" or just "table" (defaults to "public")
+      let destinationTable = `pipeline_${Date.now()}`;
+      const transformerWithTable = firstTransformer as Transformer & {
+        destinationTable?: string;
+      };
+      if (transformerWithTable.destinationTable) {
+        destinationTable = transformerWithTable.destinationTable;
+      }
 
-                // Ensure it's an array with at least one valid mapping
-                if (Array.isArray(fieldMappings)) {
-                  return (
-                    fieldMappings.length > 0 &&
-                    fieldMappings.some((fm) => {
-                      return (
-                        fm &&
-                        typeof fm === "object" &&
-                        ("source" in fm || "destination" in fm)
-                      );
-                    })
-                  );
-                }
+      // Parse destination table (format: "schema.table" or just "table")
+      const destTableParts = destinationTable.includes(".")
+        ? destinationTable.split(".")
+        : ["public", destinationTable];
+      const destSchemaName = destTableParts[0] || "public";
+      const destTableName =
+        destTableParts[1] || destTableParts[0] || destinationTable;
 
-                return false;
-              })
-              .map((t) => {
-                // Ensure fieldMappings is always a valid array
-                const fieldMappingsArray = Array.isArray(t.fieldMappings)
-                  ? t.fieldMappings
-                  : [];
+      // Transform script is already in firstTransformer.transformScript
 
-                // Convert array format to Record format for API
-                const fieldMappingsRecord: Record<string, string> = {};
-                fieldMappingsArray.forEach((fm) => {
-                  if (
-                    fm &&
-                    typeof fm === "object" &&
-                    "source" in fm &&
-                    "destination" in fm
-                  ) {
-                    fieldMappingsRecord[fm.source] = fm.destination;
-                  }
-                });
+      // Extract primary keys from field mappings (commented out - field mappings not used for now)
+      const primaryKeyFields: string[] = []; // Empty for now - can be extracted from script if needed
 
-                return {
-                  id: t.id,
-                  name: t.name,
-                  fieldMappings:
-                    Object.keys(fieldMappingsRecord).length > 0
-                      ? fieldMappingsRecord
-                      : undefined,
-                };
-              }),
-          })),
-          emitters: emitters,
+      // Determine write mode (default to append, could be enhanced)
+      const writeMode: "append" | "upsert" | "replace" =
+        primaryKeyFields.length > 0 ? "upsert" : "append";
+
+      // Create pipeline using Python API (handles source schema, destination schema, and pipeline creation)
+      const { PythonETLService } = await import(
+        "@/lib/api/services/python-etl.service"
+      );
+
+      if (!organizationId) {
+        toast.error("Error", "Organization ID is required");
+        return;
+      }
+      await PythonETLService.createPipeline(organizationId, {
+        name: `Pipeline ${new Date().toLocaleDateString()}`,
+        description: `Pipeline with ${collectorsToUse.length} collector(s)`,
+        source_schema: {
+          source_type: sourceType,
+          data_source_id: primarySourceId,
+          source_schema: sourceSchemaName,
+          source_table: sourceTableName,
+          name: `Source: ${sourceTableName}`,
+          is_active: true,
         },
-        orgId,
+        destination_schema: {
+          data_source_id: destinationConnectionId,
+          destination_schema: destSchemaName,
+          destination_table: destTableName,
+          transform_script: firstTransformer?.transformScript || "",
+          write_mode: writeMode,
+          upsert_key:
+            primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
+          name: `Destination: ${destTableName}`,
+          is_active: true,
+        },
+        sync_mode: "incremental", // Auto CDC - first run is full, subsequent runs are incremental
+        sync_frequency: "minutes", // Auto-run every 2 minutes for CDC
+        schedule_type: "minutes",
+        schedule_value: "2", // 2 minutes default for CDC polling
+        transformations: [],
       });
 
       toast.success(
@@ -312,7 +330,6 @@ export default function NewPipelinePage() {
       );
       router.push("/workspace/data-pipelines");
     } catch (error) {
-      console.error("Failed to create pipeline:", error);
       toast.error(
         "Failed to create pipeline",
         error instanceof Error ? error.message : "Unknown error occurred",

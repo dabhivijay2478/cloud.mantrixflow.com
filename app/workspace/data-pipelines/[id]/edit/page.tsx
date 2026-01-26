@@ -10,6 +10,14 @@ import {
   usePipeline,
   useUpdatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import {
+  useDestinationSchema,
+  useUpdateDestinationSchema,
+} from "@/lib/api/hooks/use-destination-schemas";
+import {
+  useSourceSchema,
+  useUpdateSourceSchema,
+} from "@/lib/api/hooks/use-source-schemas";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "../../new/collector-step";
@@ -26,12 +34,6 @@ interface PipelineConfig {
 type Emitter = NonNullable<CollectorConfig["emitters"]>[number];
 
 type Transformer = CollectorConfig["transformers"][number];
-
-type FieldMapping = {
-  source: string;
-  destination: string;
-  isPrimaryKey?: boolean;
-};
 
 interface TransformationsData {
   collectors?: Array<{
@@ -50,8 +52,27 @@ export default function EditPipelinePage() {
   const { currentOrganization } = useWorkspaceStore();
   const orgId = currentOrganization?.id;
   const pipelineId = params.id as string;
-  const { data: pipeline, isLoading, error } = usePipeline(pipelineId, orgId);
-  const updatePipelineMutation = useUpdatePipeline();
+  const { data: pipeline, isLoading, error } = usePipeline(orgId, pipelineId);
+  const updatePipelineMutation = useUpdatePipeline(orgId, pipelineId);
+
+  // Load source and destination schemas
+  const { data: sourceSchema } = useSourceSchema(
+    orgId,
+    pipeline?.sourceSchemaId,
+  );
+  const { data: destinationSchema } = useDestinationSchema(
+    orgId,
+    pipeline?.destinationSchemaId,
+  );
+
+  const updateSourceSchemaMutation = useUpdateSourceSchema(
+    orgId,
+    pipeline?.sourceSchemaId,
+  );
+  const updateDestinationSchemaMutation = useUpdateDestinationSchema(
+    orgId,
+    pipeline?.destinationSchemaId,
+  );
 
   const [currentStep, setCurrentStep] = useState<PipelineStep>("collector");
   const [config, setConfig] = useState<PipelineConfig>({
@@ -60,211 +81,235 @@ export default function EditPipelinePage() {
 
   // Load pipeline configuration from API response
   useEffect(() => {
-    if (pipeline) {
-      // Parse collectors from transformations JSONB field
+    if (pipeline && sourceSchema && destinationSchema) {
+      // Parse existing transformations from JSONB field
       const transformations =
         pipeline.transformations as unknown as TransformationsData;
-      const collectors = transformations?.collectors || [];
-      const emitters = transformations?.emitters || [];
+      let collectors = transformations?.collectors || [];
+      const existingEmitters = transformations?.emitters || [];
+
+      // Build the authoritative destination table name from destinationSchema
+      // CRITICAL: ALWAYS use "schema.table" format to match TransformStep dropdown
+      // The dropdown's destinationTables uses fullName which is ALWAYS "schema.table" format
+      const destinationTableName =
+        destinationSchema.destinationTable &&
+        destinationSchema.destinationSchema
+          ? `${destinationSchema.destinationSchema}.${destinationSchema.destinationTable}`
+          : destinationSchema.destinationTable
+            ? `public.${destinationSchema.destinationTable}`
+            : "";
+
+      // Build the authoritative source table name from sourceSchema
+      // Use same "schema.table" format for consistency
+      const sourceTableName =
+        sourceSchema.sourceTable && sourceSchema.sourceSchema
+          ? `${sourceSchema.sourceSchema}.${sourceSchema.sourceTable}`
+          : sourceSchema.sourceTable
+            ? `public.${sourceSchema.sourceTable}`
+            : "";
+
+      // Build field mappings from destinationSchema transformScript
+      // Note: Transform script is the authoritative source, field mappings are derived from UI
+      const schemaFieldMappings: Array<{
+        source: string;
+        destination: string;
+        isPrimaryKey: boolean;
+      }> = [];
+
+      // Generate stable IDs (or use existing ones from transformations)
+      const baseTimestamp = Date.now();
+      const defaultCollectorId =
+        collectors[0]?.id || `collector_${baseTimestamp}`;
+      const defaultTransformerId =
+        collectors[0]?.transformers?.[0]?.id || `transformer_${baseTimestamp}`;
+      const defaultEmitterId =
+        collectors[0]?.emitters?.[0]?.id ||
+        collectors[0]?.transformers?.[0]?.emitterId ||
+        `emitter_${baseTimestamp}`;
+
+      // Build the authoritative Emitter from destinationSchema
+      const reconstructedEmitter: Emitter = {
+        id: defaultEmitterId,
+        transformId: defaultTransformerId,
+        destinationId: destinationSchema.dataSourceId || "",
+        destinationName: "Destination",
+        destinationType: "postgres",
+      };
+
+      if (collectors.length === 0) {
+        // No existing collectors - fully reconstruct from schemas
+        const transformers =
+          schemaFieldMappings.length > 0
+            ? [
+                {
+                  id: defaultTransformerId,
+                  name: "Default Transformer",
+                  collectorId: defaultCollectorId,
+                  emitterId: defaultEmitterId,
+                  destinationTable: destinationTableName,
+                  fieldMappings: schemaFieldMappings,
+                },
+              ]
+            : [];
+
+        collectors = [
+          {
+            id: defaultCollectorId,
+            sourceId: sourceSchema.dataSourceId || "",
+            selectedTables: sourceTableName ? [sourceTableName] : [],
+            transformers: transformers,
+            emitters: [reconstructedEmitter],
+          },
+        ];
+      } else {
+        // Existing collectors - HYDRATE/ENRICH them with schema data
+        // This is the key fix: always apply authoritative data from schemas
+        collectors = collectors.map((c, _cIndex) => {
+          // Ensure emitters exist on the collector
+          let collectorEmitters = c.emitters || [];
+          if (collectorEmitters.length === 0) {
+            // No emitters stored - add the reconstructed one
+            collectorEmitters = [reconstructedEmitter];
+          }
+
+          // Hydrate each transformer with schema data if missing
+          const hydratedTransformers = (c.transformers || []).map(
+            (t, _tIndex) => {
+              const transformer = t as typeof t & {
+                destinationTable?: string;
+              };
+
+              // Use existing values if present, otherwise fall back to schema data
+              return {
+                ...t,
+                collectorId: t.collectorId || c.id,
+                emitterId:
+                  t.emitterId || collectorEmitters[0]?.id || defaultEmitterId,
+                // CRITICAL: Always use schema's destinationTable if transformer doesn't have one
+                destinationTable:
+                  transformer.destinationTable || destinationTableName,
+                // CRITICAL: Always use schema's fieldMappings if transformer doesn't have any
+                fieldMappings:
+                  t.fieldMappings && t.fieldMappings.length > 0
+                    ? t.fieldMappings
+                    : schemaFieldMappings,
+              };
+            },
+          );
+
+          // If no transformers exist, create one from schema
+          const finalTransformers =
+            hydratedTransformers.length > 0
+              ? hydratedTransformers
+              : schemaFieldMappings.length > 0
+                ? [
+                    {
+                      id: defaultTransformerId,
+                      name: "Default Transformer",
+                      collectorId: c.id,
+                      emitterId: collectorEmitters[0]?.id || defaultEmitterId,
+                      destinationTable: destinationTableName,
+                      fieldMappings: schemaFieldMappings,
+                    },
+                  ]
+                : [];
+
+          return {
+            ...c,
+            sourceId: c.sourceId || sourceSchema.dataSourceId || "",
+            selectedTables:
+              c.selectedTables && c.selectedTables.length > 0
+                ? c.selectedTables
+                : sourceTableName
+                  ? [sourceTableName]
+                  : [],
+            emitters: collectorEmitters,
+            transformers: finalTransformers,
+          };
+        });
+      }
 
       console.log("Pipeline data loaded for edit:", {
         transformations,
         collectors,
-        emitters,
-        pipeline,
+        existingEmitters,
+        destinationTableName,
+        sourceTableName,
+        schemaFieldMappingsCount: schemaFieldMappings.length,
         collectorsCount: collectors.length,
-        emittersCount: emitters.length,
-        collectorsWithEmitters: collectors.map((c) => ({
-          id: c.id,
-          hasEmitters: !!(c.emitters && c.emitters.length > 0),
-          emittersCount: c.emitters?.length || 0,
-          transformersCount: (c.transformers || []).length,
-          transformers: (c.transformers || []).map((t) => ({
-            id: t.id,
-            name: t.name,
-            emitterId: t.emitterId,
-            fieldMappingsCount: t.fieldMappings?.length || 0,
-            fieldMappings: t.fieldMappings,
-          })),
-        })),
-      });
-
-      // Map emitters to collectors
-      // Strategy 1: If emitters are stored directly on collectors (from new pipeline flow)
-      // Strategy 2: If emitters are in separate array, map via transformers
-      const collectorEmittersMap = new Map<string, Emitter[]>();
-
-      collectors.forEach((c) => {
-        // First, check if emitters are already on the collector (from new pipeline creation)
-        if (c.emitters && Array.isArray(c.emitters) && c.emitters.length > 0) {
-          collectorEmittersMap.set(c.id, c.emitters);
-        } else {
-          // Otherwise, map emitters via transformer relationships
-          const collectorEmitterIds = new Set<string>();
-          (c.transformers || []).forEach((t) => {
-            if (t.emitterId) {
-              collectorEmitterIds.add(t.emitterId);
-            }
-          });
-
-          const collectorEmitters = emitters.filter((e) =>
-            collectorEmitterIds.has(e.id),
-          );
-
-          if (collectorEmitters.length > 0) {
-            collectorEmittersMap.set(c.id, collectorEmitters);
-          }
-        }
-      });
-
-      // Also check if there are emitters without collector association (fallback)
-      // In this case, associate them with the first collector
-      if (collectors.length > 0 && emitters.length > 0) {
-        const allMappedEmitterIds = new Set(
-          Array.from(collectorEmittersMap.values())
-            .flat()
-            .map((e) => e.id),
-        );
-        const unmappedEmitters = emitters.filter(
-          (e) => !allMappedEmitterIds.has(e.id),
-        );
-        if (
-          unmappedEmitters.length > 0 &&
-          !collectorEmittersMap.has(collectors[0].id)
-        ) {
-          collectorEmittersMap.set(collectors[0].id, unmappedEmitters);
-        }
-      }
-
-      const finalConfig = {
-        collectors: collectors.map((c) => {
-          const collectorEmitters = collectorEmittersMap.get(c.id) || [];
-
-          return {
-            id: c.id,
-            sourceId: c.sourceId,
-            selectedTables: c.selectedTables || [],
-            emitters: collectorEmitters.map((e) => ({
-              id: e.id,
-              transformId: e.transformId || "",
-              destinationId: e.destinationId,
-              destinationName: e.destinationName,
-              destinationType: e.destinationType,
-              connectionConfig: e.connectionConfig || {},
-            })),
-            transformers: (c.transformers || []).map((t) => ({
-              id: t.id,
-              name: t.name,
-              collectorId: t.collectorId || c.id,
-              emitterId: t.emitterId || "",
-              destinationTable:
-                (t as { destinationTable?: string }).destinationTable || "",
-              primaryKeyField:
-                (t as { primaryKeyField?: string }).primaryKeyField || "",
-              fieldMappings: Array.isArray(t.fieldMappings)
-                ? t.fieldMappings.map((fm): FieldMapping => {
-                    if (
-                      typeof fm === "object" &&
-                      fm !== null &&
-                      "source" in fm &&
-                      "destination" in fm
-                    ) {
-                      return {
-                        source: String(fm.source),
-                        destination: String(fm.destination),
-                        isPrimaryKey:
-                          "isPrimaryKey" in fm
-                            ? Boolean(fm.isPrimaryKey)
-                            : false,
-                      };
-                    }
-                    if (typeof fm === "string") {
-                      return {
-                        source: fm,
-                        destination: fm,
-                        isPrimaryKey: false,
-                      };
-                    }
-                    return {
-                      source: String(
-                        (fm as { source?: unknown })?.source || "",
-                      ),
-                      destination: String(
-                        (fm as { destination?: unknown })?.destination || "",
-                      ),
-                      isPrimaryKey: false,
-                    };
-                  })
-                : t.fieldMappings &&
-                    typeof t.fieldMappings === "object" &&
-                    !Array.isArray(t.fieldMappings)
-                  ? Object.entries(t.fieldMappings).map(
-                      ([source, destination]): FieldMapping => ({
-                        source: String(source),
-                        destination: String(destination),
-                        isPrimaryKey: false,
-                      }),
-                    )
-                  : [],
-            })),
-          };
-        }) as CollectorConfig[],
-      };
-
-      console.log("Config set for edit:", {
-        collectorsCount: finalConfig.collectors.length,
-        configCollectors: finalConfig.collectors.map((c) => ({
+        collectorsWithData: collectors.map((c) => ({
           id: c.id,
           sourceId: c.sourceId,
-          selectedTables: c.selectedTables,
+          selectedTablesCount: c.selectedTables?.length || 0,
           emittersCount: c.emitters?.length || 0,
-          emitters:
-            c.emitters?.map((e) => ({
-              id: e.id,
-              destinationId: e.destinationId,
-              destinationName: e.destinationName,
-            })) || [],
-          transformersCount: c.transformers?.length || 0,
-          transformers:
-            c.transformers?.map((t) => ({
+          transformersCount: (c.transformers || []).length,
+          transformers: (c.transformers || []).map((t) => {
+            const transformer = t as typeof t & { destinationTable?: string };
+            return {
               id: t.id,
               name: t.name,
               emitterId: t.emitterId,
+              destinationTable: transformer.destinationTable,
               fieldMappingsCount: t.fieldMappings?.length || 0,
-            })) || [],
+            };
+          }),
         })),
       });
 
-      setConfig(finalConfig);
+      // Set the hydrated config - collectors now have all data populated
+      setConfig({ collectors: collectors as unknown as CollectorConfig[] });
     }
-  }, [pipeline]);
+  }, [pipeline, sourceSchema, destinationSchema]);
 
-  if (isLoading) {
+  if (!orgId) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading pipeline...</p>
-        </div>
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p className="text-muted-foreground">No organization selected</p>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/workspace/data-pipelines")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Pipelines
+        </Button>
       </div>
     );
   }
 
-  if (error || !pipeline) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Pipeline not found</h2>
-          <p className="text-muted-foreground mb-4">
-            {error
-              ? "Failed to load pipeline"
-              : "The pipeline you're looking for doesn't exist."}
-          </p>
-          <Button onClick={() => router.push("/workspace/data-pipelines")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Pipelines
-          </Button>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p className="text-destructive">Failed to load pipeline</p>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/workspace/data-pipelines")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Pipelines
+        </Button>
+      </div>
+    );
+  }
+
+  if (!pipeline) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center">
+        <p className="text-muted-foreground">Pipeline not found</p>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/workspace/data-pipelines")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Pipelines
+        </Button>
       </div>
     );
   }
@@ -285,70 +330,113 @@ export default function EditPipelinePage() {
     setCurrentStep("transform");
   };
 
-  const handleTransformComplete = (collectors: CollectorConfig[]) => {
+  const handleTransformComplete = async (collectors: CollectorConfig[]) => {
     setConfig((prev) => ({
       ...prev,
       collectors,
     }));
-    handleSavePipeline();
-  };
 
-  const handleSavePipeline = async () => {
-    if (!pipeline) return;
+    if (!pipeline || !sourceSchema || !destinationSchema) {
+      toast.error(
+        "Missing data",
+        "Pipeline, source schema, or destination schema not loaded.",
+      );
+      return;
+    }
 
     try {
-      // Extract emitters from collectors
-      const allEmitters = config.collectors.flatMap((c) =>
-        (c.emitters || []).map((e) => ({
-          ...e,
-          collectorId: c.id,
-        })),
-      );
+      // Step 1: Update source schema if needed
+      const firstCollector = collectors[0];
+      if (firstCollector && sourceSchema) {
+        const firstTable = firstCollector.selectedTables[0];
+        if (firstTable) {
+          const tableParts = firstTable.includes(".")
+            ? firstTable.split(".")
+            : ["public", firstTable];
+          const sourceSchemaName = tableParts[0] || "public";
+          const sourceTableName = tableParts[1] || tableParts[0] || firstTable;
 
-      const _allDestinationIds = [
-        ...new Set(allEmitters.map((e) => e.destinationId)),
-      ];
+          // Only update if changed
+          if (
+            sourceSchema.sourceSchema !== sourceSchemaName ||
+            sourceSchema.sourceTable !== sourceTableName
+          ) {
+            await updateSourceSchemaMutation.mutateAsync({
+              sourceSchema: sourceSchemaName,
+              sourceTable: sourceTableName,
+            });
+          }
+        }
+      }
 
-      // Get transformers with emitters
-      const transformersWithEmitters = config.collectors.flatMap((c) =>
-        (c.transformers || []).map((t) => ({
-          ...t,
-          collectorId: t.collectorId || c.id,
-          emitterId: t.emitterId || "",
-        })),
-      );
+      // Step 2: Update destination schema if needed
+      const firstTransformer = collectors
+        .flatMap((c) => c.transformers || [])
+        .find((t) => t.fieldMappings && t.fieldMappings.length > 0);
 
-      // Map emitters to the format expected by the API
-      const emitters = allEmitters.map((e) => {
-        const transformer = transformersWithEmitters.find(
-          (t) => t.emitterId === e.id,
-        );
-        return {
-          id: e.id,
-          transformId: transformer?.id || "",
-          destinationId: e.destinationId,
-          destinationName: e.destinationName,
-          destinationType: e.destinationType,
+      if (firstTransformer?.fieldMappings && destinationSchema) {
+        // Extract destination table from transformer
+        const transformerWithTable = firstTransformer as Transformer & {
+          destinationTable?: string;
         };
-      });
+        let destinationTable = destinationSchema.destinationTable;
+        if (transformerWithTable.destinationTable) {
+          destinationTable = transformerWithTable.destinationTable;
+        }
 
+        // Parse destination table
+        const destTableParts = destinationTable.includes(".")
+          ? destinationTable.split(".")
+          : ["public", destinationTable];
+        const destSchemaName = destTableParts[0] || "public";
+        const destTableName =
+          destTableParts[1] || destTableParts[0] || destinationTable;
+
+        // Extract primary keys from field mappings if available
+        const primaryKeyFields =
+          firstTransformer.fieldMappings
+            ?.filter((fm) => {
+              const mapping = fm as { isPrimaryKey?: boolean };
+              return mapping.isPrimaryKey === true;
+            })
+            .map((fm) => {
+              const mapping = fm as { destination: string };
+              return mapping.destination;
+            }) || [];
+
+        const writeMode: "append" | "upsert" | "replace" =
+          primaryKeyFields.length > 0 ? "upsert" : "append";
+
+        // Get transform script from transformer
+        const transformScript =
+          firstTransformer.transformScript ||
+          destinationSchema.transformScript ||
+          "";
+
+        // Only update if changed
+        if (
+          destinationSchema.destinationSchema !== destSchemaName ||
+          destinationSchema.destinationTable !== destTableName ||
+          destinationSchema.transformScript !== transformScript ||
+          destinationSchema.writeMode !== writeMode
+        ) {
+          await updateDestinationSchemaMutation.mutateAsync({
+            destinationSchema: destSchemaName,
+            destinationTable: destTableName,
+            transformScript: transformScript,
+            writeMode: writeMode,
+            upsertKey:
+              primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
+          });
+        }
+      }
+
+      // Step 3: Update pipeline
       await updatePipelineMutation.mutateAsync({
-        id: pipeline.id,
-        data: {
-          collectors: config.collectors.map((c) => ({
-            id: c.id,
-            sourceId: c.sourceId,
-            selectedTables: c.selectedTables,
-            transformers: c.transformers?.map((t) => ({
-              id: t.id,
-              name: t.name,
-              collectorId: t.collectorId || c.id,
-              emitterId: t.emitterId || "",
-              fieldMappings: t.fieldMappings || [],
-            })),
-          })),
-          emitters: emitters,
-        },
+        name: pipeline.name,
+        description: pipeline.description || undefined,
+        // Note: sourceSchemaId and destinationSchemaId remain the same
+        // unless schemas were recreated (which would require more complex logic)
       });
 
       toast.success(
@@ -389,70 +477,52 @@ export default function EditPipelinePage() {
   const getMigrationStateBadge = () => {
     if (!pipeline) return null;
 
-    const migrationState = pipeline.migrationState || "pending";
-
-    switch (migrationState) {
-      case "running":
-        return (
-          <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 animate-pulse">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
-              Running
-            </div>
-          </Badge>
-        );
-      case "listing":
-        return (
-          <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:text-purple-400" />
-              Listing
-            </div>
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:text-green-400" />
-              Completed
-            </div>
-          </Badge>
-        );
-      case "error":
-        return (
-          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:text-red-400" />
-              Error
-            </div>
-          </Badge>
-        );
-      case "pending":
-        if (pipeline.status === "paused") {
-          return (
-            <Badge
-              variant="outline"
-              className="text-muted-foreground border-amber-300 dark:border-amber-700"
-            >
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Paused
-              </div>
-            </Badge>
-          );
-        }
-        return (
-          <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:text-amber-400" />
-              Pending
-            </div>
-          </Badge>
-        );
-      default:
-        return null;
+    // Migration state is no longer part of the new schema
+    // Use status and lastRunStatus instead
+    if (pipeline.status === "paused") {
+      return (
+        <Badge
+          variant="outline"
+          className="text-muted-foreground border-amber-300 dark:border-amber-700"
+        >
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            Paused
+          </div>
+        </Badge>
+      );
     }
+
+    if (pipeline.status === "failed") {
+      return (
+        <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-red-600 dark:bg-red-400" />
+            Error
+          </div>
+        </Badge>
+      );
+    }
+
+    if (pipeline.lastRunStatus === "success") {
+      return (
+        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-600 dark:bg-green-400" />
+            Active
+          </div>
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
+        <div className="flex items-center gap-1.5">
+          <div className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:text-amber-400" />
+          {pipeline.status === "running" ? "Running" : "Pending"}
+        </div>
+      </Badge>
+    );
   };
 
   return (

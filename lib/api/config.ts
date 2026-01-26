@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase/client";
  * If no protocol is provided, defaults to https://
  */
 const normalizeApiUrl = (url: string): string => {
-  if (!url) return "http://localhost:8000";
+  if (!url) return "http://localhost:5000";
 
   // Remove trailing slashes
   const trimmed = url.trim().replace(/\/+$/, "");
@@ -25,7 +25,7 @@ const normalizeApiUrl = (url: string): string => {
 };
 
 const API_BASE_URL = normalizeApiUrl(
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
 );
 
 /**
@@ -67,12 +67,8 @@ export const getAuthToken = async (): Promise<string | null> => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      console.log("[API Config] Got token from browser session");
-    }
     return session?.access_token || null;
-  } catch (error) {
-    console.error("[API Config] Error getting Supabase session:", error);
+  } catch {
     return null;
   }
 };
@@ -90,29 +86,8 @@ export const createFetchOptions = async (
   const authToken = token !== undefined ? token : await getAuthToken();
   const headers = new Headers(defaultFetchOptions.headers);
 
-  console.log("[API Config] createFetchOptions called:", {
-    tokenProvided: token !== undefined,
-    tokenValue: token ? `${token.substring(0, 20)}...` : null,
-    authTokenResult: authToken ? `${authToken.substring(0, 20)}...` : null,
-    isServer: typeof window === "undefined",
-  });
-
   if (authToken) {
     headers.set("Authorization", `Bearer ${authToken}`);
-    console.log("[API Config] Authorization header added to request");
-  } else {
-    console.warn(
-      "[API Config] No auth token available - request will be unauthenticated",
-    );
-    if (token === null) {
-      console.warn(
-        "[API Config] Token was explicitly null (server action may have failed to get token)",
-      );
-    } else if (token === undefined) {
-      console.warn(
-        "[API Config] No token provided, tried to get from session but failed",
-      );
-    }
   }
 
   // Merge custom headers

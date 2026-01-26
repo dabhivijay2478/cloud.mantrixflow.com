@@ -56,9 +56,9 @@ export default function OrganizationsPage() {
           name: orgToSwitch.name,
           slug: orgToSwitch.slug,
           createdAt:
-            typeof orgToSwitch.createdAt === "string"
-              ? orgToSwitch.createdAt
-              : orgToSwitch.createdAt.toISOString(),
+            orgToSwitch.createdAt ||
+            orgToSwitch.created_at ||
+            new Date().toISOString(),
         });
 
         showSuccessToast("switched", "Organization");
@@ -134,11 +134,11 @@ export default function OrganizationsPage() {
         accessorKey: "createdAt",
         header: "Created",
         cell: ({ row }) => {
-          const createdAt = new Date(
-            typeof row.original.createdAt === "string"
-              ? row.original.createdAt
-              : row.original.createdAt,
-          );
+          const createdAtStr =
+            row.original.createdAt ||
+            row.original.created_at ||
+            new Date().toISOString();
+          const createdAt = new Date(createdAtStr);
           return (
             <div className="text-sm text-muted-foreground">
               {createdAt.toLocaleDateString()}

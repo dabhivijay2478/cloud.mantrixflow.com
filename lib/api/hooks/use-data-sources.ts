@@ -59,10 +59,12 @@ export const dataSourcesKeys = {
 };
 
 // Connection Management Hooks
-export function useTestConnection() {
+export function useTestConnection(orgId?: string) {
   return useMutation({
-    mutationFn: (data: TestConnectionDto) =>
-      DataSourcesService.testConnection(data),
+    mutationFn: (data: TestConnectionDto) => {
+      if (!orgId) throw new Error("Organization ID is required");
+      return DataSourcesService.testConnectionLegacy(orgId, data);
+    },
   });
 }
 
@@ -87,14 +89,18 @@ export function useConnections(orgId?: string) {
   });
 }
 
-export function useConnection(id: string | undefined) {
+export function useConnection(
+  orgId: string | undefined,
+  id: string | undefined,
+) {
   return useQuery({
     queryKey: dataSourcesKeys.connections.detail(id || ""),
     queryFn: () => {
-      if (!id) throw new Error("Connection ID is required");
-      return DataSourcesService.getConnection(id);
+      if (!id || !orgId)
+        throw new Error("Organization ID and Connection ID are required");
+      return DataSourcesService.getConnection(orgId, id);
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
 
