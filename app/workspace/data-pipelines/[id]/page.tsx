@@ -29,7 +29,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -64,15 +70,18 @@ export default function PipelineDetailPage() {
   const [isScheduleModified, setIsScheduleModified] = useState(false);
 
   // Fetch pipeline data with schemas
-  const { data: pipelineData, isLoading: pipelineLoading, refetch } = usePipelineWithSchemas(
-    organizationId,
-    pipelineId,
-  );
-  const pipeline = pipelineData ? {
-    ...pipelineData.pipeline,
-    sourceSchema: pipelineData.sourceSchema,
-    destinationSchema: pipelineData.destinationSchema,
-  } : null;
+  const {
+    data: pipelineData,
+    isLoading: pipelineLoading,
+    refetch,
+  } = usePipelineWithSchemas(organizationId, pipelineId);
+  const pipeline = pipelineData
+    ? {
+        ...pipelineData.pipeline,
+        sourceSchema: pipelineData.sourceSchema,
+        destinationSchema: pipelineData.destinationSchema,
+      }
+    : null;
   const { data: runs, isLoading: runsLoading } = usePipelineRuns(
     organizationId,
     pipelineId,
@@ -91,18 +100,24 @@ export default function PipelineDetailPage() {
   // Handle schedule save
   const handleSaveSchedule = async () => {
     if (!scheduleConfig) return;
-    
+
     try {
       await updatePipeline.mutateAsync({
         scheduleType: scheduleConfig.scheduleType,
         scheduleValue: scheduleConfig.scheduleValue,
         scheduleTimezone: scheduleConfig.scheduleTimezone,
       });
-      toast.success("Schedule updated", "Pipeline schedule has been updated successfully.");
+      toast.success(
+        "Schedule updated",
+        "Pipeline schedule has been updated successfully.",
+      );
       setIsScheduleModified(false);
       refetch();
     } catch (error) {
-      toast.error("Failed to update schedule", error instanceof Error ? error.message : "Unknown error");
+      toast.error(
+        "Failed to update schedule",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 
@@ -120,19 +135,21 @@ export default function PipelineDetailPage() {
   // ROOT FIX: No polling - all updates come via Socket.io from Postgres NOTIFY
   const socketRef = useRef<Socket | null>(null);
   const [realTimeStatus, setRealTimeStatus] = useState<string | null>(null);
-  const [realTimeRowsProcessed, setRealTimeRowsProcessed] = useState<number | null>(null);
+  const [realTimeRowsProcessed, setRealTimeRowsProcessed] = useState<
+    number | null
+  >(null);
   const [newRowsCount, setNewRowsCount] = useState<number>(0);
 
   useEffect(() => {
     if (!pipelineId || !organizationId) return;
 
     // Get API URL from environment or use default
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const socketUrl = apiUrl.replace('/api', ''); // Remove /api prefix if present
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const socketUrl = apiUrl.replace("/api", ""); // Remove /api prefix if present
 
     // Connect to Socket.io
     const socket = io(`${socketUrl}/pipelines`, {
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
@@ -141,101 +158,108 @@ export default function PipelineDetailPage() {
     socketRef.current = socket;
 
     // Join pipeline room
-    socket.emit('join_pipeline', {
+    socket.emit("join_pipeline", {
       pipelineId,
       organizationId,
     });
 
     // Listen for pipeline updates
-    socket.on('update', (data: {
-      type: 'pipeline';
-      pipeline_id: string;
-      status?: string;
-      last_run_status?: string;
-      total_rows_processed?: number;
-      last_sync_at?: string;
-      checkpoint?: any;
-    }) => {
-      if (data.pipeline_id === pipelineId) {
-        // Update real-time state
-        if (data.status) {
-          setRealTimeStatus(data.status);
-        }
-        if (data.total_rows_processed !== undefined) {
-          const previousRows = realTimeRowsProcessed || pipeline?.totalRowsProcessed || 0;
-          const newRows = data.total_rows_processed - previousRows;
-          if (newRows > 0) {
-            setNewRowsCount((prev) => prev + newRows);
-            toast.success(
-              "New rows processed",
-              `+${newRows.toLocaleString()} new rows synced`,
-            );
+    socket.on(
+      "update",
+      (data: {
+        type: "pipeline";
+        pipeline_id: string;
+        status?: string;
+        last_run_status?: string;
+        total_rows_processed?: number;
+        last_sync_at?: string;
+        checkpoint?: any;
+      }) => {
+        if (data.pipeline_id === pipelineId) {
+          // Update real-time state
+          if (data.status) {
+            setRealTimeStatus(data.status);
           }
-          setRealTimeRowsProcessed(data.total_rows_processed);
-        }
+          if (data.total_rows_processed !== undefined) {
+            const previousRows =
+              realTimeRowsProcessed || pipeline?.totalRowsProcessed || 0;
+            const newRows = data.total_rows_processed - previousRows;
+            if (newRows > 0) {
+              setNewRowsCount((prev) => prev + newRows);
+              toast.success(
+                "New rows processed",
+                `+${newRows.toLocaleString()} new rows synced`,
+              );
+            }
+            setRealTimeRowsProcessed(data.total_rows_processed);
+          }
 
-        // Refetch to get latest data
-        refetch();
-      }
-    });
+          // Refetch to get latest data
+          refetch();
+        }
+      },
+    );
 
     // Listen for run updates
-    socket.on('run_update', (data: {
-      type: 'run';
-      run_id: string;
-      pipeline_id: string;
-      status?: string;
-      rows_written?: number;
-      rows_read?: number;
-      rows_failed?: number;
-      error_message?: string;
-    }) => {
-      if (data.pipeline_id === pipelineId) {
-        // Show progress updates
-        if (data.status === 'running' && data.rows_written) {
-          toast.info(
-            "Pipeline running",
-            `${data.rows_written.toLocaleString()} rows written so far...`,
-          );
-        } else if (data.status === 'success') {
-          toast.success(
-            "Pipeline completed",
-            `Successfully processed ${data.rows_written?.toLocaleString() || 0} rows`,
-          );
-          refetch();
-        } else if (data.status === 'failed') {
-          toast.error(
-            "Pipeline failed",
-            data.error_message || "Unknown error",
-          );
+    socket.on(
+      "run_update",
+      (data: {
+        type: "run";
+        run_id: string;
+        pipeline_id: string;
+        status?: string;
+        rows_written?: number;
+        rows_read?: number;
+        rows_failed?: number;
+        error_message?: string;
+      }) => {
+        if (data.pipeline_id === pipelineId) {
+          // Show progress updates
+          if (data.status === "running" && data.rows_written) {
+            toast.info(
+              "Pipeline running",
+              `${data.rows_written.toLocaleString()} rows written so far...`,
+            );
+          } else if (data.status === "success") {
+            toast.success(
+              "Pipeline completed",
+              `Successfully processed ${data.rows_written?.toLocaleString() || 0} rows`,
+            );
+            refetch();
+          } else if (data.status === "failed") {
+            toast.error(
+              "Pipeline failed",
+              data.error_message || "Unknown error",
+            );
+            refetch();
+          }
+
+          // Refetch runs to show latest
           refetch();
         }
-
-        // Refetch runs to show latest
-        refetch();
-      }
-    });
+      },
+    );
 
     // Handle connection events
-    socket.on('joined', () => {
-      console.log('[Socket.io] Joined pipeline room:', pipelineId);
+    socket.on("joined", () => {
+      console.log("[Socket.io] Joined pipeline room:", pipelineId);
     });
 
-    socket.on('connect', () => {
-      console.log('[Socket.io] Connected to pipeline updates');
+    socket.on("connect", () => {
+      console.log("[Socket.io] Connected to pipeline updates");
     });
 
-    socket.on('disconnect', () => {
-      console.log('[Socket.io] Disconnected from pipeline updates');
+    socket.on("disconnect", () => {
+      console.log("[Socket.io] Disconnected from pipeline updates");
     });
 
-    socket.on('error', (error: any) => {
-      console.error('[Socket.io] Error:', error);
+    socket.on("error", (error: any) => {
+      console.error("[Socket.io] Error:", error);
     });
 
     // Cleanup on unmount
     return () => {
-      socket.emit('leave_pipeline', { pipelineId });
+      socket.emit("leave_pipeline", { pipelineId });
       socket.disconnect();
       socketRef.current = null;
     };
@@ -414,7 +438,10 @@ export default function PipelineDetailPage() {
               <h1 className="text-2xl font-bold">{pipeline.name}</h1>
               {getStatusBadge()}
               {realTimeStatus && realTimeStatus !== pipeline.status && (
-                <Badge variant="outline" className="text-blue-600 animate-pulse">
+                <Badge
+                  variant="outline"
+                  className="text-blue-600 animate-pulse"
+                >
                   <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
                   {realTimeStatus}
                 </Badge>
@@ -453,7 +480,11 @@ export default function PipelineDetailPage() {
                 <Pause className="h-4 w-4 mr-2" />
                 Pause Auto-Sync
               </Button>
-              <Button onClick={handleRun} disabled={runPipeline.isPending} variant="secondary">
+              <Button
+                onClick={handleRun}
+                disabled={runPipeline.isPending}
+                variant="secondary"
+              >
                 <Zap className="h-4 w-4 mr-2" />
                 Sync Now
               </Button>
@@ -670,7 +701,9 @@ export default function PipelineDetailPage() {
               {pipeline.scheduleType && pipeline.scheduleType !== "none" && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Schedule Value</span>
+                    <span className="text-muted-foreground">
+                      Schedule Value
+                    </span>
                     <span className="font-medium">
                       {pipeline.scheduleValue || "-"}
                     </span>
@@ -691,7 +724,9 @@ export default function PipelineDetailPage() {
                   )}
                   {pipeline.lastScheduledRunAt && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Last Scheduled Run</span>
+                      <span className="text-muted-foreground">
+                        Last Scheduled Run
+                      </span>
                       <span className="font-medium">
                         {new Date(pipeline.lastScheduledRunAt).toLocaleString()}
                       </span>
@@ -705,7 +740,9 @@ export default function PipelineDetailPage() {
                     CDC Column (Auto-detected)
                   </span>
                   <span className="font-medium font-mono text-xs">
-                    {(pipeline.checkpoint as any)?.watermarkField || pipeline.incrementalColumn || "-"}
+                    {(pipeline.checkpoint as any)?.watermarkField ||
+                      pipeline.incrementalColumn ||
+                      "-"}
                   </span>
                 </div>
               )}
@@ -728,9 +765,19 @@ export default function PipelineDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <ScheduleEditor
-                scheduleType={(scheduleConfig?.scheduleType || pipeline.scheduleType || "none") as ScheduleType}
-                scheduleValue={scheduleConfig?.scheduleValue || pipeline.scheduleValue || ""}
-                scheduleTimezone={scheduleConfig?.scheduleTimezone || pipeline.scheduleTimezone || "UTC"}
+                scheduleType={
+                  (scheduleConfig?.scheduleType ||
+                    pipeline.scheduleType ||
+                    "none") as ScheduleType
+                }
+                scheduleValue={
+                  scheduleConfig?.scheduleValue || pipeline.scheduleValue || ""
+                }
+                scheduleTimezone={
+                  scheduleConfig?.scheduleTimezone ||
+                  pipeline.scheduleTimezone ||
+                  "UTC"
+                }
                 onChange={handleScheduleChange}
               />
               {isScheduleModified && (
@@ -817,4 +864,3 @@ export default function PipelineDetailPage() {
     </div>
   );
 }
-

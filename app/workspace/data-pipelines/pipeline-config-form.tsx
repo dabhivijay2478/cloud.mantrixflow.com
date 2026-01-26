@@ -104,7 +104,16 @@ export function PipelineConfigurationForm({
   const dataSources = (connections || []).map((conn) => ({
     id: conn.id,
     name: conn.name,
-    type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb" | "s3" | "api" | "bigquery" | "snowflake" | "redshift" | "clickhouse",
+    type: (conn.type || "postgres") as
+      | "postgres"
+      | "mysql"
+      | "mongodb"
+      | "s3"
+      | "api"
+      | "bigquery"
+      | "snowflake"
+      | "redshift"
+      | "clickhouse",
   }));
 
   // Convert API connections to destination format

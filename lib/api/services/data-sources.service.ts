@@ -58,21 +58,24 @@ export class DataSourcesService {
     dto: CreateDataSourceDto,
   ): Promise<DataSource> {
     // Call Python API directly for creation
-    const { PythonETLService } = await import('./python-etl.service');
-    
-    console.log('[DataSourcesService] Creating data source via Python service', {
-      organizationId,
-      name: dto.name,
-      source_type: dto.source_type,
-    });
-    
+    const { PythonETLService } = await import("./python-etl.service");
+
+    console.log(
+      "[DataSourcesService] Creating data source via Python service",
+      {
+        organizationId,
+        name: dto.name,
+        source_type: dto.source_type,
+      },
+    );
+
     const result = await PythonETLService.createDataSource(organizationId, {
       name: dto.name,
       description: dto.description,
       source_type: dto.source_type,
       metadata: dto.metadata,
     });
-    
+
     // Map Python response (snake_case) to frontend format (camelCase)
     return {
       id: result.id,
@@ -131,20 +134,23 @@ export class DataSourcesService {
     includeSensitive = false,
   ): Promise<Connection> {
     // Call Python API directly to fetch from Supabase
-    const { PythonETLService } = await import('./python-etl.service');
+    const { PythonETLService } = await import("./python-etl.service");
     const connection = await PythonETLService.getConnection(
       organizationId,
       sourceId,
       includeSensitive,
     );
-    
+
     if (!connection) {
-      throw new Error('Connection not found for this data source');
+      throw new Error("Connection not found for this data source");
     }
-    
+
     // Get data source to get name
-    const dataSource = await DataSourcesService.getDataSource(organizationId, sourceId);
-    
+    const dataSource = await DataSourcesService.getDataSource(
+      organizationId,
+      sourceId,
+    );
+
     // Map Python API response to Connection format
     // biome-ignore lint/suspicious/noExplicitAny: Connection type doesn't include config but we need it
     return {
@@ -171,19 +177,26 @@ export class DataSourcesService {
     dto: CreateConnectionDto,
   ): Promise<Connection> {
     // Call Python API directly for creation/update
-    const { PythonETLService } = await import('./python-etl.service');
-    
-    console.log('[DataSourcesService] Creating/updating connection via Python service', {
+    const { PythonETLService } = await import("./python-etl.service");
+
+    console.log(
+      "[DataSourcesService] Creating/updating connection via Python service",
+      {
+        organizationId,
+        sourceId,
+        connection_type: dto.connection_type,
+      },
+    );
+
+    const result = await PythonETLService.createOrUpdateConnection(
       organizationId,
       sourceId,
-      connection_type: dto.connection_type,
-    });
-    
-    const result = await PythonETLService.createOrUpdateConnection(organizationId, sourceId, {
-      connection_type: dto.connection_type,
-      config: dto.config as Record<string, any>,
-    });
-    
+      {
+        connection_type: dto.connection_type,
+        config: dto.config as Record<string, any>,
+      },
+    );
+
     // Map Python response to Connection format
     return {
       id: result.id,
@@ -206,7 +219,9 @@ export class DataSourcesService {
     // This endpoint tests an existing connection by data source ID
     // For now, we'll need to get the connection config first, then test it
     // TODO: Implement fetching connection config and testing it via Python API
-    throw new Error('Test connection by source ID not yet implemented. Use testConnectionLegacy with connection config instead.');
+    throw new Error(
+      "Test connection by source ID not yet implemented. Use testConnectionLegacy with connection config instead.",
+    );
   }
 
   /**
@@ -221,24 +236,38 @@ export class DataSourcesService {
       schemaName?: string;
       query?: string;
     },
-  ): Promise<{ schemas?: Schema[]; tables?: Table[]; databases?: any[]; type?: string }> {
+  ): Promise<{
+    schemas?: Schema[];
+    tables?: Table[];
+    databases?: any[];
+    type?: string;
+  }> {
     // Get connection config first
-    const connection = await DataSourcesService.getConnection(organizationId, sourceId, true);
-    
+    const connection = await DataSourcesService.getConnection(
+      organizationId,
+      sourceId,
+      true,
+    );
+
     // biome-ignore lint/suspicious/noExplicitAny: Connection type may not include config in TypeScript but Python API returns it
     const connectionWithConfig = connection as any;
     if (!connection || !connectionWithConfig.config) {
-      throw new Error('Connection not configured for this data source');
+      throw new Error("Connection not configured for this data source");
     }
 
     // Get data source to determine source type
-    const dataSource = await DataSourcesService.getDataSource(organizationId, sourceId);
-    const sourceType = dataSource.sourceType?.toLowerCase() === 'postgres' ? 'postgresql' : 
-                      (dataSource.sourceType?.toLowerCase() || 'postgresql');
+    const dataSource = await DataSourcesService.getDataSource(
+      organizationId,
+      sourceId,
+    );
+    const sourceType =
+      dataSource.sourceType?.toLowerCase() === "postgres"
+        ? "postgresql"
+        : dataSource.sourceType?.toLowerCase() || "postgresql";
 
     // Call Python service directly for schema discovery
-    const { PythonETLService } = await import('./python-etl.service');
-    
+    const { PythonETLService } = await import("./python-etl.service");
+
     const discovered = await PythonETLService.discoverSchema(sourceType, {
       source_type: sourceType,
       connection_config: connectionWithConfig.config as Record<string, any>,
@@ -250,22 +279,24 @@ export class DataSourcesService {
 
     // Map Python response to expected format
     // The response format depends on the source type
-    if (sourceType === 'mongodb') {
+    if (sourceType === "mongodb") {
       // MongoDB returns databases and collections
       return {
         databases: discovered.columns as any[], // MongoDB uses columns field for collections
-        type: 'mongodb',
+        type: "mongodb",
       };
     } else {
       // SQL databases return tables
       return {
         tables: discovered.columns.map((col: any) => ({
           name: col.name,
-          schema: options?.schemaName || 'public',
+          schema: options?.schemaName || "public",
           type: col.dataType,
           columns: [col],
         })) as Table[],
-        schemas: options?.schemaName ? [{ name: options.schemaName }] : undefined,
+        schemas: options?.schemaName
+          ? [{ name: options.schemaName }]
+          : undefined,
         type: sourceType,
       };
     }
@@ -279,7 +310,7 @@ export class DataSourcesService {
   private static readonly LEGACY_BASE_PATH = "api/data-sources/postgres";
 
   /** @deprecated Use organization-scoped endpoints */
-  /** 
+  /**
    * Test connection - calls Python API directly
    * Python handles connection testing for all data source types
    */
@@ -292,10 +323,10 @@ export class DataSourcesService {
     data: TestConnectionDto,
   ): Promise<TestConnectionResponse> {
     // Call Python API directly for connection testing
-    const { PythonETLService } = await import('./python-etl.service');
-    
+    const { PythonETLService } = await import("./python-etl.service");
+
     const result = await PythonETLService.testConnection(data);
-    
+
     return {
       success: result.success,
       error: result.error,
@@ -404,7 +435,7 @@ export class DataSourcesService {
   }
 
   /** @deprecated Use deleteDataSource instead */
-  /** 
+  /**
    * Delete connection - calls Python API directly
    * Python handles validation and calls NestJS for actual database deletion
    */
@@ -413,12 +444,12 @@ export class DataSourcesService {
     orgId?: string,
   ): Promise<{ deletedId: string }> {
     if (!orgId) {
-      throw new Error('Organization ID is required to delete connection');
+      throw new Error("Organization ID is required to delete connection");
     }
-    
+
     // Call Python API directly for deletion
-    const { PythonETLService } = await import('./python-etl.service');
-    
+    const { PythonETLService } = await import("./python-etl.service");
+
     // For legacy API, connection ID is the same as data source ID
     const result = await PythonETLService.deleteConnection(orgId, id, id);
     return { deletedId: result.deleted_id || id };
@@ -444,23 +475,23 @@ export class DataSourcesService {
   ): Promise<Schema[]> {
     if (!orgId) throw new Error("Organization ID is required");
     const result = await DataSourcesService.discoverSchema(orgId, connectionId);
-    
+
     // SQL databases return schemas
     if (result.schemas) {
       return result.schemas;
     }
-    
+
     // MongoDB returns databases - convert to schema format
     if (result.databases) {
       return result.databases.map((db: any) => ({
         name: db.name,
         tables: (db.collections || []).map((coll: any) => ({
           name: coll.name,
-          type: coll.type || 'collection',
+          type: coll.type || "collection",
         })),
       }));
     }
-    
+
     return [];
   }
 
@@ -469,11 +500,14 @@ export class DataSourcesService {
     orgId?: string,
   ): Promise<Schema[]> {
     if (!orgId) throw new Error("Organization ID is required");
-    
+
     // Call Python API directly to get schemas and tables
-    const { PythonETLService } = await import('./python-etl.service');
-    const result = await PythonETLService.listSchemasWithTables(orgId, connectionId);
-    
+    const { PythonETLService } = await import("./python-etl.service");
+    const result = await PythonETLService.listSchemasWithTables(
+      orgId,
+      connectionId,
+    );
+
     // Map Python API response to Schema[] format
     if (result.schemas && result.schemas.length > 0) {
       return result.schemas.map((schema) => ({
@@ -481,12 +515,12 @@ export class DataSourcesService {
         tables: schema.tables.map((table) => ({
           name: table.name,
           schema: table.schema,
-          type: table.type as 'table' | 'view' | 'materialized_view',
+          type: table.type as "table" | "view" | "materialized_view",
           rowCount: table.rowCount,
         })),
       }));
     }
-    
+
     // Fallback for unsupported types - return empty
     return [];
   }
@@ -546,11 +580,17 @@ export class DataSourcesService {
       if (table.includes(".")) {
         // Format: "database.collection"
         const [dbName, collName] = table.split(".");
-        const foundSchema = result.schemas?.find((s: Schema) => s.name === dbName);
-        targetTable = foundSchema?.tables?.find((t: Table) => t.name === collName);
+        const foundSchema = result.schemas?.find(
+          (s: Schema) => s.name === dbName,
+        );
+        targetTable = foundSchema?.tables?.find(
+          (t: Table) => t.name === collName,
+        );
       } else if (schema) {
         // Format: schema="database", table="collection"
-        const foundSchema = result.schemas?.find((s: Schema) => s.name === schema);
+        const foundSchema = result.schemas?.find(
+          (s: Schema) => s.name === schema,
+        );
         targetTable = foundSchema?.tables?.find((t: Table) => t.name === table);
       } else {
         // No schema/database specified - search all databases for the collection
@@ -588,14 +628,19 @@ export class DataSourcesService {
     // biome-ignore lint/suspicious/noExplicitAny: Table type doesn't include columns/primaryKeys but Python API returns them
     const tableWithExtras = targetTable as any;
     const columns = tableWithExtras.columns || [];
-    
+
     // Extract primary keys if available
     const primaryKeys: string[] = [];
-    if (tableWithExtras.primaryKeys && Array.isArray(tableWithExtras.primaryKeys)) {
+    if (
+      tableWithExtras.primaryKeys &&
+      Array.isArray(tableWithExtras.primaryKeys)
+    ) {
       primaryKeys.push(...tableWithExtras.primaryKeys);
     } else if (columns) {
       // Try to find primary key columns by checking isPrimaryKey flag
-      const pkColumns = columns.filter((col: any) => col.isPrimaryKey || col.primaryKey);
+      const pkColumns = columns.filter(
+        (col: any) => col.isPrimaryKey || col.primaryKey,
+      );
       primaryKeys.push(...pkColumns.map((col: any) => col.name));
     }
 
@@ -606,10 +651,13 @@ export class DataSourcesService {
       isPrimaryKey: col.isPrimaryKey || primaryKeys.includes(col.name),
     }));
 
-    console.log(`getTableSchema: Found ${mappedColumns.length} columns for ${schema || 'no-schema'}.${table}`, {
-      columns: mappedColumns.map((c: any) => c.name),
-      primaryKeys,
-    });
+    console.log(
+      `getTableSchema: Found ${mappedColumns.length} columns for ${schema || "no-schema"}.${table}`,
+      {
+        columns: mappedColumns.map((c: any) => c.name),
+        primaryKeys,
+      },
+    );
 
     return {
       columns: mappedColumns,

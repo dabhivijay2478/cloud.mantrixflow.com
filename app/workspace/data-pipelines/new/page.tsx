@@ -178,11 +178,19 @@ export default function NewPipelinePage() {
           primarySourceId,
         );
         // Handle both camelCase and snake_case from API
-        sourceType = dataSource.sourceType || (dataSource as any).source_type || "postgres";
+        sourceType =
+          dataSource.sourceType ||
+          (dataSource as any).source_type ||
+          "postgres";
       } catch (error) {
-        console.error("Failed to fetch data source, using default type:", error);
+        console.error(
+          "Failed to fetch data source, using default type:",
+          error,
+        );
         // Try to get from connections cache if available
-        const cachedConnection = connections?.find((c) => c.id === primarySourceId);
+        const cachedConnection = connections?.find(
+          (c) => c.id === primarySourceId,
+        );
         if (cachedConnection?.type) {
           sourceType = cachedConnection.type;
         } else {
@@ -237,7 +245,9 @@ export default function NewPipelinePage() {
         .find((t) => t.transformScript && t.transformScript.trim());
 
       // Check if transformer has transformScript
-      const hasTransformScript = firstTransformer?.transformScript && firstTransformer.transformScript.trim();
+      const hasTransformScript =
+        firstTransformer?.transformScript &&
+        firstTransformer.transformScript.trim();
 
       if (!hasTransformScript) {
         toast.error(
@@ -276,8 +286,10 @@ export default function NewPipelinePage() {
         primaryKeyFields.length > 0 ? "upsert" : "append";
 
       // Create pipeline using Python API (handles source schema, destination schema, and pipeline creation)
-      const { PythonETLService } = await import('@/lib/api/services/python-etl.service');
-      
+      const { PythonETLService } = await import(
+        "@/lib/api/services/python-etl.service"
+      );
+
       await PythonETLService.createPipeline(organizationId!, {
         name: `Pipeline ${new Date().toLocaleDateString()}`,
         description: `Pipeline with ${collectorsToUse.length} collector(s)`,
@@ -293,16 +305,17 @@ export default function NewPipelinePage() {
           data_source_id: destinationConnectionId,
           destination_schema: destSchemaName,
           destination_table: destTableName,
-          transform_script: firstTransformer.transformScript || '',
+          transform_script: firstTransformer.transformScript || "",
           write_mode: writeMode,
-          upsert_key: primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
+          upsert_key:
+            primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
           name: `Destination: ${destTableName}`,
           is_active: true,
         },
-        sync_mode: "incremental",  // Auto CDC - first run is full, subsequent runs are incremental
-        sync_frequency: "minutes",  // Auto-run every 2 minutes for CDC
+        sync_mode: "incremental", // Auto CDC - first run is full, subsequent runs are incremental
+        sync_frequency: "minutes", // Auto-run every 2 minutes for CDC
         schedule_type: "minutes",
-        schedule_value: "2",  // 2 minutes default for CDC polling
+        schedule_value: "2", // 2 minutes default for CDC polling
         transformations: [],
       });
 

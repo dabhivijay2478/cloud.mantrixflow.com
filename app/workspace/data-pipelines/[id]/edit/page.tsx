@@ -110,7 +110,11 @@ export default function EditPipelinePage() {
 
       // Build field mappings from destinationSchema transformScript
       // Note: Transform script is the authoritative source, field mappings are derived from UI
-      const schemaFieldMappings: Array<{ source: string; destination: string; isPrimaryKey: boolean }> = [];
+      const schemaFieldMappings: Array<{
+        source: string;
+        destination: string;
+        isPrimaryKey: boolean;
+      }> = [];
 
       // Generate stable IDs (or use existing ones from transformations)
       const baseTimestamp = Date.now();
@@ -389,21 +393,25 @@ export default function EditPipelinePage() {
           destTableParts[1] || destTableParts[0] || destinationTable;
 
         // Extract primary keys from field mappings if available
-        const primaryKeyFields = firstTransformer.fieldMappings
-          ?.filter((fm) => {
-            const mapping = fm as { isPrimaryKey?: boolean };
-            return mapping.isPrimaryKey === true;
-          })
-          .map((fm) => {
-            const mapping = fm as { destination: string };
-            return mapping.destination;
-          }) || [];
+        const primaryKeyFields =
+          firstTransformer.fieldMappings
+            ?.filter((fm) => {
+              const mapping = fm as { isPrimaryKey?: boolean };
+              return mapping.isPrimaryKey === true;
+            })
+            .map((fm) => {
+              const mapping = fm as { destination: string };
+              return mapping.destination;
+            }) || [];
 
         const writeMode: "append" | "upsert" | "replace" =
           primaryKeyFields.length > 0 ? "upsert" : "append";
 
         // Get transform script from transformer
-        const transformScript = firstTransformer.transformScript || destinationSchema.transformScript || '';
+        const transformScript =
+          firstTransformer.transformScript ||
+          destinationSchema.transformScript ||
+          "";
 
         // Only update if changed
         if (

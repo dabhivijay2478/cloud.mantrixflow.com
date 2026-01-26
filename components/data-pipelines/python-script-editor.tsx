@@ -23,15 +23,17 @@ export function PythonScriptEditor({
     // Generate default script based on sample record if available
     if (sampleRecord && Object.keys(sampleRecord).length > 0) {
       const fields = Object.keys(sampleRecord);
-      const mappings = fields.map(field => {
-        // Handle nested fields
-        if (field.includes(".")) {
-          const parts = field.split(".");
-          return `        "${parts[parts.length - 1]}": record.get("${field}")`;
-        }
-        return `        "${field}": record.get("${field}")`;
-      }).join(",\n");
-      
+      const mappings = fields
+        .map((field) => {
+          // Handle nested fields
+          if (field.includes(".")) {
+            const parts = field.split(".");
+            return `        "${parts[parts.length - 1]}": record.get("${field}")`;
+          }
+          return `        "${field}": record.get("${field}")`;
+        })
+        .join(",\n");
+
       return `import json
 
 def transform(record):
@@ -41,13 +43,16 @@ def transform(record):
     Return dict with destination keys.
     
     Sample record structure:
-${JSON.stringify(sampleRecord, null, 4).split('\n').map(line => '    ' + line).join('\n')}
+${JSON.stringify(sampleRecord, null, 4)
+  .split("\n")
+  .map((line) => "    " + line)
+  .join("\n")}
     """
     return {
 ${mappings}
     }`;
     }
-    
+
     return `import json
 
 def transform(record):
@@ -105,21 +110,30 @@ def transform(record):
           }}
         />
       </div>
-      
+
       {sampleRecord && (
         <div className="mt-4 p-4 bg-muted rounded-lg">
-          <div className="text-sm font-semibold mb-2">Sample Record Preview:</div>
+          <div className="text-sm font-semibold mb-2">
+            Sample Record Preview:
+          </div>
           <pre className="text-xs overflow-auto max-h-32 font-mono bg-background p-2 rounded border">
             {JSON.stringify(sampleRecord, null, 2)}
           </pre>
           <div className="text-xs text-muted-foreground mt-2">
-            Use <code className="px-1 py-0.5 bg-background rounded">record.get("field_name")</code> to access fields from this record.
+            Use{" "}
+            <code className="px-1 py-0.5 bg-background rounded">
+              record.get("field_name")
+            </code>{" "}
+            to access fields from this record.
           </div>
         </div>
       )}
-      
+
       <div className="mt-2 text-xs text-muted-foreground">
-        <strong>Note:</strong> The function must be named <code className="px-1 py-0.5 bg-muted rounded">transform</code> and accept a <code className="px-1 py-0.5 bg-muted rounded">record</code> parameter (dict). Return a dict with destination field names as keys.
+        <strong>Note:</strong> The function must be named{" "}
+        <code className="px-1 py-0.5 bg-muted rounded">transform</code> and
+        accept a <code className="px-1 py-0.5 bg-muted rounded">record</code>{" "}
+        parameter (dict). Return a dict with destination field names as keys.
       </div>
     </div>
   );

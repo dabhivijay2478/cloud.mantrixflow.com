@@ -53,15 +53,15 @@ export class DataSourceService {
     data: CreateDataSourceDto,
   ): Promise<DataSource> {
     // Call Python API directly for creation
-    const { PythonETLService } = await import('./python-etl.service');
-    
+    const { PythonETLService } = await import("./python-etl.service");
+
     const result = await PythonETLService.createDataSource(organizationId, {
       name: data.name,
       description: data.description,
       source_type: data.source_type,
       metadata: data.metadata,
     });
-    
+
     // Map Python response (snake_case) to frontend format (camelCase)
     return {
       id: result.id,

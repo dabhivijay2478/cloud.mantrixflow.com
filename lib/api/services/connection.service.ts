@@ -24,19 +24,26 @@ export class ConnectionService {
     data: CreateConnectionDto,
   ): Promise<DataSourceConnection> {
     // Call Python API directly for creation/update
-    const { PythonETLService } = await import('./python-etl.service');
-    
-    console.log('[ConnectionService] Creating/updating connection via Python service', {
+    const { PythonETLService } = await import("./python-etl.service");
+
+    console.log(
+      "[ConnectionService] Creating/updating connection via Python service",
+      {
+        organizationId,
+        dataSourceId,
+        connection_type: data.connection_type,
+      },
+    );
+
+    const result = await PythonETLService.createOrUpdateConnection(
       organizationId,
       dataSourceId,
-      connection_type: data.connection_type,
-    });
-    
-    const result = await PythonETLService.createOrUpdateConnection(organizationId, dataSourceId, {
-      connection_type: data.connection_type,
-      config: data.config as Record<string, any>,
-    });
-    
+      {
+        connection_type: data.connection_type,
+        config: data.config as Record<string, any>,
+      },
+    );
+
     // Map Python response (snake_case) to frontend format (camelCase)
     return {
       id: result.id,
@@ -59,17 +66,17 @@ export class ConnectionService {
     includeSensitive: boolean = false,
   ): Promise<DataSourceConnection | null> {
     // Call Python API directly
-    const { PythonETLService } = await import('./python-etl.service');
+    const { PythonETLService } = await import("./python-etl.service");
     const connection = await PythonETLService.getConnection(
       organizationId,
       dataSourceId,
       includeSensitive,
     );
-    
+
     if (!connection) {
       return null;
     }
-    
+
     // Map Python API response to DataSourceConnection format
     return {
       id: connection.id,
@@ -106,20 +113,27 @@ export class ConnectionService {
     dataSourceId: string,
   ): Promise<TestConnectionResult> {
     // Get connection config first
-    const connection = await ConnectionService.getConnection(organizationId, dataSourceId, true);
-    
+    const connection = await ConnectionService.getConnection(
+      organizationId,
+      dataSourceId,
+      true,
+    );
+
     if (!connection || !connection.config) {
-      throw new Error('Connection not configured for this data source');
+      throw new Error("Connection not configured for this data source");
     }
 
     // Get data source to determine source type
-    const { DataSourceService } = await import('./data-source.service');
-    const dataSource = await DataSourceService.getDataSource(organizationId, dataSourceId);
-    const sourceType = dataSource.sourceType?.toLowerCase() || 'postgresql';
+    const { DataSourceService } = await import("./data-source.service");
+    const dataSource = await DataSourceService.getDataSource(
+      organizationId,
+      dataSourceId,
+    );
+    const sourceType = dataSource.sourceType?.toLowerCase() || "postgresql";
 
     // Call Python service directly
-    const { PythonETLService } = await import('./python-etl.service');
-    
+    const { PythonETLService } = await import("./python-etl.service");
+
     const result = await PythonETLService.testConnection({
       type: sourceType,
       ...(connection.config as Record<string, any>),
@@ -149,21 +163,30 @@ export class ConnectionService {
     },
   ): Promise<Record<string, unknown>> {
     // Get connection config first
-    const connection = await ConnectionService.getConnection(organizationId, dataSourceId, true);
-    
+    const connection = await ConnectionService.getConnection(
+      organizationId,
+      dataSourceId,
+      true,
+    );
+
     if (!connection || !connection.config) {
-      throw new Error('Connection not configured for this data source');
+      throw new Error("Connection not configured for this data source");
     }
 
     // Get data source to determine source type
-    const { DataSourceService } = await import('./data-source.service');
-    const dataSource = await DataSourceService.getDataSource(organizationId, dataSourceId);
-    const sourceType = dataSource.sourceType?.toLowerCase() === 'postgres' ? 'postgresql' : 
-                      (dataSource.sourceType?.toLowerCase() || 'postgresql');
+    const { DataSourceService } = await import("./data-source.service");
+    const dataSource = await DataSourceService.getDataSource(
+      organizationId,
+      dataSourceId,
+    );
+    const sourceType =
+      dataSource.sourceType?.toLowerCase() === "postgres"
+        ? "postgresql"
+        : dataSource.sourceType?.toLowerCase() || "postgresql";
 
     // Call Python service directly for schema discovery
-    const { PythonETLService } = await import('./python-etl.service');
-    
+    const { PythonETLService } = await import("./python-etl.service");
+
     const discovered = await PythonETLService.discoverSchema(sourceType, {
       source_type: sourceType,
       connection_config: connection.config as Record<string, any>,

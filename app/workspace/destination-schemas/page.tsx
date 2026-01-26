@@ -145,7 +145,8 @@ export default function DestinationSchemasPage() {
         accessorKey: "transformScript",
         header: "Transform Script",
         cell: ({ row }) => {
-          const hasScript = row.original.transformScript && row.original.transformScript.trim();
+          const hasScript =
+            row.original.transformScript && row.original.transformScript.trim();
           return (
             <span className="text-sm text-muted-foreground">
               {hasScript ? (

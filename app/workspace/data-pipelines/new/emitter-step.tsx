@@ -72,7 +72,16 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb" | "s3" | "api" | "bigquery" | "snowflake" | "redshift" | "clickhouse",
+      type: (conn.type || "postgres") as
+        | "postgres"
+        | "mysql"
+        | "mongodb"
+        | "s3"
+        | "api"
+        | "bigquery"
+        | "snowflake"
+        | "redshift"
+        | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)
@@ -175,7 +184,11 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   };
 
   const handleTestConnection = async () => {
-    if (!selectedDestinationId || !destinationConnection?.config || !organizationId) {
+    if (
+      !selectedDestinationId ||
+      !destinationConnection?.config ||
+      !organizationId
+    ) {
       setConnectionTestResult({
         success: false,
         error: "Please select a destination with a configured connection",
@@ -187,7 +200,9 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     setConnectionTestResult(null);
 
     try {
-      const selectedDestination = dataSources.find((ds) => ds.id === selectedDestinationId);
+      const selectedDestination = dataSources.find(
+        (ds) => ds.id === selectedDestinationId,
+      );
       const sourceType = selectedDestination?.type || "postgres";
 
       // Map connection config to test connection format
@@ -501,7 +516,8 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {availableDestinations.map((destination) => {
                       const Icon = destination.icon;
-                      const isSelected = selectedDestinationId === destination.id;
+                      const isSelected =
+                        selectedDestinationId === destination.id;
                       return (
                         <Card
                           key={destination.id}
@@ -551,7 +567,9 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                   </div>
                   {connectionTestResult && (
                     <Alert
-                      variant={connectionTestResult.success ? "default" : "destructive"}
+                      variant={
+                        connectionTestResult.success ? "default" : "destructive"
+                      }
                     >
                       {connectionTestResult.success ? (
                         <CheckCircle2 className="h-4 w-4" />

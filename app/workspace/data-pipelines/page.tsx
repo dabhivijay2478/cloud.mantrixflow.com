@@ -289,14 +289,14 @@ export default function DataPipelinesPage() {
     // Handle new lifecycle statuses
     if (pipeline.status === "idle") {
       // Check if auto-sync is enabled and has run before
-      const hasAutoSync = 
+      const hasAutoSync =
         pipeline.syncMode === "incremental" ||
         (pipeline.scheduleType && pipeline.scheduleType !== "none") ||
         pipeline.syncFrequency === "minutes";
-      const hasRun = 
+      const hasRun =
         (pipeline.totalRowsProcessed && pipeline.totalRowsProcessed > 0) ||
         pipeline.lastRunAt;
-      
+
       if (hasAutoSync && hasRun) {
         return (
           <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
@@ -307,7 +307,7 @@ export default function DataPipelinesPage() {
           </Badge>
         );
       }
-      
+
       return (
         <Badge className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20">
           <div className={baseClasses}>
@@ -398,7 +398,7 @@ export default function DataPipelinesPage() {
     const frequency = pipeline.syncFrequency;
     const scheduleType = pipeline.scheduleType;
     const scheduleValue = pipeline.scheduleValue;
-    
+
     const colors: Record<string, string> = {
       manual: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
       minutes: "bg-green-500/10 text-green-700 dark:text-green-400",
@@ -406,15 +406,17 @@ export default function DataPipelinesPage() {
       daily: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
       weekly: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
     };
-    
+
     // Format display text
-    let displayText = frequency?.charAt(0).toUpperCase() + frequency?.slice(1) || "Manual";
+    let displayText =
+      frequency?.charAt(0).toUpperCase() + frequency?.slice(1) || "Manual";
     if (frequency === "minutes" || scheduleType === "minutes") {
       displayText = `Every ${scheduleValue || "2"} min`;
     } else if (scheduleType && scheduleType !== "none") {
-      displayText = scheduleType.charAt(0).toUpperCase() + scheduleType.slice(1);
+      displayText =
+        scheduleType.charAt(0).toUpperCase() + scheduleType.slice(1);
     }
-    
+
     return (
       <Badge className={colors[frequency || "manual"] || colors.manual}>
         {displayText}
@@ -605,15 +607,15 @@ export default function DataPipelinesPage() {
           runPipelineMutation.isPending ||
           pausePipelineMutation.isPending ||
           resumePipelineMutation.isPending;
-        
+
         // Check if auto-sync is enabled (incremental mode or has schedule)
-        const hasAutoSync = 
+        const hasAutoSync =
           pipeline.syncMode === "incremental" ||
           (pipeline.scheduleType && pipeline.scheduleType !== "none") ||
           pipeline.syncFrequency === "minutes";
-        
+
         // Check if first run completed (has processed rows or last run exists)
-        const hasRun = 
+        const hasRun =
           (pipeline.totalRowsProcessed && pipeline.totalRowsProcessed > 0) ||
           pipeline.lastRunAt;
 
@@ -674,7 +676,9 @@ export default function DataPipelinesPage() {
                       Pause
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Pause auto-sync (checking every 2 min)</TooltipContent>
+                  <TooltipContent>
+                    Pause auto-sync (checking every 2 min)
+                  </TooltipContent>
                 </Tooltip>
               ) : (
                 // First time or manual mode - show Run button
@@ -694,8 +698,8 @@ export default function DataPipelinesPage() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {hasAutoSync 
-                      ? "Start auto-sync (first full sync, then incremental)" 
+                    {hasAutoSync
+                      ? "Start auto-sync (first full sync, then incremental)"
                       : "Execute pipeline now"}
                   </TooltipContent>
                 </Tooltip>
@@ -755,17 +759,20 @@ export default function DataPipelinesPage() {
                     <Play className="mr-2 h-4 w-4" />
                     Resume Auto-Sync
                   </DropdownMenuItem>
-                ) : !isRunning && hasRun && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePausePipeline(pipeline.id, pipeline.name);
-                    }}
-                    className="text-amber-600 focus:text-amber-600"
-                  >
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pause Auto-Sync
-                  </DropdownMenuItem>
+                ) : (
+                  !isRunning &&
+                  hasRun && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePausePipeline(pipeline.id, pipeline.name);
+                      }}
+                      className="text-amber-600 focus:text-amber-600"
+                    >
+                      <Pause className="mr-2 h-4 w-4" />
+                      Pause Auto-Sync
+                    </DropdownMenuItem>
+                  )
                 )}
                 {!isRunning && !hasRun && (
                   <DropdownMenuItem

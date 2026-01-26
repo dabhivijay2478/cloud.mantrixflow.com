@@ -1,7 +1,7 @@
 /**
  * Source Schemas API Service
  * Service layer for pipeline source schema endpoints
- * 
+ *
  * Note: ETL operations (discover, preview) call Python service directly
  * CRUD operations still go through NestJS
  */
@@ -92,10 +92,13 @@ export class SourceSchemasService {
     sourceSchemaId: string,
   ): Promise<DiscoverSchemaResult> {
     // Get source schema from NestJS (CRUD)
-    const schema = await SourceSchemasService.getSourceSchema(organizationId, sourceSchemaId);
-    
+    const schema = await SourceSchemasService.getSourceSchema(
+      organizationId,
+      sourceSchemaId,
+    );
+
     if (!schema.dataSourceId) {
-      throw new Error('Source schema must have a data source ID');
+      throw new Error("Source schema must have a data source ID");
     }
 
     // Get connection config from NestJS (with sensitive data)
@@ -106,11 +109,14 @@ export class SourceSchemasService {
     );
 
     if (!connection || !connection.config) {
-      throw new Error('Connection not configured for this data source');
+      throw new Error("Connection not configured for this data source");
     }
 
     // Normalize source type for Python service
-    const sourceType = schema.sourceType?.toLowerCase() === 'postgres' ? 'postgresql' : (schema.sourceType?.toLowerCase() || 'postgresql');
+    const sourceType =
+      schema.sourceType?.toLowerCase() === "postgres"
+        ? "postgresql"
+        : schema.sourceType?.toLowerCase() || "postgresql";
 
     // Call Python service directly
     const discovered = await PythonETLService.discoverSchema(sourceType, {
@@ -123,11 +129,15 @@ export class SourceSchemasService {
     });
 
     // Update schema in NestJS with discovered data
-    const updated = await SourceSchemasService.updateSourceSchema(organizationId, sourceSchemaId, {
-      discoveredColumns: discovered.columns as any,
-      primaryKeys: discovered.primaryKeys as any,
-      estimatedRowCount: discovered.estimatedRowCount as any,
-    });
+    const updated = await SourceSchemasService.updateSourceSchema(
+      organizationId,
+      sourceSchemaId,
+      {
+        discoveredColumns: discovered.columns as any,
+        primaryKeys: discovered.primaryKeys as any,
+        estimatedRowCount: discovered.estimatedRowCount as any,
+      },
+    );
 
     return {
       schema: updated,
@@ -161,10 +171,13 @@ export class SourceSchemasService {
     limit: number = 10,
   ): Promise<PreviewDataResult> {
     // Get source schema from NestJS (CRUD)
-    const schema = await SourceSchemasService.getSourceSchema(organizationId, sourceSchemaId);
-    
+    const schema = await SourceSchemasService.getSourceSchema(
+      organizationId,
+      sourceSchemaId,
+    );
+
     if (!schema.dataSourceId) {
-      throw new Error('Source schema must have a data source ID');
+      throw new Error("Source schema must have a data source ID");
     }
 
     // Get connection config from NestJS (with sensitive data)
@@ -175,11 +188,14 @@ export class SourceSchemasService {
     );
 
     if (!connection || !connection.config) {
-      throw new Error('Connection not configured for this data source');
+      throw new Error("Connection not configured for this data source");
     }
 
     // Normalize source type for Python service
-    const sourceType = schema.sourceType?.toLowerCase() === 'postgres' ? 'postgresql' : (schema.sourceType?.toLowerCase() || 'postgresql');
+    const sourceType =
+      schema.sourceType?.toLowerCase() === "postgres"
+        ? "postgresql"
+        : schema.sourceType?.toLowerCase() || "postgresql";
 
     // Call Python service directly to collect sample data
     const result = await PythonETLService.collect(sourceType, {
@@ -189,14 +205,14 @@ export class SourceSchemasService {
       table_name: schema.sourceTable || undefined,
       schema_name: schema.sourceSchema || undefined,
       query: schema.sourceQuery || undefined,
-      sync_mode: 'full',
+      sync_mode: "full",
       limit: Math.min(limit, 100), // Cap at 100 rows for preview
       offset: 0,
     });
 
     // Get columns from discovered schema or infer from data
     const columns = (schema.discoveredColumns as any[]) || [];
-    
+
     return {
       rows: result.rows,
       columns: columns.length > 0 ? columns : [], // Will be populated after discovery

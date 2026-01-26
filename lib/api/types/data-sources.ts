@@ -205,7 +205,7 @@ export interface SSHTunnelConfig {
 export interface TestConnectionDto {
   // Connection type (postgres, mysql, mongodb, s3, api, etc.)
   type?: string;
-  
+
   // SQL Databases (PostgreSQL, MySQL)
   connectionString?: string;
   host?: string;
@@ -219,32 +219,32 @@ export interface TestConnectionDto {
   queryTimeout?: number;
   poolSize?: number;
   databaseType?: string;
-  
+
   // MongoDB
   connection_string?: string; // MongoDB Atlas SRV format
   auth_source?: string;
   replica_set?: string;
   tls?: boolean;
-  
+
   // S3
   bucket?: string;
   region?: string;
   access_key_id?: string;
   secret_access_key?: string;
   path_prefix?: string;
-  
+
   // REST API
   base_url?: string;
   auth_type?: string;
   auth_token?: string;
   api_key?: string;
   headers?: Record<string, string>;
-  
+
   // BigQuery
   project_id?: string;
   dataset?: string;
   credentials?: Record<string, any>;
-  
+
   // Snowflake
   account?: string;
   warehouse?: string;

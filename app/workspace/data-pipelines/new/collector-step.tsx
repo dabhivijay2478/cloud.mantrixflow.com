@@ -85,7 +85,16 @@ export function CollectorStep({
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb" | "s3" | "api" | "bigquery" | "snowflake" | "redshift" | "clickhouse",
+      type: (conn.type || "postgres") as
+        | "postgres"
+        | "mysql"
+        | "mongodb"
+        | "s3"
+        | "api"
+        | "bigquery"
+        | "snowflake"
+        | "redshift"
+        | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)
@@ -211,7 +220,9 @@ export function CollectorStep({
     setConnectionTestResult(null);
 
     try {
-      const selectedSource = dataSources.find((ds) => ds.id === selectedSourceId);
+      const selectedSource = dataSources.find(
+        (ds) => ds.id === selectedSourceId,
+      );
       const sourceType = selectedSource?.type || "postgres";
 
       // Map connection config to test connection format
@@ -490,7 +501,9 @@ export function CollectorStep({
             </Select>
             {connectionTestResult && (
               <Alert
-                variant={connectionTestResult.success ? "default" : "destructive"}
+                variant={
+                  connectionTestResult.success ? "default" : "destructive"
+                }
               >
                 {connectionTestResult.success ? (
                   <CheckCircle2 className="h-4 w-4" />
@@ -508,8 +521,8 @@ export function CollectorStep({
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Connection not configured for this data source. Please configure
-                  the connection in Data Sources settings first.
+                  Connection not configured for this data source. Please
+                  configure the connection in Data Sources settings first.
                 </AlertDescription>
               </Alert>
             )}

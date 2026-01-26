@@ -5,12 +5,10 @@
  * Also handles data source and connection CRUD operations (create, update, delete)
  */
 
-import type {
-  ColumnMapping,
-  ColumnInfo,
-} from "../types/data-pipelines";
+import type { ColumnMapping, ColumnInfo } from "../types/data-pipelines";
 
-const PYTHON_SERVICE_URL = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || 'http://localhost:8001';
+const PYTHON_SERVICE_URL =
+  process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || "http://localhost:8001";
 
 export interface DiscoverSchemaRequest {
   source_type: string;
@@ -34,7 +32,7 @@ export interface CollectRequest {
   table_name?: string;
   schema_name?: string;
   query?: string;
-  sync_mode?: 'full' | 'incremental';
+  sync_mode?: "full" | "incremental";
   checkpoint?: Record<string, any>;
   limit?: number;
   offset?: number;
@@ -66,7 +64,7 @@ export interface EmitRequest {
   table_name: string;
   schema_name?: string;
   rows: any[];
-  write_mode?: 'append' | 'upsert' | 'replace';
+  write_mode?: "append" | "upsert" | "replace";
   upsert_key?: string[];
 }
 
@@ -85,30 +83,35 @@ export class PythonETLService {
   static async getAuthToken(): Promise<string | null> {
     try {
       // Check if we're in browser environment
-      if (typeof window === 'undefined') {
-        console.warn('getAuthToken called on server-side - token should be passed explicitly');
+      if (typeof window === "undefined") {
+        console.warn(
+          "getAuthToken called on server-side - token should be passed explicitly",
+        );
         return null;
       }
 
       // Use the existing Supabase client from the app
       // This ensures we use the same client instance that manages the session
-      const { supabase } = await import('@/lib/supabase/client');
-      
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
+      const { supabase } = await import("@/lib/supabase/client");
+
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
       if (error) {
-        console.error('Failed to get session:', error);
+        console.error("Failed to get session:", error);
         return null;
       }
-      
+
       if (!session?.access_token) {
-        console.warn('No active session - user may not be logged in');
+        console.warn("No active session - user may not be logged in");
         return null;
       }
-      
+
       return session.access_token;
     } catch (error) {
-      console.error('Failed to get auth token:', error);
+      console.error("Failed to get auth token:", error);
       return null;
     }
   }
@@ -121,15 +124,15 @@ export class PythonETLService {
     options: RequestInit = {},
   ): Promise<T> {
     const token = await PythonETLService.getAuthToken();
-    
+
     if (!token) {
-      console.error('No auth token available - user may not be logged in');
-      throw new Error('Authentication required. Please log in.');
+      console.error("No auth token available - user may not be logged in");
+      throw new Error("Authentication required. Please log in.");
     }
-    
+
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     };
 
@@ -139,8 +142,12 @@ export class PythonETLService {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(error.detail || `HTTP ${response.status}: ${response.statusText}`);
+      const error = await response
+        .json()
+        .catch(() => ({ detail: response.statusText }));
+      throw new Error(
+        error.detail || `HTTP ${response.status}: ${response.statusText}`,
+      );
     }
 
     return response.json();
@@ -156,7 +163,7 @@ export class PythonETLService {
     return PythonETLService.request<DiscoverSchemaResponse>(
       `/discover-schema/${sourceType}`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(request),
       },
     );
@@ -169,26 +176,22 @@ export class PythonETLService {
     sourceType: string,
     request: CollectRequest,
   ): Promise<CollectResponse> {
-    return PythonETLService.request<CollectResponse>(
-      `/collect/${sourceType}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(request),
-      },
-    );
+    return PythonETLService.request<CollectResponse>(`/collect/${sourceType}`, {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
   }
 
   /**
    * Transform data
    */
-  static async transform(request: TransformRequest): Promise<TransformResponse> {
-    return PythonETLService.request<TransformResponse>(
-      '/transform',
-      {
-        method: 'POST',
-        body: JSON.stringify(request),
-      },
-    );
+  static async transform(
+    request: TransformRequest,
+  ): Promise<TransformResponse> {
+    return PythonETLService.request<TransformResponse>("/transform", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
   }
 
   /**
@@ -198,13 +201,10 @@ export class PythonETLService {
     destinationType: string,
     request: EmitRequest,
   ): Promise<EmitResponse> {
-    return PythonETLService.request<EmitResponse>(
-      `/emit/${destinationType}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(request),
-      },
-    );
+    return PythonETLService.request<EmitResponse>(`/emit/${destinationType}`, {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
   }
 
   /**
@@ -218,19 +218,19 @@ export class PythonETLService {
     schemaName?: string,
     checkpoint?: Record<string, any>,
   ): Promise<{ has_changes: boolean; checkpoint?: Record<string, any> }> {
-    return PythonETLService.request<{ has_changes: boolean; checkpoint?: Record<string, any> }>(
-      `/delta-check/${sourceType}`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          connection_config: connectionConfig,
-          source_config: sourceConfig,
-          table_name: tableName,
-          schema_name: schemaName,
-          checkpoint,
-        }),
-      },
-    );
+    return PythonETLService.request<{
+      has_changes: boolean;
+      checkpoint?: Record<string, any>;
+    }>(`/delta-check/${sourceType}`, {
+      method: "POST",
+      body: JSON.stringify({
+        connection_config: connectionConfig,
+        source_config: sourceConfig,
+        table_name: tableName,
+        schema_name: schemaName,
+        checkpoint,
+      }),
+    });
   }
 
   /**
@@ -268,19 +268,16 @@ export class PythonETLService {
       created_by: string;
       created_at: string;
       updated_at: string;
-    }>(
-      '/data-sources',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          organization_id: organizationId,
-          name: data.name,
-          description: data.description,
-          source_type: data.source_type,
-          metadata: data.metadata,
-        }),
-      },
-    );
+    }>("/data-sources", {
+      method: "POST",
+      body: JSON.stringify({
+        organization_id: organizationId,
+        name: data.name,
+        description: data.description,
+        source_type: data.source_type,
+        metadata: data.metadata,
+      }),
+    });
   }
 
   /**
@@ -294,7 +291,7 @@ export class PythonETLService {
     return PythonETLService.request<{ success: boolean; deleted_id: string }>(
       `/data-sources/${dataSourceId}`,
       {
-        method: 'DELETE',
+        method: "DELETE",
         body: JSON.stringify({
           organization_id: organizationId,
           data_source_id: dataSourceId,
@@ -331,18 +328,15 @@ export class PythonETLService {
       status: string;
       created_at: string;
       updated_at: string;
-    }>(
-      '/connections',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          organization_id: organizationId,
-          data_source_id: dataSourceId,
-          connection_type: data.connection_type,
-          config: data.config,
-        }),
-      },
-    );
+    }>("/connections", {
+      method: "POST",
+      body: JSON.stringify({
+        organization_id: organizationId,
+        data_source_id: dataSourceId,
+        connection_type: data.connection_type,
+        config: data.config,
+      }),
+    });
   }
 
   /**
@@ -357,7 +351,7 @@ export class PythonETLService {
     return PythonETLService.request<{ success: boolean; deleted_id: string }>(
       `/connections/${connectionId}`,
       {
-        method: 'DELETE',
+        method: "DELETE",
         body: JSON.stringify({
           organization_id: organizationId,
           connection_id: connectionId,
@@ -371,24 +365,22 @@ export class PythonETLService {
    * Test a data source connection
    * Calls Python API to test connection configuration
    */
-  static async testConnection(
-    connectionData: {
-      type: string;
-      host?: string;
-      port?: number;
-      database?: string;
-      username?: string;
-      password?: string;
-      connection_string?: string;
-      connection_string_mongo?: string;
-      ssl?: any;
-      auth_source?: string;
-      replica_set?: string;
-      tls?: boolean;
-      database_type?: string;
-      [key: string]: any;
-    },
-  ): Promise<{
+  static async testConnection(connectionData: {
+    type: string;
+    host?: string;
+    port?: number;
+    database?: string;
+    username?: string;
+    password?: string;
+    connection_string?: string;
+    connection_string_mongo?: string;
+    ssl?: any;
+    auth_source?: string;
+    replica_set?: string;
+    tls?: boolean;
+    database_type?: string;
+    [key: string]: any;
+  }): Promise<{
     success: boolean;
     message?: string;
     error?: string;
@@ -398,11 +390,11 @@ export class PythonETLService {
   }> {
     // Map connection_string to connection_string_mongo for MongoDB
     const requestData: any = { ...connectionData };
-    if (connectionData.type === 'mongodb' && connectionData.connection_string) {
+    if (connectionData.type === "mongodb" && connectionData.connection_string) {
       requestData.connection_string_mongo = connectionData.connection_string;
       delete requestData.connection_string;
     }
-    
+
     return PythonETLService.request<{
       success: boolean;
       message?: string;
@@ -410,13 +402,10 @@ export class PythonETLService {
       version?: string;
       response_time_ms?: number;
       details?: any;
-    }>(
-      '/test-connection',
-      {
-        method: 'POST',
-        body: JSON.stringify(requestData),
-      },
-    );
+    }>("/test-connection", {
+      method: "POST",
+      body: JSON.stringify(requestData),
+    });
   }
 
   /**
@@ -438,7 +427,7 @@ export class PythonETLService {
     created_at: string;
     updated_at: string;
   } | null> {
-    const params = includeSensitive ? '?includeSensitive=true' : '';
+    const params = includeSensitive ? "?includeSensitive=true" : "";
     return PythonETLService.request<{
       id: string;
       data_source_id: string;
@@ -452,7 +441,7 @@ export class PythonETLService {
     } | null>(
       `/organizations/${organizationId}/data-sources/${dataSourceId}/connection${params}`,
       {
-        method: 'GET',
+        method: "GET",
       },
     );
   }
@@ -470,7 +459,7 @@ export class PythonETLService {
       tables: Array<{
         name: string;
         schema: string;
-        type: 'table' | 'view' | 'materialized_view';
+        type: "table" | "view" | "materialized_view";
         rowCount?: number;
         columns?: Array<{
           name: string;
@@ -488,7 +477,7 @@ export class PythonETLService {
         tables: Array<{
           name: string;
           schema: string;
-          type: 'table' | 'view' | 'materialized_view';
+          type: "table" | "view" | "materialized_view";
           rowCount?: number;
           columns?: Array<{
             name: string;
@@ -502,7 +491,7 @@ export class PythonETLService {
     }>(
       `/organizations/${organizationId}/data-sources/${dataSourceId}/schemas`,
       {
-        method: 'GET',
+        method: "GET",
       },
     );
   }
@@ -530,15 +519,22 @@ export class PythonETLService {
         destination_schema?: string;
         destination_table: string;
         transform_script: string;
-        write_mode?: 'append' | 'upsert' | 'replace';
+        write_mode?: "append" | "upsert" | "replace";
         upsert_key?: string[];
         name?: string;
         is_active?: boolean;
       };
-      sync_mode?: 'full' | 'incremental' | 'cdc';
-      sync_frequency?: 'manual' | 'minutes' | 'hourly' | 'daily' | 'weekly';
+      sync_mode?: "full" | "incremental" | "cdc";
+      sync_frequency?: "manual" | "minutes" | "hourly" | "daily" | "weekly";
       incremental_column?: string;
-      schedule_type?: 'none' | 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom_cron';
+      schedule_type?:
+        | "none"
+        | "minutes"
+        | "hourly"
+        | "daily"
+        | "weekly"
+        | "monthly"
+        | "custom_cron";
       schedule_value?: string;
       schedule_timezone?: string;
       transformations?: any[];
@@ -566,7 +562,7 @@ export class PythonETLService {
     return PythonETLService.request(
       `/organizations/${organizationId}/pipelines`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(data),
       },
     );
@@ -582,10 +578,17 @@ export class PythonETLService {
     data: {
       name?: string;
       description?: string;
-      sync_mode?: 'full' | 'incremental' | 'cdc';
-      sync_frequency?: 'manual' | 'minutes' | 'hourly' | 'daily' | 'weekly';
+      sync_mode?: "full" | "incremental" | "cdc";
+      sync_frequency?: "manual" | "minutes" | "hourly" | "daily" | "weekly";
       incremental_column?: string;
-      schedule_type?: 'none' | 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom_cron';
+      schedule_type?:
+        | "none"
+        | "minutes"
+        | "hourly"
+        | "daily"
+        | "weekly"
+        | "monthly"
+        | "custom_cron";
       schedule_value?: string;
       schedule_timezone?: string;
       transformations?: any[];
@@ -613,7 +616,7 @@ export class PythonETLService {
     return PythonETLService.request(
       `/organizations/${organizationId}/pipelines/${pipelineId}`,
       {
-        method: 'PATCH',
+        method: "PATCH",
         body: JSON.stringify(data),
       },
     );
@@ -627,7 +630,7 @@ export class PythonETLService {
     organizationId: string,
     pipelineId: string,
     options?: {
-      syncMode?: 'full' | 'incremental';
+      syncMode?: "full" | "incremental";
       limit?: number;
     },
   ): Promise<{
@@ -644,9 +647,9 @@ export class PythonETLService {
     return PythonETLService.request(
       `/organizations/${organizationId}/pipelines/${pipelineId}/run`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
-          sync_mode: options?.syncMode || 'full',
+          sync_mode: options?.syncMode || "full",
           limit: options?.limit,
         }),
       },
@@ -667,7 +670,7 @@ export class PythonETLService {
     return PythonETLService.request(
       `/organizations/${organizationId}/pipelines/${pipelineId}/pause`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({}),
       },
     );

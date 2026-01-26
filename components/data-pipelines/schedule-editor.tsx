@@ -155,7 +155,8 @@ export function ScheduleEditor({
       case "daily":
         return `Runs daily at ${dailyTime} (${timezone})`;
       case "weekly": {
-        const dayName = DAYS_OF_WEEK.find((d) => d.value === weeklyDay)?.label || "Monday";
+        const dayName =
+          DAYS_OF_WEEK.find((d) => d.value === weeklyDay)?.label || "Monday";
         return `Runs every ${dayName} at ${weeklyTime} (${timezone})`;
       }
       case "monthly":
@@ -399,7 +400,11 @@ export function ScheduleEditor({
                 value={weeklyTime}
                 onChange={(e) => {
                   setWeeklyTime(e.target.value);
-                  emitChange("weekly", `${weeklyDay}:${e.target.value}`, timezone);
+                  emitChange(
+                    "weekly",
+                    `${weeklyDay}:${e.target.value}`,
+                    timezone,
+                  );
                 }}
                 disabled={disabled}
               />
@@ -462,7 +467,11 @@ export function ScheduleEditor({
                 value={monthlyTime}
                 onChange={(e) => {
                   setMonthlyTime(e.target.value);
-                  emitChange("monthly", `${monthlyDay}:${e.target.value}`, timezone);
+                  emitChange(
+                    "monthly",
+                    `${monthlyDay}:${e.target.value}`,
+                    timezone,
+                  );
                 }}
                 disabled={disabled}
               />
@@ -507,8 +516,8 @@ export function ScheduleEditor({
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">
-              Format: minute hour day-of-month month day-of-week (e.g., &quot;0 9 * *
-              1-5&quot; = 9 AM on weekdays)
+              Format: minute hour day-of-month month day-of-week (e.g., &quot;0
+              9 * * 1-5&quot; = 9 AM on weekdays)
             </p>
           </div>
           <div className="space-y-2">

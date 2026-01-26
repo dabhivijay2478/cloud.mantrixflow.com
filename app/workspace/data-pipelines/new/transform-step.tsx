@@ -79,7 +79,16 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb" | "s3" | "api" | "bigquery" | "snowflake" | "redshift" | "clickhouse",
+      type: (conn.type || "postgres") as
+        | "postgres"
+        | "mysql"
+        | "mongodb"
+        | "s3"
+        | "api"
+        | "bigquery"
+        | "snowflake"
+        | "redshift"
+        | "clickhouse",
       status:
         conn.status === "active"
           ? ("connected" as const)
@@ -104,7 +113,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
   const [transformScript, setTransformScript] = useState<string>("");
-  const [transformMode, setTransformMode] = useState<"mappings" | "script">("script");
+  const [transformMode, setTransformMode] = useState<"mappings" | "script">(
+    "script",
+  );
 
   // Debug: Log when collectors prop changes
   useEffect(() => {
@@ -238,7 +249,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       // For MongoDB: format is "database.collection" or just "collection"
       // For SQL: format is "schema.table" or just "table"
       const isMongoDB = sourceDataSource?.type === "mongodb";
-      
+
       if (tableName.includes(".")) {
         const parts = tableName.split(".");
         return {
@@ -265,14 +276,21 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const sourceSchemaQueries = useQueries({
     queries: sourceTableQueries.map(
       ({ tableName: _tableName, schema, table, connectionId, isMongoDB }) => ({
-        queryKey: ["table-schema", connectionId, table, schema || "none", "source", isMongoDB ? "mongodb" : "sql"],
+        queryKey: [
+          "table-schema",
+          connectionId,
+          table,
+          schema || "none",
+          "source",
+          isMongoDB ? "mongodb" : "sql",
+        ],
         queryFn: async () => {
           try {
             const result = await DataSourcesService.getTableSchema(
-              connectionId, 
-              table, 
-              schema, 
-              orgId
+              connectionId,
+              table,
+              schema,
+              orgId,
             );
             console.log(`Fetched schema for ${table}:`, {
               columnsCount: result.columns?.length || 0,
@@ -296,12 +314,17 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
     sourceSchemaQueries.forEach((query, index) => {
       if (query.isLoading) {
-        console.log(`Loading schema for table ${sourceTableQueries[index]?.tableName}...`);
+        console.log(
+          `Loading schema for table ${sourceTableQueries[index]?.tableName}...`,
+        );
         return;
       }
-      
+
       if (query.error) {
-        console.error(`Error loading schema for table ${sourceTableQueries[index]?.tableName}:`, query.error);
+        console.error(
+          `Error loading schema for table ${sourceTableQueries[index]?.tableName}:`,
+          query.error,
+        );
         return;
       }
 
@@ -310,28 +333,36 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         query.data.columns.forEach((col: any) => {
           // For MongoDB, use field name directly (may include nested paths like "address.city")
           // For SQL, prefix with table name
-          const fieldName = tableInfo.isMongoDB 
-            ? col.name 
+          const fieldName = tableInfo.isMongoDB
+            ? col.name
             : `${tableInfo.tableName}.${col.name}`;
-          
+
           fields.push({
             name: fieldName,
             type: col.dataType || col.type || "unknown",
             table: tableInfo.tableName,
           });
         });
-        
-        console.log(`Added ${query.data.columns.length} fields from ${tableInfo.tableName}`);
+
+        console.log(
+          `Added ${query.data.columns.length} fields from ${tableInfo.tableName}`,
+        );
       } else {
-        console.warn(`No columns found for table ${sourceTableQueries[index]?.tableName}`, {
-          data: query.data,
-          hasData: !!query.data,
-          columnsLength: query.data?.columns?.length,
-        });
+        console.warn(
+          `No columns found for table ${sourceTableQueries[index]?.tableName}`,
+          {
+            data: query.data,
+            hasData: !!query.data,
+            columnsLength: query.data?.columns?.length,
+          },
+        );
       }
     });
 
-    console.log(`Total source fields: ${fields.length}`, fields.map(f => f.name));
+    console.log(
+      `Total source fields: ${fields.length}`,
+      fields.map((f) => f.name),
+    );
     return fields;
   }, [sourceSchemaQueries, sourceTableQueries]);
 
@@ -392,7 +423,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const destinationFields = useMemo(() => {
     if (!destinationTableQuery) return generatedDestinationFields;
     const queryResult = destinationSchemaQuery[0];
-    
+
     // If we have actual table columns, use them
     if (queryResult?.data?.columns && queryResult.data.columns.length > 0) {
       return queryResult.data.columns.map((col) => {
@@ -414,7 +445,11 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
     // Otherwise use generated fields
     return generatedDestinationFields;
-  }, [destinationSchemaQuery, destinationTableQuery, generatedDestinationFields]);
+  }, [
+    destinationSchemaQuery,
+    destinationTableQuery,
+    generatedDestinationFields,
+  ]);
 
   const handleAutoGenerate = () => {
     if (sourceFields.length === 0) return;
@@ -434,9 +469,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       const sourceField = sourceFields[index];
       // Determine if ID/PK
       const isId =
-        sourceField.name === "_id" ||
-        sourceField.name.toLowerCase() === "id";
-      
+        sourceField.name === "_id" || sourceField.name.toLowerCase() === "id";
+
       return {
         source: sourceField.name,
         destination: df.name,
@@ -532,7 +566,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       alert("Please provide a Python transform script.");
       return;
     }
-    
+
     // Field mappings validation commented out - only scripts allowed for now
     // if (transformMode === "script") {
     //   if (!transformScript || !transformScript.trim()) {
@@ -554,8 +588,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     // }
 
     // Ensure fieldMappings is always an array
-    const validFieldMappings =
-      Array.isArray(fieldMappings) ? fieldMappings : [];
+    const validFieldMappings = Array.isArray(fieldMappings)
+      ? fieldMappings
+      : [];
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
@@ -1004,93 +1039,130 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             )}
           </div>
 
-          {selectedCollectorId && selectedEmitterId && selectedDestinationTable && (
-            <div className="space-y-4">
-              {/* Debug info */}
-              {process.env.NODE_ENV === "development" && (
-                <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
-                  <div>Source Fields: {sourceFields.length}</div>
-                  <div>Destination Fields: {destinationFields.length}</div>
-                  <div>Source Queries: {sourceSchemaQueries.length} (loading: {sourceSchemaQueries.filter(q => q.isLoading).length}, errors: {sourceSchemaQueries.filter(q => q.error).length})</div>
-                  <div>Destination Query: {destinationSchemaQuery[0]?.isLoading ? "loading" : destinationSchemaQuery[0]?.error ? "error" : "ready"}</div>
-                </div>
-              )}
+          {selectedCollectorId &&
+            selectedEmitterId &&
+            selectedDestinationTable && (
+              <div className="space-y-4">
+                {/* Debug info */}
+                {process.env.NODE_ENV === "development" && (
+                  <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                    <div>Source Fields: {sourceFields.length}</div>
+                    <div>Destination Fields: {destinationFields.length}</div>
+                    <div>
+                      Source Queries: {sourceSchemaQueries.length} (loading:{" "}
+                      {sourceSchemaQueries.filter((q) => q.isLoading).length},
+                      errors:{" "}
+                      {sourceSchemaQueries.filter((q) => q.error).length})
+                    </div>
+                    <div>
+                      Destination Query:{" "}
+                      {destinationSchemaQuery[0]?.isLoading
+                        ? "loading"
+                        : destinationSchemaQuery[0]?.error
+                          ? "error"
+                          : "ready"}
+                    </div>
+                  </div>
+                )}
 
-              {/* Transform Mode Tabs - Only script mode allowed for now */}
-              {/* Field mappings tab commented out - only scripts allowed */}
-              <Tabs value="script" onValueChange={() => {}}>
-                <TabsList className="grid w-full grid-cols-1">
-                  <TabsTrigger value="script" className="flex items-center gap-2" disabled>
-                    <Code className="h-4 w-4" />
-                    Python Script
-                  </TabsTrigger>
-                  {/* Field Mappings tab commented out for now */}
-                  {/* <TabsTrigger value="mappings" className="flex items-center gap-2">
+                {/* Transform Mode Tabs - Only script mode allowed for now */}
+                {/* Field mappings tab commented out - only scripts allowed */}
+                <Tabs value="script" onValueChange={() => {}}>
+                  <TabsList className="grid w-full grid-cols-1">
+                    <TabsTrigger
+                      value="script"
+                      className="flex items-center gap-2"
+                      disabled
+                    >
+                      <Code className="h-4 w-4" />
+                      Python Script
+                    </TabsTrigger>
+                    {/* Field Mappings tab commented out for now */}
+                    {/* <TabsTrigger value="mappings" className="flex items-center gap-2">
                     <MapIcon className="h-4 w-4" />
                     Field Mappings
                   </TabsTrigger> */}
-                </TabsList>
+                  </TabsList>
 
-                {/* Python Script Editor */}
-                <TabsContent value="script" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Transform Script
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Write a Python function that transforms source records. Use <code className="px-1 py-0.5 bg-muted rounded">record.get("source_field")</code> to read from source data.
-                    </p>
-                    <PythonScriptEditor
-                      value={transformScript}
-                      onChange={setTransformScript}
-                      sampleRecord={
-                        sourceFields.length > 0
-                          ? sourceFields.reduce((acc, field) => {
-                              // Create a sample record with example values based on field type
-                              // Handle nested fields (e.g., "address.city")
-                              const fieldPath = field.name.split(".");
-                              const fieldName = fieldPath[fieldPath.length - 1];
-                              
-                              const exampleValue =
-                                field.type === "integer" || field.type === "number"
-                                  ? 123
-                                  : field.type === "boolean"
-                                    ? true
-                                    : field.type === "date" || field.type === "timestamp"
-                                      ? "2024-01-01"
-                                      : fieldName.toLowerCase().includes("email")
-                                        ? "example@email.com"
-                                        : fieldName.toLowerCase().includes("url")
-                                          ? "https://example.com"
-                                          : `Sample ${fieldName}`;
-                              
-                              // Set nested value
-                              if (fieldPath.length > 1) {
-                                let current = acc;
-                                for (let i = 0; i < fieldPath.length - 1; i++) {
-                                  if (!current[fieldPath[i]]) {
-                                    current[fieldPath[i]] = {};
+                  {/* Python Script Editor */}
+                  <TabsContent value="script" className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Transform Script
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Write a Python function that transforms source records.
+                        Use{" "}
+                        <code className="px-1 py-0.5 bg-muted rounded">
+                          record.get("source_field")
+                        </code>{" "}
+                        to read from source data.
+                      </p>
+                      <PythonScriptEditor
+                        value={transformScript}
+                        onChange={setTransformScript}
+                        sampleRecord={
+                          sourceFields.length > 0
+                            ? sourceFields.reduce(
+                                (acc, field) => {
+                                  // Create a sample record with example values based on field type
+                                  // Handle nested fields (e.g., "address.city")
+                                  const fieldPath = field.name.split(".");
+                                  const fieldName =
+                                    fieldPath[fieldPath.length - 1];
+
+                                  const exampleValue =
+                                    field.type === "integer" ||
+                                    field.type === "number"
+                                      ? 123
+                                      : field.type === "boolean"
+                                        ? true
+                                        : field.type === "date" ||
+                                            field.type === "timestamp"
+                                          ? "2024-01-01"
+                                          : fieldName
+                                                .toLowerCase()
+                                                .includes("email")
+                                            ? "example@email.com"
+                                            : fieldName
+                                                  .toLowerCase()
+                                                  .includes("url")
+                                              ? "https://example.com"
+                                              : `Sample ${fieldName}`;
+
+                                  // Set nested value
+                                  if (fieldPath.length > 1) {
+                                    let current = acc;
+                                    for (
+                                      let i = 0;
+                                      i < fieldPath.length - 1;
+                                      i++
+                                    ) {
+                                      if (!current[fieldPath[i]]) {
+                                        current[fieldPath[i]] = {};
+                                      }
+                                      current = current[fieldPath[i]];
+                                    }
+                                    current[fieldName] = exampleValue;
+                                  } else {
+                                    acc[field.name] = exampleValue;
                                   }
-                                  current = current[fieldPath[i]];
-                                }
-                                current[fieldName] = exampleValue;
-                              } else {
-                                acc[field.name] = exampleValue;
-                              }
-                              
-                              return acc;
-                            }, {} as Record<string, any>)
-                          : undefined
-                      }
-                      height="500px"
-                    />
-                  </div>
-                </TabsContent>
 
-                {/* Field Mappings tab commented out - only scripts allowed for now */}
-              </Tabs>
-            </div>
-          )}
+                                  return acc;
+                                },
+                                {} as Record<string, any>,
+                              )
+                            : undefined
+                        }
+                        height="500px"
+                      />
+                    </div>
+                  </TabsContent>
+
+                  {/* Field Mappings tab commented out - only scripts allowed for now */}
+                </Tabs>
+              </div>
+            )}
         </div>
       </FormSheet>
 

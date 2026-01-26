@@ -7,14 +7,14 @@
  * Supported data source types
  */
 export enum DataSourceType {
-  POSTGRES = 'postgres',
-  MYSQL = 'mysql',
-  MONGODB = 'mongodb',
-  S3 = 's3',
-  API = 'api',
-  BIGQUERY = 'bigquery',
-  SNOWFLAKE = 'snowflake',
-  CSV = 'csv',
+  POSTGRES = "postgres",
+  MYSQL = "mysql",
+  MONGODB = "mongodb",
+  S3 = "s3",
+  API = "api",
+  BIGQUERY = "bigquery",
+  SNOWFLAKE = "snowflake",
+  CSV = "csv",
 }
 
 /**
@@ -47,7 +47,7 @@ export interface SchemaInfo {
  */
 export interface TableInfo {
   name: string;
-  type: 'table' | 'view' | 'collection';
+  type: "table" | "view" | "collection";
   schema?: string;
   columns?: ColumnInfo[];
   estimatedRowCount?: number;
@@ -81,7 +81,7 @@ export interface ConnectionTestResult {
 export interface DataSourceConfig {
   type: DataSourceType | string;
   name: string;
-  
+
   // Database connections
   host?: string;
   port?: number;
@@ -89,27 +89,27 @@ export interface DataSourceConfig {
   username?: string;
   password?: string;
   ssl?: boolean;
-  
+
   // MongoDB specific
   connection_string?: string;
   auth_source?: string;
-  
+
   // S3 specific
   bucket?: string;
   region?: string;
   access_key_id?: string;
   secret_access_key?: string;
   path_prefix?: string;
-  
+
   // API specific
   base_url?: string;
   endpoint?: string;
-  auth_type?: 'none' | 'bearer' | 'api_key' | 'basic';
+  auth_type?: "none" | "bearer" | "api_key" | "basic";
   auth_token?: string;
   api_key?: string;
   api_key_header?: string;
   headers?: Record<string, string>;
-  
+
   // Generic
   [key: string]: any;
 }
@@ -131,18 +131,20 @@ export interface DataSource {
 /**
  * Helper to get display name for data source type
  */
-export function getDataSourceTypeDisplayName(type: DataSourceType | string): string {
+export function getDataSourceTypeDisplayName(
+  type: DataSourceType | string,
+): string {
   const displayNames: Record<string, string> = {
-    [DataSourceType.POSTGRES]: 'PostgreSQL',
-    [DataSourceType.MYSQL]: 'MySQL',
-    [DataSourceType.MONGODB]: 'MongoDB',
-    [DataSourceType.S3]: 'Amazon S3',
-    [DataSourceType.API]: 'REST API',
-    [DataSourceType.BIGQUERY]: 'BigQuery',
-    [DataSourceType.SNOWFLAKE]: 'Snowflake',
-    [DataSourceType.CSV]: 'CSV File',
+    [DataSourceType.POSTGRES]: "PostgreSQL",
+    [DataSourceType.MYSQL]: "MySQL",
+    [DataSourceType.MONGODB]: "MongoDB",
+    [DataSourceType.S3]: "Amazon S3",
+    [DataSourceType.API]: "REST API",
+    [DataSourceType.BIGQUERY]: "BigQuery",
+    [DataSourceType.SNOWFLAKE]: "Snowflake",
+    [DataSourceType.CSV]: "CSV File",
   };
-  
+
   return displayNames[type] || type;
 }
 
@@ -162,17 +164,14 @@ export function isSQLDataSource(type: DataSourceType | string): boolean {
  * Check if data source type is a NoSQL database
  */
 export function isNoSQLDataSource(type: DataSourceType | string): boolean {
-  return [
-    DataSourceType.MONGODB,
-  ].includes(type as DataSourceType);
+  return [DataSourceType.MONGODB].includes(type as DataSourceType);
 }
 
 /**
  * Check if data source type is a file-based source
  */
 export function isFileDataSource(type: DataSourceType | string): boolean {
-  return [
-    DataSourceType.S3,
-    DataSourceType.CSV,
-  ].includes(type as DataSourceType);
+  return [DataSourceType.S3, DataSourceType.CSV].includes(
+    type as DataSourceType,
+  );
 }

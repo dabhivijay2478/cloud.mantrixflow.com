@@ -87,13 +87,15 @@ export function ConnectionSheet({
   } | null>(null);
   const [loading, setLoading] = useState(false);
   // Track which password fields have visibility toggled
-  const [visiblePasswordFields, setVisiblePasswordFields] = useState<Record<string, boolean>>({});
+  const [visiblePasswordFields, setVisiblePasswordFields] = useState<
+    Record<string, boolean>
+  >({});
 
   // Toggle password field visibility
   const togglePasswordVisibility = (fieldName: string) => {
-    setVisiblePasswordFields(prev => ({
+    setVisiblePasswordFields((prev) => ({
       ...prev,
-      [fieldName]: !prev[fieldName]
+      [fieldName]: !prev[fieldName],
     }));
   };
 
@@ -368,17 +370,20 @@ export function ConnectionSheet({
                           <div className="relative">
                             <Input
                               id={field.name}
-                              type={visiblePasswordFields[field.name] ? "text" : "password"}
+                              type={
+                                visiblePasswordFields[field.name]
+                                  ? "text"
+                                  : "password"
+                              }
                               placeholder={field.placeholder}
                               {...form.register(field.name)}
-                              className={cn(
-                                "h-10 pr-10",
-                                "font-mono",
-                              )}
+                              className={cn("h-10 pr-10", "font-mono")}
                             />
                             <button
                               type="button"
-                              onClick={() => togglePasswordVisibility(field.name)}
+                              onClick={() =>
+                                togglePasswordVisibility(field.name)
+                              }
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                               tabIndex={-1}
                             >
