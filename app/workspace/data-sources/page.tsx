@@ -72,14 +72,17 @@ export default function DataSourcesPage() {
   // Data source types that are implemented in the backend collector service
   // Only PostgreSQL, MySQL, and MongoDB are supported
   const SUPPORTED_SOURCE_TYPES = ["postgres", "mysql", "mongodb"] as const;
+  type SupportedSourceType = (typeof SUPPORTED_SOURCE_TYPES)[number];
 
   // Filter to only show supported data sources (hide all others)
   const enabledDataSources = allDataSources
-    .filter((ds) => SUPPORTED_SOURCE_TYPES.includes(ds.type as any))
+    .filter((ds) =>
+      SUPPORTED_SOURCE_TYPES.includes(ds.type as SupportedSourceType),
+    )
     .map((ds) => ({
       ...ds,
       disabled: false, // All shown sources are enabled
-    }));
+    })) as Array<typeof allDataSources[number] & { disabled: boolean }>;
 
   // Get all unique user IDs from connections for fetching user names
   const userIds = useMemo(
@@ -206,7 +209,7 @@ export default function DataSourcesPage() {
 
     const dataSource = enabledDataSources.find(
       (ds) => ds.id === connectingDataSourceId,
-    );
+    ) as (typeof allDataSources[number] & { disabled: boolean }) | undefined;
     if (!dataSource) return;
 
     try {
@@ -317,15 +320,18 @@ export default function DataSourcesPage() {
   ): Promise<{ success: boolean; message: string }> => {
     try {
       // Find the data source to get its type
-      const dataSource = enabledDataSources.find(
+      const foundDataSource = enabledDataSources.find(
         (ds) => ds.id === connectingDataSourceId,
       );
-
+      
       // Get the source type from the data source definition
       // Use type first (from allDataSources), then id as fallback
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dsAny = dataSource as any;
-      const sourceType: string = dsAny?.type || dsAny?.id || "postgres";
+      let sourceType: string = "postgres";
+      if (foundDataSource) {
+        // Type assertion to help TypeScript understand the structure
+        const ds = foundDataSource as { type: string; id: string };
+        sourceType = ds.type || ds.id;
+      }
 
       // Build test data based on source type
       let testData: TestConnectionDto;
@@ -490,12 +496,6 @@ export default function DataSourcesPage() {
         }
 
         // SQL Databases: PostgreSQL, MySQL, MSSQL, Redshift, ClickHouse, PGVector
-        case "postgres":
-        case "mysql":
-        case "mssql":
-        case "redshift":
-        case "clickhouse":
-        case "pgvector":
         default: {
           const databaseType = data.databaseType || "other";
           const isNeon = databaseType === "neon";

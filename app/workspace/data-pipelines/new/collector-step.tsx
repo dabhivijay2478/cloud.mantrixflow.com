@@ -2,7 +2,9 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  AlertCircle,
   ArrowRight,
+  CheckCircle2,
   Database,
   Edit,
   Loader2,
@@ -10,12 +12,11 @@ import {
   Table,
   Trash2,
   X,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { DataTable, FormSheet } from "@/components/shared";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,14 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useConnection } from "@/lib/api/hooks/use-connection";
 import {
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
-import { useConnection } from "@/lib/api/hooks/use-connection";
 import { PythonETLService } from "@/lib/api/services/python-etl.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface CollectorConfig {
   id: string;
@@ -226,17 +226,21 @@ export function CollectorStep({
       const sourceType = selectedSource?.type || "postgres";
 
       // Map connection config to test connection format
-      const testConfig: any = {
+      const testConfig = {
         type: sourceType,
-        ...connection.config,
+        ...(connection.config as unknown as Record<string, unknown>),
+      } as {
+        type: string;
+        [key: string]: unknown;
       };
 
-      // Normalize field names
-      if (connection.config.username && !testConfig.username) {
-        testConfig.username = connection.config.username;
+      // Normalize field names (safely access union type properties)
+      const config = connection.config as unknown as Record<string, unknown>;
+      if (config.username && !testConfig.username) {
+        testConfig.username = config.username;
       }
-      if (connection.config.user && !testConfig.user) {
-        testConfig.user = connection.config.user;
+      if (config.user && !testConfig.user) {
+        testConfig.user = config.user;
       }
 
       const result = await PythonETLService.testConnection(testConfig);
@@ -246,10 +250,12 @@ export function CollectorStep({
         message: result.message || "Connection successful",
         error: result.error,
       });
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       setConnectionTestResult({
         success: false,
-        error: error.message || "Failed to test connection",
+        error: errorMessage || "Failed to test connection",
       });
     } finally {
       setTestingConnection(false);

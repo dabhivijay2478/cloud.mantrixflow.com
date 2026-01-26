@@ -3,7 +3,7 @@
  * Service layer for data source endpoints (organization-scoped)
  */
 
-import { ApiClient, type ApiDeleteResponse } from "../client";
+import { ApiClient } from "../client";
 import type {
   Connection,
   ConnectionHealth,
@@ -13,6 +13,7 @@ import type {
   CreateSyncJobDto,
   Database,
   DataSource,
+  DataSourceType,
   ExecuteQueryDto,
   ExplainQueryResponse,
   QueryExecutionResponse,
@@ -88,8 +89,8 @@ export class DataSourcesService {
       createdBy: result.created_by,
       createdAt: result.created_at,
       updatedAt: result.updated_at,
-      deletedAt: null,
-    } as DataSource;
+      deletedAt: undefined,
+    } as unknown as DataSource;
   }
 
   static async updateDataSource(
@@ -112,9 +113,10 @@ export class DataSourcesService {
     id: string,
   ): Promise<{ deletedId: string }> {
     // Call NestJS API directly for deletion
-    const response = await ApiClient.delete<{ deletedId: string; meta: any }>(
-      `${DataSourcesService.basePath(organizationId)}/${id}`,
-    );
+    const response = await ApiClient.delete<{
+      deletedId: string;
+      meta: Record<string, unknown>;
+    }>(`${DataSourcesService.basePath(organizationId)}/${id}`);
     return { deletedId: response.deletedId || id };
   }
 
@@ -152,19 +154,18 @@ export class DataSourcesService {
     );
 
     // Map Python API response to Connection format
-    // biome-ignore lint/suspicious/noExplicitAny: Connection type doesn't include config but we need it
     return {
       id: connection.id,
       organizationId,
       name: dataSource.name,
-      type: connection.connection_type as any,
-      status: connection.status as any,
+      type: connection.connection_type as DataSourceType,
+      status: connection.status as "active" | "inactive" | "error" | "testing",
       config: connection.config,
       created_at: connection.created_at,
       createdAt: connection.created_at,
       updated_at: connection.updated_at,
       updatedAt: connection.updated_at,
-    } as any as Connection;
+    } as Connection & { config: Record<string, unknown> };
   }
 
   /**
@@ -193,7 +194,7 @@ export class DataSourcesService {
       sourceId,
       {
         connection_type: dto.connection_type,
-        config: dto.config as Record<string, any>,
+        config: dto.config as unknown as Record<string, unknown>,
       },
     );
 
@@ -213,8 +214,8 @@ export class DataSourcesService {
   }
 
   static async testConnection(
-    organizationId: string,
-    sourceId: string,
+    _organizationId: string,
+    _sourceId: string,
   ): Promise<TestConnectionResponse> {
     // This endpoint tests an existing connection by data source ID
     // For now, we'll need to get the connection config first, then test it
@@ -239,7 +240,10 @@ export class DataSourcesService {
   ): Promise<{
     schemas?: Schema[];
     tables?: Table[];
-    databases?: any[];
+    databases?: Array<{
+      name: string;
+      collections?: Array<{ name: string; type?: string }>;
+    }>;
     type?: string;
   }> {
     // Get connection config first
@@ -249,8 +253,9 @@ export class DataSourcesService {
       true,
     );
 
-    // biome-ignore lint/suspicious/noExplicitAny: Connection type may not include config in TypeScript but Python API returns it
-    const connectionWithConfig = connection as any;
+    const connectionWithConfig = connection as Connection & {
+      config: Record<string, unknown>;
+    };
     if (!connection || !connectionWithConfig.config) {
       throw new Error("Connection not configured for this data source");
     }
@@ -270,7 +275,7 @@ export class DataSourcesService {
 
     const discovered = await PythonETLService.discoverSchema(sourceType, {
       source_type: sourceType,
-      connection_config: connectionWithConfig.config as Record<string, any>,
+      connection_config: connectionWithConfig.config as Record<string, unknown>,
       source_config: {},
       table_name: options?.tableName,
       schema_name: options?.schemaName,
@@ -282,16 +287,19 @@ export class DataSourcesService {
     if (sourceType === "mongodb") {
       // MongoDB returns databases and collections
       return {
-        databases: discovered.columns as any[], // MongoDB uses columns field for collections
+        databases: discovered.columns as Array<{
+          name: string;
+          collections?: Array<{ name: string; type?: string }>;
+        }>, // MongoDB uses columns field for collections
         type: "mongodb",
       };
     } else {
       // SQL databases return tables
       return {
-        tables: discovered.columns.map((col: any) => ({
+        tables: discovered.columns.map((col) => ({
           name: col.name,
           schema: options?.schemaName || "public",
-          type: col.dataType,
+          type: col.type,
           columns: [col],
         })) as Table[],
         schemas: options?.schemaName
@@ -319,13 +327,18 @@ export class DataSourcesService {
    * Frontend should use this method for testing connections
    */
   static async testConnectionLegacy(
-    organizationId: string,
+    _organizationId: string,
     data: TestConnectionDto,
   ): Promise<TestConnectionResponse> {
     // Call Python API directly for connection testing
     const { PythonETLService } = await import("./python-etl.service");
 
-    const result = await PythonETLService.testConnection(data);
+    const result = await PythonETLService.testConnection({
+      ...data,
+      type: data.type || "postgres",
+      ssl: data.ssl ?? undefined,
+      sshTunnel: data.sshTunnel ?? undefined,
+    } as Parameters<typeof PythonETLService.testConnection>[0]);
 
     return {
       success: result.success,
@@ -362,8 +375,9 @@ export class DataSourcesService {
       } as CreateConnectionDto,
     );
 
-    // biome-ignore lint/suspicious/noExplicitAny: Legacy code
-    const connection = connectionResult as any; // Cast to access properties not in Connection interface
+    const connection = connectionResult as Connection & {
+      config: Record<string, unknown>;
+    }; // Cast to access properties not in Connection interface
 
     // 3. Return combined object matching Connection interface
     // Note: Frontend uses DataSource ID as Connection ID in listings
@@ -379,7 +393,7 @@ export class DataSourcesService {
       updated_at: dataSource.updatedAt,
       updatedAt: dataSource.updatedAt,
 
-      connection_type: connection.connection_type,
+      connection_type: connection.type || dataSource.sourceType,
 
       config: connection.config,
     } as unknown as Connection;
@@ -483,11 +497,12 @@ export class DataSourcesService {
 
     // MongoDB returns databases - convert to schema format
     if (result.databases) {
-      return result.databases.map((db: any) => ({
+      return result.databases.map((db) => ({
         name: db.name,
-        tables: (db.collections || []).map((coll: any) => ({
+        tables: (db.collections || []).map((coll) => ({
           name: coll.name,
-          type: coll.type || "collection",
+          schema: db.name,
+          type: (coll.type || "table") as "table" | "view" | "materialized_view",
         })),
       }));
     }
@@ -534,15 +549,13 @@ export class DataSourcesService {
     const result = await DataSourcesService.discoverSchema(orgId, connectionId);
 
     if (schema) {
-      // biome-ignore lint/suspicious/noExplicitAny: Legacy code
-      const foundSchema = result.schemas?.find((s: any) => s.name === schema);
+      const foundSchema = result.schemas?.find((s) => s.name === schema);
       return foundSchema ? foundSchema.tables || [] : [];
     }
 
     // If no schema specified, flatten all tables? Or return empty?
     // Legacy behavior was listing tables for a schema.
-    // biome-ignore lint/suspicious/noExplicitAny: Legacy code
-    return result.schemas?.flatMap((s: any) => s.tables) || [];
+    return result.schemas?.flatMap((s) => s.tables || []) || [];
   }
 
   static async getTableSchema(
@@ -558,17 +571,20 @@ export class DataSourcesService {
 
     // Normalize MongoDB response to match expected structure
     if (result.type === "mongodb" && result.databases) {
-      // biome-ignore lint/suspicious/noExplicitAny: Normalizing backend response
-      result.schemas = result.databases.map((db: any) => ({
+      result.schemas = result.databases.map((db) => ({
         name: db.name,
-        tables: db.collections?.map((coll: any) => ({
+        tables: db.collections?.map((coll: { name: string; fields?: Array<{ name: string; type: string; nullable?: boolean }> }) => ({
           name: coll.name,
-          columns: coll.fields?.map((f: any) => ({
-            name: f.name,
-            dataType: f.type,
-            nullable: f.nullable,
-            isPrimaryKey: f.name === "_id", // MongoDB _id is always primary key
-          })),
+          schema: db.name,
+          type: "table" as const,
+          columns: coll.fields?.map(
+            (f) => ({
+              name: f.name,
+              dataType: f.type,
+              nullable: f.nullable,
+              isPrimaryKey: f.name === "_id", // MongoDB _id is always primary key
+            }),
+          ),
         })),
       }));
     }
@@ -625,8 +641,17 @@ export class DataSourcesService {
     // Extract columns from discovered schema
     // For PostgreSQL/MySQL: columns are in targetTable.columns (if available from Python API)
     // For MongoDB: columns are in coll.fields (already normalized above)
-    // biome-ignore lint/suspicious/noExplicitAny: Table type doesn't include columns/primaryKeys but Python API returns them
-    const tableWithExtras = targetTable as any;
+    const tableWithExtras = targetTable as Table & {
+      columns?: Array<{
+        name: string;
+        type?: string;
+        dataType?: string;
+        nullable?: boolean;
+        isPrimaryKey?: boolean;
+        primaryKey?: boolean;
+      }>;
+      primaryKeys?: string[];
+    };
     const columns = tableWithExtras.columns || [];
 
     // Extract primary keys if available
@@ -639,12 +664,12 @@ export class DataSourcesService {
     } else if (columns) {
       // Try to find primary key columns by checking isPrimaryKey flag
       const pkColumns = columns.filter(
-        (col: any) => col.isPrimaryKey || col.primaryKey,
+        (col) => col.isPrimaryKey || col.primaryKey,
       );
-      primaryKeys.push(...pkColumns.map((col: any) => col.name));
+      primaryKeys.push(...pkColumns.map((col) => col.name));
     }
 
-    const mappedColumns = columns.map((col: any) => ({
+    const mappedColumns = columns.map((col) => ({
       name: col.name,
       dataType: col.type || col.dataType || "unknown",
       nullable: col.nullable !== false,
@@ -654,7 +679,7 @@ export class DataSourcesService {
     console.log(
       `getTableSchema: Found ${mappedColumns.length} columns for ${schema || "no-schema"}.${table}`,
       {
-        columns: mappedColumns.map((c: any) => c.name),
+        columns: mappedColumns.map((c) => c.name),
         primaryKeys,
       },
     );

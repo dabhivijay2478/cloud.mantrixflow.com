@@ -243,7 +243,7 @@ export interface TestConnectionDto {
   // BigQuery
   project_id?: string;
   dataset?: string;
-  credentials?: Record<string, any>;
+  credentials?: Record<string, unknown>;
 
   // Snowflake
   account?: string;

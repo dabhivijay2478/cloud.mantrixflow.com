@@ -145,8 +145,7 @@ export default function DestinationSchemasPage() {
         accessorKey: "transformScript",
         header: "Transform Script",
         cell: ({ row }) => {
-          const hasScript =
-            row.original.transformScript && row.original.transformScript.trim();
+          const hasScript = row.original.transformScript?.trim();
           return (
             <span className="text-sm text-muted-foreground">
               {hasScript ? (
@@ -446,7 +445,7 @@ function DestinationSchemaDetailsDialog({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {schema.transformScript && schema.transformScript.trim() ? (
+              {schema.transformScript?.trim() ? (
                 <div className="border rounded-lg overflow-auto">
                   <pre className="p-4 text-xs font-mono bg-muted/30 max-h-96 overflow-auto">
                     {schema.transformScript}

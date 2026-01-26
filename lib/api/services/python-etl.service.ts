@@ -5,15 +5,15 @@
  * Also handles data source and connection CRUD operations (create, update, delete)
  */
 
-import type { ColumnMapping, ColumnInfo } from "../types/data-pipelines";
+import type { ColumnInfo } from "../types/data-pipelines";
 
 const PYTHON_SERVICE_URL =
   process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || "http://localhost:8001";
 
 export interface DiscoverSchemaRequest {
   source_type: string;
-  connection_config: Record<string, any>;
-  source_config?: Record<string, any>;
+  connection_config: Record<string, unknown>;
+  source_config?: Record<string, unknown>;
   table_name?: string;
   schema_name?: string;
   query?: string;
@@ -27,43 +27,43 @@ export interface DiscoverSchemaResponse {
 
 export interface CollectRequest {
   source_type: string;
-  connection_config: Record<string, any>;
-  source_config?: Record<string, any>;
+  connection_config: Record<string, unknown>;
+  source_config?: Record<string, unknown>;
   table_name?: string;
   schema_name?: string;
   query?: string;
   sync_mode?: "full" | "incremental";
-  checkpoint?: Record<string, any>;
+  checkpoint?: Record<string, unknown>;
   limit?: number;
   offset?: number;
   cursor?: string;
 }
 
 export interface CollectResponse {
-  rows: any[];
+  rows: Record<string, unknown>[];
   total_rows?: number;
   next_cursor?: string;
   has_more?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TransformRequest {
-  rows: any[];
+  rows: Record<string, unknown>[];
   transform_script: string;
 }
 
 export interface TransformResponse {
-  transformed_rows: any[];
-  errors: any[];
+  transformed_rows: Record<string, unknown>[];
+  errors: Array<{ message: string; row?: number; error?: string }>;
 }
 
 export interface EmitRequest {
   destination_type: string;
-  connection_config: Record<string, any>;
-  destination_config?: Record<string, any>;
+  connection_config: Record<string, unknown>;
+  destination_config?: Record<string, unknown>;
   table_name: string;
   schema_name?: string;
-  rows: any[];
+  rows: Record<string, unknown>[];
   write_mode?: "append" | "upsert" | "replace";
   upsert_key?: string[];
 }
@@ -72,7 +72,7 @@ export interface EmitResponse {
   rows_written: number;
   rows_skipped: number;
   rows_failed: number;
-  errors: any[];
+  errors: Array<{ message: string; row?: number; error?: string }>;
 }
 
 export class PythonETLService {
@@ -212,15 +212,15 @@ export class PythonETLService {
    */
   static async deltaCheck(
     sourceType: string,
-    connectionConfig: Record<string, any>,
-    sourceConfig: Record<string, any>,
+    connectionConfig: Record<string, unknown>,
+    sourceConfig: Record<string, unknown>,
     tableName?: string,
     schemaName?: string,
-    checkpoint?: Record<string, any>,
-  ): Promise<{ has_changes: boolean; checkpoint?: Record<string, any> }> {
+    checkpoint?: Record<string, unknown>,
+  ): Promise<{ has_changes: boolean; checkpoint?: Record<string, unknown> }> {
     return PythonETLService.request<{
       has_changes: boolean;
-      checkpoint?: Record<string, any>;
+      checkpoint?: Record<string, unknown>;
     }>(`/delta-check/${sourceType}`, {
       method: "POST",
       body: JSON.stringify({
@@ -243,7 +243,7 @@ export class PythonETLService {
       name: string;
       description?: string;
       source_type: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     },
   ): Promise<{
     id: string;
@@ -252,7 +252,7 @@ export class PythonETLService {
     description?: string;
     source_type: string;
     is_active: boolean;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     created_by: string;
     created_at: string;
     updated_at: string;
@@ -264,7 +264,7 @@ export class PythonETLService {
       description?: string;
       source_type: string;
       is_active: boolean;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
       created_by: string;
       created_at: string;
       updated_at: string;
@@ -309,13 +309,13 @@ export class PythonETLService {
     dataSourceId: string,
     data: {
       connection_type: string;
-      config: Record<string, any>;
+      config: Record<string, unknown>;
     },
   ): Promise<{
     id: string;
     data_source_id: string;
     connection_type: string;
-    config: Record<string, any>;
+    config: Record<string, unknown>;
     status: string;
     created_at: string;
     updated_at: string;
@@ -324,7 +324,7 @@ export class PythonETLService {
       id: string;
       data_source_id: string;
       connection_type: string;
-      config: Record<string, any>;
+      config: Record<string, unknown>;
       status: string;
       created_at: string;
       updated_at: string;
@@ -374,22 +374,22 @@ export class PythonETLService {
     password?: string;
     connection_string?: string;
     connection_string_mongo?: string;
-    ssl?: any;
+    ssl?: { enabled?: boolean; [key: string]: unknown };
     auth_source?: string;
     replica_set?: string;
     tls?: boolean;
     database_type?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }): Promise<{
     success: boolean;
     message?: string;
     error?: string;
     version?: string;
     response_time_ms?: number;
-    details?: any;
+    details?: Record<string, unknown>;
   }> {
     // Map connection_string to connection_string_mongo for MongoDB
-    const requestData: any = { ...connectionData };
+    const requestData: Record<string, unknown> = { ...connectionData };
     if (connectionData.type === "mongodb" && connectionData.connection_string) {
       requestData.connection_string_mongo = connectionData.connection_string;
       delete requestData.connection_string;
@@ -401,7 +401,7 @@ export class PythonETLService {
       error?: string;
       version?: string;
       response_time_ms?: number;
-      details?: any;
+      details?: Record<string, unknown>;
     }>("/test-connection", {
       method: "POST",
       body: JSON.stringify(requestData),
@@ -420,7 +420,7 @@ export class PythonETLService {
     id: string;
     data_source_id: string;
     connection_type: string;
-    config: Record<string, any>;
+    config: Record<string, unknown>;
     status: string;
     last_connected_at?: string;
     last_error?: string;
@@ -432,7 +432,7 @@ export class PythonETLService {
       id: string;
       data_source_id: string;
       connection_type: string;
-      config: Record<string, any>;
+      config: Record<string, unknown>;
       status: string;
       last_connected_at?: string;
       last_error?: string;
@@ -537,7 +537,7 @@ export class PythonETLService {
         | "custom_cron";
       schedule_value?: string;
       schedule_timezone?: string;
-      transformations?: any[];
+      transformations?: Record<string, unknown>[];
     },
   ): Promise<{
     id: string;
@@ -547,7 +547,7 @@ export class PythonETLService {
     description?: string;
     sourceSchemaId: string;
     destinationSchemaId: string;
-    transformations?: any[];
+    transformations?: Record<string, unknown>[];
     syncMode: string;
     incrementalColumn?: string;
     syncFrequency: string;
@@ -591,7 +591,7 @@ export class PythonETLService {
         | "custom_cron";
       schedule_value?: string;
       schedule_timezone?: string;
-      transformations?: any[];
+      transformations?: Record<string, unknown>[];
     },
   ): Promise<{
     id: string;
@@ -601,7 +601,7 @@ export class PythonETLService {
     description?: string;
     sourceSchemaId: string;
     destinationSchemaId: string;
-    transformations?: any[];
+    transformations?: Record<string, unknown>[];
     syncMode: string;
     incrementalColumn?: string;
     syncFrequency: string;
@@ -642,7 +642,7 @@ export class PythonETLService {
     rowsWritten: number;
     rowsSkipped: number;
     rowsFailed: number;
-    errors: any[];
+    errors: Array<{ message: string; row?: number; error?: string }>;
   }> {
     return PythonETLService.request(
       `/organizations/${organizationId}/pipelines/${pipelineId}/run`,

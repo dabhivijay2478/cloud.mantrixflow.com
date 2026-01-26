@@ -5,8 +5,10 @@
 
 import { ApiClient } from "../client";
 import type {
+  ConnectionConfig,
   CreateConnectionDto,
   DataSourceConnection,
+  DataSourceType,
   TestConnectionResult,
   UpdateConnectionDto,
 } from "../types/data-sources";
@@ -40,19 +42,18 @@ export class ConnectionService {
       dataSourceId,
       {
         connection_type: data.connection_type,
-        config: data.config as Record<string, any>,
+        config: data.config as unknown as Record<string, unknown>,
       },
     );
 
-    // Map Python response (snake_case) to frontend format (camelCase)
+    // Map Python response (snake_case) to frontend format
     return {
       id: result.id,
-      dataSourceId: result.data_source_id,
-      connectionType: result.connection_type,
-      config: result.config,
+      data_source_id: result.data_source_id,
+      connection_type: result.connection_type,
+      config: result.config as unknown as ConnectionConfig,
       status: result.status,
-      createdAt: result.created_at,
-      updatedAt: result.updated_at,
+      last_connected_at: result.created_at,
     } as DataSourceConnection;
   }
 
@@ -81,9 +82,9 @@ export class ConnectionService {
     return {
       id: connection.id,
       data_source_id: connection.data_source_id,
-      connection_type: connection.connection_type as any,
-      config: connection.config,
-      status: connection.status as any,
+      connection_type: connection.connection_type as DataSourceType,
+      config: connection.config as unknown as ConnectionConfig,
+      status: connection.status as "active" | "inactive" | "error" | "testing",
       last_connected_at: connection.last_connected_at,
       last_error: connection.last_error,
     };
@@ -136,16 +137,18 @@ export class ConnectionService {
 
     const result = await PythonETLService.testConnection({
       type: sourceType,
-      ...(connection.config as Record<string, any>),
+      ...(connection.config as unknown as Record<string, unknown>),
     });
 
     return {
       success: result.success,
-      message: result.message,
+      message: result.message || "",
       error: result.error,
-      version: result.version,
-      responseTimeMs: result.response_time_ms,
-      details: result.details,
+      details: {
+        version: result.version,
+        response_time_ms: result.response_time_ms,
+        ...result.details,
+      },
     };
   }
 
@@ -189,7 +192,7 @@ export class ConnectionService {
 
     const discovered = await PythonETLService.discoverSchema(sourceType, {
       source_type: sourceType,
-      connection_config: connection.config as Record<string, any>,
+      connection_config: connection.config as unknown as Record<string, unknown>,
       source_config: {},
       table_name: options?.tableName,
       schema_name: options?.schemaName,
@@ -199,8 +202,8 @@ export class ConnectionService {
     // Return discovered schema
     return {
       columns: discovered.columns,
-      primaryKeys: discovered.primaryKeys,
-      estimatedRowCount: discovered.estimatedRowCount,
+      primaryKeys: discovered.primary_keys,
+      estimatedRowCount: discovered.estimated_row_count,
     };
   }
 }

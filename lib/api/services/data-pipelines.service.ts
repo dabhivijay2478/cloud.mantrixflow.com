@@ -16,6 +16,7 @@ import type {
   PipelineStats,
   PipelineWithSchemas,
   RunPipelineDto,
+  RunStatus,
   UpdatePipelineDto,
   ValidationResult,
 } from "../types/data-pipelines";
@@ -32,12 +33,10 @@ export class DataPipelinesService {
    * Python API handles source schema, destination schema, and pipeline creation
    */
   static async createPipeline(
-    organizationId: string,
-    data: CreatePipelineDto,
+    _organizationId: string,
+    _data: CreatePipelineDto,
   ): Promise<Pipeline> {
     // Call Python API directly for pipeline creation
-    const { PythonETLService } = await import("./python-etl.service");
-
     // Note: Python API expects a different format with source_schema and destination_schema
     // This method signature is kept for backward compatibility but should be updated
     // to match the Python API format in the future
@@ -92,7 +91,7 @@ export class DataPipelinesService {
     const { PythonETLService } = await import("./python-etl.service");
 
     // Map frontend DTO to Python API format
-    const pythonData: any = {};
+    const pythonData: Record<string, unknown> = {};
     if (data.name !== undefined) pythonData.name = data.name;
     if (data.description !== undefined)
       pythonData.description = data.description;
@@ -108,13 +107,15 @@ export class DataPipelinesService {
     if (data.scheduleTimezone !== undefined)
       pythonData.schedule_timezone = data.scheduleTimezone;
     if (data.transformations !== undefined)
-      pythonData.transformations = data.transformations;
+      pythonData.transformations = data.transformations as unknown as Record<string, unknown>[];
 
-    return PythonETLService.updatePipeline(
+    const result = await PythonETLService.updatePipeline(
       organizationId,
       pipelineId,
       pythonData,
     );
+    
+    return result as unknown as Pipeline;
   }
 
   /**
@@ -148,8 +149,8 @@ export class DataPipelinesService {
       organizationId,
       pipelineId,
       {
-        syncMode: (options?.syncMode as "full" | "incremental") || "full",
-        limit: options?.limit,
+        syncMode: "full",
+        limit: options?.batchSize,
       },
     );
 
@@ -158,13 +159,10 @@ export class DataPipelinesService {
       id: result.runId,
       pipelineId: result.pipelineId,
       organizationId: organizationId,
-      status: result.status as
-        | "pending"
-        | "running"
-        | "completed"
-        | "failed"
-        | "cancelled",
+      triggeredBy: "system", // Default value since Python API doesn't provide this
       triggerType: "manual",
+      status: (result.status === "completed" ? "success" : result.status) as RunStatus,
+      jobState: (result.status === "completed" ? "completed" : result.status === "failed" ? "failed" : result.status === "running" ? "running" : "pending") as "pending" | "running" | "completed" | "failed",
       rowsRead: result.rowsRead,
       rowsWritten: result.rowsWritten,
       rowsSkipped: result.rowsSkipped,

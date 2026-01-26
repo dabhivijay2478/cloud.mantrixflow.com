@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
   Clock,
-  Database,
   Edit,
   Loader2,
   Pause,
   Play,
   RefreshCw,
+  Save,
   Trash2,
   XCircle,
   Zap,
-  Save,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { io, Socket } from "socket.io-client";
+import { useEffect, useRef, useState } from "react";
+import { io, type Socket } from "socket.io-client";
+import { ScheduleEditor } from "@/components/data-pipelines";
 import { LoadingState } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,29 +30,19 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
   useDeletePipeline,
   usePausePipeline,
-  usePipelineWithSchemas,
   usePipelineRuns,
   usePipelineStats,
+  usePipelineWithSchemas,
   useResumePipeline,
   useRunPipeline,
-  useValidatePipeline,
   useUpdatePipeline,
+  useValidatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
 import type { PipelineRun, ScheduleType } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
-import { ScheduleEditor } from "@/components/data-pipelines";
 
 export default function PipelineDetailPage() {
   const params = useParams();
@@ -140,6 +130,19 @@ export default function PipelineDetailPage() {
   >(null);
   const [newRowsCount, setNewRowsCount] = useState<number>(0);
 
+  // Use refs to track values without causing effect re-runs
+  const realTimeRowsProcessedRef = useRef<number | null>(null);
+  const pipelineTotalRowsRef = useRef<number | undefined>(undefined);
+
+  // Update refs when values change (without triggering effect re-run)
+  useEffect(() => {
+    realTimeRowsProcessedRef.current = realTimeRowsProcessed;
+  }, [realTimeRowsProcessed]);
+
+  useEffect(() => {
+    pipelineTotalRowsRef.current = pipeline?.totalRowsProcessed ?? undefined;
+  }, [pipeline?.totalRowsProcessed]);
+
   useEffect(() => {
     if (!pipelineId || !organizationId) return;
 
@@ -173,7 +176,7 @@ export default function PipelineDetailPage() {
         last_run_status?: string;
         total_rows_processed?: number;
         last_sync_at?: string;
-        checkpoint?: any;
+        checkpoint?: Record<string, unknown>;
       }) => {
         if (data.pipeline_id === pipelineId) {
           // Update real-time state
@@ -182,7 +185,9 @@ export default function PipelineDetailPage() {
           }
           if (data.total_rows_processed !== undefined) {
             const previousRows =
-              realTimeRowsProcessed || pipeline?.totalRowsProcessed || 0;
+              realTimeRowsProcessedRef.current ??
+              pipelineTotalRowsRef.current ??
+              0;
             const newRows = data.total_rows_processed - previousRows;
             if (newRows > 0) {
               setNewRowsCount((prev) => prev + newRows);
@@ -253,7 +258,7 @@ export default function PipelineDetailPage() {
       console.log("[Socket.io] Disconnected from pipeline updates");
     });
 
-    socket.on("error", (error: any) => {
+    socket.on("error", (error: Error) => {
       console.error("[Socket.io] Error:", error);
     });
 
@@ -270,7 +275,7 @@ export default function PipelineDetailPage() {
     setNewRowsCount(0);
     setRealTimeStatus(null);
     setRealTimeRowsProcessed(null);
-  }, [pipelineId]);
+  }, []);
 
   if (pipelineLoading) {
     return <LoadingState fullScreen message="Loading pipeline..." />;
@@ -740,7 +745,10 @@ export default function PipelineDetailPage() {
                     CDC Column (Auto-detected)
                   </span>
                   <span className="font-medium font-mono text-xs">
-                    {(pipeline.checkpoint as any)?.watermarkField ||
+                    {(pipeline.checkpoint &&
+                      (pipeline.checkpoint as Record<string, unknown>)?.watermarkField
+                        ? String((pipeline.checkpoint as Record<string, unknown>).watermarkField)
+                        : null) ||
                       pipeline.incrementalColumn ||
                       "-"}
                   </span>

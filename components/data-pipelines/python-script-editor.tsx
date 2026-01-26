@@ -7,7 +7,7 @@ import { useMemo } from "react";
 interface PythonScriptEditorProps {
   value: string;
   onChange: (value: string) => void;
-  sampleRecord?: Record<string, any>;
+  sampleRecord?: Record<string, unknown>;
   className?: string;
   height?: string;
 }
@@ -45,7 +45,7 @@ def transform(record):
     Sample record structure:
 ${JSON.stringify(sampleRecord, null, 4)
   .split("\n")
-  .map((line) => "    " + line)
+  .map((line) => `    ${line}`)
   .join("\n")}
     """
     return {

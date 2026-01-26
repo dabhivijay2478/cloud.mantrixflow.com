@@ -2,17 +2,18 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  AlertCircle,
   ArrowRight,
   CheckCircle2,
   Database,
   Edit,
+  Loader2,
   Plus,
   Trash2,
-  Loader2,
-  AlertCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useConnections } from "@/lib/api";
 import { useConnection } from "@/lib/api/hooks/use-connection";
 import { PythonETLService } from "@/lib/api/services/python-etl.service";
@@ -206,17 +206,21 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       const sourceType = selectedDestination?.type || "postgres";
 
       // Map connection config to test connection format
-      const testConfig: any = {
+      const testConfig = {
         type: sourceType,
-        ...destinationConnection.config,
+        ...(destinationConnection.config as unknown as Record<string, unknown>),
+      } as {
+        type: string;
+        [key: string]: unknown;
       };
 
-      // Normalize field names
-      if (destinationConnection.config.username && !testConfig.username) {
-        testConfig.username = destinationConnection.config.username;
+      // Normalize field names (safely access union type properties)
+      const config = destinationConnection.config as unknown as Record<string, unknown>;
+      if (config.username && !testConfig.username) {
+        testConfig.username = config.username;
       }
-      if (destinationConnection.config.user && !testConfig.user) {
-        testConfig.user = destinationConnection.config.user;
+      if (config.user && !testConfig.user) {
+        testConfig.user = config.user;
       }
 
       const result = await PythonETLService.testConnection(testConfig);
@@ -226,10 +230,12 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         message: result.message || "Connection successful",
         error: result.error,
       });
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       setConnectionTestResult({
         success: false,
-        error: error.message || "Failed to test connection",
+        error: errorMessage || "Failed to test connection",
       });
     } finally {
       setTestingConnection(false);

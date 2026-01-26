@@ -173,14 +173,17 @@ export default function NewPipelinePage() {
       // Get data source to determine source type
       let sourceType = "postgres"; // Default fallback
       try {
+        if (!organizationId) {
+          throw new Error("Organization ID is required");
+        }
         const dataSource = await DataSourcesService.getDataSource(
-          organizationId!,
+          organizationId,
           primarySourceId,
         );
         // Handle both camelCase and snake_case from API
         sourceType =
           dataSource.sourceType ||
-          (dataSource as any).source_type ||
+          (dataSource as { source_type?: string }).source_type ||
           "postgres";
       } catch (error) {
         console.error(
@@ -242,12 +245,10 @@ export default function NewPipelinePage() {
       // Only script-based transformations are allowed for now
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => t.transformScript && t.transformScript.trim());
+        .find((t) => t.transformScript?.trim());
 
       // Check if transformer has transformScript
-      const hasTransformScript =
-        firstTransformer?.transformScript &&
-        firstTransformer.transformScript.trim();
+      const hasTransformScript = firstTransformer?.transformScript?.trim();
 
       if (!hasTransformScript) {
         toast.error(
@@ -290,7 +291,11 @@ export default function NewPipelinePage() {
         "@/lib/api/services/python-etl.service"
       );
 
-      await PythonETLService.createPipeline(organizationId!, {
+      if (!organizationId) {
+        toast.error("Error", "Organization ID is required");
+        return;
+      }
+      await PythonETLService.createPipeline(organizationId, {
         name: `Pipeline ${new Date().toLocaleDateString()}`,
         description: `Pipeline with ${collectorsToUse.length} collector(s)`,
         source_schema: {
@@ -305,7 +310,7 @@ export default function NewPipelinePage() {
           data_source_id: destinationConnectionId,
           destination_schema: destSchemaName,
           destination_table: destTableName,
-          transform_script: firstTransformer.transformScript || "",
+          transform_script: firstTransformer?.transformScript || "",
           write_mode: writeMode,
           upsert_key:
             primaryKeyFields.length > 0 ? primaryKeyFields : undefined,

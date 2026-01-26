@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { AlertCircle, Calendar, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -8,10 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar, AlertCircle } from "lucide-react";
 import type { ScheduleType } from "@/lib/api/types/data-pipelines";
 
 interface ScheduleEditorProps {
@@ -149,9 +149,9 @@ export function ScheduleEditor({
       case "none":
         return "Manual runs only - no automatic scheduling";
       case "minutes":
-        return `Runs every ${minutesInterval} minute${parseInt(minutesInterval) !== 1 ? "s" : ""}`;
+        return `Runs every ${minutesInterval} minute${parseInt(minutesInterval, 10) !== 1 ? "s" : ""}`;
       case "hourly":
-        return `Runs every ${hourlyInterval} hour${parseInt(hourlyInterval) !== 1 ? "s" : ""}`;
+        return `Runs every ${hourlyInterval} hour${parseInt(hourlyInterval, 10) !== 1 ? "s" : ""}`;
       case "daily":
         return `Runs daily at ${dailyTime} (${timezone})`;
       case "weekly": {

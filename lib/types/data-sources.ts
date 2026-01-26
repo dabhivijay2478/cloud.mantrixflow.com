@@ -26,7 +26,7 @@ export interface ColumnInfo {
   nullable: boolean;
   isPrimaryKey?: boolean;
   isForeignKey?: boolean;
-  defaultValue?: any;
+  defaultValue?: unknown;
   maxLength?: number;
   precision?: number;
   scale?: number;
@@ -39,7 +39,7 @@ export interface SchemaInfo {
   columns: ColumnInfo[];
   primaryKeys: string[];
   estimatedRowCount?: number;
-  sampleDocuments?: any[];
+  sampleDocuments?: Record<string, unknown>[];
 }
 
 /**
@@ -70,7 +70,7 @@ export interface ConnectionTestResult {
   message: string;
   details?: {
     version?: string;
-    serverInfo?: any;
+    serverInfo?: Record<string, unknown>;
     latencyMs?: number;
   };
 }
@@ -111,7 +111,7 @@ export interface DataSourceConfig {
   headers?: Record<string, string>;
 
   // Generic
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

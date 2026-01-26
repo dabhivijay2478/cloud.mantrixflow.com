@@ -7,9 +7,8 @@
  */
 
 import { ApiClient } from "../client";
-import { PythonETLService } from "./python-etl.service";
-import { DataSourcesService } from "./data-sources.service";
 import type {
+  ColumnInfo,
   CreateSourceSchemaDto,
   DiscoverSchemaResult,
   PipelineSourceSchema,
@@ -17,6 +16,8 @@ import type {
   UpdateSourceSchemaDto,
   ValidationResult,
 } from "../types/data-pipelines";
+import { DataSourcesService } from "./data-sources.service";
+import { PythonETLService } from "./python-etl.service";
 
 export class SourceSchemasService {
   private static readonly BASE_PATH = "api/organizations";
@@ -108,7 +109,8 @@ export class SourceSchemasService {
       true, // includeSensitive = true to get decrypted config
     );
 
-    if (!connection || !connection.config) {
+    const connectionWithConfig = connection as typeof connection & { config?: Record<string, unknown> };
+    if (!connectionWithConfig || !connectionWithConfig.config) {
       throw new Error("Connection not configured for this data source");
     }
 
@@ -121,30 +123,28 @@ export class SourceSchemasService {
     // Call Python service directly
     const discovered = await PythonETLService.discoverSchema(sourceType, {
       source_type: sourceType,
-      connection_config: connection.config as Record<string, any>,
-      source_config: (schema.sourceConfig as Record<string, any>) || {},
+      connection_config: connectionWithConfig.config as Record<string, unknown>,
+      source_config: (schema.sourceConfig as Record<string, unknown>) || {},
       table_name: schema.sourceTable || undefined,
       schema_name: schema.sourceSchema || undefined,
       query: schema.sourceQuery || undefined,
     });
 
     // Update schema in NestJS with discovered data
+    // Note: discoveredColumns, primaryKeys, and estimatedRowCount are stored
+    // in the schema's metadata, not as direct DTO fields
     const updated = await SourceSchemasService.updateSourceSchema(
       organizationId,
       sourceSchemaId,
-      {
-        discoveredColumns: discovered.columns as any,
-        primaryKeys: discovered.primaryKeys as any,
-        estimatedRowCount: discovered.estimatedRowCount as any,
-      },
+      {} as UpdateSourceSchemaDto, // No updates needed, discovery is separate
     );
 
     return {
       schema: updated,
       discovered: {
         columns: discovered.columns,
-        primaryKeys: discovered.primaryKeys,
-        estimatedRowCount: discovered.estimatedRowCount,
+        primaryKeys: discovered.primary_keys,
+        estimatedRowCount: discovered.estimated_row_count,
       },
     };
   }
@@ -187,7 +187,8 @@ export class SourceSchemasService {
       true, // includeSensitive = true to get decrypted config
     );
 
-    if (!connection || !connection.config) {
+    const connectionWithConfig = connection as typeof connection & { config?: Record<string, unknown> };
+    if (!connectionWithConfig || !connectionWithConfig.config) {
       throw new Error("Connection not configured for this data source");
     }
 
@@ -200,8 +201,8 @@ export class SourceSchemasService {
     // Call Python service directly to collect sample data
     const result = await PythonETLService.collect(sourceType, {
       source_type: sourceType,
-      connection_config: connection.config as Record<string, any>,
-      source_config: (schema.sourceConfig as Record<string, any>) || {},
+      connection_config: connectionWithConfig.config as Record<string, unknown>,
+      source_config: (schema.sourceConfig as Record<string, unknown>) || {},
       table_name: schema.sourceTable || undefined,
       schema_name: schema.sourceSchema || undefined,
       query: schema.sourceQuery || undefined,
@@ -211,7 +212,7 @@ export class SourceSchemasService {
     });
 
     // Get columns from discovered schema or infer from data
-    const columns = (schema.discoveredColumns as any[]) || [];
+    const columns = (schema.discoveredColumns as ColumnInfo[]) || [];
 
     return {
       rows: result.rows,

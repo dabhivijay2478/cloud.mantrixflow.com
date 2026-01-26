@@ -74,8 +74,8 @@ export class DataSourceService {
       createdBy: result.created_by,
       createdAt: result.created_at,
       updatedAt: result.updated_at,
-      deletedAt: null,
-    } as DataSource;
+      deletedAt: undefined,
+    } as unknown as DataSource;
   }
 
   /**

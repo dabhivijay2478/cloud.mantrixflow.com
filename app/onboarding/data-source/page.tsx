@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  Cloud,
-  Database,
-  FileSpreadsheet,
-  Globe,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";

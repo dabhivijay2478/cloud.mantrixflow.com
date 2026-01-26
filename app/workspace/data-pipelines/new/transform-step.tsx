@@ -4,17 +4,16 @@ import { useQueries } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
+  Code,
   Database,
   Edit,
-  Key,
   Map as MapIcon,
   Pause,
   Plus,
-  Sparkles,
   Trash2,
-  Code,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { PythonScriptEditor } from "@/components/data-pipelines/python-script-editor";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,16 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PythonScriptEditor } from "@/components/data-pipelines/python-script-editor";
 import {
   useConnections,
   useSchemasWithTables,
@@ -113,7 +103,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
   const [transformScript, setTransformScript] = useState<string>("");
-  const [transformMode, setTransformMode] = useState<"mappings" | "script">(
+  const [_transformMode, setTransformMode] = useState<"mappings" | "script">(
     "script",
   );
 
@@ -294,7 +284,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             );
             console.log(`Fetched schema for ${table}:`, {
               columnsCount: result.columns?.length || 0,
-              columns: result.columns?.map((c: any) => c.name),
+              columns: result.columns?.map((c: { name: string }) => c.name),
             });
             return result;
           } catch (error) {
@@ -330,7 +320,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
       if (query.data?.columns && query.data.columns.length > 0) {
         const tableInfo = sourceTableQueries[index];
-        query.data.columns.forEach((col: any) => {
+        query.data.columns.forEach((col) => {
           // For MongoDB, use field name directly (may include nested paths like "address.city")
           // For SQL, prefix with table name
           const fieldName = tableInfo.isMongoDB
@@ -339,7 +329,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
           fields.push({
             name: fieldName,
-            type: col.dataType || col.type || "unknown",
+            type: col.dataType || "unknown",
             table: tableInfo.tableName,
           });
         });
@@ -451,7 +441,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     generatedDestinationFields,
   ]);
 
-  const handleAutoGenerate = () => {
+  const _handleAutoGenerate = () => {
     if (sourceFields.length === 0) return;
 
     // 1. Generate destination fields from source fields
@@ -481,7 +471,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setFieldMappings(newMappings);
   };
 
-  const handleFieldMapping = (
+  const _handleFieldMapping = (
     sourceField: string,
     destinationField: string,
   ) => {
@@ -545,7 +535,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     });
   };
 
-  const handleRemoveMapping = (destinationField: string) => {
+  const _handleRemoveMapping = (destinationField: string) => {
     setFieldMappings((prev) =>
       prev.filter((m) => m.destination !== destinationField),
     );
@@ -1141,7 +1131,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                       if (!current[fieldPath[i]]) {
                                         current[fieldPath[i]] = {};
                                       }
-                                      current = current[fieldPath[i]];
+                                      current = current[fieldPath[i]] as Record<string, unknown>;
                                     }
                                     current[fieldName] = exampleValue;
                                   } else {
@@ -1150,7 +1140,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
 
                                   return acc;
                                 },
-                                {} as Record<string, any>,
+                                {} as Record<string, unknown>,
                               )
                             : undefined
                         }

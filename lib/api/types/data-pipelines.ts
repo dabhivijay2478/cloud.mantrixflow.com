@@ -301,6 +301,7 @@ export interface Pipeline {
   scheduleTimezone?: string | null;
   lastScheduledRunAt?: string | null;
   nextScheduledRunAt?: string | null;
+  checkpoint?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
