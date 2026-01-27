@@ -8,7 +8,7 @@
 import type { ColumnInfo } from "../types/data-pipelines";
 
 const PYTHON_SERVICE_URL =
-  process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL || "http://localhost:8001";
+  process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL;
 
 export interface DiscoverSchemaRequest {
   source_type: string;
