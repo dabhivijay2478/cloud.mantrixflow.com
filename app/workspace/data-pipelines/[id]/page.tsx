@@ -146,8 +146,9 @@ export default function PipelineDetailPage() {
   useEffect(() => {
     if (!pipelineId || !organizationId) return;
 
-    // Get API URL from environment or use default
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    // API URL from environment only (NEXT_PUBLIC_API_URL in apps/app .env)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return;
     const socketUrl = apiUrl.replace("/api", ""); // Remove /api prefix if present
 
     // Connect to Socket.io
