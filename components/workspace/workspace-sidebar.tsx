@@ -397,7 +397,7 @@ export function WorkspaceSidebar() {
                 </SidebarMenuItem>
               )}
               {/* Source Schemas - Visible to OWNER, ADMIN, EDITOR */}
-              {(currentUserRole === "OWNER" ||
+              {/* {(currentUserRole === "OWNER" ||
                 currentUserRole === "ADMIN" ||
                 currentUserRole === "EDITOR") && (
                 <SidebarMenuItem>
@@ -413,9 +413,9 @@ export function WorkspaceSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
+              )} */}
               {/* Destination Schemas - Visible to OWNER, ADMIN, EDITOR */}
-              {(currentUserRole === "OWNER" ||
+              {/* {(currentUserRole === "OWNER" ||
                 currentUserRole === "ADMIN" ||
                 currentUserRole === "EDITOR") && (
                 <SidebarMenuItem>
@@ -433,7 +433,7 @@ export function WorkspaceSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
+              )} */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
