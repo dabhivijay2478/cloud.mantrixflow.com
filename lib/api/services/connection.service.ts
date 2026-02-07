@@ -17,76 +17,82 @@ export class ConnectionService {
   private static readonly BASE_PATH = "api/organizations";
 
   /**
-   * Create or update connection for a data source - calls Python API directly
-   * Python handles validation and creates/updates the connection in Supabase
+   * Create or update connection for a data source via NestJS
+   * NestJS encrypts sensitive credentials before persistence.
    */
   static async createOrUpdateConnection(
     organizationId: string,
     dataSourceId: string,
     data: CreateConnectionDto,
   ): Promise<DataSourceConnection> {
-    // Call Python API directly for creation/update
-    const { PythonETLService } = await import("./python-etl.service");
-
-    console.log(
-      "[ConnectionService] Creating/updating connection via Python service",
+    const result = await ApiClient.post<Record<string, unknown>>(
+      `${ConnectionService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/connection`,
       {
-        organizationId,
-        dataSourceId,
-        connection_type: data.connection_type,
+        connectionType: data.connection_type,
+        config: data.config,
       },
     );
 
-    const result = await PythonETLService.createOrUpdateConnection(
-      organizationId,
-      dataSourceId,
-      {
-        connection_type: data.connection_type,
-        config: data.config as unknown as Record<string, unknown>,
-      },
-    );
+    const normalizedDataSourceId =
+      (result.dataSourceId as string) ||
+      (result.data_source_id as string) ||
+      dataSourceId;
 
-    // Map Python response (snake_case) to frontend format
     return {
-      id: result.id,
-      data_source_id: result.data_source_id,
-      connection_type: result.connection_type,
-      config: result.config as unknown as ConnectionConfig,
-      status: result.status,
-      last_connected_at: result.created_at,
+      id: (result.id as string) || dataSourceId,
+      data_source_id: normalizedDataSourceId,
+      connection_type:
+        (result.connectionType as DataSourceType) ||
+        (result.connection_type as DataSourceType) ||
+        data.connection_type,
+      config: (result.config as ConnectionConfig) || data.config,
+      status: (result.status as "active" | "inactive" | "error" | "testing") || "inactive",
+      last_connected_at:
+        (result.lastConnectedAt as string) ||
+        (result.last_connected_at as string) ||
+        undefined,
     } as DataSourceConnection;
   }
 
   /**
    * Get connection for a data source (with masked sensitive fields)
-   * Calls Python API directly to fetch from Supabase
+   * Calls NestJS API (source of truth for encrypted connection storage)
    */
   static async getConnection(
     organizationId: string,
     dataSourceId: string,
     includeSensitive: boolean = false,
   ): Promise<DataSourceConnection | null> {
-    // Call Python API directly
-    const { PythonETLService } = await import("./python-etl.service");
-    const connection = await PythonETLService.getConnection(
-      organizationId,
-      dataSourceId,
-      includeSensitive,
+    const params = includeSensitive ? "?includeSensitive=true" : "";
+    const connection = await ApiClient.get<Record<string, unknown> | null>(
+      `${ConnectionService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/connection${params}`,
     );
 
     if (!connection) {
       return null;
     }
 
-    // Map Python API response to DataSourceConnection format
+    const connectionType =
+      (connection.connectionType as DataSourceType) ||
+      (connection.connection_type as DataSourceType) ||
+      "postgres";
+
+    const dataSourceIdValue =
+      (connection.dataSourceId as string) ||
+      (connection.data_source_id as string) ||
+      dataSourceId;
+
     return {
-      id: connection.id,
-      data_source_id: connection.data_source_id,
-      connection_type: connection.connection_type as DataSourceType,
+      id: (connection.id as string) || dataSourceId,
+      data_source_id: dataSourceIdValue,
+      connection_type: connectionType,
       config: connection.config as unknown as ConnectionConfig,
       status: connection.status as "active" | "inactive" | "error" | "testing",
-      last_connected_at: connection.last_connected_at,
-      last_error: connection.last_error,
+      last_connected_at:
+        (connection.lastConnectedAt as string) ||
+        (connection.last_connected_at as string),
+      last_error:
+        (connection.lastError as string) || (connection.last_error as string),
     };
   }
 

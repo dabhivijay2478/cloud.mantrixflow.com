@@ -1156,10 +1156,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         </div>
       </FormSheet>
 
-      {/* Continue Button */}
+      {/* Continue to Configure step */}
       <div className="flex justify-end">
         <Button onClick={handleContinue} className="cursor-pointer">
-          Create Pipeline
+          Continue to name & create
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

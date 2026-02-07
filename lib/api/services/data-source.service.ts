@@ -45,35 +45,53 @@ export class DataSourceService {
   }
 
   /**
-   * Create a new data source - calls Python API directly
-   * Python handles validation and creates the data source in Supabase
+   * Create a new data source
    */
   static async createDataSource(
     organizationId: string,
     data: CreateDataSourceDto,
   ): Promise<DataSource> {
-    // Call Python API directly for creation
-    const { PythonETLService } = await import("./python-etl.service");
+    const result = await ApiClient.post<Record<string, unknown>>(
+      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources`,
+      {
+        name: data.name,
+        description: data.description,
+        sourceType: data.source_type,
+        metadata: data.metadata,
+      },
+    );
 
-    const result = await PythonETLService.createDataSource(organizationId, {
-      name: data.name,
-      description: data.description,
-      source_type: data.source_type,
-      metadata: data.metadata,
-    });
+    const createdAt =
+      (result.createdAt as string) ||
+      (result.created_at as string) ||
+      new Date().toISOString();
+    const updatedAt =
+      (result.updatedAt as string) ||
+      (result.updated_at as string) ||
+      createdAt;
 
-    // Map Python response (snake_case) to frontend format (camelCase)
     return {
-      id: result.id,
-      organizationId: result.organization_id,
-      name: result.name,
-      description: result.description,
-      sourceType: result.source_type,
-      isActive: result.is_active,
-      metadata: result.metadata,
-      createdBy: result.created_by,
-      createdAt: result.created_at,
-      updatedAt: result.updated_at,
+      id: (result.id as string) || "",
+      organizationId:
+        (result.organizationId as string) ||
+        (result.organization_id as string) ||
+        organizationId,
+      name: (result.name as string) || data.name,
+      description: (result.description as string) || data.description,
+      sourceType:
+        (result.sourceType as DataSource["sourceType"]) ||
+        (result.source_type as DataSource["sourceType"]) ||
+        data.source_type,
+      isActive:
+        (result.isActive as boolean) ??
+        (result.is_active as boolean) ??
+        true,
+      metadata: (result.metadata as Record<string, unknown>) || data.metadata,
+      createdBy:
+        (result.createdBy as string) ||
+        (result.created_by as string),
+      createdAt,
+      updatedAt,
       deletedAt: undefined,
     } as unknown as DataSource;
   }

@@ -9,6 +9,7 @@ import { DataPipelinesService } from "../services/data-pipelines.service";
 import type {
   CreatePipelineDto,
   DryRunPipelineDto,
+  Pipeline,
   RunPipelineDto,
   UpdatePipelineDto,
 } from "../types/data-pipelines";
@@ -250,24 +251,48 @@ export function useRunPipeline(
         options,
       );
     },
-    onSuccess: () => {
-      if (organizationId && pipelineId) {
-        // Invalidate pipeline detail to show running state
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            pipelineId,
-          ),
-        });
-        // Invalidate runs list
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.runs(organizationId, pipelineId),
-        });
-        // Invalidate stats
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.stats(organizationId, pipelineId),
+    onMutate: async () => {
+      if (!organizationId || !pipelineId) return {};
+
+      const detailKey = dataPipelinesKeys.pipelines.detail(
+        organizationId,
+        pipelineId,
+      );
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previousPipeline = queryClient.getQueryData<Pipeline>(detailKey);
+
+      if (previousPipeline) {
+        queryClient.setQueryData<Pipeline>(detailKey, {
+          ...previousPipeline,
+          status: "running",
         });
       }
+
+      return { previousPipeline, detailKey };
+    },
+    onError: (_error, _vars, context) => {
+      if (
+        context?.previousPipeline &&
+        context.detailKey &&
+        Array.isArray(context.detailKey)
+      ) {
+        queryClient.setQueryData(context.detailKey, context.previousPipeline);
+      }
+    },
+    onSettled: () => {
+      if (!organizationId || !pipelineId) return;
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.runs(organizationId, pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.stats(organizationId, pipelineId),
+      });
     },
   });
 }
@@ -287,19 +312,39 @@ export function usePausePipeline(
       }
       return DataPipelinesService.pausePipeline(organizationId, pipelineId);
     },
-    onSuccess: (updatedPipeline) => {
-      if (updatedPipeline?.id && organizationId) {
-        queryClient.setQueryData(
-          dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            updatedPipeline.id,
-          ),
-          updatedPipeline,
-        );
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+    onMutate: async () => {
+      if (!organizationId || !pipelineId) return {};
+      const detailKey = dataPipelinesKeys.pipelines.detail(
+        organizationId,
+        pipelineId,
+      );
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previousPipeline = queryClient.getQueryData<Pipeline>(detailKey);
+      if (previousPipeline) {
+        queryClient.setQueryData<Pipeline>(detailKey, {
+          ...previousPipeline,
+          status: "paused",
         });
       }
+      return { previousPipeline, detailKey };
+    },
+    onError: (_error, _vars, context) => {
+      if (
+        context?.previousPipeline &&
+        context.detailKey &&
+        Array.isArray(context.detailKey)
+      ) {
+        queryClient.setQueryData(context.detailKey, context.previousPipeline);
+      }
+    },
+    onSettled: () => {
+      if (!organizationId || !pipelineId) return;
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+      });
     },
   });
 }
@@ -319,19 +364,39 @@ export function useResumePipeline(
       }
       return DataPipelinesService.resumePipeline(organizationId, pipelineId);
     },
-    onSuccess: (updatedPipeline) => {
-      if (updatedPipeline?.id && organizationId) {
-        queryClient.setQueryData(
-          dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            updatedPipeline.id,
-          ),
-          updatedPipeline,
-        );
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+    onMutate: async () => {
+      if (!organizationId || !pipelineId) return {};
+      const detailKey = dataPipelinesKeys.pipelines.detail(
+        organizationId,
+        pipelineId,
+      );
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previousPipeline = queryClient.getQueryData<Pipeline>(detailKey);
+      if (previousPipeline) {
+        queryClient.setQueryData<Pipeline>(detailKey, {
+          ...previousPipeline,
+          status: "idle",
         });
       }
+      return { previousPipeline, detailKey };
+    },
+    onError: (_error, _vars, context) => {
+      if (
+        context?.previousPipeline &&
+        context.detailKey &&
+        Array.isArray(context.detailKey)
+      ) {
+        queryClient.setQueryData(context.detailKey, context.previousPipeline);
+      }
+    },
+    onSettled: () => {
+      if (!organizationId || !pipelineId) return;
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+      });
     },
   });
 }

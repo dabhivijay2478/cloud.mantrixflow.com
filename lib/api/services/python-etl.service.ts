@@ -1,8 +1,10 @@
 /**
  * Python ETL Service Client
  * Direct client for calling Python FastAPI ETL microservice
- * Used for ETL operations: discover schema, collect, transform, emit
- * Also handles data source and connection CRUD operations (create, update, delete)
+ * Used ONLY for ETL operations: discover schema, collect, transform, emit, delta-check, test-connection
+ *
+ * CRUD operations (data sources, connections, pipelines) go through the NestJS API
+ * via ApiClient / DataSourcesService / DataPipelinesService.
  */
 
 import type { ColumnInfo } from "../types/data-pipelines";
@@ -23,6 +25,15 @@ export interface DiscoverSchemaResponse {
   columns: ColumnInfo[];
   primary_keys: string[];
   estimated_row_count?: number;
+  schemas?: Array<{
+    name: string;
+    tables: Array<{
+      name: string;
+      schema: string;
+      type: "table" | "view" | "materialized_view";
+      rowCount?: number;
+    }>;
+  }>;
 }
 
 export interface CollectRequest {
@@ -233,133 +244,13 @@ export class PythonETLService {
     });
   }
 
-  /**
-   * Create a data source
-   * Calls Python API to create a new data source
-   */
-  static async createDataSource(
-    organizationId: string,
-    data: {
-      name: string;
-      description?: string;
-      source_type: string;
-      metadata?: Record<string, unknown>;
-    },
-  ): Promise<{
-    id: string;
-    organization_id: string;
-    name: string;
-    description?: string;
-    source_type: string;
-    is_active: boolean;
-    metadata?: Record<string, unknown>;
-    created_by: string;
-    created_at: string;
-    updated_at: string;
-  }> {
-    return PythonETLService.request<{
-      id: string;
-      organization_id: string;
-      name: string;
-      description?: string;
-      source_type: string;
-      is_active: boolean;
-      metadata?: Record<string, unknown>;
-      created_by: string;
-      created_at: string;
-      updated_at: string;
-    }>("/data-sources", {
-      method: "POST",
-      body: JSON.stringify({
-        organization_id: organizationId,
-        name: data.name,
-        description: data.description,
-        source_type: data.source_type,
-        metadata: data.metadata,
-      }),
-    });
-  }
-
-  /**
-   * Delete a data source
-   * Calls Python API which validates and calls NestJS for database deletion
-   */
-  static async deleteDataSource(
-    organizationId: string,
-    dataSourceId: string,
-  ): Promise<{ success: boolean; deleted_id: string }> {
-    return PythonETLService.request<{ success: boolean; deleted_id: string }>(
-      `/data-sources/${dataSourceId}`,
-      {
-        method: "DELETE",
-        body: JSON.stringify({
-          organization_id: organizationId,
-          data_source_id: dataSourceId,
-        }),
-      },
-    );
-  }
-
-  /**
-   * Create or update a connection
-   * Calls Python API to create/update connection configuration
-   */
-  static async createOrUpdateConnection(
-    organizationId: string,
-    dataSourceId: string,
-    data: {
-      connection_type: string;
-      config: Record<string, unknown>;
-    },
-  ): Promise<{
-    id: string;
-    data_source_id: string;
-    connection_type: string;
-    config: Record<string, unknown>;
-    status: string;
-    created_at: string;
-    updated_at: string;
-  }> {
-    return PythonETLService.request<{
-      id: string;
-      data_source_id: string;
-      connection_type: string;
-      config: Record<string, unknown>;
-      status: string;
-      created_at: string;
-      updated_at: string;
-    }>("/connections", {
-      method: "POST",
-      body: JSON.stringify({
-        organization_id: organizationId,
-        data_source_id: dataSourceId,
-        connection_type: data.connection_type,
-        config: data.config,
-      }),
-    });
-  }
-
-  /**
-   * Delete a connection
-   * Calls Python API which validates and calls NestJS for database deletion
-   */
-  static async deleteConnection(
-    organizationId: string,
-    connectionId: string,
-    dataSourceId?: string,
-  ): Promise<{ success: boolean; deleted_id: string }> {
-    return PythonETLService.request<{ success: boolean; deleted_id: string }>(
-      `/connections/${connectionId}`,
-      {
-        method: "DELETE",
-        body: JSON.stringify({
-          organization_id: organizationId,
-          connection_id: connectionId,
-          data_source_id: dataSourceId || connectionId, // Use connectionId as fallback
-        }),
-      },
-    );
-  }
+  // =========================================================================
+  // NOTE: Data source CRUD, connection CRUD, and pipeline CRUD operations
+  // are handled by the NestJS API (via ApiClient / DataSourcesService /
+  // DataPipelinesService). Do NOT add CRUD methods here — this service
+  // is exclusively for ETL operations (discover, collect, transform, emit,
+  // delta-check, test-connection) that run on the Python FastAPI service.
+  // =========================================================================
 
   /**
    * Test a data source connection
@@ -408,271 +299,4 @@ export class PythonETLService {
     });
   }
 
-  /**
-   * Get connection details for a data source
-   * Calls Python API to fetch from Supabase
-   */
-  static async getConnection(
-    organizationId: string,
-    dataSourceId: string,
-    includeSensitive: boolean = false,
-  ): Promise<{
-    id: string;
-    data_source_id: string;
-    connection_type: string;
-    config: Record<string, unknown>;
-    status: string;
-    last_connected_at?: string;
-    last_error?: string;
-    created_at: string;
-    updated_at: string;
-  } | null> {
-    const params = includeSensitive ? "?includeSensitive=true" : "";
-    return PythonETLService.request<{
-      id: string;
-      data_source_id: string;
-      connection_type: string;
-      config: Record<string, unknown>;
-      status: string;
-      last_connected_at?: string;
-      last_error?: string;
-      created_at: string;
-      updated_at: string;
-    } | null>(
-      `/organizations/${organizationId}/data-sources/${dataSourceId}/connection${params}`,
-      {
-        method: "GET",
-      },
-    );
-  }
-
-  /**
-   * List all schemas and tables for a data source
-   * Calls Python API to discover schemas using tap-postgres
-   */
-  static async listSchemasWithTables(
-    organizationId: string,
-    dataSourceId: string,
-  ): Promise<{
-    schemas: Array<{
-      name: string;
-      tables: Array<{
-        name: string;
-        schema: string;
-        type: "table" | "view" | "materialized_view";
-        rowCount?: number;
-        columns?: Array<{
-          name: string;
-          type: string;
-          nullable: boolean;
-        }>;
-        primaryKeys?: string[];
-      }>;
-    }>;
-    type: string;
-  }> {
-    return PythonETLService.request<{
-      schemas: Array<{
-        name: string;
-        tables: Array<{
-          name: string;
-          schema: string;
-          type: "table" | "view" | "materialized_view";
-          rowCount?: number;
-          columns?: Array<{
-            name: string;
-            type: string;
-            nullable: boolean;
-          }>;
-          primaryKeys?: string[];
-        }>;
-      }>;
-      type: string;
-    }>(
-      `/organizations/${organizationId}/data-sources/${dataSourceId}/schemas`,
-      {
-        method: "GET",
-      },
-    );
-  }
-
-  /**
-   * Create a pipeline with source and destination schemas
-   * Python API handles the complete pipeline creation flow
-   */
-  static async createPipeline(
-    organizationId: string,
-    data: {
-      name: string;
-      description?: string;
-      source_schema: {
-        source_type: string;
-        data_source_id: string;
-        source_schema?: string;
-        source_table: string;
-        source_query?: string;
-        name?: string;
-        is_active?: boolean;
-      };
-      destination_schema: {
-        data_source_id: string;
-        destination_schema?: string;
-        destination_table: string;
-        transform_script: string;
-        write_mode?: "append" | "upsert" | "replace";
-        upsert_key?: string[];
-        name?: string;
-        is_active?: boolean;
-      };
-      sync_mode?: "full" | "incremental" | "cdc";
-      sync_frequency?: "manual" | "minutes" | "hourly" | "daily" | "weekly";
-      incremental_column?: string;
-      schedule_type?:
-        | "none"
-        | "minutes"
-        | "hourly"
-        | "daily"
-        | "weekly"
-        | "monthly"
-        | "custom_cron";
-      schedule_value?: string;
-      schedule_timezone?: string;
-      transformations?: Record<string, unknown>[];
-    },
-  ): Promise<{
-    id: string;
-    organizationId: string;
-    createdBy: string;
-    name: string;
-    description?: string;
-    sourceSchemaId: string;
-    destinationSchemaId: string;
-    transformations?: Record<string, unknown>[];
-    syncMode: string;
-    incrementalColumn?: string;
-    syncFrequency: string;
-    scheduleType: string;
-    scheduleValue?: string;
-    scheduleTimezone: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt?: string;
-  }> {
-    return PythonETLService.request(
-      `/organizations/${organizationId}/pipelines`,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-    );
-  }
-
-  /**
-   * Update a pipeline
-   * Python API handles pipeline updates
-   */
-  static async updatePipeline(
-    organizationId: string,
-    pipelineId: string,
-    data: {
-      name?: string;
-      description?: string;
-      sync_mode?: "full" | "incremental" | "cdc";
-      sync_frequency?: "manual" | "minutes" | "hourly" | "daily" | "weekly";
-      incremental_column?: string;
-      schedule_type?:
-        | "none"
-        | "minutes"
-        | "hourly"
-        | "daily"
-        | "weekly"
-        | "monthly"
-        | "custom_cron";
-      schedule_value?: string;
-      schedule_timezone?: string;
-      transformations?: Record<string, unknown>[];
-    },
-  ): Promise<{
-    id: string;
-    organizationId: string;
-    createdBy: string;
-    name: string;
-    description?: string;
-    sourceSchemaId: string;
-    destinationSchemaId: string;
-    transformations?: Record<string, unknown>[];
-    syncMode: string;
-    incrementalColumn?: string;
-    syncFrequency: string;
-    scheduleType: string;
-    scheduleValue?: string;
-    scheduleTimezone: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt?: string;
-  }> {
-    return PythonETLService.request(
-      `/organizations/${organizationId}/pipelines/${pipelineId}`,
-      {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      },
-    );
-  }
-
-  /**
-   * Run a pipeline directly via Python API
-   * This bypasses NestJS proxy to avoid timeout issues
-   */
-  static async runPipeline(
-    organizationId: string,
-    pipelineId: string,
-    options?: {
-      syncMode?: "full" | "incremental";
-      limit?: number;
-    },
-  ): Promise<{
-    success: boolean;
-    runId: string;
-    pipelineId: string;
-    status: string;
-    rowsRead: number;
-    rowsWritten: number;
-    rowsSkipped: number;
-    rowsFailed: number;
-    errors: Array<{ message: string; row?: number; error?: string }>;
-  }> {
-    return PythonETLService.request(
-      `/organizations/${organizationId}/pipelines/${pipelineId}/run`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          sync_mode: options?.syncMode || "full",
-          limit: options?.limit,
-        }),
-      },
-    );
-  }
-
-  /**
-   * Pause a running pipeline
-   */
-  static async pausePipeline(
-    organizationId: string,
-    pipelineId: string,
-  ): Promise<{
-    success: boolean;
-    pipelineId: string;
-    status: string;
-  }> {
-    return PythonETLService.request(
-      `/organizations/${organizationId}/pipelines/${pipelineId}/pause`,
-      {
-        method: "POST",
-        body: JSON.stringify({}),
-      },
-    );
-  }
 }

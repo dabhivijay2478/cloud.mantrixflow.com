@@ -117,6 +117,9 @@ export interface CreatePipelineDto {
   syncMode?: SyncMode;
   incrementalColumn?: string;
   syncFrequency?: SyncFrequency;
+  scheduleType?: ScheduleType;
+  scheduleValue?: string;
+  scheduleTimezone?: string;
 }
 
 export interface UpdatePipelineDto {

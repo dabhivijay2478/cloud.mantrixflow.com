@@ -34,9 +34,7 @@ export function PythonScriptEditor({
         })
         .join(",\n");
 
-      return `import json
-
-def transform(record):
+      return `def transform(record):
     """
     Transform source record to destination format.
     Use record.get("source_field") to read from source.
@@ -53,9 +51,7 @@ ${mappings}
     }`;
     }
 
-    return `import json
-
-def transform(record):
+    return `def transform(record):
     """
     Transform source record to destination format.
     Use record.get("source_field") to read from source.
@@ -134,6 +130,8 @@ def transform(record):
         <code className="px-1 py-0.5 bg-muted rounded">transform</code> and
         accept a <code className="px-1 py-0.5 bg-muted rounded">record</code>{" "}
         parameter (dict). Return a dict with destination field names as keys.
+        The <code className="px-1 py-0.5 bg-muted rounded">json</code> module is
+        already available in the runtime.
       </div>
     </div>
   );

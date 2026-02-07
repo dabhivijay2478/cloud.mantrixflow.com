@@ -16,7 +16,6 @@ import type {
   PipelineStats,
   PipelineWithSchemas,
   RunPipelineDto,
-  RunStatus,
   UpdatePipelineDto,
   ValidationResult,
 } from "../types/data-pipelines";
@@ -29,19 +28,15 @@ export class DataPipelinesService {
   // ============================================================================
 
   /**
-   * Create a new pipeline - calls Python API directly
-   * Python API handles source schema, destination schema, and pipeline creation
+   * Create a new pipeline.
    */
   static async createPipeline(
-    _organizationId: string,
-    _data: CreatePipelineDto,
+    organizationId: string,
+    data: CreatePipelineDto,
   ): Promise<Pipeline> {
-    // Call Python API directly for pipeline creation
-    // Note: Python API expects a different format with source_schema and destination_schema
-    // This method signature is kept for backward compatibility but should be updated
-    // to match the Python API format in the future
-    throw new Error(
-      "Use PythonETLService.createPipeline directly with source_schema and destination_schema",
+    return ApiClient.post<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines`,
+      data,
     );
   }
 
@@ -79,43 +74,17 @@ export class DataPipelinesService {
   }
 
   /**
-   * Update pipeline - calls Python API directly
-   * Python API handles pipeline updates
+   * Update pipeline.
    */
   static async updatePipeline(
     organizationId: string,
     pipelineId: string,
     data: UpdatePipelineDto,
   ): Promise<Pipeline> {
-    // Call Python API directly for pipeline updates
-    const { PythonETLService } = await import("./python-etl.service");
-
-    // Map frontend DTO to Python API format
-    const pythonData: Record<string, unknown> = {};
-    if (data.name !== undefined) pythonData.name = data.name;
-    if (data.description !== undefined)
-      pythonData.description = data.description;
-    if (data.syncMode !== undefined) pythonData.sync_mode = data.syncMode;
-    if (data.syncFrequency !== undefined)
-      pythonData.sync_frequency = data.syncFrequency;
-    if (data.incrementalColumn !== undefined)
-      pythonData.incremental_column = data.incrementalColumn;
-    if (data.scheduleType !== undefined)
-      pythonData.schedule_type = data.scheduleType;
-    if (data.scheduleValue !== undefined)
-      pythonData.schedule_value = data.scheduleValue;
-    if (data.scheduleTimezone !== undefined)
-      pythonData.schedule_timezone = data.scheduleTimezone;
-    if (data.transformations !== undefined)
-      pythonData.transformations = data.transformations as unknown as Record<string, unknown>[];
-
-    const result = await PythonETLService.updatePipeline(
-      organizationId,
-      pipelineId,
-      pythonData,
+    return ApiClient.patch<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}`,
+      data,
     );
-    
-    return result as unknown as Pipeline;
   }
 
   /**
@@ -131,77 +100,34 @@ export class DataPipelinesService {
   }
 
   // ============================================================================
-  // PIPELINE EXECUTION - Uses Python API directly to avoid NestJS proxy timeout
+  // PIPELINE EXECUTION
   // ============================================================================
 
   /**
-   * Run pipeline - calls Python API directly to avoid timeout issues
+   * Run pipeline.
    */
   static async runPipeline(
     organizationId: string,
     pipelineId: string,
     options?: RunPipelineDto,
   ): Promise<PipelineRun> {
-    // Call Python API directly to bypass NestJS proxy and avoid timeout issues
-    const { PythonETLService } = await import("./python-etl.service");
-
-    const result = await PythonETLService.runPipeline(
-      organizationId,
-      pipelineId,
-      {
-        syncMode: "full",
-        limit: options?.batchSize,
-      },
+    return ApiClient.post<PipelineRun>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/run`,
+      options || {},
     );
-
-    // Map Python response to PipelineRun format
-    return {
-      id: result.runId,
-      pipelineId: result.pipelineId,
-      organizationId: organizationId,
-      triggeredBy: "system", // Default value since Python API doesn't provide this
-      triggerType: "manual",
-      status: (result.status === "completed" ? "success" : result.status) as RunStatus,
-      jobState: (result.status === "completed" ? "completed" : result.status === "failed" ? "failed" : result.status === "running" ? "running" : "pending") as "pending" | "running" | "completed" | "failed",
-      rowsRead: result.rowsRead,
-      rowsWritten: result.rowsWritten,
-      rowsSkipped: result.rowsSkipped,
-      rowsFailed: result.rowsFailed,
-      errorMessage:
-        result.errors?.length > 0 ? result.errors[0]?.error : undefined,
-      startedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
   }
 
   /**
-   * Pause pipeline - calls Python API directly
+   * Pause pipeline.
    */
   static async pausePipeline(
     organizationId: string,
     pipelineId: string,
   ): Promise<Pipeline> {
-    // Call Python API directly
-    const { PythonETLService } = await import("./python-etl.service");
-
-    const result = await PythonETLService.pausePipeline(
-      organizationId,
-      pipelineId,
+    return ApiClient.post<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/pause`,
+      {},
     );
-
-    // Return minimal pipeline object with updated status
-    return {
-      id: result.pipelineId,
-      organizationId: organizationId,
-      status: result.status as
-        | "idle"
-        | "running"
-        | "paused"
-        | "failed"
-        | "completed",
-    } as Pipeline;
   }
 
   /**
