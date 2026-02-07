@@ -150,19 +150,26 @@ export function ConnectionSheet({
 
   // Handle default value setting for selects if needed immediately
   useEffect(() => {
-    if (open && schema) {
+    if (open && schema && dataSource) {
       schema.fields.forEach((field) => {
-        // Find fields that have a default valid option if not set
-        // Specifically for useConnectionString select in MongoDB
+        // MongoDB: default connection method to individual fields
         if (
           field.name === "useConnectionString" &&
           !form.getValues("useConnectionString")
         ) {
           form.setValue("useConnectionString", "false");
         }
+        // MySQL / Postgres: default SSL to disabled if not set
+        if (
+          (dataSource.type === "mysql" || dataSource.type === "postgres") &&
+          field.name === "ssl" &&
+          !form.getValues("ssl")
+        ) {
+          form.setValue("ssl", "false");
+        }
       });
     }
-  }, [open, schema, form]);
+  }, [open, schema, form, dataSource]);
 
   const handleTestConnection = async () => {
     if (!dataSourceId || !dataSource) return;

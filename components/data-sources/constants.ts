@@ -131,6 +131,19 @@ export const connectionSchemas: Record<
         placeholder: "••••••••",
         required: true,
       },
+      {
+        name: "ssl",
+        label: "Enable SSL",
+        type: "select",
+        placeholder: "Select SSL mode",
+        required: false,
+        description:
+          "Enable SSL/TLS for secure connections (recommended for cloud MySQL)",
+        options: [
+          { value: "false", label: "Disabled" },
+          { value: "true", label: "Enabled" },
+        ],
+      },
     ],
     connectionString: true,
     testConnection: true,
