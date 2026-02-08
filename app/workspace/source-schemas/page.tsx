@@ -34,7 +34,7 @@ import {
   useDeleteSourceSchema,
   useDiscoverSourceSchema,
   usePreviewSourceData,
-  useSourceSchemas,
+  useSourceSchemasPaginated,
 } from "@/lib/api/hooks/use-source-schemas";
 import type { PipelineSourceSchema } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -46,7 +46,14 @@ export default function SourceSchemasPage() {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
-  const { data: schemas, isLoading } = useSourceSchemas(organizationId);
+  // Pagination state
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+
+  const { data: paginatedResult, isLoading } = useSourceSchemasPaginated(
+    organizationId,
+    pagination,
+  );
+  const schemas = paginatedResult?.data;
   const deleteSchema = useDeleteSourceSchema(organizationId);
 
   // Support opening preview from URL parameter
@@ -254,8 +261,8 @@ export default function SourceSchemasPage() {
       <DataTable
         tableId={
           organizationId
-            ? `source-schemas-table-${organizationId}`
-            : "source-schemas-table"
+            ? `source-schemas-v2-${organizationId}`
+            : "source-schemas-v2"
         }
         columns={columns}
         data={schemas || []}
@@ -269,11 +276,16 @@ export default function SourceSchemasPage() {
           "discoveredColumns",
           "estimatedRowCount",
           "isActive",
+          "lastDiscoveredAt",
           "actions",
         ]}
         fixedColumns={["name", "actions"]}
         emptyMessage="No source schemas yet"
         emptyDescription="Source schemas are created when you set up data pipelines."
+        manualPagination
+        pagination={pagination}
+        onPaginationChange={setPagination}
+        totalCount={paginatedResult?.total ?? 0}
       />
 
       {/* Preview Dialog */}

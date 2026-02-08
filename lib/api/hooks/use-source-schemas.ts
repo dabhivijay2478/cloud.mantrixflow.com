@@ -57,6 +57,39 @@ export function useSourceSchemas(organizationId: string | undefined) {
 }
 
 /**
+ * List source schemas with server-side pagination
+ */
+export function useSourceSchemasPaginated(
+  organizationId: string | undefined,
+  pagination: { pageIndex: number; pageSize: number },
+) {
+  const { pageIndex, pageSize } = pagination;
+  const offset = pageIndex * pageSize;
+
+  return useQuery({
+    queryKey: [
+      ...sourceSchemasKeys.lists(),
+      organizationId,
+      { limit: pageSize, offset },
+    ],
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return SourceSchemasService.listSourceSchemasPaginated(
+        organizationId,
+        pageSize,
+        offset,
+      );
+    },
+    enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/**
  * Get source schema by ID
  * Schema structure is essentially static once created - cache indefinitely
  * and rely on explicit invalidation after mutations

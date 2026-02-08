@@ -6,7 +6,7 @@
  * CRUD operations still go through NestJS
  */
 
-import { ApiClient } from "../client";
+import { ApiClient, type PaginatedListResult } from "../client";
 import type {
   ColumnInfo,
   CreateSourceSchemaDto,
@@ -43,6 +43,23 @@ export class SourceSchemasService {
   ): Promise<PipelineSourceSchema[]> {
     return ApiClient.get<PipelineSourceSchema[]>(
       `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas`,
+    );
+  }
+
+  /**
+   * List source schemas with server-side pagination
+   */
+  static async listSourceSchemasPaginated(
+    organizationId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<PaginatedListResult<PipelineSourceSchema>> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    return ApiClient.getList<PipelineSourceSchema>(
+      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas?${params}`,
     );
   }
 

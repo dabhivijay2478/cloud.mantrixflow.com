@@ -39,7 +39,7 @@ import {
 import {
   dataPipelinesKeys,
   useDeletePipeline,
-  usePipelines,
+  usePipelinesPaginated,
 } from "@/lib/api/hooks/use-data-pipelines";
 import { useUsers } from "@/lib/api/hooks/use-users";
 import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
@@ -61,9 +61,13 @@ export default function DataPipelinesPage() {
     name: string;
   } | null>(null);
 
+  // Pagination state
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+
   // API hooks
-  const { data: pipelines, isLoading: pipelinesLoading } =
-    usePipelines(organizationId);
+  const { data: paginatedResult, isLoading: pipelinesLoading } =
+    usePipelinesPaginated(organizationId, pagination);
+  const pipelines = paginatedResult?.data;
   const deletePipeline = useDeletePipeline(organizationId);
 
   // Get user info for creators
@@ -877,6 +881,10 @@ export default function DataPipelinesPage() {
         onRowClick={(row) => router.push(`/workspace/data-pipelines/${row.id}`)}
         emptyMessage="No pipelines yet"
         emptyDescription="Create your first data pipeline to start moving data from source to destination."
+        manualPagination
+        pagination={pagination}
+        onPaginationChange={setPagination}
+        totalCount={paginatedResult?.total ?? 0}
       />
 
       {/* Delete Confirmation Modal */}

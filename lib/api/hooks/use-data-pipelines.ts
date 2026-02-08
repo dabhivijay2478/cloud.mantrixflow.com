@@ -103,7 +103,7 @@ export function useCreatePipeline(organizationId: string | undefined) {
 }
 
 /**
- * List pipelines for organization
+ * List pipelines for organization (unpaginated, backward-compatible)
  */
 export function usePipelines(organizationId: string | undefined) {
   return useQuery({
@@ -115,6 +115,37 @@ export function usePipelines(organizationId: string | undefined) {
       return DataPipelinesService.listPipelines(organizationId);
     },
     enabled: !!organizationId,
+  });
+}
+
+/**
+ * List pipelines with server-side pagination
+ */
+export function usePipelinesPaginated(
+  organizationId: string | undefined,
+  pagination: { pageIndex: number; pageSize: number },
+) {
+  const { pageIndex, pageSize } = pagination;
+  const offset = pageIndex * pageSize;
+
+  return useQuery({
+    queryKey: [
+      ...dataPipelinesKeys.pipelines.lists(),
+      organizationId,
+      { limit: pageSize, offset },
+    ],
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataPipelinesService.listPipelinesPaginated(
+        organizationId,
+        pageSize,
+        offset,
+      );
+    },
+    enabled: !!organizationId,
+    placeholderData: (prev) => prev,
   });
 }
 

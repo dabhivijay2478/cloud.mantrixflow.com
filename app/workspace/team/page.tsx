@@ -33,7 +33,7 @@ import {
   organizationMembersKeys,
   useCurrentOrganization,
   useCurrentUser,
-  useOrganizationMembers,
+  useOrganizationMembersPaginated,
   useRemoveMember,
   useTransferOwnership,
   useUpdateMember,
@@ -105,13 +105,17 @@ export default function TeamPage() {
     memberEmail: string;
   } | null>(null);
 
-  // Fetch organization members (only if organization is selected)
+  // Pagination state
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+
+  // Fetch organization members with pagination
   const {
-    data: members,
+    data: paginatedMembersResult,
     isLoading: membersLoading,
     error: membersError,
     refetch: _refetchMembers,
-  } = useOrganizationMembers(organizationId);
+  } = useOrganizationMembersPaginated(organizationId, pagination);
+  const members = paginatedMembersResult?.data;
 
   // Refetch members when organization changes
   useEffect(() => {
@@ -613,6 +617,10 @@ export default function TeamPage() {
         fixedColumns={["name", "actions"]}
         emptyMessage="No team members yet"
         emptyDescription="Invite team members to get started"
+        manualPagination
+        pagination={pagination}
+        onPaginationChange={setPagination}
+        totalCount={paginatedMembersResult?.total ?? 0}
       />
 
       {/* Confirmation Modals */}

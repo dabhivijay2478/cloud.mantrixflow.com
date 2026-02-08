@@ -3,7 +3,7 @@
  * Service layer for organization endpoints
  */
 
-import { ApiClient } from "../client";
+import { ApiClient, type PaginatedListResult } from "../client";
 import type {
   CreateOrganizationDto,
   InviteMemberDto,
@@ -95,6 +95,23 @@ export class OrganizationsService {
   ): Promise<OrganizationMember[]> {
     return ApiClient.get<OrganizationMember[]>(
       `${OrganizationsService.BASE_PATH}/${organizationId}/members`,
+    );
+  }
+
+  /**
+   * List members with server-side pagination
+   */
+  static async listMembersPaginated(
+    organizationId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<PaginatedListResult<OrganizationMember>> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    return ApiClient.getList<OrganizationMember>(
+      `${OrganizationsService.BASE_PATH}/${organizationId}/members?${params}`,
     );
   }
 

@@ -4,7 +4,7 @@
  * Updated to match refactored backend API paths
  */
 
-import { ApiClient } from "../client";
+import { ApiClient, type PaginatedListResult } from "../client";
 import type {
   ColumnInfo,
   CreateDestinationSchemaDto,
@@ -43,6 +43,23 @@ export class DestinationSchemasService {
   ): Promise<PipelineDestinationSchema[]> {
     return ApiClient.get<PipelineDestinationSchema[]>(
       `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas`,
+    );
+  }
+
+  /**
+   * List destination schemas with server-side pagination
+   */
+  static async listDestinationSchemasPaginated(
+    organizationId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<PaginatedListResult<PipelineDestinationSchema>> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    return ApiClient.getList<PipelineDestinationSchema>(
+      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas?${params}`,
     );
   }
 

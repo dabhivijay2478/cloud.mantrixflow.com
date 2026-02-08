@@ -3,7 +3,7 @@
  * Service layer for new data source endpoints (replaces postgres-connections)
  */
 
-import { ApiClient } from "../client";
+import { ApiClient, type PaginatedListResult } from "../client";
 import type {
   CreateDataSourceDto,
   DataSource,
@@ -29,6 +29,28 @@ export class DataSourceService {
 
     return ApiClient.get<DataSource[]>(
       `${DataSourceService.BASE_PATH}/${organizationId}/data-sources${queryString}`,
+    );
+  }
+
+  /**
+   * List data sources with server-side pagination
+   */
+  static async listDataSourcesPaginated(
+    organizationId: string,
+    limit: number = 20,
+    offset: number = 0,
+    filters?: { sourceType?: string; isActive?: boolean },
+  ): Promise<PaginatedListResult<DataSource>> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (filters?.sourceType) params.append("sourceType", filters.sourceType);
+    if (filters?.isActive !== undefined)
+      params.append("isActive", filters.isActive.toString());
+
+    return ApiClient.getList<DataSource>(
+      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources?${params}`,
     );
   }
 

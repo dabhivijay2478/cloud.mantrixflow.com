@@ -35,6 +35,37 @@ export function useOrganizationMembers(organizationId: string | undefined) {
 }
 
 /**
+ * Hook to fetch organization members with server-side pagination
+ */
+export function useOrganizationMembersPaginated(
+  organizationId: string | undefined,
+  pagination: { pageIndex: number; pageSize: number },
+) {
+  const { pageIndex, pageSize } = pagination;
+  const offset = pageIndex * pageSize;
+
+  return useQuery({
+    queryKey: [
+      ...organizationMembersKeys.lists(),
+      organizationId,
+      { limit: pageSize, offset },
+    ],
+    queryFn: () => {
+      if (!organizationId) throw new Error("Organization ID is required");
+      return OrganizationsService.listMembersPaginated(
+        organizationId,
+        pageSize,
+        offset,
+      );
+    },
+    enabled: !!organizationId,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/**
  * Hook to fetch a single organization member
  */
 export function useOrganizationMember(

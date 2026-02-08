@@ -42,7 +42,7 @@ import {
   useCheckTableExists,
   useCreateDestinationTable,
   useDeleteDestinationSchema,
-  useDestinationSchemas,
+  useDestinationSchemasPaginated,
   useValidateDestinationSchema,
 } from "@/lib/api/hooks/use-destination-schemas";
 import type { PipelineDestinationSchema } from "@/lib/api/types/data-pipelines";
@@ -55,7 +55,14 @@ export default function DestinationSchemasPage() {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
-  const { data: schemas, isLoading } = useDestinationSchemas(organizationId);
+  // Pagination state
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+
+  const { data: paginatedResult, isLoading } = useDestinationSchemasPaginated(
+    organizationId,
+    pagination,
+  );
+  const schemas = paginatedResult?.data;
   const deleteSchema = useDeleteDestinationSchema(organizationId);
 
   // Support opening details from URL parameter
@@ -276,8 +283,8 @@ export default function DestinationSchemasPage() {
       <DataTable
         tableId={
           organizationId
-            ? `destination-schemas-table-${organizationId}`
-            : "destination-schemas-table"
+            ? `destination-schemas-v2-${organizationId}`
+            : "destination-schemas-v2"
         }
         columns={columns}
         data={schemas || []}
@@ -291,11 +298,16 @@ export default function DestinationSchemasPage() {
           "writeMode",
           "destinationTableExists",
           "isActive",
+          "lastSyncedAt",
           "actions",
         ]}
         fixedColumns={["name", "actions"]}
         emptyMessage="No destination schemas yet"
         emptyDescription="Destination schemas are created when you set up data pipelines."
+        manualPagination
+        pagination={pagination}
+        onPaginationChange={setPagination}
+        totalCount={paginatedResult?.total ?? 0}
       />
 
       {/* Details Dialog */}

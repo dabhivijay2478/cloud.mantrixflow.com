@@ -4,7 +4,7 @@
  * Updated to match refactored backend API
  */
 
-import { ApiClient } from "../client";
+import { ApiClient, type PaginatedListResult } from "../client";
 import type {
   CreatePipelineDto,
   DryRunPipelineDto,
@@ -41,11 +41,28 @@ export class DataPipelinesService {
   }
 
   /**
-   * List all pipelines for organization
+   * List all pipelines for organization (unpaginated, backward-compatible)
    */
   static async listPipelines(organizationId: string): Promise<Pipeline[]> {
     return ApiClient.get<Pipeline[]>(
       `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines`,
+    );
+  }
+
+  /**
+   * List pipelines with server-side pagination
+   */
+  static async listPipelinesPaginated(
+    organizationId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<PaginatedListResult<Pipeline>> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    return ApiClient.getList<Pipeline>(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines?${params}`,
     );
   }
 

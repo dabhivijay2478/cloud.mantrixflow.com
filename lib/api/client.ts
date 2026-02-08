@@ -162,6 +162,50 @@ async function handleResponse<T>(response: Response): Promise<T> {
 /**
  * API Client class with reusable methods
  */
+/**
+ * Paginated list result returned by getList
+ */
+export interface PaginatedListResult<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+/**
+ * Handle API response and extract data + pagination for list endpoints
+ */
+async function handleListResponse<T>(
+  response: Response,
+): Promise<PaginatedListResult<T>> {
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType?.includes("application/json");
+
+  if (!response.ok) {
+    // Reuse error handling from handleResponse
+    await handleResponse<T[]>(response);
+    // handleResponse will throw, this is unreachable
+    throw new Error("Unexpected");
+  }
+
+  if (isJson) {
+    const json = await response.json();
+    const data = (json.data ?? json) as T[];
+    const pagination = json.pagination;
+
+    return {
+      data,
+      total: pagination?.total ?? data.length,
+      limit: pagination?.limit ?? data.length,
+      offset: pagination?.offset ?? 0,
+      hasMore: pagination?.hasMore ?? false,
+    };
+  }
+
+  return { data: [] as T[], total: 0, limit: 0, offset: 0, hasMore: false };
+}
+
 export class ApiClient {
   /**
    * GET request
@@ -184,6 +228,27 @@ export class ApiClient {
 
     const response = await fetch(url, finalOptions);
     return handleResponse<T>(response);
+  }
+
+  /**
+   * GET request for list endpoints that returns data + pagination
+   */
+  static async getList<T>(
+    endpoint: string,
+    options: RequestInit & { token?: string | null } = {},
+  ): Promise<PaginatedListResult<T>> {
+    const url = getApiUrl(endpoint);
+    const { token, ...fetchOptions } = options;
+    const finalOptions = await createFetchOptions(
+      {
+        ...fetchOptions,
+        method: "GET",
+      },
+      token,
+    );
+
+    const response = await fetch(url, finalOptions);
+    return handleListResponse<T>(response);
   }
 
   /**
