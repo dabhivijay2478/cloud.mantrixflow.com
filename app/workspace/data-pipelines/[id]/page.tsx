@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock,
+  Code2,
+  Columns3,
   Edit,
   Loader2,
   Pause,
@@ -17,7 +19,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import { ScheduleEditor } from "@/components/data-pipelines";
+import { DataPreviewTable, ScheduleEditor } from "@/components/data-pipelines";
 import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { LoadingState } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useDeletePipeline,
@@ -41,6 +44,8 @@ import {
   useUpdatePipeline,
   useValidatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import { usePreviewDestinationData } from "@/lib/api/hooks/use-destination-schemas";
+import { usePreviewSourceData } from "@/lib/api/hooks/use-source-schemas";
 import type { PipelineRun, ScheduleType } from "@/lib/api/types/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
@@ -90,6 +95,31 @@ export default function PipelineDetailPage() {
   const validatePipeline = useValidatePipeline(organizationId, pipelineId);
   const deletePipeline = useDeletePipeline(organizationId);
   const updatePipeline = useUpdatePipeline(organizationId, pipelineId);
+
+  // Source & destination data previews (top 10 rows, lazy-loaded)
+  const sourceSchemaId = pipelineData?.pipeline?.sourceSchemaId;
+  const destinationSchemaId = pipelineData?.pipeline?.destinationSchemaId;
+
+  const {
+    data: sourcePreview,
+    isLoading: sourcePreviewLoading,
+    error: sourcePreviewError,
+    refetch: refetchSourcePreview,
+    isFetching: sourcePreviewRefreshing,
+  } = usePreviewSourceData(organizationId, sourceSchemaId, 10, !!sourceSchemaId);
+
+  const {
+    data: destinationPreview,
+    isLoading: destPreviewLoading,
+    error: destPreviewError,
+    refetch: refetchDestPreview,
+    isFetching: destPreviewRefreshing,
+  } = usePreviewDestinationData(
+    organizationId,
+    destinationSchemaId,
+    10,
+    !!destinationSchemaId,
+  );
 
   // Handle schedule save
   const handleSaveSchedule = async () => {
@@ -507,7 +537,7 @@ export default function PipelineDetailPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Rows Processed</CardDescription>
@@ -554,6 +584,32 @@ export default function PipelineDetailPage() {
             <div className="text-2xl font-bold">
               {stats?.averageDuration ? `${stats.averageDuration}s` : "-"}
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Last Sync</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold">
+              {pipeline.destinationSchema?.lastSyncedAt
+                ? new Date(
+                    pipeline.destinationSchema.lastSyncedAt,
+                  ).toLocaleDateString()
+                : pipeline.lastRunAt
+                  ? new Date(pipeline.lastRunAt).toLocaleDateString()
+                  : "-"}
+            </div>
+            {(pipeline.destinationSchema?.lastSyncedAt ||
+              pipeline.lastRunAt) && (
+              <div className="text-xs text-muted-foreground mt-1">
+                {new Date(
+                  pipeline.destinationSchema?.lastSyncedAt ||
+                    pipeline.lastRunAt ||
+                    "",
+                ).toLocaleTimeString()}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -641,6 +697,7 @@ export default function PipelineDetailPage() {
         {/* Configuration Tab */}
         <TabsContent value="config" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Source Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Source</CardTitle>
@@ -663,9 +720,45 @@ export default function PipelineDetailPage() {
                         : "-"}
                   </span>
                 </div>
+                {/* Discovered columns */}
+                {pipeline.sourceSchema?.discoveredColumns &&
+                  pipeline.sourceSchema.discoveredColumns.length > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Columns3 className="h-3 w-3" />
+                        Discovered Columns
+                      </span>
+                      <span className="font-medium">
+                        {pipeline.sourceSchema.discoveredColumns.length}
+                      </span>
+                    </div>
+                  )}
+                {/* Estimated row count */}
+                {pipeline.sourceSchema?.estimatedRowCount != null && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Est. Rows</span>
+                    <span className="font-medium">
+                      {pipeline.sourceSchema.estimatedRowCount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {/* Last discovered */}
+                {pipeline.sourceSchema?.lastDiscoveredAt && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Last Discovered
+                    </span>
+                    <span className="font-medium text-xs">
+                      {new Date(
+                        pipeline.sourceSchema.lastDiscoveredAt,
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
+            {/* Destination Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Destination</CardTitle>
@@ -686,10 +779,119 @@ export default function PipelineDetailPage() {
                     {pipeline.destinationSchema?.writeMode || "-"}
                   </span>
                 </div>
+                {pipeline.destinationSchema?.upsertKey &&
+                  pipeline.destinationSchema.upsertKey.length > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Upsert Key</span>
+                      <span className="font-medium font-mono text-xs">
+                        {pipeline.destinationSchema.upsertKey.join(", ")}
+                      </span>
+                    </div>
+                  )}
+                {pipeline.destinationSchema?.lastSyncedAt && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Last Synced</span>
+                    <span className="font-medium text-xs">
+                      {new Date(
+                        pipeline.destinationSchema.lastSyncedAt,
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {/* Transform script indicator */}
+                {pipeline.destinationSchema?.transformScript && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Code2 className="h-3 w-3" />
+                      Transform Script
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      Active
+                    </Badge>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
+          {/* Transformation Script Section */}
+          {pipeline.destinationSchema?.transformScript && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Code2 className="h-5 w-5" />
+                  Transformation Script
+                </CardTitle>
+                <CardDescription>
+                  Python transform applied to each record before writing to
+                  destination
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg bg-zinc-950 p-4 overflow-auto max-h-[300px]">
+                  <pre className="text-sm font-mono text-zinc-100 whitespace-pre-wrap">
+                    {pipeline.destinationSchema.transformScript}
+                  </pre>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Edit this script from the{" "}
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 text-xs"
+                    onClick={() =>
+                      router.push(
+                        `/workspace/data-pipelines/${pipelineId}/edit`,
+                      )
+                    }
+                    type="button"
+                  >
+                    pipeline editor
+                  </Button>
+                  .
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Data Previews */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">Data Previews</h3>
+            <p className="text-sm text-muted-foreground">
+              Sample data from source and destination (top 10 rows)
+            </p>
+
+            <DataPreviewTable
+              title="Source Data Preview"
+              description={
+                pipeline.sourceSchema?.sourceTable
+                  ? `${pipeline.sourceSchema.sourceSchema || "public"}.${pipeline.sourceSchema.sourceTable}`
+                  : undefined
+              }
+              rows={sourcePreview?.rows || []}
+              isLoading={sourcePreviewLoading}
+              error={sourcePreviewError?.message ?? null}
+              onRefresh={() => refetchSourcePreview()}
+              isRefreshing={sourcePreviewRefreshing}
+            />
+
+            <DataPreviewTable
+              title="Destination Data Preview"
+              description={
+                pipeline.destinationSchema
+                  ? `${pipeline.destinationSchema.destinationSchema}.${pipeline.destinationSchema.destinationTable}`
+                  : undefined
+              }
+              rows={destinationPreview?.rows || []}
+              isLoading={destPreviewLoading}
+              error={destPreviewError?.message ?? null}
+              onRefresh={() => refetchDestPreview()}
+              isRefreshing={destPreviewRefreshing}
+            />
+          </div>
+
+          <Separator />
+
+          {/* Sync Settings */}
           <Card>
             <CardHeader>
               <CardTitle>Sync Settings</CardTitle>

@@ -233,12 +233,14 @@ export function useValidateSourceSchema(
 }
 
 /**
- * Preview sample data from source
+ * Preview sample data from source (top N rows)
+ * Cached for 5 minutes - source data changes infrequently between pipeline runs
  */
 export function usePreviewSourceData(
   organizationId: string | undefined,
   schemaId: string | undefined,
   limit?: number,
+  enabled?: boolean,
 ) {
   return useQuery({
     queryKey: sourceSchemasKeys.preview(
@@ -256,8 +258,10 @@ export function usePreviewSourceData(
         limit,
       );
     },
-    enabled: !!organizationId && !!schemaId,
-    staleTime: 30000, // 30 seconds - preview data is relatively fresh
+    enabled: (enabled ?? true) && !!organizationId && !!schemaId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1,
   });
 }
 

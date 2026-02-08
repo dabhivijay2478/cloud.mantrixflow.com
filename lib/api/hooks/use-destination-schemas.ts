@@ -33,6 +33,14 @@ export const destinationSchemasKeys = {
       organizationId,
       schemaId,
     ] as const,
+  preview: (organizationId: string, schemaId: string, limit?: number) =>
+    [
+      ...destinationSchemasKeys.all,
+      "preview",
+      organizationId,
+      schemaId,
+      limit,
+    ] as const,
 };
 
 // ============================================================================
@@ -294,5 +302,38 @@ export function useCreateDestinationTable(
         });
       }
     },
+  });
+}
+
+/**
+ * Preview sample data from destination table (top N rows)
+ * Cached for 5 minutes - destination data changes only after pipeline runs
+ */
+export function usePreviewDestinationData(
+  organizationId: string | undefined,
+  schemaId: string | undefined,
+  limit?: number,
+  enabled?: boolean,
+) {
+  return useQuery({
+    queryKey: destinationSchemasKeys.preview(
+      organizationId || "",
+      schemaId || "",
+      limit,
+    ),
+    queryFn: () => {
+      if (!organizationId || !schemaId) {
+        throw new Error("Organization ID and Schema ID are required");
+      }
+      return DestinationSchemasService.previewDestinationData(
+        organizationId,
+        schemaId,
+        limit,
+      );
+    },
+    enabled: (enabled ?? true) && !!organizationId && !!schemaId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1, // Destination table may not exist yet
   });
 }

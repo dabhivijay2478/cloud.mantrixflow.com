@@ -6,14 +6,18 @@
 
 import { ApiClient } from "../client";
 import type {
+  ColumnInfo,
   CreateDestinationSchemaDto,
   CreateTableResult,
   PipelineDestinationSchema,
+  PreviewDataResult,
   SchemaValidationResult,
   TableExistsResult,
   UpdateDestinationSchemaDto,
   ValidationResult,
 } from "../types/data-pipelines";
+import { DataSourcesService } from "./data-sources.service";
+import { PythonETLService } from "./python-etl.service";
 
 export class DestinationSchemasService {
   private static readonly BASE_PATH = "api/organizations";
@@ -126,5 +130,70 @@ export class DestinationSchemasService {
     return ApiClient.post<CreateTableResult>(
       `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}/create-table`,
     );
+  }
+
+  /**
+   * Preview sample data from destination table
+   * Calls Python ETL collect endpoint to read top N rows from the destination
+   */
+  static async previewDestinationData(
+    organizationId: string,
+    destinationSchemaId: string,
+    limit: number = 10,
+  ): Promise<PreviewDataResult> {
+    // Get destination schema from NestJS (CRUD)
+    const schema =
+      await DestinationSchemasService.getDestinationSchema(
+        organizationId,
+        destinationSchemaId,
+      );
+
+    if (!schema.dataSourceId) {
+      throw new Error("Destination schema must have a data source ID");
+    }
+
+    // Get connection config from NestJS (with sensitive data)
+    const connection = await DataSourcesService.getConnection(
+      organizationId,
+      schema.dataSourceId,
+      true,
+    );
+
+    const connectionWithConfig = connection as typeof connection & {
+      config?: Record<string, unknown>;
+    };
+    if (!connectionWithConfig?.config) {
+      throw new Error("Connection not configured for this destination");
+    }
+
+    // Destination is always PostgreSQL in current architecture
+    const sourceType = "postgresql";
+
+    // Collect from destination table
+    const result = await PythonETLService.collect(sourceType, {
+      source_type: sourceType,
+      connection_config: connectionWithConfig.config as Record<string, unknown>,
+      source_config: {},
+      table_name: schema.destinationTable,
+      schema_name: schema.destinationSchema || "public",
+      sync_mode: "full",
+      limit: Math.min(limit, 100),
+      offset: 0,
+    });
+
+    // Infer columns from first row if available
+    const columns: ColumnInfo[] =
+      result.rows.length > 0
+        ? Object.keys(result.rows[0]).map((key) => ({
+            name: key,
+            type: typeof result.rows[0][key] === "number" ? "numeric" : "text",
+            nullable: true,
+          }))
+        : [];
+
+    return {
+      rows: result.rows,
+      columns,
+    };
   }
 }
