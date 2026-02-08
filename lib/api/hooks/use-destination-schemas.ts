@@ -41,6 +41,7 @@ export const destinationSchemasKeys = {
 
 /**
  * List destination schemas for organization
+ * Cached for 5 minutes - schema lists rarely change between navigations
  */
 export function useDestinationSchemas(organizationId: string | undefined) {
   return useQuery({
@@ -52,11 +53,15 @@ export function useDestinationSchemas(organizationId: string | undefined) {
       return DestinationSchemasService.listDestinationSchemas(organizationId);
     },
     enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 }
 
 /**
  * Get destination schema by ID
+ * Schema structure is essentially static once created - cache indefinitely
+ * and rely on explicit invalidation after mutations
  */
 export function useDestinationSchema(
   organizationId: string | undefined,
@@ -77,6 +82,8 @@ export function useDestinationSchema(
       );
     },
     enabled: !!organizationId && !!schemaId,
+    staleTime: Infinity, // Schema structure never auto-refetches; invalidated on mutation
+    gcTime: 30 * 60 * 1000, // Keep in cache 30 minutes after last use
   });
 }
 

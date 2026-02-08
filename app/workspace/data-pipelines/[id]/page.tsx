@@ -18,6 +18,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { ScheduleEditor } from "@/components/data-pipelines";
+import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { LoadingState } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,9 @@ export default function PipelineDetailPage() {
   const pipelineId = params?.id as string;
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
+
+  // Delete confirmation modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Schedule editing state
   const [scheduleConfig, setScheduleConfig] = useState<{
@@ -352,18 +356,21 @@ export default function PipelineDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (confirm(`Are you sure you want to delete "${pipeline.name}"?`)) {
-      try {
-        await deletePipeline.mutateAsync(pipelineId);
-        toast.success("Pipeline deleted", `${pipeline.name} has been deleted.`);
-        router.push("/workspace/data-pipelines");
-      } catch (error) {
-        toast.error(
-          "Failed to delete",
-          error instanceof Error ? error.message : "Unknown error",
-        );
-      }
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deletePipeline.mutateAsync(pipelineId);
+      setShowDeleteConfirm(false);
+      toast.success("Pipeline deleted", `${pipeline.name} has been deleted.`);
+      router.push("/workspace/data-pipelines");
+    } catch (error) {
+      toast.error(
+        "Failed to delete",
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 
@@ -859,7 +866,7 @@ export default function PipelineDetailPage() {
                 </div>
                 <Button
                   variant="destructive"
-                  onClick={handleDelete}
+                  onClick={handleDeleteClick}
                   disabled={deletePipeline.isPending}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -870,6 +877,17 @@ export default function PipelineDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        action="delete"
+        itemName="Pipeline"
+        itemValue={pipeline.name}
+        isLoading={deletePipeline.isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

@@ -13,6 +13,8 @@ import type {
   RunPipelineDto,
   UpdatePipelineDto,
 } from "../types/data-pipelines";
+import { sourceSchemasKeys } from "./use-source-schemas";
+import { destinationSchemasKeys } from "./use-destination-schemas";
 
 // Query Keys
 export const dataPipelinesKeys = {
@@ -140,6 +142,8 @@ export function usePipeline(
 
 /**
  * Get pipeline with source and destination schemas
+ * Schema data is essentially static - use aggressive caching.
+ * Invalidated explicitly on pipeline update/delete.
  */
 export function usePipelineWithSchemas(
   organizationId: string | undefined,
@@ -160,11 +164,14 @@ export function usePipelineWithSchemas(
       );
     },
     enabled: !!organizationId && !!pipelineId,
+    staleTime: Infinity, // Schema data never auto-refetches; invalidated on mutation
+    gcTime: 30 * 60 * 1000, // Keep in cache 30 minutes after last use
   });
 }
 
 /**
  * Update pipeline
+ * Invalidates detail, full (with schemas), list, and associated schema caches
  */
 export function useUpdatePipeline(
   organizationId: string | undefined,
@@ -184,15 +191,39 @@ export function useUpdatePipeline(
     },
     onSuccess: (updatedPipeline) => {
       if (organizationId && pipelineId) {
-        // Update cache with new data
+        // Update detail cache with new data
         queryClient.setQueryData(
           dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
           updatedPipeline,
         );
+        // Invalidate full (pipeline + schemas) to reflect any schema changes
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.full(
+            organizationId,
+            pipelineId,
+          ),
+        });
         // Invalidate list
         queryClient.invalidateQueries({
           queryKey: dataPipelinesKeys.pipelines.list(organizationId),
         });
+        // Invalidate associated source/destination schema caches
+        if (updatedPipeline.sourceSchemaId) {
+          queryClient.invalidateQueries({
+            queryKey: sourceSchemasKeys.detail(
+              organizationId,
+              updatedPipeline.sourceSchemaId,
+            ),
+          });
+        }
+        if (updatedPipeline.destinationSchemaId) {
+          queryClient.invalidateQueries({
+            queryKey: destinationSchemasKeys.detail(
+              organizationId,
+              updatedPipeline.destinationSchemaId,
+            ),
+          });
+        }
       }
     },
   });
@@ -200,6 +231,7 @@ export function useUpdatePipeline(
 
 /**
  * Delete pipeline
+ * Cleans up all related caches: detail, full, list, runs, stats, and schema queries
  */
 export function useDeletePipeline(organizationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -210,20 +242,86 @@ export function useDeletePipeline(organizationId: string | undefined) {
       }
       return DataPipelinesService.deletePipeline(organizationId, pipelineId);
     },
-    onSuccess: (_, deletedPipelineId) => {
-      if (organizationId) {
-        // Remove from cache
-        queryClient.removeQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(
+    onMutate: async (deletedPipelineId) => {
+      if (!organizationId) return {};
+
+      // Snapshot the pipeline before deletion so we can clean up schema caches
+      const pipeline = queryClient.getQueryData<Pipeline>(
+        dataPipelinesKeys.pipelines.detail(organizationId, deletedPipelineId),
+      );
+
+      // Optimistic update: remove from list immediately
+      const listKey = dataPipelinesKeys.pipelines.list(organizationId);
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previousPipelines =
+        queryClient.getQueryData<Pipeline[]>(listKey);
+      if (previousPipelines) {
+        queryClient.setQueryData<Pipeline[]>(
+          listKey,
+          previousPipelines.filter((p) => p.id !== deletedPipelineId),
+        );
+      }
+
+      return { previousPipelines, pipeline, listKey };
+    },
+    onError: (_error, _deletedPipelineId, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousPipelines && context.listKey) {
+        queryClient.setQueryData(context.listKey, context.previousPipelines);
+      }
+    },
+    onSuccess: (_, deletedPipelineId, context) => {
+      if (!organizationId) return;
+
+      // Remove all pipeline-specific caches
+      queryClient.removeQueries({
+        queryKey: dataPipelinesKeys.pipelines.detail(
+          organizationId,
+          deletedPipelineId,
+        ),
+      });
+      queryClient.removeQueries({
+        queryKey: dataPipelinesKeys.pipelines.full(
+          organizationId,
+          deletedPipelineId,
+        ),
+      });
+      queryClient.removeQueries({
+        queryKey: dataPipelinesKeys.runs(organizationId, deletedPipelineId),
+      });
+      queryClient.removeQueries({
+        queryKey: dataPipelinesKeys.stats(organizationId, deletedPipelineId),
+      });
+
+      // Invalidate schema caches associated with this pipeline
+      const pipeline = context?.pipeline;
+      if (pipeline?.sourceSchemaId) {
+        queryClient.invalidateQueries({
+          queryKey: sourceSchemasKeys.detail(
             organizationId,
-            deletedPipelineId,
+            pipeline.sourceSchemaId,
           ),
         });
-        // Invalidate list
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+          queryKey: sourceSchemasKeys.list(organizationId),
         });
       }
+      if (pipeline?.destinationSchemaId) {
+        queryClient.invalidateQueries({
+          queryKey: destinationSchemasKeys.detail(
+            organizationId,
+            pipeline.destinationSchemaId,
+          ),
+        });
+        queryClient.invalidateQueries({
+          queryKey: destinationSchemasKeys.list(organizationId),
+        });
+      }
+
+      // Invalidate pipeline list
+      queryClient.invalidateQueries({
+        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+      });
     },
   });
 }
