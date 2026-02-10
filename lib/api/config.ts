@@ -6,40 +6,39 @@
 import { supabase } from "@/lib/supabase/client";
 
 /**
- * Normalize API base URL to ensure it has a protocol
- * If no protocol is provided, defaults to https://
+ * Normalize API base URL from env (add https:// if no scheme).
+ * No hardcoded fallback — set NEXT_PUBLIC_API_URL in apps/app .env.
  */
-const normalizeApiUrl = (url: string): string => {
-  if (!url) return "http://localhost:5000";
-
-  // Remove trailing slashes
-  const trimmed = url.trim().replace(/\/+$/, "");
-
-  // If it already has a protocol, return as is
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+const normalizeApiUrl = (url: string | undefined): string => {
+  const raw = (url ?? "").trim();
+  if (!raw) return "";
+  const trimmed = raw.replace(/\/+$/, "");
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
     return trimmed;
-  }
-
-  // Otherwise, add https:// by default
   return `https://${trimmed}`;
 };
 
-const API_BASE_URL = normalizeApiUrl(
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
-);
+const API_BASE_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
 
 /**
- * Get API base URL
+ * Get API base URL (from NEXT_PUBLIC_API_URL). Throws if not set.
  */
-export const getApiBaseUrl = () => API_BASE_URL;
+export const getApiBaseUrl = (): string => {
+  if (!API_BASE_URL) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL must be set in environment (e.g. in apps/app .env)",
+    );
+  }
+  return API_BASE_URL;
+};
 
 /**
- * Get full API endpoint URL
+ * Get full API endpoint URL (uses NEXT_PUBLIC_API_URL; throws if not set).
  */
-export const getApiUrl = (endpoint: string) => {
-  // Remove leading slash if present
+export const getApiUrl = (endpoint: string): string => {
+  const base = getApiBaseUrl();
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
-  return `${API_BASE_URL}/${cleanEndpoint}`;
+  return `${base}/${cleanEndpoint}`;
 };
 
 /**

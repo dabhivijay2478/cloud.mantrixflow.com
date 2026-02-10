@@ -206,22 +206,20 @@ export async function signupAction(
     const { email, password, firstName, lastName } = validation.data;
     const supabase = await createClient();
 
-    // Get the site URL for redirect after email confirmation
-    // Priority: NEXT_PUBLIC_SITE_URL > VERCEL_URL > localhost
+    // Site URL from env only (NEXT_PUBLIC_SITE_URL or VERCEL_URL)
     const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-      "http://localhost:3000";
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
-    // Redirect to callback route after email confirmation
-    // The callback route will handle onboarding redirect
-    const redirectTo = `${siteUrl}/auth/callback?type=signup`;
+    const redirectTo = siteUrl
+      ? `${siteUrl}/auth/callback?type=signup`
+      : undefined;
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectTo,
+        ...(redirectTo && { emailRedirectTo: redirectTo }),
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -346,9 +344,11 @@ export async function forgotPasswordAction(
     const { email } = validation.data;
     const supabase = await createClient();
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/auth/callback?type=recovery`,
+      redirectTo: siteUrl
+        ? `${siteUrl}/auth/callback?type=recovery`
+        : undefined,
     });
 
     if (error) {

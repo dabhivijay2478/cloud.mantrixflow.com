@@ -43,6 +43,40 @@ export function useDataSources(
 }
 
 /**
+ * Hook to fetch data sources with server-side pagination
+ */
+export function useDataSourcesPaginated(
+  organizationId: string | undefined,
+  pagination: { pageIndex: number; pageSize: number },
+  filters?: { sourceType?: string; isActive?: boolean },
+) {
+  const { pageIndex, pageSize } = pagination;
+  const offset = pageIndex * pageSize;
+
+  return useQuery({
+    queryKey: [
+      ...dataSourceKeys.lists(),
+      organizationId,
+      { limit: pageSize, offset },
+      filters,
+    ],
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DataSourceService.listDataSourcesPaginated(
+        organizationId,
+        pageSize,
+        offset,
+        filters,
+      );
+    },
+    enabled: !!organizationId,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/**
  * Hook to fetch a single data source
  */
 export function useDataSource(

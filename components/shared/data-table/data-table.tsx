@@ -339,24 +339,56 @@ export function DataTable<TData, TValue>({
         })
         .filter((id): id is string => Boolean(id));
 
+      const currentColumnSet = new Set(columnIds);
+
       // Try to load from localStorage first
       const storedVisibleIds = getStoredColumnVisibility(tableId);
 
       if (storedVisibleIds && storedVisibleIds.length > 0) {
-        // Build visibility state from stored IDs
-        // Only include columns that still exist (handle removed columns gracefully)
-        const visibility: VisibilityState = {};
-        columnIds.forEach((colId) => {
-          visibility[colId] = storedVisibleIds.includes(colId);
-        });
-        return visibility;
+        // Check how many stored IDs still exist in the current column set
+        const validStoredIds = storedVisibleIds.filter((id) =>
+          currentColumnSet.has(id),
+        );
+
+        // If stored data has no overlap with current columns, it's completely stale
+        if (validStoredIds.length === 0) {
+          // Fall through to defaultVisibleColumns
+        } else {
+          const storedSet = new Set(storedVisibleIds);
+          const visibility: VisibilityState = {};
+
+          columnIds.forEach((colId) => {
+            // Fixed columns are always visible regardless of stored state
+            if (fixedColumns.includes(colId)) {
+              visibility[colId] = true;
+            } else if (storedSet.has(colId)) {
+              // Column was explicitly visible in stored state
+              visibility[colId] = true;
+            } else if (
+              !storedSet.has(colId) &&
+              defaultVisibleColumns?.includes(colId)
+            ) {
+              // Column not in stored state but is a default visible column
+              // This is likely a newly added column — show it by default
+              visibility[colId] = true;
+            } else {
+              // Column not in stored state and not a default — hide it
+              visibility[colId] = false;
+            }
+          });
+
+          return visibility;
+        }
       }
 
       // Fallback to defaultVisibleColumns if provided
       if (defaultVisibleColumns) {
         const visibility: VisibilityState = {};
         columnIds.forEach((colId) => {
-          visibility[colId] = defaultVisibleColumns.includes(colId);
+          // Fixed columns are always visible
+          visibility[colId] =
+            fixedColumns.includes(colId) ||
+            defaultVisibleColumns.includes(colId);
         });
         return visibility;
       }
@@ -440,7 +472,7 @@ export function DataTable<TData, TValue>({
     : setInternalRowSelection;
 
   const paginationState = pagination || internalPagination;
-  const _setPaginationState = onPaginationChange
+  const setPaginationState = onPaginationChange
     ? (
         updater: PaginationState | ((prev: PaginationState) => PaginationState),
       ) => {
@@ -521,6 +553,7 @@ export function DataTable<TData, TValue>({
       : {
           getPaginationRowModel: getPaginationRowModel(),
         }),
+    onPaginationChange: setPaginationState,
     onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
@@ -575,7 +608,10 @@ export function DataTable<TData, TValue>({
   }
 
   const selectedRowCount = Object.values(selection).filter(Boolean).length;
-  const totalRowCount = table.getFilteredRowModel().rows.length;
+  const totalRowCount =
+    manualPagination && totalCount != null
+      ? totalCount
+      : table.getFilteredRowModel().rows.length;
 
   return (
     <div className={cn("w-full space-y-4", className)}>
@@ -750,20 +786,48 @@ export function DataTable<TData, TValue>({
       {/* Bottom Controls: Row Selection Summary and Pagination */}
       <div className="flex items-center justify-between">
         {/* Row Selection Summary - Bottom Left */}
-        {enableRowSelection && (
-          <div className="text-sm text-muted-foreground">
-            {selectedRowCount} of {totalRowCount} row
-            {totalRowCount !== 1 ? "s" : ""} selected.
-          </div>
-        )}
-        {!enableRowSelection && (
-          <div className="text-sm text-muted-foreground">
-            {totalRowCount} row{totalRowCount !== 1 ? "s" : ""}
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          {enableRowSelection ? (
+            <div className="text-sm text-muted-foreground">
+              {selectedRowCount} of {totalRowCount} row
+              {totalRowCount !== 1 ? "s" : ""} selected.
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              {totalRowCount} row{totalRowCount !== 1 ? "s" : ""}
+            </div>
+          )}
+
+          {/* Rows per page selector */}
+          {(table.getPageCount() > 1 || manualPagination) && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Rows per page
+              </span>
+              <select
+                className="h-8 w-[70px] rounded-md border border-input bg-background px-2 text-sm"
+                value={paginationState.pageSize}
+                onChange={(e) => {
+                  const newSize = Number(e.target.value);
+                  setPaginationState({
+                    pageIndex: 0,
+                    pageSize: newSize,
+                  });
+                }}
+              >
+                {_pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
 
         {/* Pagination Controls - Bottom Right */}
-        {table.getPageCount() > 1 && (
+        {(table.getPageCount() > 1 ||
+          (manualPagination && totalRowCount > paginationState.pageSize)) && (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -789,7 +853,6 @@ export function DataTable<TData, TValue>({
             </Button>
           </div>
         )}
-        {table.getPageCount() <= 1 && enableRowSelection && <div />}
       </div>
     </div>
   );

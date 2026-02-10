@@ -39,6 +39,7 @@ export const sourceSchemasKeys = {
 
 /**
  * List source schemas for organization
+ * Cached for 5 minutes - schema lists rarely change between navigations
  */
 export function useSourceSchemas(organizationId: string | undefined) {
   return useQuery({
@@ -50,11 +51,48 @@ export function useSourceSchemas(organizationId: string | undefined) {
       return SourceSchemasService.listSourceSchemas(organizationId);
     },
     enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+}
+
+/**
+ * List source schemas with server-side pagination
+ */
+export function useSourceSchemasPaginated(
+  organizationId: string | undefined,
+  pagination: { pageIndex: number; pageSize: number },
+) {
+  const { pageIndex, pageSize } = pagination;
+  const offset = pageIndex * pageSize;
+
+  return useQuery({
+    queryKey: [
+      ...sourceSchemasKeys.lists(),
+      organizationId,
+      { limit: pageSize, offset },
+    ],
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return SourceSchemasService.listSourceSchemasPaginated(
+        organizationId,
+        pageSize,
+        offset,
+      );
+    },
+    enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 }
 
 /**
  * Get source schema by ID
+ * Schema structure is essentially static once created - cache indefinitely
+ * and rely on explicit invalidation after mutations
  */
 export function useSourceSchema(
   organizationId: string | undefined,
@@ -69,6 +107,8 @@ export function useSourceSchema(
       return SourceSchemasService.getSourceSchema(organizationId, schemaId);
     },
     enabled: !!organizationId && !!schemaId,
+    staleTime: Infinity, // Schema structure never auto-refetches; invalidated on mutation
+    gcTime: 30 * 60 * 1000, // Keep in cache 30 minutes after last use
   });
 }
 
@@ -226,12 +266,14 @@ export function useValidateSourceSchema(
 }
 
 /**
- * Preview sample data from source
+ * Preview sample data from source (top N rows)
+ * Cached for 5 minutes - source data changes infrequently between pipeline runs
  */
 export function usePreviewSourceData(
   organizationId: string | undefined,
   schemaId: string | undefined,
   limit?: number,
+  enabled?: boolean,
 ) {
   return useQuery({
     queryKey: sourceSchemasKeys.preview(
@@ -249,8 +291,10 @@ export function usePreviewSourceData(
         limit,
       );
     },
-    enabled: !!organizationId && !!schemaId,
-    staleTime: 30000, // 30 seconds - preview data is relatively fresh
+    enabled: (enabled ?? true) && !!organizationId && !!schemaId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1,
   });
 }
 

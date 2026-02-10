@@ -18,8 +18,11 @@ export async function POST(request: Request) {
     const { email } = result.data;
     const supabase = await createClient();
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback?type=recovery`,
+      redirectTo: siteUrl
+        ? `${siteUrl}/auth/callback?type=recovery`
+        : undefined,
     });
 
     if (error) {

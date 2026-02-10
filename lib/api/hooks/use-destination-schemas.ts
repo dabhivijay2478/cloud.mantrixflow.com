@@ -33,6 +33,14 @@ export const destinationSchemasKeys = {
       organizationId,
       schemaId,
     ] as const,
+  preview: (organizationId: string, schemaId: string, limit?: number) =>
+    [
+      ...destinationSchemasKeys.all,
+      "preview",
+      organizationId,
+      schemaId,
+      limit,
+    ] as const,
 };
 
 // ============================================================================
@@ -41,6 +49,7 @@ export const destinationSchemasKeys = {
 
 /**
  * List destination schemas for organization
+ * Cached for 5 minutes - schema lists rarely change between navigations
  */
 export function useDestinationSchemas(organizationId: string | undefined) {
   return useQuery({
@@ -52,11 +61,48 @@ export function useDestinationSchemas(organizationId: string | undefined) {
       return DestinationSchemasService.listDestinationSchemas(organizationId);
     },
     enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+}
+
+/**
+ * List destination schemas with server-side pagination
+ */
+export function useDestinationSchemasPaginated(
+  organizationId: string | undefined,
+  pagination: { pageIndex: number; pageSize: number },
+) {
+  const { pageIndex, pageSize } = pagination;
+  const offset = pageIndex * pageSize;
+
+  return useQuery({
+    queryKey: [
+      ...destinationSchemasKeys.lists(),
+      organizationId,
+      { limit: pageSize, offset },
+    ],
+    queryFn: () => {
+      if (!organizationId) {
+        throw new Error("Organization ID is required");
+      }
+      return DestinationSchemasService.listDestinationSchemasPaginated(
+        organizationId,
+        pageSize,
+        offset,
+      );
+    },
+    enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 }
 
 /**
  * Get destination schema by ID
+ * Schema structure is essentially static once created - cache indefinitely
+ * and rely on explicit invalidation after mutations
  */
 export function useDestinationSchema(
   organizationId: string | undefined,
@@ -77,6 +123,8 @@ export function useDestinationSchema(
       );
     },
     enabled: !!organizationId && !!schemaId,
+    staleTime: Infinity, // Schema structure never auto-refetches; invalidated on mutation
+    gcTime: 30 * 60 * 1000, // Keep in cache 30 minutes after last use
   });
 }
 
@@ -287,5 +335,38 @@ export function useCreateDestinationTable(
         });
       }
     },
+  });
+}
+
+/**
+ * Preview sample data from destination table (top N rows)
+ * Cached for 5 minutes - destination data changes only after pipeline runs
+ */
+export function usePreviewDestinationData(
+  organizationId: string | undefined,
+  schemaId: string | undefined,
+  limit?: number,
+  enabled?: boolean,
+) {
+  return useQuery({
+    queryKey: destinationSchemasKeys.preview(
+      organizationId || "",
+      schemaId || "",
+      limit,
+    ),
+    queryFn: () => {
+      if (!organizationId || !schemaId) {
+        throw new Error("Organization ID and Schema ID are required");
+      }
+      return DestinationSchemasService.previewDestinationData(
+        organizationId,
+        schemaId,
+        limit,
+      );
+    },
+    enabled: (enabled ?? true) && !!organizationId && !!schemaId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1, // Destination table may not exist yet
   });
 }

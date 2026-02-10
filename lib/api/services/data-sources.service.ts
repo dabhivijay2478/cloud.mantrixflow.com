@@ -58,37 +58,43 @@ export class DataSourcesService {
     organizationId: string,
     dto: CreateDataSourceDto,
   ): Promise<DataSource> {
-    // Call Python API directly for creation
-    const { PythonETLService } = await import("./python-etl.service");
-
-    console.log(
-      "[DataSourcesService] Creating data source via Python service",
+    const result = await ApiClient.post<Record<string, unknown>>(
+      DataSourcesService.basePath(organizationId),
       {
-        organizationId,
         name: dto.name,
-        source_type: dto.source_type,
+        description: dto.description,
+        sourceType: dto.source_type,
+        metadata: dto.metadata,
       },
     );
 
-    const result = await PythonETLService.createDataSource(organizationId, {
-      name: dto.name,
-      description: dto.description,
-      source_type: dto.source_type,
-      metadata: dto.metadata,
-    });
+    const createdAt =
+      (result.createdAt as string) ||
+      (result.created_at as string) ||
+      new Date().toISOString();
+    const updatedAt =
+      (result.updatedAt as string) ||
+      (result.updated_at as string) ||
+      createdAt;
 
-    // Map Python response (snake_case) to frontend format (camelCase)
     return {
-      id: result.id,
-      organizationId: result.organization_id,
-      name: result.name,
-      description: result.description,
-      sourceType: result.source_type,
-      isActive: result.is_active,
-      metadata: result.metadata,
-      createdBy: result.created_by,
-      createdAt: result.created_at,
-      updatedAt: result.updated_at,
+      id: (result.id as string) || "",
+      organizationId:
+        (result.organizationId as string) ||
+        (result.organization_id as string) ||
+        organizationId,
+      name: (result.name as string) || dto.name,
+      description: (result.description as string) || dto.description,
+      sourceType:
+        (result.sourceType as DataSourceType) ||
+        (result.source_type as DataSourceType) ||
+        dto.source_type,
+      isActive:
+        (result.isActive as boolean) ?? (result.is_active as boolean) ?? true,
+      metadata: (result.metadata as Record<string, unknown>) || dto.metadata,
+      createdBy: (result.createdBy as string) || (result.created_by as string),
+      createdAt,
+      updatedAt,
       deletedAt: undefined,
     } as unknown as DataSource;
   }
@@ -135,81 +141,95 @@ export class DataSourcesService {
     sourceId: string,
     includeSensitive = false,
   ): Promise<Connection> {
-    // Call Python API directly to fetch from Supabase
-    const { PythonETLService } = await import("./python-etl.service");
-    const connection = await PythonETLService.getConnection(
-      organizationId,
-      sourceId,
-      includeSensitive,
+    const params = includeSensitive ? "?includeSensitive=true" : "";
+    const connection = await ApiClient.get<Record<string, unknown> | null>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/connection${params}`,
     );
 
     if (!connection) {
       throw new Error("Connection not found for this data source");
     }
 
-    // Get data source to get name
-    const dataSource = await DataSourcesService.getDataSource(
-      organizationId,
-      sourceId,
-    );
+    const createdAt =
+      (connection.createdAt as string) ||
+      (connection.created_at as string) ||
+      new Date().toISOString();
+    const updatedAt =
+      (connection.updatedAt as string) ||
+      (connection.updated_at as string) ||
+      createdAt;
 
-    // Map Python API response to Connection format
     return {
-      id: connection.id,
+      id: (connection.id as string) || sourceId,
       organizationId,
-      name: dataSource.name,
-      type: connection.connection_type as DataSourceType,
-      status: connection.status as "active" | "inactive" | "error" | "testing",
-      config: connection.config,
-      created_at: connection.created_at,
-      createdAt: connection.created_at,
-      updated_at: connection.updated_at,
-      updatedAt: connection.updated_at,
+      name: (connection.name as string) || "Connection",
+      type:
+        (connection.connectionType as DataSourceType) ||
+        (connection.connection_type as DataSourceType) ||
+        (connection.type as DataSourceType) ||
+        "postgres",
+      status:
+        (connection.status as
+          | "active"
+          | "inactive"
+          | "error"
+          | "testing"
+          | "connected"
+          | "disconnected") || "inactive",
+      config: (connection.config as Record<string, unknown>) || {},
+      created_at: createdAt,
+      createdAt,
+      updated_at: updatedAt,
+      updatedAt,
     } as Connection & { config: Record<string, unknown> };
   }
 
   /**
-   * Create or update connection for a data source - calls Python API directly
-   * Python handles validation and creates/updates the connection in Supabase
+   * Create or update connection for a data source via NestJS
+   * NestJS encrypts sensitive credentials before persistence.
    */
   static async createOrUpdateConnection(
     organizationId: string,
     sourceId: string,
     dto: CreateConnectionDto,
   ): Promise<Connection> {
-    // Call Python API directly for creation/update
-    const { PythonETLService } = await import("./python-etl.service");
-
-    console.log(
-      "[DataSourcesService] Creating/updating connection via Python service",
+    const result = await ApiClient.post<Record<string, unknown>>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/connection`,
       {
-        organizationId,
-        sourceId,
-        connection_type: dto.connection_type,
+        connectionType: dto.connection_type,
+        config: dto.config,
       },
     );
 
-    const result = await PythonETLService.createOrUpdateConnection(
-      organizationId,
-      sourceId,
-      {
-        connection_type: dto.connection_type,
-        config: dto.config as unknown as Record<string, unknown>,
-      },
-    );
+    const createdAt =
+      (result.createdAt as string) ||
+      (result.created_at as string) ||
+      new Date().toISOString();
+    const updatedAt =
+      (result.updatedAt as string) ||
+      (result.updated_at as string) ||
+      createdAt;
 
-    // Map Python response to Connection format
     return {
-      id: result.id,
+      id: (result.id as string) || sourceId,
       organizationId,
       name: dto.name, // Name comes from DTO, not from Python response
-      type: result.connection_type,
-      status: result.status,
-      config: result.config,
-      created_at: result.created_at,
-      createdAt: result.created_at,
-      updated_at: result.updated_at,
-      updatedAt: result.updated_at,
+      type:
+        (result.connectionType as string) ||
+        (result.connection_type as string) ||
+        dto.connection_type,
+      status:
+        (result.status as
+          | "active"
+          | "inactive"
+          | "error"
+          | "connected"
+          | "disconnected") || "inactive",
+      config: (result.config as Record<string, unknown>) || dto.config,
+      created_at: createdAt,
+      createdAt,
+      updated_at: updatedAt,
+      updatedAt,
     } as Connection;
   }
 
@@ -282,32 +302,40 @@ export class DataSourcesService {
       query: options?.query,
     });
 
-    // Map Python response to expected format
-    // The response format depends on the source type
-    if (sourceType === "mongodb") {
-      // MongoDB returns databases and collections
+    // Preferred shape from Python ETL discover endpoint.
+    if (discovered.schemas && discovered.schemas.length > 0) {
       return {
-        databases: discovered.columns as Array<{
-          name: string;
-          collections?: Array<{ name: string; type?: string }>;
-        }>, // MongoDB uses columns field for collections
-        type: "mongodb",
-      };
-    } else {
-      // SQL databases return tables
-      return {
-        tables: discovered.columns.map((col) => ({
-          name: col.name,
-          schema: options?.schemaName || "public",
-          type: col.type,
-          columns: [col],
-        })) as Table[],
-        schemas: options?.schemaName
-          ? [{ name: options.schemaName }]
-          : undefined,
+        schemas: discovered.schemas.map((schema) => ({
+          name: schema.name,
+          tables: schema.tables.map((table) => ({
+            name: table.name,
+            schema: table.schema || schema.name,
+            type: table.type,
+            rowCount: table.rowCount,
+          })),
+        })),
         type: sourceType,
       };
     }
+
+    // Backward-compatible fallback shape.
+    if (sourceType === "mongodb") {
+      return {
+        databases: [],
+        type: "mongodb",
+      };
+    }
+
+    return {
+      tables: discovered.columns.map((col) => ({
+        name: col.name,
+        schema: options?.schemaName || "public",
+        type: "table",
+        columns: [col],
+      })) as Table[],
+      schemas: options?.schemaName ? [{ name: options.schemaName }] : undefined,
+      type: sourceType,
+    };
   }
 
   // ==========================================================================
@@ -450,8 +478,8 @@ export class DataSourcesService {
 
   /** @deprecated Use deleteDataSource instead */
   /**
-   * Delete connection - calls Python API directly
-   * Python handles validation and calls NestJS for actual database deletion
+   * Delete connection - calls NestJS API
+   * NestJS handles connection deletion directly.
    */
   static async deleteConnection(
     id: string,
@@ -461,12 +489,11 @@ export class DataSourcesService {
       throw new Error("Organization ID is required to delete connection");
     }
 
-    // Call Python API directly for deletion
-    const { PythonETLService } = await import("./python-etl.service");
-
-    // For legacy API, connection ID is the same as data source ID
-    const result = await PythonETLService.deleteConnection(orgId, id, id);
-    return { deletedId: result.deleted_id || id };
+    // Delete connection via NestJS API
+    await ApiClient.delete<{ deletedId: string }>(
+      `${DataSourcesService.basePath(orgId)}/${id}/connection`,
+    );
+    return { deletedId: id };
   }
 
   // ==========================================================================
@@ -502,7 +529,10 @@ export class DataSourcesService {
         tables: (db.collections || []).map((coll) => ({
           name: coll.name,
           schema: db.name,
-          type: (coll.type || "table") as "table" | "view" | "materialized_view",
+          type: (coll.type || "table") as
+            | "table"
+            | "view"
+            | "materialized_view",
         })),
       }));
     }
@@ -515,28 +545,34 @@ export class DataSourcesService {
     orgId?: string,
   ): Promise<Schema[]> {
     if (!orgId) throw new Error("Organization ID is required");
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
 
-    // Call Python API directly to get schemas and tables
-    const { PythonETLService } = await import("./python-etl.service");
-    const result = await PythonETLService.listSchemasWithTables(
-      orgId,
-      connectionId,
-    );
-
-    // Map Python API response to Schema[] format
     if (result.schemas && result.schemas.length > 0) {
       return result.schemas.map((schema) => ({
         name: schema.name,
-        tables: schema.tables.map((table) => ({
+        tables: (schema.tables || []).map((table) => ({
           name: table.name,
-          schema: table.schema,
-          type: table.type as "table" | "view" | "materialized_view",
+          schema: table.schema || schema.name,
+          type: table.type || "table",
           rowCount: table.rowCount,
         })),
       }));
     }
 
-    // Fallback for unsupported types - return empty
+    if (result.databases && result.databases.length > 0) {
+      return result.databases.map((db) => ({
+        name: db.name,
+        tables: (db.collections || []).map((coll) => ({
+          name: coll.name,
+          schema: db.name,
+          type: (coll.type || "table") as
+            | "table"
+            | "view"
+            | "materialized_view",
+        })),
+      }));
+    }
+
     return [];
   }
 
@@ -573,19 +609,22 @@ export class DataSourcesService {
     if (result.type === "mongodb" && result.databases) {
       result.schemas = result.databases.map((db) => ({
         name: db.name,
-        tables: db.collections?.map((coll: { name: string; fields?: Array<{ name: string; type: string; nullable?: boolean }> }) => ({
-          name: coll.name,
-          schema: db.name,
-          type: "table" as const,
-          columns: coll.fields?.map(
-            (f) => ({
+        tables: db.collections?.map(
+          (coll: {
+            name: string;
+            fields?: Array<{ name: string; type: string; nullable?: boolean }>;
+          }) => ({
+            name: coll.name,
+            schema: db.name,
+            type: "table" as const,
+            columns: coll.fields?.map((f) => ({
               name: f.name,
               dataType: f.type,
               nullable: f.nullable,
               isPrimaryKey: f.name === "_id", // MongoDB _id is always primary key
-            }),
-          ),
-        })),
+            })),
+          }),
+        ),
       }));
     }
 

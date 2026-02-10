@@ -18,7 +18,9 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { DataTable, PageHeader } from "@/components/shared";
+import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +39,7 @@ import {
 import {
   dataPipelinesKeys,
   useDeletePipeline,
-  usePipelines,
+  usePipelinesPaginated,
 } from "@/lib/api/hooks/use-data-pipelines";
 import { useUsers } from "@/lib/api/hooks/use-users";
 import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
@@ -53,9 +55,19 @@ export default function DataPipelinesPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
+  // Delete confirmation modal state
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  // Pagination state
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+
   // API hooks
-  const { data: pipelines, isLoading: pipelinesLoading } =
-    usePipelines(organizationId);
+  const { data: paginatedResult, isLoading: pipelinesLoading } =
+    usePipelinesPaginated(organizationId, pagination);
+  const pipelines = paginatedResult?.data;
   const deletePipeline = useDeletePipeline(organizationId);
 
   // Get user info for creators
@@ -229,20 +241,23 @@ export default function DataPipelinesPage() {
     }
   };
 
-  const handleDelete = async (pipelineId: string, pipelineName: string) => {
-    if (
-      confirm(
-        `Are you sure you want to delete "${pipelineName}"? This action cannot be undone.`,
-      )
-    ) {
-      try {
-        await deletePipeline.mutateAsync(pipelineId);
-        toast.success("Pipeline deleted", `${pipelineName} has been deleted.`);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unable to delete pipeline.";
-        toast.error("Failed to delete pipeline", message);
-      }
+  const handleDeleteClick = (pipelineId: string, pipelineName: string) => {
+    setDeleteTarget({ id: pipelineId, name: pipelineName });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deletePipeline.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+      toast.success(
+        "Pipeline deleted",
+        `${deleteTarget.name} has been deleted.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to delete pipeline.";
+      toast.error("Failed to delete pipeline", message);
     }
   };
 
@@ -789,7 +804,7 @@ export default function DataPipelinesPage() {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDelete(pipeline.id, pipeline.name);
+                    handleDeleteClick(pipeline.id, pipeline.name);
                   }}
                   className="text-red-600 focus:text-red-600"
                 >
@@ -866,6 +881,23 @@ export default function DataPipelinesPage() {
         onRowClick={(row) => router.push(`/workspace/data-pipelines/${row.id}`)}
         emptyMessage="No pipelines yet"
         emptyDescription="Create your first data pipeline to start moving data from source to destination."
+        manualPagination
+        pagination={pagination}
+        onPaginationChange={setPagination}
+        totalCount={paginatedResult?.total ?? 0}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        action="delete"
+        itemName="Pipeline"
+        itemValue={deleteTarget?.name}
+        isLoading={deletePipeline.isPending}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

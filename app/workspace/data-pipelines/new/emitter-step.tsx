@@ -215,7 +215,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       };
 
       // Normalize field names (safely access union type properties)
-      const config = destinationConnection.config as unknown as Record<string, unknown>;
+      const config = destinationConnection.config as unknown as Record<
+        string,
+        unknown
+      >;
       if (config.username && !testConfig.username) {
         testConfig.username = config.username;
       }
