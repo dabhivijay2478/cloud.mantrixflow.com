@@ -105,13 +105,9 @@ export class DataSourceService {
         (result.source_type as DataSource["sourceType"]) ||
         data.source_type,
       isActive:
-        (result.isActive as boolean) ??
-        (result.is_active as boolean) ??
-        true,
+        (result.isActive as boolean) ?? (result.is_active as boolean) ?? true,
       metadata: (result.metadata as Record<string, unknown>) || data.metadata,
-      createdBy:
-        (result.createdBy as string) ||
-        (result.created_by as string),
+      createdBy: (result.createdBy as string) || (result.created_by as string),
       createdAt,
       updatedAt,
       deletedAt: undefined,

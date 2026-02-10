@@ -90,13 +90,9 @@ export class DataSourcesService {
         (result.source_type as DataSourceType) ||
         dto.source_type,
       isActive:
-        (result.isActive as boolean) ??
-        (result.is_active as boolean) ??
-        true,
+        (result.isActive as boolean) ?? (result.is_active as boolean) ?? true,
       metadata: (result.metadata as Record<string, unknown>) || dto.metadata,
-      createdBy:
-        (result.createdBy as string) ||
-        (result.created_by as string),
+      createdBy: (result.createdBy as string) || (result.created_by as string),
       createdAt,
       updatedAt,
       deletedAt: undefined,
@@ -210,7 +206,9 @@ export class DataSourcesService {
       (result.created_at as string) ||
       new Date().toISOString();
     const updatedAt =
-      (result.updatedAt as string) || (result.updated_at as string) || createdAt;
+      (result.updatedAt as string) ||
+      (result.updated_at as string) ||
+      createdAt;
 
     return {
       id: (result.id as string) || sourceId,
@@ -221,8 +219,12 @@ export class DataSourcesService {
         (result.connection_type as string) ||
         dto.connection_type,
       status:
-        (result.status as "active" | "inactive" | "error" | "connected" | "disconnected") ||
-        "inactive",
+        (result.status as
+          | "active"
+          | "inactive"
+          | "error"
+          | "connected"
+          | "disconnected") || "inactive",
       config: (result.config as Record<string, unknown>) || dto.config,
       created_at: createdAt,
       createdAt,
@@ -527,7 +529,10 @@ export class DataSourcesService {
         tables: (db.collections || []).map((coll) => ({
           name: coll.name,
           schema: db.name,
-          type: (coll.type || "table") as "table" | "view" | "materialized_view",
+          type: (coll.type || "table") as
+            | "table"
+            | "view"
+            | "materialized_view",
         })),
       }));
     }
@@ -560,7 +565,10 @@ export class DataSourcesService {
         tables: (db.collections || []).map((coll) => ({
           name: coll.name,
           schema: db.name,
-          type: (coll.type || "table") as "table" | "view" | "materialized_view",
+          type: (coll.type || "table") as
+            | "table"
+            | "view"
+            | "materialized_view",
         })),
       }));
     }
@@ -601,19 +609,22 @@ export class DataSourcesService {
     if (result.type === "mongodb" && result.databases) {
       result.schemas = result.databases.map((db) => ({
         name: db.name,
-        tables: db.collections?.map((coll: { name: string; fields?: Array<{ name: string; type: string; nullable?: boolean }> }) => ({
-          name: coll.name,
-          schema: db.name,
-          type: "table" as const,
-          columns: coll.fields?.map(
-            (f) => ({
+        tables: db.collections?.map(
+          (coll: {
+            name: string;
+            fields?: Array<{ name: string; type: string; nullable?: boolean }>;
+          }) => ({
+            name: coll.name,
+            schema: db.name,
+            type: "table" as const,
+            columns: coll.fields?.map((f) => ({
               name: f.name,
               dataType: f.type,
               nullable: f.nullable,
               isPrimaryKey: f.name === "_id", // MongoDB _id is always primary key
-            }),
-          ),
-        })),
+            })),
+          }),
+        ),
       }));
     }
 

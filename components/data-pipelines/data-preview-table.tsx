@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertCircle, ChevronDown, ChevronUp, Database, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  Loader2,
+} from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -161,9 +167,12 @@ export function DataPreviewTable({
                     <tbody>
                       {displayRows.map((row, rowIdx) => {
                         const record = row as Record<string, unknown>;
+                        const rowKey = columnNames
+                          .map((col) => String(record[col] ?? ""))
+                          .join("\u241f");
                         return (
                           <tr
-                            key={rowIdx}
+                            key={rowKey || `preview-row-${String(rowIdx)}`}
                             className="border-b last:border-b-0 hover:bg-muted/30"
                           >
                             <td className="px-3 py-1.5 text-xs text-muted-foreground tabular-nums">

@@ -46,7 +46,9 @@ export class ConnectionService {
         (result.connection_type as DataSourceType) ||
         data.connection_type,
       config: (result.config as ConnectionConfig) || data.config,
-      status: (result.status as "active" | "inactive" | "error" | "testing") || "inactive",
+      status:
+        (result.status as "active" | "inactive" | "error" | "testing") ||
+        "inactive",
       last_connected_at:
         (result.lastConnectedAt as string) ||
         (result.last_connected_at as string) ||
@@ -198,7 +200,10 @@ export class ConnectionService {
 
     const discovered = await PythonETLService.discoverSchema(sourceType, {
       source_type: sourceType,
-      connection_config: connection.config as unknown as Record<string, unknown>,
+      connection_config: connection.config as unknown as Record<
+        string,
+        unknown
+      >,
       source_config: {},
       table_name: options?.tableName,
       schema_name: options?.schemaName,

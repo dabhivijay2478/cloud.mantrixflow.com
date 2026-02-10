@@ -608,9 +608,10 @@ export function DataTable<TData, TValue>({
   }
 
   const selectedRowCount = Object.values(selection).filter(Boolean).length;
-  const totalRowCount = manualPagination && totalCount != null
-    ? totalCount
-    : table.getFilteredRowModel().rows.length;
+  const totalRowCount =
+    manualPagination && totalCount != null
+      ? totalCount
+      : table.getFilteredRowModel().rows.length;
 
   return (
     <div className={cn("w-full space-y-4", className)}>
@@ -800,7 +801,9 @@ export function DataTable<TData, TValue>({
           {/* Rows per page selector */}
           {(table.getPageCount() > 1 || manualPagination) && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Rows per page</span>
+              <span className="text-sm text-muted-foreground">
+                Rows per page
+              </span>
               <select
                 className="h-8 w-[70px] rounded-md border border-input bg-background px-2 text-sm"
                 value={paginationState.pageSize}
@@ -823,7 +826,8 @@ export function DataTable<TData, TValue>({
         </div>
 
         {/* Pagination Controls - Bottom Right */}
-        {(table.getPageCount() > 1 || (manualPagination && totalRowCount > paginationState.pageSize)) && (
+        {(table.getPageCount() > 1 ||
+          (manualPagination && totalRowCount > paginationState.pageSize)) && (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

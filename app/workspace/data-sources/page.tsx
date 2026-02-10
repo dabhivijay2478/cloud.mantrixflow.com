@@ -82,7 +82,7 @@ export default function DataSourcesPage() {
     .map((ds) => ({
       ...ds,
       disabled: false, // All shown sources are enabled
-    })) as Array<typeof allDataSources[number] & { disabled: boolean }>;
+    })) as Array<(typeof allDataSources)[number] & { disabled: boolean }>;
 
   // Get all unique user IDs from connections for fetching user names
   const userIds = useMemo(
@@ -209,7 +209,7 @@ export default function DataSourcesPage() {
 
     const dataSource = enabledDataSources.find(
       (ds) => ds.id === connectingDataSourceId,
-    ) as (typeof allDataSources[number] & { disabled: boolean }) | undefined;
+    ) as ((typeof allDataSources)[number] & { disabled: boolean }) | undefined;
     if (!dataSource) return;
 
     try {
@@ -323,7 +323,7 @@ export default function DataSourcesPage() {
       const foundDataSource = enabledDataSources.find(
         (ds) => ds.id === connectingDataSourceId,
       );
-      
+
       // Get the source type from the data source definition
       // Use type first (from allDataSources), then id as fallback
       let sourceType: string = "postgres";

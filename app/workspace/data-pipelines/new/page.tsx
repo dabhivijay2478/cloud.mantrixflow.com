@@ -447,8 +447,8 @@ export default function NewPipelinePage() {
                   Name your pipeline
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Give your pipeline a unique, descriptive name so you can find it
-                  easily.
+                  Give your pipeline a unique, descriptive name so you can find
+                  it easily.
                 </p>
                 <div className="mt-6">
                   <Label

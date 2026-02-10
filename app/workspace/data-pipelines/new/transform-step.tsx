@@ -1131,7 +1131,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                                       if (!current[fieldPath[i]]) {
                                         current[fieldPath[i]] = {};
                                       }
-                                      current = current[fieldPath[i]] as Record<string, unknown>;
+                                      current = current[fieldPath[i]] as Record<
+                                        string,
+                                        unknown
+                                      >;
                                     }
                                     current[fieldName] = exampleValue;
                                   } else {

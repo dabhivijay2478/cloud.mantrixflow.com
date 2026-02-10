@@ -20,8 +20,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { DataPreviewTable, ScheduleEditor } from "@/components/data-pipelines";
-import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { LoadingState } from "@/components/shared";
+import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,7 +106,12 @@ export default function PipelineDetailPage() {
     error: sourcePreviewError,
     refetch: refetchSourcePreview,
     isFetching: sourcePreviewRefreshing,
-  } = usePreviewSourceData(organizationId, sourceSchemaId, 10, !!sourceSchemaId);
+  } = usePreviewSourceData(
+    organizationId,
+    sourceSchemaId,
+    10,
+    !!sourceSchemaId,
+  );
 
   const {
     data: destinationPreview,
@@ -956,9 +961,13 @@ export default function PipelineDetailPage() {
                   </span>
                   <span className="font-medium font-mono text-xs">
                     {(pipeline.checkpoint &&
-                      (pipeline.checkpoint as Record<string, unknown>)?.watermarkField
-                        ? String((pipeline.checkpoint as Record<string, unknown>).watermarkField)
-                        : null) ||
+                    (pipeline.checkpoint as Record<string, unknown>)
+                      ?.watermarkField
+                      ? String(
+                          (pipeline.checkpoint as Record<string, unknown>)
+                            .watermarkField,
+                        )
+                      : null) ||
                       pipeline.incrementalColumn ||
                       "-"}
                   </span>

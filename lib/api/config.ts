@@ -13,7 +13,8 @@ const normalizeApiUrl = (url: string | undefined): string => {
   const raw = (url ?? "").trim();
   if (!raw) return "";
   const trimmed = raw.replace(/\/+$/, "");
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
+    return trimmed;
   return `https://${trimmed}`;
 };
 
@@ -24,7 +25,9 @@ const API_BASE_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
  */
 export const getApiBaseUrl = (): string => {
   if (!API_BASE_URL) {
-    throw new Error("NEXT_PUBLIC_API_URL must be set in environment (e.g. in apps/app .env)");
+    throw new Error(
+      "NEXT_PUBLIC_API_URL must be set in environment (e.g. in apps/app .env)",
+    );
   }
   return API_BASE_URL;
 };

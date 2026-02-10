@@ -126,7 +126,9 @@ export class SourceSchemasService {
       true, // includeSensitive = true to get decrypted config
     );
 
-    const connectionWithConfig = connection as typeof connection & { config?: Record<string, unknown> };
+    const connectionWithConfig = connection as typeof connection & {
+      config?: Record<string, unknown>;
+    };
     if (!connectionWithConfig || !connectionWithConfig.config) {
       throw new Error("Connection not configured for this data source");
     }
@@ -204,7 +206,9 @@ export class SourceSchemasService {
       true, // includeSensitive = true to get decrypted config
     );
 
-    const connectionWithConfig = connection as typeof connection & { config?: Record<string, unknown> };
+    const connectionWithConfig = connection as typeof connection & {
+      config?: Record<string, unknown>;
+    };
     if (!connectionWithConfig || !connectionWithConfig.config) {
       throw new Error("Connection not configured for this data source");
     }

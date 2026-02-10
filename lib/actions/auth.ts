@@ -211,7 +211,9 @@ export async function signupAction(
       process.env.NEXT_PUBLIC_SITE_URL ??
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
-    const redirectTo = siteUrl ? `${siteUrl}/auth/callback?type=signup` : undefined;
+    const redirectTo = siteUrl
+      ? `${siteUrl}/auth/callback?type=signup`
+      : undefined;
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -344,7 +346,9 @@ export async function forgotPasswordAction(
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: siteUrl ? `${siteUrl}/auth/callback?type=recovery` : undefined,
+      redirectTo: siteUrl
+        ? `${siteUrl}/auth/callback?type=recovery`
+        : undefined,
     });
 
     if (error) {

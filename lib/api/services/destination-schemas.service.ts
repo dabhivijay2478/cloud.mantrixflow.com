@@ -159,11 +159,10 @@ export class DestinationSchemasService {
     limit: number = 10,
   ): Promise<PreviewDataResult> {
     // Get destination schema from NestJS (CRUD)
-    const schema =
-      await DestinationSchemasService.getDestinationSchema(
-        organizationId,
-        destinationSchemaId,
-      );
+    const schema = await DestinationSchemasService.getDestinationSchema(
+      organizationId,
+      destinationSchemaId,
+    );
 
     if (!schema.dataSourceId) {
       throw new Error("Destination schema must have a data source ID");

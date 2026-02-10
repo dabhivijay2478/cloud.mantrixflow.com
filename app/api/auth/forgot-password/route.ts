@@ -20,7 +20,9 @@ export async function POST(request: Request) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: siteUrl ? `${siteUrl}/auth/callback?type=recovery` : undefined,
+      redirectTo: siteUrl
+        ? `${siteUrl}/auth/callback?type=recovery`
+        : undefined,
     });
 
     if (error) {

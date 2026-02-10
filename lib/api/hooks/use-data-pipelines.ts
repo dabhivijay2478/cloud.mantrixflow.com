@@ -13,8 +13,8 @@ import type {
   RunPipelineDto,
   UpdatePipelineDto,
 } from "../types/data-pipelines";
-import { sourceSchemasKeys } from "./use-source-schemas";
 import { destinationSchemasKeys } from "./use-destination-schemas";
+import { sourceSchemasKeys } from "./use-source-schemas";
 
 // Query Keys
 export const dataPipelinesKeys = {
@@ -284,8 +284,7 @@ export function useDeletePipeline(organizationId: string | undefined) {
       // Optimistic update: remove from list immediately
       const listKey = dataPipelinesKeys.pipelines.list(organizationId);
       await queryClient.cancelQueries({ queryKey: listKey });
-      const previousPipelines =
-        queryClient.getQueryData<Pipeline[]>(listKey);
+      const previousPipelines = queryClient.getQueryData<Pipeline[]>(listKey);
       if (previousPipelines) {
         queryClient.setQueryData<Pipeline[]>(
           listKey,
@@ -411,7 +410,10 @@ export function useRunPipeline(
     onSettled: () => {
       if (!organizationId || !pipelineId) return;
       queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+        queryKey: dataPipelinesKeys.pipelines.detail(
+          organizationId,
+          pipelineId,
+        ),
       });
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.pipelines.list(organizationId),
@@ -469,7 +471,10 @@ export function usePausePipeline(
     onSettled: () => {
       if (!organizationId || !pipelineId) return;
       queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+        queryKey: dataPipelinesKeys.pipelines.detail(
+          organizationId,
+          pipelineId,
+        ),
       });
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.pipelines.list(organizationId),
@@ -521,7 +526,10 @@ export function useResumePipeline(
     onSettled: () => {
       if (!organizationId || !pipelineId) return;
       queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+        queryKey: dataPipelinesKeys.pipelines.detail(
+          organizationId,
+          pipelineId,
+        ),
       });
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.pipelines.list(organizationId),

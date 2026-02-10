@@ -9,8 +9,7 @@
 
 import type { ColumnInfo } from "../types/data-pipelines";
 
-const PYTHON_SERVICE_URL =
-  process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL;
+const PYTHON_SERVICE_URL = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL;
 
 export interface DiscoverSchemaRequest {
   source_type: string;
@@ -298,5 +297,4 @@ export class PythonETLService {
       body: JSON.stringify(requestData),
     });
   }
-
 }
