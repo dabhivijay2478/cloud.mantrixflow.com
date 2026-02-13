@@ -65,8 +65,11 @@ export default function DataPipelinesPage() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
 
   // API hooks
-  const { data: paginatedResult, isLoading: pipelinesLoading } =
-    usePipelinesPaginated(organizationId, pagination);
+  const {
+    data: paginatedResult,
+    isLoading: pipelinesLoading,
+    isFetching: pipelinesFetching,
+  } = usePipelinesPaginated(organizationId, pagination);
   const pipelines = paginatedResult?.data;
   const deletePipeline = useDeletePipeline(organizationId);
 
@@ -833,6 +836,8 @@ export default function DataPipelinesPage() {
             <Button
               variant="outline"
               size="sm"
+              disabled={pipelinesFetching}
+              aria-label="Refresh pipelines"
               onClick={() =>
                 queryClient.invalidateQueries({
                   queryKey: dataPipelinesKeys.pipelines.list(
@@ -841,8 +846,10 @@ export default function DataPipelinesPage() {
                 })
               }
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${pipelinesFetching ? "animate-spin" : ""}`}
+              />
+              {pipelinesFetching ? "Refreshing…" : "Refresh"}
             </Button>
             <Button
               onClick={() => router.push("/workspace/data-pipelines/new")}
