@@ -82,6 +82,7 @@ export const dataPipelinesKeys = {
 
 /**
  * Create a new pipeline
+ * Invalidates: pipeline lists, dashboard, activity logs
  */
 export function useCreatePipeline(organizationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -94,8 +95,17 @@ export function useCreatePipeline(organizationId: string | undefined) {
     },
     onSuccess: () => {
       if (organizationId) {
+        // Invalidate all pipeline list queries (including paginated)
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+          queryKey: dataPipelinesKeys.pipelines.lists(),
+        });
+        // Invalidate dashboard to reflect new pipeline count
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },
@@ -202,7 +212,8 @@ export function usePipelineWithSchemas(
 
 /**
  * Update pipeline
- * Invalidates detail, full (with schemas), list, and associated schema caches
+ * Invalidates: detail, full (with schemas), all list queries (including paginated),
+ * associated source/destination schema caches, dashboard, activity logs
  */
 export function useUpdatePipeline(
   organizationId: string | undefined,
@@ -234,9 +245,9 @@ export function useUpdatePipeline(
             pipelineId,
           ),
         });
-        // Invalidate list
+        // Invalidate all pipeline list queries (including paginated)
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+          queryKey: dataPipelinesKeys.pipelines.lists(),
         });
         // Invalidate associated source/destination schema caches
         if (updatedPipeline.sourceSchemaId) {
@@ -255,6 +266,14 @@ export function useUpdatePipeline(
             ),
           });
         }
+        // Invalidate dashboard
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
+        });
       }
     },
   });
@@ -262,7 +281,8 @@ export function useUpdatePipeline(
 
 /**
  * Delete pipeline
- * Cleans up all related caches: detail, full, list, runs, stats, and schema queries
+ * Cleans up all related caches: detail, full, list (all paginated variants), runs, stats,
+ * validation, schema queries, dashboard, activity logs, global search
  */
 export function useDeletePipeline(organizationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -322,6 +342,12 @@ export function useDeletePipeline(organizationId: string | undefined) {
       queryClient.removeQueries({
         queryKey: dataPipelinesKeys.stats(organizationId, deletedPipelineId),
       });
+      queryClient.removeQueries({
+        queryKey: dataPipelinesKeys.validation(
+          organizationId,
+          deletedPipelineId,
+        ),
+      });
 
       // Invalidate schema caches associated with this pipeline
       const pipeline = context?.pipeline;
@@ -348,9 +374,21 @@ export function useDeletePipeline(organizationId: string | undefined) {
         });
       }
 
-      // Invalidate pipeline list
+      // Invalidate ALL pipeline list queries (including all paginated variants)
       queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        queryKey: dataPipelinesKeys.pipelines.lists(),
+      });
+      // Invalidate dashboard to reflect updated counts
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
+      // Invalidate global search
+      queryClient.invalidateQueries({
+        queryKey: ["global-search"],
       });
     },
   });
@@ -362,6 +400,7 @@ export function useDeletePipeline(organizationId: string | undefined) {
 
 /**
  * Run pipeline
+ * Invalidates: pipeline detail + list, runs, stats, dashboard, activity logs
  */
 export function useRunPipeline(
   organizationId: string | undefined,
@@ -415,8 +454,9 @@ export function useRunPipeline(
           pipelineId,
         ),
       });
+      // Invalidate all pipeline list queries (including paginated)
       queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        queryKey: dataPipelinesKeys.pipelines.lists(),
       });
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.runs(organizationId, pipelineId),
@@ -424,12 +464,21 @@ export function useRunPipeline(
       queryClient.invalidateQueries({
         queryKey: dataPipelinesKeys.stats(organizationId, pipelineId),
       });
+      // Invalidate dashboard
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
     },
   });
 }
 
 /**
  * Pause pipeline
+ * Invalidates: pipeline detail + all list queries, dashboard, activity logs
  */
 export function usePausePipeline(
   organizationId: string | undefined,
@@ -476,8 +525,17 @@ export function usePausePipeline(
           pipelineId,
         ),
       });
+      // Invalidate all pipeline list queries (including paginated)
       queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        queryKey: dataPipelinesKeys.pipelines.lists(),
+      });
+      // Invalidate dashboard
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
@@ -485,6 +543,7 @@ export function usePausePipeline(
 
 /**
  * Resume pipeline
+ * Invalidates: pipeline detail + all list queries, dashboard, activity logs
  */
 export function useResumePipeline(
   organizationId: string | undefined,
@@ -531,8 +590,17 @@ export function useResumePipeline(
           pipelineId,
         ),
       });
+      // Invalidate all pipeline list queries (including paginated)
       queryClient.invalidateQueries({
-        queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+        queryKey: dataPipelinesKeys.pipelines.lists(),
+      });
+      // Invalidate dashboard
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
@@ -540,6 +608,7 @@ export function useResumePipeline(
 
 /**
  * Cancel a running pipeline run
+ * Invalidates: run detail, runs list, pipeline detail + list, dashboard, activity logs
  */
 export function useCancelPipelineRun(
   organizationId: string | undefined,
@@ -574,6 +643,18 @@ export function useCancelPipelineRun(
             organizationId,
             pipelineId,
           ),
+        });
+        // Invalidate all pipeline list queries
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.lists(),
+        });
+        // Invalidate dashboard
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },

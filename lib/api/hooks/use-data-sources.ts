@@ -74,8 +74,17 @@ export function useCreateConnection(orgId?: string) {
     mutationFn: (data: CreateConnectionDto) =>
       DataSourcesService.createConnection(data, orgId),
     onSuccess: () => {
+      // Invalidate all connection list queries
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.connections.lists(),
+      });
+      // Invalidate dashboard to reflect new connection
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
@@ -110,11 +119,21 @@ export function useUpdateConnection() {
     mutationFn: ({ id, data }: { id: string; data: UpdateConnectionDto }) =>
       DataSourcesService.updateConnection(id, data),
     onSuccess: (_, variables) => {
+      // Invalidate the specific connection detail
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.connections.detail(variables.id),
       });
+      // Invalidate all connection list queries
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.connections.lists(),
+      });
+      // Invalidate dashboard
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
@@ -124,9 +143,62 @@ export function useDeleteConnection(orgId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => DataSourcesService.deleteConnection(id, orgId),
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
+      // Remove the specific connection detail cache
+      queryClient.removeQueries({
+        queryKey: dataSourcesKeys.connections.detail(deletedId),
+      });
+      // Invalidate all connection list queries
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.connections.lists(),
+      });
+      // Remove all caches related to the deleted connection
+      queryClient.removeQueries({
+        queryKey: dataSourcesKeys.databases(deletedId),
+      });
+      queryClient.removeQueries({
+        queryKey: dataSourcesKeys.schemas(deletedId),
+      });
+      queryClient.removeQueries({
+        queryKey: [...dataSourcesKeys.all, "tables", deletedId],
+      });
+      queryClient.removeQueries({
+        queryKey: [...dataSourcesKeys.all, "table-schema", deletedId],
+      });
+      queryClient.removeQueries({
+        queryKey: dataSourcesKeys.syncJobs(deletedId),
+      });
+      queryClient.removeQueries({
+        queryKey: dataSourcesKeys.health(deletedId),
+      });
+      queryClient.removeQueries({
+        queryKey: [...dataSourcesKeys.all, "query-logs", deletedId],
+      });
+      queryClient.removeQueries({
+        queryKey: dataSourcesKeys.metrics(deletedId),
+      });
+      // Invalidate pipelines that may reference this connection
+      queryClient.invalidateQueries({
+        queryKey: ["data-pipelines"],
+      });
+      // Invalidate source/destination schemas
+      queryClient.invalidateQueries({
+        queryKey: ["source-schemas"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["destination-schemas"],
+      });
+      // Invalidate dashboard
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
+      // Invalidate global search
+      queryClient.invalidateQueries({
+        queryKey: ["global-search"],
       });
     },
   });
@@ -231,7 +303,10 @@ export function useRefreshSchema() {
         queryKey: dataSourcesKeys.schemas(connectionId),
       });
       queryClient.invalidateQueries({
-        queryKey: dataSourcesKeys.tables(connectionId),
+        queryKey: [...dataSourcesKeys.all, "tables", connectionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...dataSourcesKeys.all, "table-schema", connectionId],
       });
     },
   });
@@ -276,6 +351,10 @@ export function useCreateSyncJob() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.syncJobs(variables.connectionId),
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
@@ -328,6 +407,10 @@ export function useCancelSyncJob() {
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.syncJobs(variables.connectionId),
       });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
     },
   });
 }
@@ -353,6 +436,10 @@ export function useUpdateSyncJobSchedule() {
       });
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.syncJobs(variables.connectionId),
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
