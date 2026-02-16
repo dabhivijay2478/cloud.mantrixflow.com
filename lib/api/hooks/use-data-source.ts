@@ -9,6 +9,7 @@ import type {
   CreateDataSourceDto,
   UpdateDataSourceDto,
 } from "../types/data-sources";
+import { dataSourcesKeys } from "./use-data-sources";
 
 // Query Keys
 export const dataSourceKeys = {
@@ -115,6 +116,7 @@ export function useSupportedDataSourceTypes(
 
 /**
  * Hook to create a data source
+ * Invalidates: data source lists (all pagination states), dashboard, activity logs
  */
 export function useCreateDataSource(organizationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -128,11 +130,21 @@ export function useCreateDataSource(organizationId: string | undefined) {
     },
     onSuccess: () => {
       if (organizationId) {
+        // Invalidate all data source list queries (including paginated variants)
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.lists(),
         });
+        // Also invalidate legacy connections list (used by data sources page)
         queryClient.invalidateQueries({
-          queryKey: dataSourceKeys.list(organizationId),
+          queryKey: dataSourcesKeys.connections.lists(),
+        });
+        // Invalidate dashboard to reflect new data source count
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs to show the create action
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },
@@ -141,6 +153,7 @@ export function useCreateDataSource(organizationId: string | undefined) {
 
 /**
  * Hook to update a data source
+ * Invalidates: data source detail + lists, connections, dashboard, activity logs
  */
 export function useUpdateDataSource(
   organizationId: string | undefined,
@@ -161,11 +174,25 @@ export function useUpdateDataSource(
     },
     onSuccess: () => {
       if (organizationId && dataSourceId) {
+        // Invalidate specific detail cache
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.detail(organizationId, dataSourceId),
         });
+        // Invalidate all data source list queries (including paginated variants)
         queryClient.invalidateQueries({
-          queryKey: dataSourceKeys.list(organizationId),
+          queryKey: dataSourceKeys.lists(),
+        });
+        // Invalidate connection queries for this data source
+        queryClient.invalidateQueries({
+          queryKey: ["connections", "detail", organizationId, dataSourceId],
+        });
+        // Invalidate dashboard to reflect updated status
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },
@@ -174,6 +201,8 @@ export function useUpdateDataSource(
 
 /**
  * Hook to delete a data source
+ * Invalidates: data source lists (all pagination states), removes detail cache,
+ * connections, pipelines, source/destination schemas, dashboard, activity logs
  */
 export function useDeleteDataSource(organizationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -185,10 +214,56 @@ export function useDeleteDataSource(organizationId: string | undefined) {
       }
       return DataSourceService.deleteDataSource(organizationId, dataSourceId);
     },
-    onSuccess: () => {
+    onSuccess: (_, deletedDataSourceId) => {
       if (organizationId) {
+        // Remove the specific detail cache for the deleted data source
+        queryClient.removeQueries({
+          queryKey: dataSourceKeys.detail(organizationId, deletedDataSourceId),
+        });
+        // Invalidate all data source list queries (including all paginated variants)
         queryClient.invalidateQueries({
-          queryKey: dataSourceKeys.list(organizationId),
+          queryKey: dataSourceKeys.lists(),
+        });
+        // Also invalidate legacy connections list (used by data sources page)
+        queryClient.invalidateQueries({
+          queryKey: dataSourcesKeys.connections.lists(),
+        });
+        // Remove legacy connection detail cache for the deleted data source
+        queryClient.removeQueries({
+          queryKey: dataSourcesKeys.connections.detail(deletedDataSourceId),
+        });
+        // Remove connection cache for the deleted data source (new API)
+        queryClient.removeQueries({
+          queryKey: [
+            "connections",
+            "detail",
+            organizationId,
+            deletedDataSourceId,
+          ],
+        });
+        // Invalidate pipelines - they might reference this data source
+        queryClient.invalidateQueries({
+          queryKey: ["data-pipelines"],
+        });
+        // Invalidate source schemas - they might reference this data source
+        queryClient.invalidateQueries({
+          queryKey: ["source-schemas"],
+        });
+        // Invalidate destination schemas - they might reference this data source
+        queryClient.invalidateQueries({
+          queryKey: ["destination-schemas"],
+        });
+        // Invalidate dashboard to reflect updated counts
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs to show the delete action
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
+        });
+        // Invalidate global search results as they may include the deleted source
+        queryClient.invalidateQueries({
+          queryKey: ["global-search"],
         });
       }
     },

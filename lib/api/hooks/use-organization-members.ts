@@ -89,6 +89,7 @@ export function useOrganizationMember(
 
 /**
  * Hook to invite a member
+ * Invalidates: all member list queries (including paginated), activity logs
  */
 export function useInviteMember() {
   const queryClient = useQueryClient();
@@ -102,9 +103,13 @@ export function useInviteMember() {
       data: InviteMemberDto;
     }) => OrganizationsService.inviteMember(organizationId, data),
     onSuccess: (_, variables) => {
-      // Invalidate members list
+      // Invalidate all member list queries (including paginated)
       queryClient.invalidateQueries({
-        queryKey: organizationMembersKeys.list(variables.organizationId),
+        queryKey: organizationMembersKeys.lists(),
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
@@ -112,6 +117,7 @@ export function useInviteMember() {
 
 /**
  * Hook to update a member
+ * Invalidates: all member list queries (including paginated), member detail, activity logs
  */
 export function useUpdateMember() {
   const queryClient = useQueryClient();
@@ -127,15 +133,20 @@ export function useUpdateMember() {
       data: UpdateMemberDto;
     }) => OrganizationsService.updateMember(organizationId, memberId, data),
     onSuccess: (_, variables) => {
-      // Invalidate members list and detail
+      // Invalidate all member list queries (including paginated)
       queryClient.invalidateQueries({
-        queryKey: organizationMembersKeys.list(variables.organizationId),
+        queryKey: organizationMembersKeys.lists(),
       });
+      // Invalidate the specific member detail
       queryClient.invalidateQueries({
         queryKey: organizationMembersKeys.detail(
           variables.organizationId,
           variables.memberId,
         ),
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });
@@ -143,6 +154,8 @@ export function useUpdateMember() {
 
 /**
  * Hook to remove a member
+ * Invalidates: all member list queries (including paginated), removes member detail,
+ * activity logs
  */
 export function useRemoveMember() {
   const queryClient = useQueryClient();
@@ -156,9 +169,20 @@ export function useRemoveMember() {
       memberId: string;
     }) => OrganizationsService.removeMember(organizationId, memberId),
     onSuccess: (_, variables) => {
-      // Invalidate members list
+      // Remove the specific member detail cache
+      queryClient.removeQueries({
+        queryKey: organizationMembersKeys.detail(
+          variables.organizationId,
+          variables.memberId,
+        ),
+      });
+      // Invalidate all member list queries (including paginated)
       queryClient.invalidateQueries({
-        queryKey: organizationMembersKeys.list(variables.organizationId),
+        queryKey: organizationMembersKeys.lists(),
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
       });
     },
   });

@@ -114,6 +114,7 @@ export function useSourceSchema(
 
 /**
  * Create source schema
+ * Invalidates: all source schema list queries (including paginated), activity logs
  */
 export function useCreateSourceSchema(organizationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -126,8 +127,13 @@ export function useCreateSourceSchema(organizationId: string | undefined) {
     },
     onSuccess: () => {
       if (organizationId) {
+        // Invalidate all source schema list queries (including paginated)
         queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.list(organizationId),
+          queryKey: sourceSchemasKeys.lists(),
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },
@@ -136,6 +142,7 @@ export function useCreateSourceSchema(organizationId: string | undefined) {
 
 /**
  * Update source schema
+ * Invalidates: detail, all list queries (including paginated), pipelines, activity logs
  */
 export function useUpdateSourceSchema(
   organizationId: string | undefined,
@@ -160,9 +167,17 @@ export function useUpdateSourceSchema(
           sourceSchemasKeys.detail(organizationId, schemaId),
           updatedSchema,
         );
-        // Invalidate list to reflect changes
+        // Invalidate all list queries (including paginated)
         queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.list(organizationId),
+          queryKey: sourceSchemasKeys.lists(),
+        });
+        // Invalidate pipelines that reference this schema
+        queryClient.invalidateQueries({
+          queryKey: ["data-pipelines"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },
@@ -171,6 +186,8 @@ export function useUpdateSourceSchema(
 
 /**
  * Delete source schema
+ * Invalidates: removes detail/discovery/validation/preview caches,
+ * all list queries (including paginated), pipelines, dashboard, activity logs, global search
  */
 export function useDeleteSourceSchema(organizationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -183,13 +200,44 @@ export function useDeleteSourceSchema(organizationId: string | undefined) {
     },
     onSuccess: (_, deletedSchemaId) => {
       if (organizationId) {
-        // Remove from cache
+        // Remove all caches specific to the deleted schema
         queryClient.removeQueries({
           queryKey: sourceSchemasKeys.detail(organizationId, deletedSchemaId),
         });
-        // Invalidate list
+        queryClient.removeQueries({
+          queryKey: sourceSchemasKeys.discovery(
+            organizationId,
+            deletedSchemaId,
+          ),
+        });
+        queryClient.removeQueries({
+          queryKey: sourceSchemasKeys.validation(
+            organizationId,
+            deletedSchemaId,
+          ),
+        });
+        queryClient.removeQueries({
+          queryKey: sourceSchemasKeys.preview(organizationId, deletedSchemaId),
+        });
+        // Invalidate all source schema list queries (including paginated)
         queryClient.invalidateQueries({
-          queryKey: sourceSchemasKeys.list(organizationId),
+          queryKey: sourceSchemasKeys.lists(),
+        });
+        // Invalidate pipelines that may reference this schema
+        queryClient.invalidateQueries({
+          queryKey: ["data-pipelines"],
+        });
+        // Invalidate dashboard
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
+        });
+        // Invalidate global search
+        queryClient.invalidateQueries({
+          queryKey: ["global-search"],
         });
       }
     },
