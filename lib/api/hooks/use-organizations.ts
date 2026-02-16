@@ -36,6 +36,13 @@ export function useCreateOrganization() {
       queryClient.invalidateQueries({
         queryKey: organizationsKeys.current(),
       });
+      queryClient.invalidateQueries({
+        queryKey: organizationsKeys.canCreate(),
+      });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
     },
   });
 }
@@ -81,6 +88,10 @@ export function useUpdateOrganization() {
       queryClient.invalidateQueries({
         queryKey: organizationsKeys.current(),
       });
+      // Invalidate activity logs
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
     },
   });
 }
@@ -89,12 +100,47 @@ export function useDeleteOrganization() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => OrganizationsService.deleteOrganization(id),
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
+      // Remove specific org detail cache
+      queryClient.removeQueries({
+        queryKey: organizationsKeys.detail(deletedId),
+      });
       queryClient.invalidateQueries({
         queryKey: organizationsKeys.lists(),
       });
       queryClient.invalidateQueries({
         queryKey: organizationsKeys.current(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: organizationsKeys.canCreate(),
+      });
+      // Invalidate all org-dependent queries since the org is deleted
+      queryClient.invalidateQueries({
+        queryKey: ["organization-members"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["data-sources"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["data-pipelines"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["source-schemas"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["destination-schemas"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["connections"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["global-search"],
       });
     },
   });
@@ -112,7 +158,7 @@ export function useSetCurrentOrganization() {
       queryClient.invalidateQueries({
         queryKey: organizationsKeys.lists(),
       });
-      // Invalidate organization-dependent queries to refresh context
+      // Invalidate ALL organization-dependent queries to refresh context
       queryClient.invalidateQueries({
         queryKey: ["organization-members"],
       });
@@ -121,6 +167,24 @@ export function useSetCurrentOrganization() {
       });
       queryClient.invalidateQueries({
         queryKey: ["data-pipelines"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["source-schemas"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["destination-schemas"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["connections"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["global-search"],
       });
     },
   });
@@ -158,9 +222,13 @@ export function useTransferOwnership(organizationId: string | undefined) {
         queryClient.invalidateQueries({
           queryKey: organizationsKeys.current(),
         });
-        // Invalidate members list to refresh owner status
+        // Invalidate all member queries (including paginated)
         queryClient.invalidateQueries({
           queryKey: ["organization-members"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },

@@ -101,7 +101,7 @@ export default function DataPipelinesPage() {
           ),
         });
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+          queryKey: dataPipelinesKeys.pipelines.lists(),
         });
       }
     },
@@ -121,7 +121,7 @@ export default function DataPipelinesPage() {
           ),
         });
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+          queryKey: dataPipelinesKeys.pipelines.lists(),
         });
       }
     },
@@ -141,7 +141,7 @@ export default function DataPipelinesPage() {
           ),
         });
         queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.list(organizationId),
+          queryKey: dataPipelinesKeys.pipelines.lists(),
         });
       }
     },
@@ -840,9 +840,7 @@ export default function DataPipelinesPage() {
               aria-label="Refresh pipelines"
               onClick={() =>
                 queryClient.invalidateQueries({
-                  queryKey: dataPipelinesKeys.pipelines.list(
-                    organizationId || "",
-                  ),
+                  queryKey: dataPipelinesKeys.pipelines.lists(),
                 })
               }
             >

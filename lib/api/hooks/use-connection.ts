@@ -45,6 +45,7 @@ export function useConnection(
 
 /**
  * Hook to create or update connection
+ * Invalidates: connection detail, data source detail + lists, dashboard, activity logs
  */
 export function useCreateOrUpdateConnection(
   organizationId: string | undefined,
@@ -71,6 +72,18 @@ export function useCreateOrUpdateConnection(
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.detail(organizationId, dataSourceId),
         });
+        // Invalidate all data source list queries to reflect connection status changes
+        queryClient.invalidateQueries({
+          queryKey: dataSourceKeys.lists(),
+        });
+        // Invalidate dashboard
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
+        });
       }
     },
   });
@@ -78,6 +91,7 @@ export function useCreateOrUpdateConnection(
 
 /**
  * Hook to update connection configuration
+ * Invalidates: connection detail, data source detail + lists, dashboard, activity logs
  */
 export function useUpdateConnection(
   organizationId: string | undefined,
@@ -104,6 +118,18 @@ export function useUpdateConnection(
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.detail(organizationId, dataSourceId),
         });
+        // Invalidate all data source list queries to reflect connection status changes
+        queryClient.invalidateQueries({
+          queryKey: dataSourceKeys.lists(),
+        });
+        // Invalidate dashboard
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
+        });
       }
     },
   });
@@ -111,6 +137,7 @@ export function useUpdateConnection(
 
 /**
  * Hook to test connection
+ * Invalidates: connection detail, data source detail + lists, activity logs
  */
 export function useTestConnection(
   organizationId: string | undefined,
@@ -133,6 +160,14 @@ export function useTestConnection(
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.detail(organizationId, dataSourceId),
         });
+        // Invalidate all data source list queries to reflect connection test results
+        queryClient.invalidateQueries({
+          queryKey: dataSourceKeys.lists(),
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
+        });
       }
     },
   });
@@ -140,6 +175,7 @@ export function useTestConnection(
 
 /**
  * Hook to discover schema
+ * Invalidates: connection detail, data source detail, source schemas, activity logs
  */
 export function useDiscoverSchema(
   organizationId: string | undefined,
@@ -161,6 +197,14 @@ export function useDiscoverSchema(
         });
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.detail(organizationId, dataSourceId),
+        });
+        // Invalidate source schemas since discovery affects them
+        queryClient.invalidateQueries({
+          queryKey: ["source-schemas"],
+        });
+        // Invalidate activity logs
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
         });
       }
     },

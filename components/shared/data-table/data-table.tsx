@@ -364,15 +364,9 @@ export function DataTable<TData, TValue>({
             } else if (storedSet.has(colId)) {
               // Column was explicitly visible in stored state
               visibility[colId] = true;
-            } else if (
-              !storedSet.has(colId) &&
-              defaultVisibleColumns?.includes(colId)
-            ) {
-              // Column not in stored state but is a default visible column
-              // This is likely a newly added column — show it by default
-              visibility[colId] = true;
             } else {
-              // Column not in stored state and not a default — hide it
+              // Column not in stored state — hide it
+              // This respects the user's choice to hide a column, even if it's in the default list
               visibility[colId] = false;
             }
           });
