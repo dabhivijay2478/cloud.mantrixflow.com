@@ -35,6 +35,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConnectorMetadata } from "@/lib/api/hooks/use-connector-metadata";
+import { useCreateConnection } from "@/lib/api";
+import type { CreateConnectionDto } from "@/lib/api";
 import {
   type DataSource,
   useWorkspaceStore,
@@ -78,6 +80,8 @@ export default function ConnectPage() {
     completeOnboarding,
     currentOrganization,
   } = useWorkspaceStore();
+  const organizationId = currentOrganization?.id;
+  const createConnection = useCreateConnection(organizationId);
   const [loading, setLoading] = useState(false);
   const [visiblePasswordFields, setVisiblePasswordFields] = useState<
     Record<string, boolean>
@@ -145,23 +149,70 @@ export default function ConnectPage() {
   };
 
   const onSubmit = async (data: ConnectionFormValues) => {
+    if (!organizationId) {
+      toast.error("No organization selected", "Please select an organization.");
+      return;
+    }
     setLoading(true);
     try {
-      const dataSource: DataSource = {
-        id: `ds_${Date.now()}`,
+      // Build config from form data (same pattern as data-sources handleConnect)
+      const config: Record<string, unknown> = {};
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === "name") return;
+        if (!value) return;
+        if (key === "port") {
+          config[key] = parseInt(value, 10);
+        } else {
+          config[key] = value;
+        }
+      });
+      // Include sync_mode for database connectors
+      if (["postgres", "mysql", "mongodb"].includes(connector)) {
+        config.sync_mode = data.sync_mode || "full";
+      }
+      // MongoDB connection string handling
+      if (connector === "mongodb") {
+        if (data.useConnectionString === "false") {
+          delete config.connection_string;
+        } else if (data.useConnectionString === "true") {
+          delete config.host;
+          delete config.port;
+          delete config.username;
+          delete config.password;
+          delete config.database;
+        }
+      }
+      // SSL for database types
+      if (["postgres", "mysql", "mongodb"].includes(connector)) {
+        if (data.ssl === "true" || data.tls === "true") {
+          if (connector !== "mongodb") config.ssl = { enabled: true };
+        } else if (data.ssl === "false" || data.tls === "false") {
+          if (connector !== "mongodb") config.ssl = undefined;
+        }
+      }
+
+      const connectionData: CreateConnectionDto = {
         name: data.name || `${connector} Connection`,
-        type: connector as DataSource["type"],
-        status: "connected" as const,
-        organizationId: currentOrganization?.id,
-        connectedAt: new Date().toISOString(),
+        connection_type: connector as CreateConnectionDto["connection_type"],
+        config: config as CreateConnectionDto["config"],
       };
 
+      const created = await createConnection.mutateAsync(connectionData);
+
+      const dataSource: DataSource = {
+        id: created.id,
+        name: created.name ?? data.name ?? `${connector} Connection`,
+        type: (created.type ?? connector) as DataSource["type"],
+        status: "connected",
+        organizationId: organizationId,
+        connectedAt: new Date().toISOString(),
+      };
       addDataSource(dataSource);
       updateOnboarding({ dataSourceId: dataSource.id });
       toast.success("Connection successful!");
       router.push(`/onboarding/connect/${connector}/select`);
     } catch (error) {
-      toast.error("Failed to connect. Please check your credentials.");
+      toast.error("Failed to connect", error instanceof Error ? error.message : "Please check your credentials.");
       console.error(error);
     } finally {
       setLoading(false);

@@ -57,6 +57,7 @@ export interface CollectorConfig {
     fieldMappings?: Array<{ source: string; destination: string }>;
     destinationTable?: string; // Selected destination table (schema.table format)
     primaryKeyField?: string; // Explicitly defined primary key field name
+    dbtModels?: string[]; // Selected dbt model names; empty = run all
   }>;
 }
 

@@ -255,6 +255,7 @@ export interface CreateDestinationSchemaDto {
   destinationTable: string;
   destinationTableExists?: boolean;
   transformScript?: string; // Custom Python transform script
+  dbtModels?: string[]; // Selected dbt model names; empty = run all
   writeMode?: WriteMode;
   upsertKey?: string[];
   name?: string;
@@ -265,6 +266,7 @@ export interface UpdateDestinationSchemaDto {
   destinationSchema?: string;
   destinationTable?: string;
   transformScript?: string;
+  dbtModels?: string[];
   writeMode?: WriteMode;
   upsertKey?: string[];
   isActive?: boolean;

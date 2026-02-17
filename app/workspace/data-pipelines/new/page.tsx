@@ -332,6 +332,7 @@ export default function NewPipelinePage() {
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
             name: `Destination: ${destTableName}`,
+            dbtModels: (firstTransformer as Transformer & { dbtModels?: string[] }).dbtModels,
           },
         );
 

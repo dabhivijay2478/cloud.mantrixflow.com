@@ -32,6 +32,7 @@ import {
 import { useDbtModels } from "@/lib/api/hooks/use-data-pipelines";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
 import type { EmitterConfig } from "./emitter-step";
 
@@ -449,18 +450,29 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   };
 
   const handleContinue = () => {
-    // Validate that at least one transformer has transform script
-    // Field mappings validation removed - only scripts allowed for now
-    const hasValidTransformers = collectors.some((collector) => {
-      return (
-        collector.transformers &&
-        collector.transformers.length > 0 &&
-        collector.transformers.some((t) => {
-          return true; // Clean Engine: transformers valid without script (dbt handles)
-        })
+    // Validate each transformer has destination table selected
+    const missingTable = collectors.some((collector) =>
+      (collector.transformers || []).some(
+        (t) => !t.destinationTable || !String(t.destinationTable).trim(),
+      ),
+    );
+    if (missingTable) {
+      toast.error(
+        "Destination table required",
+        "Please select a destination table for each transformer.",
       );
-    });
-
+      return;
+    }
+    const hasTransformers = collectors.some(
+      (c) => c.transformers && c.transformers.length > 0,
+    );
+    if (!hasTransformers) {
+      toast.error(
+        "No transformers",
+        "Please add at least one transformer before continuing.",
+      );
+      return;
+    }
     onComplete(collectors);
   };
 
