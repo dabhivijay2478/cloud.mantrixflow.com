@@ -371,12 +371,12 @@ export function DataSourceTable({
                                 <DropdownMenuItem
                                   onClick={() => {
                                     router.push(
-                                      `/workspace/data-sources/${dataSource.id}/query`,
+                                      `/workspace/data-sources/${dataSource.id}/discover`,
                                     );
                                   }}
                                 >
                                   <TableIcon className="mr-2 h-4 w-4" />
-                                  View table navigation
+                                  Discover schema
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem

@@ -17,6 +17,8 @@ export const connectionKeys = {
   details: () => [...connectionKeys.all, "detail"] as const,
   detail: (organizationId: string, dataSourceId: string) =>
     [...connectionKeys.details(), organizationId, dataSourceId] as const,
+  discover: (organizationId: string, dataSourceId: string) =>
+    [...connectionKeys.all, "discover", organizationId, dataSourceId] as const,
 };
 
 /**
@@ -170,6 +172,33 @@ export function useTestConnection(
         });
       }
     },
+  });
+}
+
+/**
+ * Hook to fetch full schema (databases, schemas, tables, columns with types)
+ * Uses NestJS discover API - no row data, metadata only
+ */
+export function useDiscoverSchemaFull(
+  organizationId: string | undefined,
+  dataSourceId: string | undefined,
+) {
+  return useQuery({
+    queryKey: connectionKeys.discover(
+      organizationId || "",
+      dataSourceId || "",
+    ),
+    queryFn: () => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return ConnectionService.discoverSchemaFull(
+        organizationId,
+        dataSourceId,
+      );
+    },
+    enabled: !!organizationId && !!dataSourceId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - schema rarely changes
   });
 }
 

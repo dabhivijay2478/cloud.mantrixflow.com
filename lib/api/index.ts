@@ -20,6 +20,9 @@ export { activityLogsKeys } from "./hooks/use-activity-logs";
 // Hooks - Connection (new connection management)
 export * from "./hooks/use-connection";
 export { connectionKeys } from "./hooks/use-connection";
+// Hooks - Connector Metadata (dynamic connection forms)
+export * from "./hooks/use-connector-metadata";
+export { connectorMetadataKeys } from "./hooks/use-connector-metadata";
 // Hooks - Dashboard
 export * from "./hooks/use-dashboard";
 export { dashboardKeys } from "./hooks/use-dashboard";
@@ -76,6 +79,7 @@ export * from "./hooks/use-users";
 export { usersKeys } from "./hooks/use-users";
 // Services
 export { ActivityLogsService } from "./services/activity-logs.service";
+export { ConnectorsService } from "./services/connectors.service";
 export { ConnectionService } from "./services/connection.service";
 export { DashboardService } from "./services/dashboard.service";
 export { DataPipelinesService } from "./services/data-pipelines.service";

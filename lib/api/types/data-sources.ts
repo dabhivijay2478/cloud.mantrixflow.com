@@ -298,6 +298,15 @@ export interface Table {
   type: "table" | "view" | "materialized_view";
   rowCount?: number;
   size?: string;
+  /** Columns with data types (from schema discovery) */
+  columns?: Array<{
+    name: string;
+    type?: string;
+    dataType?: string;
+    nullable?: boolean;
+    isPrimaryKey?: boolean;
+    primaryKey?: boolean;
+  }>;
 }
 
 export interface Column {

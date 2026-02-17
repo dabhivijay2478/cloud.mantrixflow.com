@@ -161,6 +161,62 @@ export class ConnectionService {
   }
 
   /**
+   * Discover full schema via ETL API (Python service)
+   * Returns databases, schemas, tables, and columns with data types (no row data)
+   */
+  static async discoverSchemaFull(
+    organizationId: string,
+    dataSourceId: string,
+  ): Promise<{
+    schemas?: Array<{
+      name: string;
+      tables?: Array<{
+        name: string;
+        type?: string;
+        schema?: string;
+        rowCount?: number;
+        columns?: Array<{ name: string; type: string; nullable?: boolean }>;
+      }>;
+    }>;
+    databases?: Array<{
+      name: string;
+      collections?: Array<{
+        name: string;
+        type?: string;
+        fields?: Array<{ name: string; type: string; nullable?: boolean }>;
+      }>;
+    }>;
+    type?: string;
+  }> {
+    const { DataSourcesService } = await import("./data-sources.service");
+    const result = await DataSourcesService.discoverSchema(
+      organizationId,
+      dataSourceId,
+    );
+    return result as {
+      schemas?: Array<{
+        name: string;
+        tables?: Array<{
+          name: string;
+          type?: string;
+          schema?: string;
+          rowCount?: number;
+          columns?: Array<{ name: string; type: string; nullable?: boolean }>;
+        }>;
+      }>;
+      databases?: Array<{
+        name: string;
+        collections?: Array<{
+          name: string;
+          type?: string;
+          fields?: Array<{ name: string; type: string; nullable?: boolean }>;
+        }>;
+      }>;
+      type?: string;
+    };
+  }
+
+  /**
    * Discover schema for a data source connection - calls Python API directly
    * Python handles schema discovery for all data source types
    */

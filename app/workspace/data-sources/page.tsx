@@ -37,12 +37,14 @@ import { useConfirmation } from "@/hooks/use-confirmation";
 import {
   type CreateConnectionDto,
   type TestConnectionDto,
-  useConnections,
   useCreateConnection,
   useUsers,
 } from "@/lib/api";
-import { useDeleteDataSource } from "@/lib/api/hooks/use-data-source";
+import { buildConnectionSchemasFromMetadata } from "@/components/data-sources/connector-metadata-utils";
+import { useConnectorMetadata } from "@/lib/api/hooks/use-connector-metadata";
+import { useDeleteDataSource, useDataSourcesPaginated } from "@/lib/api/hooks/use-data-source";
 import { useTestConnection as useTestConnectionLegacy } from "@/lib/api/hooks/use-data-sources";
+import { useSourceSchemas } from "@/lib/api/hooks/use-source-schemas";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
@@ -56,16 +58,42 @@ export default function DataSourcesPage() {
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get("search") || undefined;
 
-  // Use real API hooks instead of workspace store
-  // Note: Currently using legacy postgres connections API
-  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
-  const { data: connections, isLoading: connectionsLoading } =
-    useConnections(organizationId);
+  // Pagination state for data sources table
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+
+  // Use paginated data sources API
+  const { data: paginatedResult, isLoading: connectionsLoading } =
+    useDataSourcesPaginated(organizationId, pagination);
+  const connections = paginatedResult?.data;
+  const totalCount = paginatedResult?.total ?? 0;
   const createConnection = useCreateConnection(organizationId);
   // Use NestJS API for data source deletion
   const deleteDataSource = useDeleteDataSource(organizationId);
   // Use legacy testConnection hook (now updated to use org-scoped endpoint)
   const testConnection = useTestConnectionLegacy(organizationId);
+
+  // Fetch connector metadata for dynamic connection forms (postgres, mysql, mongodb)
+  const { data: connectorMetadata } = useConnectorMetadata();
+  const connectionSchemasOverride = useMemo(
+    () =>
+      connectorMetadata
+        ? buildConnectionSchemasFromMetadata(connectorMetadata)
+        : undefined,
+    [connectorMetadata],
+  );
+
+  // Fetch source schemas to count pipelines/schemas per data source (for Connections column)
+  const { data: sourceSchemas } = useSourceSchemas(organizationId);
+  const schemaCountByDataSourceId = useMemo(() => {
+    const map = new Map<string, number>();
+    sourceSchemas?.forEach((schema) => {
+      const dsId = schema.dataSourceId ?? (schema as { data_source_id?: string }).data_source_id;
+      if (dsId) {
+        map.set(dsId, (map.get(dsId) ?? 0) + 1);
+      }
+    });
+    return map;
+  }, [sourceSchemas]);
 
   const isLoading = connectionsLoading;
 
@@ -84,48 +112,71 @@ export default function DataSourcesPage() {
       disabled: false, // All shown sources are enabled
     })) as Array<(typeof allDataSources)[number] & { disabled: boolean }>;
 
-  // Get all unique user IDs from connections for fetching user names
+  // Get all unique user IDs from connections for fetching user names (createdBy)
   const userIds = useMemo(
-    () => connections?.map((conn) => conn.userId).filter(Boolean) || [],
+    () =>
+      connections?.map(
+        (conn) =>
+          (conn as { createdBy?: string }).createdBy ||
+          (conn as { userId?: string }).userId,
+      ).filter(Boolean) || [],
     [connections],
   );
   const { usersMap } = useUsers(userIds);
 
-  // Convert API connections to component format
-  const filteredDataSources: DataSource[] = (connections?.map((conn) => {
-    const dateValue = conn.lastConnectedAt || conn.createdAt;
-    const connectedAt =
-      typeof dateValue === "string"
-        ? dateValue
-        : dateValue instanceof Date
-          ? dateValue.toISOString()
-          : new Date(dateValue).toISOString();
+  // Convert API data sources to component format
+  const filteredDataSources: (DataSource & { createdBy?: string })[] =
+    (connections?.map((conn) => {
+      const apiDs = conn as {
+        id: string;
+        name: string;
+        sourceType?: string;
+        type?: string;
+        organizationId?: string;
+        orgId?: string;
+        isActive?: boolean;
+        status?: string;
+        lastConnectedAt?: Date | string;
+        createdAt?: Date | string;
+        updatedAt?: Date | string;
+        createdBy?: string;
+      };
+      const dateValue =
+        apiDs.lastConnectedAt || apiDs.updatedAt || apiDs.createdAt;
+      const connectedAt =
+        typeof dateValue === "string"
+          ? dateValue
+          : dateValue instanceof Date
+            ? dateValue.toISOString()
+            : dateValue
+              ? new Date(dateValue).toISOString()
+              : "";
 
-    return {
-      id: conn.id,
-      name: conn.name,
-      type: "postgres" as const,
-      status: (conn.status === "active"
-        ? "connected"
-        : conn.status === "error"
-          ? "error"
-          : "disconnected") as "connected" | "disconnected" | "error",
-      organizationId: conn.orgId,
-      connectedAt,
-      tables: undefined, // Will be fetched separately when needed
-    };
-  }) || []) as DataSource[];
+      return {
+        id: apiDs.id,
+        name: apiDs.name,
+        type: (apiDs.sourceType || apiDs.type || "postgres") as DataSource["type"],
+        status: (apiDs.status === "active" || apiDs.isActive
+          ? "connected"
+          : apiDs.status === "error"
+            ? "error"
+            : "disconnected") as "connected" | "disconnected" | "error",
+        organizationId: apiDs.organizationId || apiDs.orgId || "",
+        connectedAt,
+        tables: undefined,
+        createdBy:
+          apiDs.createdBy ||
+          (conn as { userId?: string }).userId,
+      };
+    }) || []) as (DataSource & { createdBy?: string })[];
 
   const router = useRouter();
-  const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
-    null,
-  );
   const [showConnectionSheet, setShowConnectionSheet] = useState(false);
   const [connectingDataSourceId, setConnectingDataSourceId] = useState<
     string | null
   >(null);
-  // Check if there are any connections (regardless of status)
-  const hasConnections = filteredDataSources.length > 0;
+  // Check if there are any connections (use totalCount for pagination correctness)
+  const hasConnections = totalCount > 0;
 
   // View state: show grid when no connections, table when connections exist
   const [showGridView, setShowGridView] = useState<boolean>(true);
@@ -178,18 +229,14 @@ export default function DataSourcesPage() {
   );
 
   const handleDataSourceClick = (dataSourceId: string) => {
-    setSelectedDataSource(dataSourceId);
-
     // If we're in table view showing connections, check if this is a connection ID
     const isConnectionId = filteredDataSources.some(
       (conn) => conn.id === dataSourceId,
     );
 
     if (isConnectionId) {
-      // This is a connection - navigate to connection detail or keep in table view
+      // This is a connection - keep in table view
       setShowGridView(false);
-      // TODO: Navigate to connection detail page when implemented
-      // router.push(`/workspace/data-sources/${dataSourceId}/query`);
     } else if (isConnected(dataSourceId)) {
       // If clicking on a connected data source type, hide grid view
       setShowGridView(false);
@@ -214,11 +261,6 @@ export default function DataSourcesPage() {
 
     try {
       // Convert form data to API format
-      const host = data.host || "";
-      const _isLocalhost =
-        host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
-
-      // Build config based on data source type
       const config: Record<string, unknown> = {};
 
       // Add all form data to config
@@ -660,15 +702,21 @@ export default function DataSourcesPage() {
         header: "Connections",
         cell: ({ row }) => {
           const dataSource = row.original;
+          const schemaCount = schemaCountByDataSourceId.get(dataSource.id) ?? 0;
           const connected = isConnected(dataSource.id);
           const connectedData = getConnectedDataSource(dataSource.id);
           const selectedTables =
             connectedData?.selectedTables ||
             (connectedData?.selectedTable ? [connectedData.selectedTable] : []);
-          return connected && selectedTables.length > 0 ? (
+          const tableCount =
+            selectedTables.length > 0 ? selectedTables.length : schemaCount;
+          return connected && tableCount > 0 ? (
             <span className="text-sm font-medium">
-              {selectedTables.length}{" "}
-              {selectedTables.length === 1 ? "table" : "tables"}
+              {tableCount} {tableCount === 1 ? "table" : "tables"}
+            </span>
+          ) : schemaCount > 0 ? (
+            <span className="text-sm text-muted-foreground">
+              {schemaCount} {schemaCount === 1 ? "schema" : "schemas"}
             </span>
           ) : (
             <span className="text-muted-foreground text-sm">-</span>
@@ -694,15 +742,16 @@ export default function DataSourcesPage() {
         accessorKey: "createdBy",
         header: "Created By",
         cell: ({ row }) => {
-          const dataSource = row.original;
-          // Find the connection to get userId
-          const connection = connections?.find(
-            (conn) => conn.id === dataSource.id,
-          );
-          if (!connection?.userId) {
+          const dataSource = row.original as DataSource & { createdBy?: string };
+          const creatorId =
+            dataSource.createdBy ||
+            (connections?.find((conn) => conn.id === dataSource.id) as
+              | { createdBy?: string; userId?: string }
+              | undefined)?.createdBy;
+          if (!creatorId) {
             return <span className="text-muted-foreground text-sm">-</span>;
           }
-          const creator = usersMap.get(connection.userId);
+          const creator = usersMap.get(creatorId);
           const displayName =
             creator?.fullName ||
             (creator?.firstName && creator?.lastName
@@ -756,12 +805,23 @@ export default function DataSourcesPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(
+                            `/workspace/data-sources/${dataSource.id}/discover`,
+                          );
+                        }}
+                      >
+                        <TableIcon className="mr-2 h-4 w-4" />
+                        Discover schema
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(
                             `/workspace/data-sources/${dataSource.id}/query`,
                           );
                         }}
                       >
                         <TableIcon className="mr-2 h-4 w-4" />
-                        View table navigation
+                        Query editor
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -802,6 +862,7 @@ export default function DataSourcesPage() {
       handleDelete,
       connections,
       usersMap,
+      schemaCountByDataSourceId,
     ],
   );
 
@@ -886,6 +947,7 @@ export default function DataSourcesPage() {
             "type",
             "connections",
             "connectedAt",
+            "createdBy",
             "status",
             "actions",
           ]}
@@ -893,6 +955,10 @@ export default function DataSourcesPage() {
           onRowClick={(row) => handleDataSourceClick(row.id)}
           emptyMessage="No data sources found"
           emptyDescription="Get started by connecting a data source"
+          manualPagination
+          pagination={pagination}
+          onPaginationChange={setPagination}
+          totalCount={totalCount}
         />
       )}
 
@@ -908,6 +974,7 @@ export default function DataSourcesPage() {
         dataSourceId={connectingDataSourceId}
         onConnect={handleConnect}
         onTestConnection={handleTestConnection}
+        connectionSchemasOverride={connectionSchemasOverride}
       />
 
       {/* Delete Confirmation Modal */}

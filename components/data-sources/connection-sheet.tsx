@@ -25,26 +25,24 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
+import type { ConnectionSchema } from "./connector-metadata-utils";
 import { allDataSources, connectionSchemas } from "./constants";
 import { getIconComponent } from "./utils";
 
 type ConnectionFormValues = Record<string, string>;
 
-// Dynamic schema builder based on data source type and current form values
-const buildConnectionSchema = (
-  dataSourceType: string,
+// Dynamic schema builder based on form schema and current form values
+function buildConnectionSchema(
+  schema: ConnectionSchema | null | undefined,
   formValues: ConnectionFormValues,
-) => {
-  const schema = connectionSchemas[dataSourceType];
+) {
   if (!schema) {
     return z.object({}).passthrough();
   }
 
   const schemaObject: Record<string, z.ZodTypeAny> = {};
 
-  // Add all fields from schema
   schema.fields.forEach((field) => {
-    // Check if field is visible/active based on dependsOn
     let isVisible = true;
     if (field.dependsOn) {
       const dependencyValue = formValues[field.dependsOn.field];
@@ -61,7 +59,7 @@ const buildConnectionSchema = (
   });
 
   return z.object(schemaObject);
-};
+}
 
 interface ConnectionSheetProps {
   open: boolean;
@@ -71,6 +69,8 @@ interface ConnectionSheetProps {
   onTestConnection?: (
     data: ConnectionFormValues,
   ) => Promise<{ success: boolean; message: string }>;
+  /** Override connection schemas (e.g. from API metadata). Keyed by frontend type: postgres, mysql, mongodb */
+  connectionSchemasOverride?: Record<string, ConnectionSchema>;
 }
 
 export function ConnectionSheet({
@@ -79,6 +79,7 @@ export function ConnectionSheet({
   dataSourceId,
   onConnect,
   onTestConnection,
+  connectionSchemasOverride,
 }: ConnectionSheetProps) {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<{
@@ -102,13 +103,18 @@ export function ConnectionSheet({
   const dataSource = dataSourceId
     ? allDataSources.find((ds) => ds.id === dataSourceId)
     : null;
-  const schema = dataSource ? connectionSchemas[dataSource.type] : null;
+  const schema = dataSource
+    ? (connectionSchemasOverride?.[dataSource.type] ??
+        connectionSchemas[dataSource.type])
+    : null;
 
   const getDefaultValues = useCallback(() => {
     if (!schema) return {};
     const defaults: Record<string, string> = {};
     schema.fields.forEach((field) => {
-      defaults[field.name] = "";
+      const def = (field as { default?: unknown }).default;
+      defaults[field.name] =
+        def !== undefined && def !== null ? String(def) : "";
     });
     return defaults;
   }, [schema]);
@@ -120,8 +126,8 @@ export function ConnectionSheet({
         return { values: values as ConnectionFormValues, errors: {} };
       }
       // Pass current values to schema builder for dynamic validation
-      const schema = buildConnectionSchema(dataSource.type, values);
-      const result = schema.safeParse(values);
+      const validationSchema = buildConnectionSchema(schema, values);
+      const result = validationSchema.safeParse(values);
       if (result.success) {
         return { values: result.data as ConnectionFormValues, errors: {} };
       }

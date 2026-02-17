@@ -307,12 +307,26 @@ export class DataSourcesService {
       return {
         schemas: discovered.schemas.map((schema) => ({
           name: schema.name,
-          tables: schema.tables.map((table) => ({
-            name: table.name,
-            schema: table.schema || schema.name,
-            type: table.type,
-            rowCount: table.rowCount,
-          })),
+          tables: schema.tables.map((table) => {
+            const t = table as {
+              name: string;
+              schema?: string;
+              type?: string;
+              rowCount?: number;
+              columns?: Array<{ name: string; type: string; nullable?: boolean }>;
+            };
+            return {
+              name: t.name,
+              schema: t.schema || schema.name,
+              type: (t.type || "table") as "table" | "view" | "materialized_view",
+              rowCount: t.rowCount,
+              columns: t.columns?.map((col) => ({
+                name: col.name,
+                type: col.type,
+                nullable: col.nullable,
+              })),
+            };
+          }),
         })),
         type: sourceType,
       };
@@ -345,15 +359,7 @@ export class DataSourcesService {
 
   private static readonly LEGACY_BASE_PATH = "api/data-sources/postgres";
 
-  /** @deprecated Use organization-scoped endpoints */
-  /**
-   * Test connection - calls Python API directly
-   * Python handles connection testing for all data source types
-   */
-  /**
-   * Test connection - calls Python API directly
-   * Frontend should use this method for testing connections
-   */
+  /** @deprecated Use organization-scoped endpoints. Test connection - calls Python API directly. */
   static async testConnectionLegacy(
     _organizationId: string,
     data: TestConnectionDto,
@@ -444,6 +450,9 @@ export class DataSourcesService {
               status: ds.isActive ? "connected" : "disconnected",
               lastConnectedAt: ds.updatedAt,
               createdAt: ds.createdAt,
+              userId:
+                (ds as { createdBy?: string }).createdBy ||
+                (ds as { created_by?: string }).created_by,
             }) as Connection,
         );
       } catch {
@@ -619,13 +628,14 @@ export class DataSourcesService {
             type: "table" as const,
             columns: coll.fields?.map((f) => ({
               name: f.name,
+              type: f.type,
               dataType: f.type,
               nullable: f.nullable,
               isPrimaryKey: f.name === "_id", // MongoDB _id is always primary key
             })),
           }),
         ),
-      }));
+      })) as Schema[];
     }
 
     let targetTable: Table | undefined;

@@ -78,6 +78,10 @@ export function useCreateConnection(orgId?: string) {
       queryClient.invalidateQueries({
         queryKey: dataSourcesKeys.connections.lists(),
       });
+      // Invalidate data source list (used by paginated data sources page)
+      queryClient.invalidateQueries({
+        queryKey: ["data-sources", "list"],
+      });
       // Invalidate dashboard to reflect new connection
       queryClient.invalidateQueries({
         queryKey: ["dashboard"],
