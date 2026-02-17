@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock,
-  Code2,
   Columns3,
   Edit,
   Loader2,
@@ -803,60 +802,9 @@ export default function PipelineDetailPage() {
                     </span>
                   </div>
                 )}
-                {/* Transform script indicator */}
-                {pipeline.destinationSchema?.transformScript && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <Code2 className="h-3 w-3" />
-                      Transform Script
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      Active
-                    </Badge>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
-
-          {/* Transformation Script Section */}
-          {pipeline.destinationSchema?.transformScript && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Code2 className="h-5 w-5" />
-                  Transformation Script
-                </CardTitle>
-                <CardDescription>
-                  Python transform applied to each record before writing to
-                  destination
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="border rounded-lg bg-zinc-950 p-4 overflow-auto max-h-[300px]">
-                  <pre className="text-sm font-mono text-zinc-100 whitespace-pre-wrap">
-                    {pipeline.destinationSchema.transformScript}
-                  </pre>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Edit this script from the{" "}
-                  <Button
-                    variant="link"
-                    className="h-auto p-0 text-xs"
-                    onClick={() =>
-                      router.push(
-                        `/workspace/data-pipelines/${pipelineId}/edit`,
-                      )
-                    }
-                    type="button"
-                  >
-                    pipeline editor
-                  </Button>
-                  .
-                </p>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Data Previews */}
           <div className="space-y-3">

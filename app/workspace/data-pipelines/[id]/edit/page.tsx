@@ -108,8 +108,7 @@ export default function EditPipelinePage() {
             ? `public.${sourceSchema.sourceTable}`
             : "";
 
-      // Build field mappings from destinationSchema transformScript
-      // Note: Transform script is the authoritative source, field mappings are derived from UI
+      // Clean Engine: dbt handles transforms in Meltano job
       const schemaFieldMappings: Array<{
         source: string;
         destination: string;
@@ -407,23 +406,15 @@ export default function EditPipelinePage() {
         const writeMode: "append" | "upsert" | "replace" =
           primaryKeyFields.length > 0 ? "upsert" : "append";
 
-        // Get transform script from transformer
-        const transformScript =
-          firstTransformer.transformScript ||
-          destinationSchema.transformScript ||
-          "";
-
-        // Only update if changed
+        // Only update if changed (Clean Engine: dbt handles transforms)
         if (
           destinationSchema.destinationSchema !== destSchemaName ||
           destinationSchema.destinationTable !== destTableName ||
-          destinationSchema.transformScript !== transformScript ||
           destinationSchema.writeMode !== writeMode
         ) {
           await updateDestinationSchemaMutation.mutateAsync({
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            transformScript: transformScript,
             writeMode: writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,

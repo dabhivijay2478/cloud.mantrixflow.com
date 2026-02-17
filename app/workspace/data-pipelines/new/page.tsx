@@ -294,9 +294,9 @@ export default function NewPipelinePage() {
       const destTableName =
         destTableParts[1] || destTableParts[0] || destinationTable;
 
-      // Transform script is already in firstTransformer.transformScript
+      // Clean Engine: dbt handles transforms in Meltano job.
 
-      // Extract primary keys from field mappings (commented out - field mappings not used for now)
+      // Extract primary keys from field mappings
       const primaryKeyFields: string[] = []; // Empty for now - can be extracted from script if needed
 
       // Determine write mode (default to append, could be enhanced)
@@ -328,7 +328,6 @@ export default function NewPipelinePage() {
             dataSourceId: destinationConnectionId,
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            transformScript: firstTransformer.transformScript || undefined,
             writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,

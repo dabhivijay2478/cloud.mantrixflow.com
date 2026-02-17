@@ -49,8 +49,7 @@ export interface TransformConfig {
     source: string;
     destination: string;
     isPrimaryKey?: boolean;
-  }>; // JSON array format with primary key flag (legacy - use transformScript instead)
-  transformScript?: string; // Custom Python transform script (preferred)
+  }>;
   destinationTable?: string; // Selected destination table (schema.table format)
   primaryKeyField?: string; // Explicitly defined primary key field name
   dbtModels?: string[]; // Selected dbt models (empty = run all)
@@ -99,7 +98,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
   >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
-  const [transformScript, setTransformScript] = useState<string>("");
   const [selectedDbtModels, setSelectedDbtModels] = useState<string[]>([]);
 
   const { data: dbtModelsData } = useDbtModels();
@@ -356,28 +354,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     )
       return;
 
-    // Clean Engine: Transformations are handled by dbt in the Meltano job.
-    // transformScript is optional (legacy); no Python script required.
-
-    // Field mappings validation commented out - dbt handles transforms
-    // if (transformMode === "script") {
-    //   if (!transformScript || !transformScript.trim()) {
-    //     alert("Please provide a Python transform script.");
-    //     return;
-    //   }
-    // } else {
-    //   // Validate that field mappings exist and are not empty
-    //   if (
-    //     !fieldMappings ||
-    //     !Array.isArray(fieldMappings) ||
-    //     fieldMappings.length === 0
-    //   ) {
-    //     alert(
-    //       "Please configure at least one field mapping before saving the transformer.",
-    //     );
-    //     return;
-    //   }
-    // }
+    // Clean Engine: Transformations handled by dbt in Meltano job.
 
     // Ensure fieldMappings is always an array
     const validFieldMappings = Array.isArray(fieldMappings)
@@ -389,9 +366,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings: [], // Field mappings - dbt handles transforms in Meltano job
-      transformScript: transformScript?.trim() || undefined, // Optional; dbt is primary
-      destinationTable: selectedDestinationTable, // Store selected destination table
+      fieldMappings: [], // dbt handles transforms in Meltano job
+      destinationTable: selectedDestinationTable,
       dbtModels: selectedDbtModels.length > 0 ? selectedDbtModels : undefined,
       primaryKeyField:
         primaryKeyField ||
@@ -421,7 +397,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedDestinationTable("");
     setTransformName("");
     setFieldMappings([]);
-    setTransformScript("");
     setSelectedDbtModels([]);
   };
 
@@ -469,7 +444,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         )?.destination ||
         "",
     );
-    setTransformScript(transform.transformScript || "");
     setSelectedDbtModels(transform.dbtModels ?? []);
     setShowAddDialog(true);
   };

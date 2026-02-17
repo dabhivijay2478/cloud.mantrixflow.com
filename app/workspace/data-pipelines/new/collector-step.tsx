@@ -54,8 +54,7 @@ export interface CollectorConfig {
     name: string;
     collectorId?: string;
     emitterId?: string;
-    fieldMappings?: Array<{ source: string; destination: string }>; // JSON array format
-    transformScript?: string; // Custom Python transform script (preferred over field mappings)
+    fieldMappings?: Array<{ source: string; destination: string }>;
     destinationTable?: string; // Selected destination table (schema.table format)
     primaryKeyField?: string; // Explicitly defined primary key field name
   }>;
