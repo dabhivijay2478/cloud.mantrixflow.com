@@ -1,7 +1,8 @@
 /**
  * Python ETL Service Client
  * Direct client for calling Python FastAPI ETL microservice
- * Used ONLY for ETL operations: discover schema, collect, transform, emit, delta-check, test-connection
+ * Used for ETL operations: discover schema, collect, delta-check, test-connection
+ * Data movement uses run-meltano-pipeline via NestJS API.
  *
  * CRUD operations (data sources, connections, pipelines) go through the NestJS API
  * via ApiClient / DataSourcesService / DataPipelinesService.
@@ -55,34 +56,6 @@ export interface CollectResponse {
   next_cursor?: string;
   has_more?: boolean;
   metadata?: Record<string, unknown>;
-}
-
-export interface TransformRequest {
-  rows: Record<string, unknown>[];
-  transform_script: string;
-}
-
-export interface TransformResponse {
-  transformed_rows: Record<string, unknown>[];
-  errors: Array<{ message: string; row?: number; error?: string }>;
-}
-
-export interface EmitRequest {
-  destination_type: string;
-  connection_config: Record<string, unknown>;
-  destination_config?: Record<string, unknown>;
-  table_name: string;
-  schema_name?: string;
-  rows: Record<string, unknown>[];
-  write_mode?: "append" | "upsert" | "replace";
-  upsert_key?: string[];
-}
-
-export interface EmitResponse {
-  rows_written: number;
-  rows_skipped: number;
-  rows_failed: number;
-  errors: Array<{ message: string; row?: number; error?: string }>;
 }
 
 export class PythonETLService {
@@ -193,31 +166,6 @@ export class PythonETLService {
   }
 
   /**
-   * Transform data
-   */
-  static async transform(
-    request: TransformRequest,
-  ): Promise<TransformResponse> {
-    return PythonETLService.request<TransformResponse>("/transform", {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Emit data to destination
-   */
-  static async emit(
-    destinationType: string,
-    request: EmitRequest,
-  ): Promise<EmitResponse> {
-    return PythonETLService.request<EmitResponse>(`/emit/${destinationType}`, {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
    * Delta check for changes
    */
   static async deltaCheck(
@@ -247,8 +195,8 @@ export class PythonETLService {
   // NOTE: Data source CRUD, connection CRUD, and pipeline CRUD operations
   // are handled by the NestJS API (via ApiClient / DataSourcesService /
   // DataPipelinesService). Do NOT add CRUD methods here — this service
-  // is exclusively for ETL operations (discover, collect, transform, emit,
-  // delta-check, test-connection) that run on the Python FastAPI service.
+  // is exclusively for ETL operations (discover, collect, delta-check, test-connection)
+  // that run on the Python FastAPI service. Data movement uses run-meltano-pipeline.
   // =========================================================================
 
   /**
