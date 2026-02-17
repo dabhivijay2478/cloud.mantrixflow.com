@@ -788,8 +788,9 @@ export function usePipelineRun(
       );
     },
     enabled: !!organizationId && !!pipelineId && !!runId,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll every 3 seconds if run is still in progress (real-time progress)
+      const data = query.state.data;
       const status = data?.status;
       if (status === "running" || status === "pending") {
         return 3000;

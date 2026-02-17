@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, Database, Eye, EyeOff } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { z } from "zod";
 import { buildConnectionSchemasFromMetadata } from "@/components/data-sources/connector-metadata-utils";
 import type { ConnectionSchema } from "@/components/data-sources/connector-metadata-utils";
@@ -114,6 +114,7 @@ export default function ConnectPage() {
   }, [schema, connector]);
 
   const form = useForm<ConnectionFormValues>({
+    // @ts-expect-error - Custom resolver with dynamic schema (matches ConnectionSheet)
     resolver: (values, _context, _options) => {
       if (!schema) {
         return { values: values as ConnectionFormValues, errors: {} };
@@ -194,7 +195,7 @@ export default function ConnectPage() {
       const connectionData: CreateConnectionDto = {
         name: data.name || `${connector} Connection`,
         connection_type: connector as CreateConnectionDto["connection_type"],
-        config: config as CreateConnectionDto["config"],
+        config: config as unknown as CreateConnectionDto["config"],
       };
 
       const created = await createConnection.mutateAsync(connectionData);
@@ -212,7 +213,10 @@ export default function ConnectPage() {
       toast.success("Connection successful!");
       router.push(`/onboarding/connect/${connector}/select`);
     } catch (error) {
-      toast.error("Failed to connect", error instanceof Error ? error.message : "Please check your credentials.");
+      toast.error(
+        "Failed to connect",
+        error instanceof Error ? error.message : "Please check your credentials.",
+      );
       console.error(error);
     } finally {
       setLoading(false);
