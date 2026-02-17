@@ -150,21 +150,10 @@ export default function DestinationSchemasPage() {
       },
       {
         accessorKey: "transformScript",
-        header: "Transform Script",
-        cell: ({ row }) => {
-          const hasScript = row.original.transformScript?.trim();
-          return (
-            <span className="text-sm text-muted-foreground">
-              {hasScript ? (
-                <Badge variant="outline" className="text-green-600">
-                  Configured
-                </Badge>
-              ) : (
-                "-"
-              )}
-            </span>
-          );
-        },
+        header: "Transform",
+        cell: () => (
+          <Badge variant="secondary">dbt</Badge>
+        ),
       },
       {
         accessorKey: "writeMode",
@@ -448,26 +437,18 @@ function DestinationSchemaDetailsDialog({
             </CardContent>
           </Card>
 
-          {/* Transform Script */}
+          {/* Transform */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Transform Script</CardTitle>
+              <CardTitle className="text-base">Transform</CardTitle>
               <CardDescription>
-                Python script for data transformation
+                Transformations are handled by dbt in the Meltano pipeline
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {schema.transformScript?.trim() ? (
-                <div className="border rounded-lg overflow-auto">
-                  <pre className="p-4 text-xs font-mono bg-muted/30 max-h-96 overflow-auto">
-                    {schema.transformScript}
-                  </pre>
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  No transform script configured
-                </div>
-              )}
+              <div className="py-4 text-center text-muted-foreground">
+                <Badge variant="secondary">dbt</Badge>
+              </div>
             </CardContent>
           </Card>
 

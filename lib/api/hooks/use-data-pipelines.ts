@@ -6,6 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataPipelinesService } from "../services/data-pipelines.service";
+import { PythonETLService } from "../services/python-etl.service";
 import type {
   CreatePipelineDto,
   DryRunPipelineDto,
@@ -67,6 +68,7 @@ export const dataPipelinesKeys = {
     ] as const,
   stats: (organizationId: string, pipelineId: string) =>
     [...dataPipelinesKeys.all, "stats", organizationId, pipelineId] as const,
+  dbtModels: () => [...dataPipelinesKeys.all, "dbt-models"] as const,
   validation: (organizationId: string, pipelineId: string) =>
     [
       ...dataPipelinesKeys.all,
@@ -156,6 +158,17 @@ export function usePipelinesPaginated(
     },
     enabled: !!organizationId,
     placeholderData: (prev) => prev,
+  });
+}
+
+/**
+ * List dbt model names from ETL transform/models/ for the model selector UI.
+ */
+export function useDbtModels() {
+  return useQuery({
+    queryKey: dataPipelinesKeys.dbtModels(),
+    queryFn: () => PythonETLService.getDbtModels(),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

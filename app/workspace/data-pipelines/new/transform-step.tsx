@@ -12,7 +12,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
+import { useDbtModels } from "@/lib/api/hooks/use-data-pipelines";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import type { CollectorConfig } from "./collector-step";
@@ -52,6 +53,7 @@ export interface TransformConfig {
   transformScript?: string; // Custom Python transform script (preferred)
   destinationTable?: string; // Selected destination table (schema.table format)
   primaryKeyField?: string; // Explicitly defined primary key field name
+  dbtModels?: string[]; // Selected dbt models (empty = run all)
   status?: "published" | "paused";
 }
 
@@ -96,33 +98,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [fieldMappings, setFieldMappings] = useState<
     Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
   >([]);
-  const [generatedDestinationFields, setGeneratedDestinationFields] = useState<
-    Array<{ name: string; type: string; table: string }>
-  >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
   const [transformScript, setTransformScript] = useState<string>("");
-  const [_transformMode, setTransformMode] = useState<"mappings" | "script">(
-    "script",
-  );
+  const [selectedDbtModels, setSelectedDbtModels] = useState<string[]>([]);
 
-  // Debug: Log when collectors prop changes
-  useEffect(() => {
-    console.log("TransformStep - Collectors prop changed:", {
-      collectorsCount: collectors.length,
-      collectors: collectors.map((c) => ({
-        id: c.id,
-        sourceId: c.sourceId,
-        transformersCount: c.transformers?.length || 0,
-        transformers:
-          c.transformers?.map((t) => ({
-            id: t.id,
-            name: t.name,
-            emitterId: t.emitterId,
-            fieldMappingsCount: t.fieldMappings?.length || 0,
-          })) || [],
-      })),
-    });
-  }, [collectors]);
+  const { data: dbtModelsData } = useDbtModels();
+  const dbtModels = dbtModelsData?.models ?? [];
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
@@ -146,20 +127,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const source = dataSources.find((ds) => ds.id === collector.sourceId);
     const collectorTransformers = collector.transformers || [];
 
-    // Debug logging
-    if (collectorTransformers.length > 0) {
-      console.log("TransformStep - Found transformers for collector:", {
-        collectorId: collector.id,
-        transformersCount: collectorTransformers.length,
-        transformers: collectorTransformers.map((t) => ({
-          id: t.id,
-          name: t.name,
-          emitterId: t.emitterId,
-          fieldMappingsCount: t.fieldMappings?.length || 0,
-        })),
-      });
-    }
-
     return collectorTransformers.map((t) => {
       const transform = t as TransformConfig;
       const emitter = allEmitters.find((e) => e.id === transform.emitterId);
@@ -172,19 +139,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         fieldMappings: transform.fieldMappings || [],
       };
     });
-  });
-
-  // Debug logging for all transforms
-  console.log("TransformStep - All transforms:", {
-    collectorsCount: collectors.length,
-    allTransformsCount: allTransforms.length,
-    allTransforms: allTransforms.map((t) => ({
-      id: t.id,
-      name: t.name,
-      collectorId: t.collectorId,
-      emitterId: t.emitterId,
-      fieldMappingsCount: t.fieldMappings?.length || 0,
-    })),
   });
 
   const selectedCollector = collectors.find(
@@ -273,22 +227,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           isMongoDB ? "mongodb" : "sql",
         ],
         queryFn: async () => {
-          try {
-            const result = await DataSourcesService.getTableSchema(
-              connectionId,
-              table,
-              schema,
-              orgId,
-            );
-            console.log(`Fetched schema for ${table}:`, {
-              columnsCount: result.columns?.length || 0,
-              columns: result.columns?.map((c: { name: string }) => c.name),
-            });
-            return result;
-          } catch (error) {
-            console.error(`Failed to fetch schema for ${table}:`, error);
-            throw error;
-          }
+          return DataSourcesService.getTableSchema(
+            connectionId,
+            table,
+            schema,
+            orgId,
+          );
         },
         enabled: !!connectionId && !!table && !!orgId,
         retry: 2,
@@ -301,20 +245,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     const fields: Array<{ name: string; type: string; table: string }> = [];
 
     sourceSchemaQueries.forEach((query, index) => {
-      if (query.isLoading) {
-        console.log(
-          `Loading schema for table ${sourceTableQueries[index]?.tableName}...`,
-        );
-        return;
-      }
-
-      if (query.error) {
-        console.error(
-          `Error loading schema for table ${sourceTableQueries[index]?.tableName}:`,
-          query.error,
-        );
-        return;
-      }
+      if (query.isLoading) return;
+      if (query.error) return;
 
       if (query.data?.columns && query.data.columns.length > 0) {
         const tableInfo = sourceTableQueries[index];
@@ -331,26 +263,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             table: tableInfo.tableName,
           });
         });
-
-        console.log(
-          `Added ${query.data.columns.length} fields from ${tableInfo.tableName}`,
-        );
-      } else {
-        console.warn(
-          `No columns found for table ${sourceTableQueries[index]?.tableName}`,
-          {
-            data: query.data,
-            hasData: !!query.data,
-            columnsLength: query.data?.columns?.length,
-          },
-        );
       }
     });
 
-    console.log(
-      `Total source fields: ${fields.length}`,
-      fields.map((f) => f.name),
-    );
     return fields;
   }, [sourceSchemaQueries, sourceTableQueries]);
 
@@ -407,15 +322,13 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     ],
   });
 
-  // Build destination fields from fetched table schema + generated fields
+  // Build destination fields from fetched table schema
   const destinationFields = useMemo(() => {
-    if (!destinationTableQuery) return generatedDestinationFields;
+    if (!destinationTableQuery) return [];
     const queryResult = destinationSchemaQuery[0];
 
-    // If we have actual table columns, use them
     if (queryResult?.data?.columns && queryResult.data.columns.length > 0) {
       return queryResult.data.columns.map((col) => {
-        // Handle both Column objects and string arrays
         if (typeof col === "string") {
           return {
             name: col,
@@ -431,113 +344,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       });
     }
 
-    // Otherwise use generated fields
-    return generatedDestinationFields;
-  }, [
-    destinationSchemaQuery,
-    destinationTableQuery,
-    generatedDestinationFields,
-  ]);
-
-  const _handleAutoGenerate = () => {
-    if (sourceFields.length === 0) return;
-
-    // 1. Generate destination fields from source fields
-    // Flatten fields: "address.city" -> "address_city"
-    const newGenerations = sourceFields.map((sf) => ({
-      name: sf.name.replace(/\./g, "_"),
-      type: sf.type,
-      table: selectedDestinationTable || "generated",
-    }));
-
-    setGeneratedDestinationFields(newGenerations);
-
-    // 2. Create Mappings
-    const newMappings = newGenerations.map((df, index) => {
-      const sourceField = sourceFields[index];
-      // Determine if ID/PK
-      const isId =
-        sourceField.name === "_id" || sourceField.name.toLowerCase() === "id";
-
-      return {
-        source: sourceField.name,
-        destination: df.name,
-        isPrimaryKey: isId,
-      };
-    });
-
-    setFieldMappings(newMappings);
-  };
-
-  const _handleFieldMapping = (
-    sourceField: string,
-    destinationField: string,
-  ) => {
-    setFieldMappings((prev) => {
-      const existing = prev.findIndex(
-        (m) => m.destination === destinationField,
-      );
-      // Auto-set as primary key if this is the ID field
-      const isPrimaryKey =
-        destinationField.toLowerCase() === "id" ||
-        destinationField === primaryKeyField;
-
-      // If setting this as PK, remove PK from all other fields
-      const shouldSetAsPK =
-        isPrimaryKey || destinationField.toLowerCase() === "id";
-
-      if (existing >= 0) {
-        // Update existing mapping
-        const updated = prev.map((m) => {
-          if (m.destination === destinationField) {
-            return {
-              source: sourceField,
-              destination: destinationField,
-              isPrimaryKey: shouldSetAsPK,
-            };
-          }
-          // Remove PK from all other fields if this one is being set as PK
-          if (shouldSetAsPK && m.isPrimaryKey) {
-            return { ...m, isPrimaryKey: false };
-          }
-          return m;
-        });
-
-        // Update primary key field state
-        if (shouldSetAsPK) {
-          setPrimaryKeyField(destinationField);
-        } else if (destinationField === primaryKeyField) {
-          setPrimaryKeyField("");
-        }
-
-        return updated;
-      } else {
-        // Add new mapping - remove PK from all existing fields if this is being set as PK
-        const updated = prev.map((m) =>
-          shouldSetAsPK && m.isPrimaryKey ? { ...m, isPrimaryKey: false } : m,
-        );
-
-        const newMapping = {
-          source: sourceField,
-          destination: destinationField,
-          isPrimaryKey: shouldSetAsPK,
-        };
-
-        // Update primary key field state
-        if (shouldSetAsPK) {
-          setPrimaryKeyField(destinationField);
-        }
-
-        return [...updated, newMapping];
-      }
-    });
-  };
-
-  const _handleRemoveMapping = (destinationField: string) => {
-    setFieldMappings((prev) =>
-      prev.filter((m) => m.destination !== destinationField),
-    );
-  };
+    return [];
+  }, [destinationSchemaQuery, destinationTableQuery]);
 
   const handleAddTransform = () => {
     if (
@@ -584,6 +392,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       fieldMappings: [], // Field mappings - dbt handles transforms in Meltano job
       transformScript: transformScript?.trim() || undefined, // Optional; dbt is primary
       destinationTable: selectedDestinationTable, // Store selected destination table
+      dbtModels: selectedDbtModels.length > 0 ? selectedDbtModels : undefined,
       primaryKeyField:
         primaryKeyField ||
         validFieldMappings.find(
@@ -613,7 +422,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setTransformName("");
     setFieldMappings([]);
     setTransformScript("");
-    setTransformMode("script");
+    setSelectedDbtModels([]);
   };
 
   const handleDeleteTransform = (collectorId: string, transformId: string) => {
@@ -647,22 +456,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   };
 
   const handleEditTransform = (transform: TransformConfig) => {
-    console.log("handleEditTransform - Setting form state:", {
-      transformId: transform.id,
-      collectorId: transform.collectorId,
-      emitterId: transform.emitterId,
-      name: transform.name,
-      destinationTable: transform.destinationTable,
-      fieldMappingsCount: transform.fieldMappings?.length || 0,
-      fieldMappings: transform.fieldMappings,
-      availableEmittersCount: allEmitters.length,
-      allEmitters: allEmitters.map((e) => ({
-        id: e.id,
-        collectorId: e.collectorId,
-        destinationId: e.destinationId,
-        destinationName: e.destinationName,
-      })),
-    });
     setEditingTransform(transform.id);
     setSelectedCollectorId(transform.collectorId);
     setSelectedEmitterId(transform.emitterId);
@@ -677,7 +470,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         "",
     );
     setTransformScript(transform.transformScript || "");
-    setTransformMode("script"); // Always use script mode - field mappings disabled
+    setSelectedDbtModels(transform.dbtModels ?? []);
     setShowAddDialog(true);
   };
 
@@ -693,14 +486,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         })
       );
     });
-
-    if (!hasValidTransformers) {
-      // This validation is handled in the parent component (page.tsx)
-      // We'll still allow continue but the parent will catch it
-      console.warn(
-        "No transformers with transform scripts found. Pipeline creation will fail.",
-      );
-    }
 
     onComplete(collectors);
   };
@@ -745,13 +530,18 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     //   ),
     // },
     {
-      accessorKey: "transformScript",
-      header: "Script",
-      cell: ({ row }) => (
-        <Badge variant="secondary">
-          {row.original.transformScript ? "Legacy script" : "dbt"}
-        </Badge>
-      ),
+      accessorKey: "dbtModels",
+      header: "Transform",
+      cell: ({ row }) => {
+        const models = row.original.dbtModels;
+        return (
+          <Badge variant="secondary">
+            {models && models.length > 0
+              ? `${models.length} model${models.length !== 1 ? "s" : ""}`
+              : "dbt (all)"}
+          </Badge>
+        );
+      },
     },
     {
       id: "actions",
@@ -828,7 +618,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           "name",
           "collectorName",
           "emitterName",
-          "transformScript",
+          "dbtModels",
           "actions",
         ]}
         fixedColumns={["name", "actions"]}
@@ -1048,7 +838,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 )}
 
                 {/* Clean Engine: Transformations handled by dbt in Meltano job */}
-                <div className="rounded-lg border border-muted bg-muted/30 p-4 space-y-2">
+                <div className="rounded-lg border border-muted bg-muted/30 p-4 space-y-4">
                   <div className="flex items-center gap-2">
                     <Code className="h-4 w-4 text-muted-foreground" />
                     <Label className="text-sm font-medium">
@@ -1060,6 +850,39 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     Meltano pipeline. Column mapping and data quality rules run
                     as part of the sync job. No Python script required.
                   </p>
+                  {dbtModels.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        dbt Models (optional)
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Leave empty to run all models. Select specific models to
+                        run (backend support coming soon).
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {dbtModels.map((model) => {
+                          const isSelected =
+                            selectedDbtModels.includes(model);
+                          return (
+                            <Badge
+                              key={model}
+                              variant={isSelected ? "default" : "outline"}
+                              className="cursor-pointer"
+                              onClick={() =>
+                                setSelectedDbtModels((prev) =>
+                                  isSelected
+                                    ? prev.filter((m) => m !== model)
+                                    : [...prev, model],
+                                )
+                              }
+                            >
+                              {model}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

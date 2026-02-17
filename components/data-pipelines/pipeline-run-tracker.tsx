@@ -4,12 +4,13 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  Copy,
   Loader2,
   RefreshCw,
   XCircle,
   XOctagon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ import {
   usePipelineStats,
 } from "@/lib/api/hooks/use-data-pipelines";
 import type { PipelineRun } from "@/lib/api/types/data-pipelines";
+import { toast } from "@/lib/utils/toast";
 
 interface PipelineRunTrackerProps {
   organizationId: string;
@@ -278,38 +280,7 @@ export function PipelineRunTracker({
 
         {/* Error Details - user_message from ETL (CDC guidance, etc.) */}
         {run.status === "failed" && run.errorMessage && (
-          <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-red-800 dark:text-red-200">
-                    Error Details
-                  </span>
-                  {(run.errorMessage.includes("replication") ||
-                    run.errorMessage.includes("binlog") ||
-                    run.errorMessage.includes("oplog")) && (
-                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-700 dark:text-amber-400">
-                      CDC setup required
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">
-                  {run.errorMessage}
-                </div>
-                {run.errorStack && (
-                  <details className="mt-2">
-                    <summary className="text-xs cursor-pointer text-red-600 dark:text-red-400">
-                      Show stack trace
-                    </summary>
-                    <pre className="mt-2 text-xs bg-red-100 dark:bg-red-900/30 p-2 rounded overflow-x-auto">
-                      {run.errorStack}
-                    </pre>
-                  </details>
-                )}
-              </div>
-            </div>
-          </div>
+          <ErrorDetailsBlock errorMessage={run.errorMessage} errorStack={run.errorStack} />
         )}
 
         {/* Trigger Info */}
@@ -321,5 +292,79 @@ export function PipelineRunTracker({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ErrorDetailsBlock({
+  errorMessage,
+  errorStack,
+}: {
+  errorMessage: string;
+  errorStack?: string | null;
+}) {
+  const [copied, setCopied] = useState(false);
+  const isCdcError =
+    errorMessage.includes("replication") ||
+    errorMessage.includes("binlog") ||
+    errorMessage.includes("oplog");
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(errorMessage);
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }, [errorMessage]);
+
+  return (
+    <div
+      className={isCdcError ? "p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900" : "p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900"}
+    >
+      <div className="flex items-start gap-3">
+        <AlertCircle className={`h-5 w-5 shrink-0 mt-0.5 ${isCdcError ? "text-amber-500" : "text-red-500"}`} />
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`font-medium ${isCdcError ? "text-amber-800 dark:text-amber-200" : "text-red-800 dark:text-red-200"}`}>
+              {isCdcError ? "CDC Setup Required" : "Error Details"}
+            </span>
+            {isCdcError && (
+              <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-700 dark:text-amber-400">
+                Replication not configured
+              </Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 ml-auto shrink-0"
+              onClick={handleCopy}
+            >
+              <Copy className="h-3.5 w-3.5 mr-1" />
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+          {isCdcError && (
+            <p className="text-xs text-muted-foreground">
+              Run the SQL or configuration below in your database, then retry.
+            </p>
+          )}
+          <div className={`text-sm whitespace-pre-wrap font-mono text-xs mt-1 ${isCdcError ? "text-amber-700 dark:text-amber-300" : "text-red-700 dark:text-red-300"}`}>
+            {errorMessage}
+          </div>
+          {errorStack && (
+            <details className="mt-2">
+              <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+                Show stack trace
+              </summary>
+              <pre className="mt-2 text-xs bg-muted/50 p-2 rounded overflow-x-auto">
+                {errorStack}
+              </pre>
+            </details>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

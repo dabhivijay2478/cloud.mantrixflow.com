@@ -1,12 +1,13 @@
 "use client";
 
-import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
+import { Check, Database, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -116,8 +117,15 @@ export function ConnectionSheet({
       defaults[field.name] =
         def !== undefined && def !== null ? String(def) : "";
     });
+    // Sync mode for database connectors (Phase 5: Full Sync vs CDC)
+    if (
+      dataSource &&
+      ["postgres", "mysql", "mongodb"].includes(dataSource.type)
+    ) {
+      defaults["sync_mode"] = "full";
+    }
     return defaults;
-  }, [schema]);
+  }, [schema, dataSource]);
 
   const form = useForm<ConnectionFormValues>({
     // @ts-expect-error - Custom resolver with dynamic schema
@@ -292,6 +300,53 @@ export function ConnectionSheet({
               onSubmit={form.handleSubmit(handleConnect)}
               className="space-y-6"
             >
+              {/* Sync Mode toggle for database connectors (Phase 5) */}
+              {dataSource &&
+                ["postgres", "mysql", "mongodb"].includes(dataSource.type) && (
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-medium">
+                        Sync Mode
+                      </Label>
+                    </div>
+                    <RadioGroup
+                      value={form.watch("sync_mode") || "full"}
+                      onValueChange={(v) => form.setValue("sync_mode", v)}
+                      className="flex flex-col gap-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="full" id="sync-full" />
+                        <Label
+                          htmlFor="sync-full"
+                          className="cursor-pointer font-normal"
+                        >
+                          Full Sync
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value="incremental"
+                          id="sync-cdc"
+                        />
+                        <Label
+                          htmlFor="sync-cdc"
+                          className="cursor-pointer font-normal"
+                        >
+                          Log-Based CDC
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                    <p className="text-xs text-muted-foreground">
+                      {dataSource.type === "postgres"
+                        ? "CDC requires wal_level=logical and a replication slot."
+                        : dataSource.type === "mysql"
+                          ? "CDC requires binlog to be enabled."
+                          : "CDC uses MongoDB oplog for change capture."}
+                    </p>
+                  </div>
+                )}
+
               <div className="grid gap-4">
                 {schema.fields.map((field, index) => {
                   // Check if field should be visible

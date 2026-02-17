@@ -1,12 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Database } from "lucide-react";
+import { ArrowLeft, ArrowRight, Database, Eye, EyeOff } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { buildConnectionSchemasFromMetadata } from "@/components/data-sources/connector-metadata-utils";
+import type { ConnectionSchema } from "@/components/data-sources/connector-metadata-utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,21 +25,48 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useConnectorMetadata } from "@/lib/api/hooks/use-connector-metadata";
 import {
   type DataSource,
   useWorkspaceStore,
 } from "@/lib/stores/workspace-store";
 
-const connectionSchema = z.object({
-  host: z.string().min(1, "Host is required"),
-  port: z.string().optional(),
-  database: z.string().min(1, "Database name is required"),
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
+type ConnectionFormValues = Record<string, string>;
 
-type ConnectionFormValues = z.infer<typeof connectionSchema>;
+// Dynamic schema builder for validation (matches ConnectionSheet)
+function buildConnectionSchema(
+  schema: ConnectionSchema | null | undefined,
+  formValues: ConnectionFormValues,
+) {
+  if (!schema) {
+    return z.object({}).passthrough();
+  }
+  const schemaObject: Record<string, z.ZodTypeAny> = {};
+  schema.fields.forEach((field) => {
+    let isVisible = true;
+    if (field.dependsOn) {
+      const dependencyValue = formValues[field.dependsOn.field];
+      isVisible = String(dependencyValue) === String(field.dependsOn.value);
+    }
+    if (field.required && isVisible) {
+      schemaObject[field.name] = z
+        .string()
+        .min(1, `${field.label} is required`);
+    } else {
+      schemaObject[field.name] = z.string().optional();
+    }
+  });
+  return z.object(schemaObject);
+}
 
 export default function ConnectPage() {
   const router = useRouter();
@@ -50,30 +79,77 @@ export default function ConnectPage() {
     currentOrganization,
   } = useWorkspaceStore();
   const [loading, setLoading] = useState(false);
+  const [visiblePasswordFields, setVisiblePasswordFields] = useState<
+    Record<string, boolean>
+  >({});
+
+  const { data: connectorMetadata } = useConnectorMetadata();
+  const connectionSchemasOverride = useMemo(
+    () =>
+      connectorMetadata
+        ? buildConnectionSchemasFromMetadata(connectorMetadata)
+        : undefined,
+    [connectorMetadata],
+  );
+
+  const schema = connectionSchemasOverride?.[connector];
+
+  const getDefaultValues = useCallback(() => {
+    if (!schema) return {};
+    const defaults: Record<string, string> = {};
+    schema.fields.forEach((field) => {
+      const def = (field as { default?: unknown }).default;
+      defaults[field.name] =
+        def !== undefined && def !== null ? String(def) : "";
+    });
+    // Sync mode for database connectors (Phase 5: Full Sync vs CDC)
+    if (["postgres", "mysql", "mongodb"].includes(connector)) {
+      defaults["sync_mode"] = "full";
+    }
+    return defaults;
+  }, [schema, connector]);
+
+  const form = useForm<ConnectionFormValues>({
+    resolver: (values, _context, _options) => {
+      if (!schema) {
+        return { values: values as ConnectionFormValues, errors: {} };
+      }
+      const validationSchema = buildConnectionSchema(schema, values);
+      const result = validationSchema.safeParse(values);
+      if (result.success) {
+        return { values: result.data as ConnectionFormValues, errors: {} };
+      }
+      const errors: Record<string, { message: string }> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path[0];
+        if (path && typeof path === "string") {
+          errors[path] = { message: issue.message };
+        }
+      });
+      return { values: {} as ConnectionFormValues, errors };
+    },
+    defaultValues: getDefaultValues(),
+  });
+
+  const allValues = form.watch();
+
+  useEffect(() => {
+    if (schema && connector) {
+      form.reset(getDefaultValues());
+    }
+  }, [connector, schema, form, getDefaultValues]);
 
   const handleSkip = () => {
     completeOnboarding();
     router.push("/workspace");
   };
 
-  const form = useForm<ConnectionFormValues>({
-    resolver: zodResolver(connectionSchema),
-    defaultValues: {
-      host: "",
-      port: "",
-      database: "",
-      username: "",
-      password: "",
-    },
-  });
-
-  const onSubmit = async (_data: ConnectionFormValues) => {
+  const onSubmit = async (data: ConnectionFormValues) => {
     setLoading(true);
     try {
-      // In a real app, this would call an API to test the connection
       const dataSource: DataSource = {
         id: `ds_${Date.now()}`,
-        name: `${connector} Connection`,
+        name: data.name || `${connector} Connection`,
         type: connector as DataSource["type"],
         status: "connected" as const,
         organizationId: currentOrganization?.id,
@@ -93,9 +169,7 @@ export default function ConnectPage() {
   };
 
   const handleOAuth = () => {
-    // For OAuth connectors like Google Sheets
     toast.info("Redirecting to OAuth...");
-    // In a real app, this would redirect to OAuth flow
     setTimeout(() => {
       const dataSource: DataSource = {
         id: `ds_${Date.now()}`,
@@ -113,6 +187,9 @@ export default function ConnectPage() {
 
   const isOAuthConnector = ["google-sheets"].includes(connector);
   const isFileUpload = ["excel", "csv"].includes(connector);
+  const isDatabaseConnector = ["postgres", "mysql", "mongodb"].includes(
+    connector,
+  );
 
   if (isOAuthConnector) {
     return (
@@ -239,6 +316,207 @@ export default function ConnectPage() {
     );
   }
 
+  if (isDatabaseConnector && schema) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Database className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Connect {connector}</CardTitle>
+                  <CardDescription>
+                    Step 2 of 3 - Enter your connection details
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
+                  {/* Sync Mode toggle for database connectors (Phase 5) */}
+                  {isDatabaseConnector && (
+                    <FormField
+                      control={form.control}
+                      name="sync_mode"
+                      render={({ field: formField }) => (
+                        <FormItem className="rounded-lg border p-4">
+                          <FormLabel>Sync Mode</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              value={formField.value || "full"}
+                              onValueChange={formField.onChange}
+                              className="flex flex-col gap-2 pt-2"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="full" id="sync-full" />
+                                <FormLabel
+                                  htmlFor="sync-full"
+                                  className="cursor-pointer font-normal"
+                                >
+                                  Full Sync
+                                </FormLabel>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem
+                                  value="incremental"
+                                  id="sync-cdc"
+                                />
+                                <FormLabel
+                                  htmlFor="sync-cdc"
+                                  className="cursor-pointer font-normal"
+                                >
+                                  Log-Based CDC
+                                </FormLabel>
+                              </div>
+                            </RadioGroup>
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {connector === "postgres"
+                              ? "CDC requires wal_level=logical and a replication slot."
+                              : connector === "mysql"
+                                ? "CDC requires binlog to be enabled."
+                                : "CDC uses MongoDB oplog for change capture."}
+                          </p>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  {schema.fields.map((field) => {
+                    if (field.dependsOn) {
+                      const dependencyValue = allValues[field.dependsOn.field];
+                      if (
+                        String(dependencyValue) !==
+                        String(field.dependsOn.value)
+                      ) {
+                        return null;
+                      }
+                    }
+
+                    return (
+                      <FormField
+                        key={field.name}
+                        control={form.control}
+                        name={field.name}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {field.label}
+                              {field.required && (
+                                <span className="text-destructive ml-1">*</span>
+                              )}
+                            </FormLabel>
+                            <FormControl>
+                              {field.type === "select" ? (
+                                <Select
+                                  value={formField.value || ""}
+                                  onValueChange={formField.onChange}
+                                >
+                                  <SelectTrigger className="h-10">
+                                    <SelectValue
+                                      placeholder={field.placeholder}
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {field.options?.map((option) => (
+                                      <SelectItem
+                                        key={option.value}
+                                        value={option.value}
+                                      >
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : field.type === "password" ? (
+                                <div className="relative">
+                                  <Input
+                                    type={
+                                      visiblePasswordFields[field.name]
+                                        ? "text"
+                                        : "password"
+                                    }
+                                    placeholder={field.placeholder}
+                                    {...formField}
+                                    className="h-10 pr-10"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setVisiblePasswordFields((prev) => ({
+                                        ...prev,
+                                        [field.name]: !prev[field.name],
+                                      }))
+                                    }
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    tabIndex={-1}
+                                  >
+                                    {visiblePasswordFields[field.name] ? (
+                                      <Eye className="h-4 w-4" />
+                                    ) : (
+                                      <EyeOff className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              ) : (
+                                <Input
+                                  type={field.type === "number" ? "number" : "text"}
+                                  placeholder={field.placeholder}
+                                  {...formField}
+                                  className="h-10"
+                                />
+                              )}
+                            </FormControl>
+                            {field.description && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {field.description}
+                              </p>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })}
+                  <div className="flex items-center justify-between pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => router.push("/onboarding/data-source")}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Back
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleSkip}
+                        disabled={loading}
+                      >
+                        Skip for now
+                      </Button>
+                      <Button type="submit" disabled={loading}>
+                        {loading ? "Connecting..." : "Connect"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -257,106 +535,21 @@ export default function ConnectPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
+            <p className="text-sm text-muted-foreground py-4">
+              Loading connection form...
+            </p>
+            <div className="flex items-center justify-between pt-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/onboarding/data-source")}
               >
-                <FormField
-                  control={form.control}
-                  name="host"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Host</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="localhost" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="port"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Port (Optional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="5432" type="number" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="database"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Database Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="mydb" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="user" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="••••••••"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex items-center justify-between pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => router.push("/onboarding/data-source")}
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                  </Button>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={handleSkip}
-                      disabled={loading}
-                    >
-                      Skip for now
-                    </Button>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Connecting..." : "Connect"}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </form>
-            </Form>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+              <Button variant="ghost" onClick={handleSkip}>
+                Skip for now
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

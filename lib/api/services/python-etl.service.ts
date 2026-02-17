@@ -200,6 +200,13 @@ export class PythonETLService {
   // =========================================================================
 
   /**
+   * List dbt model names from transform/models/ for the model selector UI.
+   */
+  static async getDbtModels(): Promise<{ models: string[] }> {
+    return PythonETLService.request<{ models: string[] }>("/dbt-models");
+  }
+
+  /**
    * Test a data source connection
    * Calls Python API to test connection configuration
    */
