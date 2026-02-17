@@ -276,16 +276,25 @@ export function PipelineRunTracker({
           )}
         </div>
 
-        {/* Error Details */}
+        {/* Error Details - user_message from ETL (CDC guidance, etc.) */}
         {run.status === "failed" && run.errorMessage && (
           <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <div className="font-medium text-red-800 dark:text-red-200">
-                  Error Details
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-red-800 dark:text-red-200">
+                    Error Details
+                  </span>
+                  {(run.errorMessage.includes("replication") ||
+                    run.errorMessage.includes("binlog") ||
+                    run.errorMessage.includes("oplog")) && (
+                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-700 dark:text-amber-400">
+                      CDC setup required
+                    </Badge>
+                  )}
                 </div>
-                <div className="text-sm text-red-700 dark:text-red-300">
+                <div className="text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">
                   {run.errorMessage}
                 </div>
                 {run.errorStack && (

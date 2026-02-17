@@ -776,10 +776,10 @@ export function usePipelineRun(
     },
     enabled: !!organizationId && !!pipelineId && !!runId,
     refetchInterval: (data) => {
-      // Poll every 5 seconds if run is still in progress
-      const status = data?.state?.data?.status;
+      // Poll every 3 seconds if run is still in progress (real-time progress)
+      const status = data?.status;
       if (status === "running" || status === "pending") {
-        return 5000;
+        return 3000;
       }
       return false;
     },

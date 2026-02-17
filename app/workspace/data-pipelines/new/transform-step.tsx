@@ -13,7 +13,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { PythonScriptEditor } from "@/components/data-pipelines/python-script-editor";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useConnections,
   useSchemasWithTables,
@@ -550,14 +548,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     )
       return;
 
-    // Validate based on transform mode
-    // Only script mode is allowed for now - field mappings are commented out
-    if (!transformScript || !transformScript.trim()) {
-      alert("Please provide a Python transform script.");
-      return;
-    }
+    // Clean Engine: Transformations are handled by dbt in the Meltano job.
+    // transformScript is optional (legacy); no Python script required.
 
-    // Field mappings validation commented out - only scripts allowed for now
+    // Field mappings validation commented out - dbt handles transforms
     // if (transformMode === "script") {
     //   if (!transformScript || !transformScript.trim()) {
     //     alert("Please provide a Python transform script.");
@@ -587,8 +581,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings: [], // Field mappings disabled for now - only scripts allowed
-      transformScript: transformScript, // Always use script mode
+      fieldMappings: [], // Field mappings - dbt handles transforms in Meltano job
+      transformScript: transformScript?.trim() || undefined, // Optional; dbt is primary
       destinationTable: selectedDestinationTable, // Store selected destination table
       primaryKeyField:
         primaryKeyField ||
@@ -695,7 +689,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         collector.transformers &&
         collector.transformers.length > 0 &&
         collector.transformers.some((t) => {
-          return t.transformScript && t.transformScript.trim().length > 0;
+          return true; // Clean Engine: transformers valid without script (dbt handles)
         })
       );
     });
@@ -755,7 +749,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       header: "Script",
       cell: ({ row }) => (
         <Badge variant="secondary">
-          {row.original.transformScript ? "Configured" : "Not configured"}
+          {row.original.transformScript ? "Legacy script" : "dbt"}
         </Badge>
       ),
     },
@@ -858,9 +852,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !selectedCollectorId ||
                 !selectedEmitterId ||
                 !transformName ||
-                !selectedDestinationTable ||
-                !transformScript ||
-                !transformScript.trim()
+                !selectedDestinationTable
               }
               className="w-full sm:w-auto cursor-pointer"
             >
@@ -1055,105 +1047,20 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   </div>
                 )}
 
-                {/* Transform Mode Tabs - Only script mode allowed for now */}
-                {/* Field mappings tab commented out - only scripts allowed */}
-                <Tabs value="script" onValueChange={() => {}}>
-                  <TabsList className="grid w-full grid-cols-1">
-                    <TabsTrigger
-                      value="script"
-                      className="flex items-center gap-2"
-                      disabled
-                    >
-                      <Code className="h-4 w-4" />
-                      Python Script
-                    </TabsTrigger>
-                    {/* Field Mappings tab commented out for now */}
-                    {/* <TabsTrigger value="mappings" className="flex items-center gap-2">
-                    <MapIcon className="h-4 w-4" />
-                    Field Mappings
-                  </TabsTrigger> */}
-                  </TabsList>
-
-                  {/* Python Script Editor */}
-                  <TabsContent value="script" className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Transform Script
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Write a Python function that transforms source records.
-                        Use{" "}
-                        <code className="px-1 py-0.5 bg-muted rounded">
-                          record.get("source_field")
-                        </code>{" "}
-                        to read from source data.
-                      </p>
-                      <PythonScriptEditor
-                        value={transformScript}
-                        onChange={setTransformScript}
-                        sampleRecord={
-                          sourceFields.length > 0
-                            ? sourceFields.reduce(
-                                (acc, field) => {
-                                  // Create a sample record with example values based on field type
-                                  // Handle nested fields (e.g., "address.city")
-                                  const fieldPath = field.name.split(".");
-                                  const fieldName =
-                                    fieldPath[fieldPath.length - 1];
-
-                                  const exampleValue =
-                                    field.type === "integer" ||
-                                    field.type === "number"
-                                      ? 123
-                                      : field.type === "boolean"
-                                        ? true
-                                        : field.type === "date" ||
-                                            field.type === "timestamp"
-                                          ? "2024-01-01"
-                                          : fieldName
-                                                .toLowerCase()
-                                                .includes("email")
-                                            ? "example@email.com"
-                                            : fieldName
-                                                  .toLowerCase()
-                                                  .includes("url")
-                                              ? "https://example.com"
-                                              : `Sample ${fieldName}`;
-
-                                  // Set nested value
-                                  if (fieldPath.length > 1) {
-                                    let current = acc;
-                                    for (
-                                      let i = 0;
-                                      i < fieldPath.length - 1;
-                                      i++
-                                    ) {
-                                      if (!current[fieldPath[i]]) {
-                                        current[fieldPath[i]] = {};
-                                      }
-                                      current = current[fieldPath[i]] as Record<
-                                        string,
-                                        unknown
-                                      >;
-                                    }
-                                    current[fieldName] = exampleValue;
-                                  } else {
-                                    acc[field.name] = exampleValue;
-                                  }
-
-                                  return acc;
-                                },
-                                {} as Record<string, unknown>,
-                              )
-                            : undefined
-                        }
-                        height="500px"
-                      />
-                    </div>
-                  </TabsContent>
-
-                  {/* Field Mappings tab commented out - only scripts allowed for now */}
-                </Tabs>
+                {/* Clean Engine: Transformations handled by dbt in Meltano job */}
+                <div className="rounded-lg border border-muted bg-muted/30 p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Code className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-medium">
+                      Transformations
+                    </Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Transformations are handled by <strong>dbt</strong> in the
+                    Meltano pipeline. Column mapping and data quality rules run
+                    as part of the sync job. No Python script required.
+                  </p>
+                </div>
               </div>
             )}
         </div>

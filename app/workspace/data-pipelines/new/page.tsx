@@ -85,23 +85,16 @@ export default function NewPipelinePage() {
     // This fixes the issue where newly created transformers aren't detected on first save
     const collectorsToUse = collectorsOverride || config.collectors;
 
-    // Validate that at least one transformer with transform script exists
-    // Only script-based transformations are allowed for now (field mappings are commented out)
-    const hasValidTransformers = collectorsToUse.some((collector) => {
-      if (!collector.transformers || collector.transformers.length === 0) {
-        return false;
-      }
-
-      return collector.transformers.some((t) => {
-        // Check if transformScript exists and is not empty
-        return t.transformScript && t.transformScript.trim().length > 0;
-      });
-    });
+    // Validate that at least one transformer exists (Clean Engine: dbt handles transforms)
+    const hasValidTransformers = collectorsToUse.some(
+      (collector) =>
+        collector.transformers && collector.transformers.length > 0,
+    );
 
     if (!hasValidTransformers) {
       toast.error(
-        "Missing transform script",
-        "Please configure at least one transformer with a Python transform script before creating the pipeline.",
+        "Missing transformers",
+        "Please configure at least one transformer (collector → emitter) before creating the pipeline.",
       );
       return;
     }
@@ -272,15 +265,12 @@ export default function NewPipelinePage() {
       // Only script-based transformations are allowed for now
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => t.transformScript?.trim());
+        .find(() => true); // Any transformer; dbt handles transforms
 
-      // Check if transformer has transformScript
-      const hasTransformScript = firstTransformer?.transformScript?.trim();
-
-      if (!firstTransformer || !hasTransformScript) {
+      if (!firstTransformer) {
         toast.error(
           "No transformation configured",
-          "Please configure a Python transform script in the transform step.",
+          "Please configure at least one transformer in the transform step.",
         );
         setIsCreating(false);
         return;
@@ -338,7 +328,7 @@ export default function NewPipelinePage() {
             dataSourceId: destinationConnectionId,
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            transformScript: firstTransformer.transformScript || "",
+            transformScript: firstTransformer.transformScript || undefined,
             writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
