@@ -247,6 +247,17 @@ export interface DataTableProps<TData, TValue> {
    * Default page size
    */
   defaultPageSize?: number;
+  /**
+   * Function to get a stable row ID (e.g. entity id).
+   * Use this when enableRowSelection is true and data has pagination,
+   * so selection persists correctly across pages.
+   */
+  getRowId?: (row: TData) => string;
+  /**
+   * Bulk actions to show when rows are selected (e.g. Delete selected button).
+   * Rendered in the bottom toolbar when enableRowSelection and selection is not empty.
+   */
+  bulkActions?: React.ReactNode;
 }
 
 /**
@@ -301,6 +312,8 @@ export function DataTable<TData, TValue>({
   className,
   pageSizeOptions: _pageSizeOptions = [10, 20, 50, 100],
   defaultPageSize = 10,
+  getRowId,
+  bulkActions,
 }: DataTableProps<TData, TValue>) {
   // Helper function to get column ID from column definition
   const getColumnId = React.useCallback(
@@ -521,6 +534,9 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns,
+    getRowId: getRowId
+      ? (originalRow) => getRowId(originalRow as TData)
+      : undefined,
     getCoreRowModel: getCoreRowModel(),
     ...(enableSorting && {
       getSortedRowModel: getSortedRowModel(),
@@ -779,13 +795,18 @@ export function DataTable<TData, TValue>({
 
       {/* Bottom Controls: Row Selection Summary and Pagination */}
       <div className="flex items-center justify-between">
-        {/* Row Selection Summary - Bottom Left */}
+        {/* Row Selection Summary and Bulk Actions - Bottom Left */}
         <div className="flex items-center gap-4">
           {enableRowSelection ? (
-            <div className="text-sm text-muted-foreground">
-              {selectedRowCount} of {totalRowCount} row
-              {totalRowCount !== 1 ? "s" : ""} selected.
-            </div>
+            <>
+              <div className="text-sm text-muted-foreground">
+                {selectedRowCount} of {totalRowCount} row
+                {totalRowCount !== 1 ? "s" : ""} selected.
+              </div>
+              {selectedRowCount > 0 && bulkActions && (
+                <div className="flex items-center gap-2">{bulkActions}</div>
+              )}
+            </>
           ) : (
             <div className="text-sm text-muted-foreground">
               {totalRowCount} row{totalRowCount !== 1 ? "s" : ""}

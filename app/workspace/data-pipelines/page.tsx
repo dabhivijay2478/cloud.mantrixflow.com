@@ -61,6 +61,10 @@ export default function DataPipelinesPage() {
     name: string;
   } | null>(null);
 
+  // Row selection for bulk delete
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
+
   // Pagination state
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
 
@@ -261,6 +265,25 @@ export default function DataPipelinesPage() {
       const message =
         error instanceof Error ? error.message : "Unable to delete pipeline.";
       toast.error("Failed to delete pipeline", message);
+    }
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (!bulkDeleteIds?.length) return;
+    try {
+      for (const id of bulkDeleteIds) {
+        await deletePipeline.mutateAsync(id);
+      }
+      toast.success(
+        "Pipelines deleted",
+        `${bulkDeleteIds.length} pipeline${bulkDeleteIds.length > 1 ? "s" : ""} have been deleted.`,
+      );
+      setBulkDeleteIds(null);
+      setRowSelection({});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to delete pipelines.";
+      toast.error("Failed to delete pipelines", message);
     }
   };
 
@@ -870,6 +893,26 @@ export default function DataPipelinesPage() {
         isLoading={pipelinesLoading}
         enableSorting
         enableFiltering
+        enableRowSelection
+        getRowId={(row) => row.id}
+        rowSelection={rowSelection}
+        onRowSelectionChange={setRowSelection}
+        bulkActions={
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              const ids = Object.entries(rowSelection)
+                .filter(([, v]) => v)
+                .map(([k]) => k);
+              if (ids.length) setBulkDeleteIds(ids);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete selected (
+            {Object.values(rowSelection).filter(Boolean).length})
+          </Button>
+        }
         externalFilter={urlSearch}
         externalFilterColumnKey="name"
         filterPlaceholder="Filter pipelines..."
@@ -903,6 +946,20 @@ export default function DataPipelinesPage() {
         itemValue={deleteTarget?.name}
         isLoading={deletePipeline.isPending}
         onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmationModal
+        open={!!bulkDeleteIds?.length}
+        onOpenChange={(open) => {
+          if (!open) setBulkDeleteIds(null);
+        }}
+        action="delete"
+        itemName="Pipeline"
+        title={`Delete ${bulkDeleteIds?.length ?? 0} Pipeline${(bulkDeleteIds?.length ?? 0) > 1 ? "s" : ""}`}
+        description={`Are you sure you want to delete ${bulkDeleteIds?.length ?? 0} selected pipeline${(bulkDeleteIds?.length ?? 0) > 1 ? "s" : ""}? This action cannot be undone.`}
+        isLoading={deletePipeline.isPending}
+        onConfirm={handleBulkDeleteConfirm}
       />
     </div>
   );

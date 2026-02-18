@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DataTable, PageHeader } from "@/components/shared";
+import { ConfirmationModal, DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +57,10 @@ export default function DestinationSchemasPage() {
 
   // Pagination state
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+
+  // Row selection for bulk delete
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
 
   const { data: paginatedResult, isLoading } = useDestinationSchemasPaginated(
     organizationId,
@@ -110,6 +114,26 @@ export default function DestinationSchemasPage() {
     },
     [deleteSchema],
   );
+
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    if (!bulkDeleteIds?.length) return;
+    try {
+      for (const id of bulkDeleteIds) {
+        await deleteSchema.mutateAsync(id);
+      }
+      toast.success(
+        "Destination schemas deleted",
+        `${bulkDeleteIds.length} destination schema${bulkDeleteIds.length > 1 ? "s" : ""} have been removed.`,
+      );
+      setBulkDeleteIds(null);
+      setRowSelection({});
+    } catch (error) {
+      toast.error(
+        "Failed to delete",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    }
+  }, [bulkDeleteIds, deleteSchema]);
 
   const getWriteModeBadge = useCallback((mode: string) => {
     const colors: Record<string, string> = {
@@ -280,6 +304,26 @@ export default function DestinationSchemasPage() {
         isLoading={isLoading}
         enableSorting
         enableFiltering
+        enableRowSelection
+        getRowId={(row) => row.id}
+        rowSelection={rowSelection}
+        onRowSelectionChange={setRowSelection}
+        bulkActions={
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              const ids = Object.entries(rowSelection)
+                .filter(([, v]) => v)
+                .map(([k]) => k);
+              if (ids.length) setBulkDeleteIds(ids);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete selected (
+            {Object.values(rowSelection).filter(Boolean).length})
+          </Button>
+        }
         filterPlaceholder="Filter destination schemas..."
         defaultVisibleColumns={[
           "name",
@@ -297,6 +341,20 @@ export default function DestinationSchemasPage() {
         pagination={pagination}
         onPaginationChange={setPagination}
         totalCount={paginatedResult?.total ?? 0}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmationModal
+        open={!!bulkDeleteIds?.length}
+        onOpenChange={(open) => {
+          if (!open) setBulkDeleteIds(null);
+        }}
+        action="delete"
+        itemName="Destination Schema"
+        title={`Delete ${bulkDeleteIds?.length ?? 0} Destination Schema${(bulkDeleteIds?.length ?? 0) > 1 ? "s" : ""}`}
+        description={`Are you sure you want to delete ${bulkDeleteIds?.length ?? 0} selected destination schema${(bulkDeleteIds?.length ?? 0) > 1 ? "s" : ""}? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        isLoading={deleteSchema.isPending}
       />
 
       {/* Details Dialog */}

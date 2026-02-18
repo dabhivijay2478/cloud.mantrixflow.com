@@ -61,6 +61,10 @@ export default function DataSourcesPage() {
   // Pagination state for data sources table
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
 
+  // Row selection for bulk delete
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
+
   // Use paginated data sources API
   const { data: paginatedResult, isLoading: connectionsLoading } =
     useDataSourcesPaginated(organizationId, pagination);
@@ -622,6 +626,28 @@ export default function DataSourcesPage() {
     },
   });
 
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    if (!bulkDeleteIds?.length) return;
+    try {
+      for (const id of bulkDeleteIds) {
+        await deleteDataSource.mutateAsync(id);
+      }
+      showSuccessToast(
+        "deleted",
+        `${bulkDeleteIds.length} Data Source${bulkDeleteIds.length > 1 ? "s" : ""}`,
+      );
+      setBulkDeleteIds(null);
+      setRowSelection({});
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unable to delete the selected data sources.";
+      showErrorToast("deleteFailed", "Data Source", errorMessage);
+      throw error;
+    }
+  }, [bulkDeleteIds, deleteDataSource]);
+
   const handleDisconnect = useCallback(
     async (dataSourceId: string) => {
       const dataSource = filteredDataSources.find(
@@ -939,6 +965,26 @@ export default function DataSourcesPage() {
           isLoading={false}
           enableSorting
           enableFiltering
+          enableRowSelection
+          getRowId={(row) => row.id}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
+          bulkActions={
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                const ids = Object.entries(rowSelection)
+                  .filter(([, v]) => v)
+                  .map(([k]) => k);
+                if (ids.length) setBulkDeleteIds(ids);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete selected (
+              {Object.values(rowSelection).filter(Boolean).length})
+            </Button>
+          }
           externalFilter={urlSearch}
           externalFilterColumnKey="name"
           filterPlaceholder="Filter data sources..."
@@ -994,6 +1040,20 @@ export default function DataSourcesPage() {
         itemName={deleteConfirm.confirmProps.itemName}
         itemValue={deleteConfirm.confirmProps.itemValue}
         onConfirm={deleteConfirm.confirmProps.onConfirm}
+        isLoading={deleteDataSource.isPending}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmationModal
+        open={!!bulkDeleteIds?.length}
+        onOpenChange={(open) => {
+          if (!open) setBulkDeleteIds(null);
+        }}
+        action="delete"
+        itemName="Data Source"
+        title={`Delete ${bulkDeleteIds?.length ?? 0} Data Source${(bulkDeleteIds?.length ?? 0) > 1 ? "s" : ""}`}
+        description={`Are you sure you want to delete ${bulkDeleteIds?.length ?? 0} selected data source${(bulkDeleteIds?.length ?? 0) > 1 ? "s" : ""}? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
         isLoading={deleteDataSource.isPending}
       />
     </div>
