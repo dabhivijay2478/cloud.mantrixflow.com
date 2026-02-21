@@ -163,10 +163,12 @@ export class ConnectionService {
   /**
    * Discover full schema via ETL API (Python service)
    * Returns databases, schemas, tables, and columns with data types (no row data)
+   * When schemaName is provided, uses Meltano filter_schemas for schema-based discovery (reduces bandwidth)
    */
   static async discoverSchemaFull(
     organizationId: string,
     dataSourceId: string,
+    options?: { schemaName?: string; tableName?: string },
   ): Promise<{
     schemas?: Array<{
       name: string;
@@ -192,6 +194,7 @@ export class ConnectionService {
     const result = await DataSourcesService.discoverSchema(
       organizationId,
       dataSourceId,
+      options,
     );
     return result as {
       schemas?: Array<{

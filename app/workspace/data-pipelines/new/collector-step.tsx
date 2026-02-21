@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -109,6 +110,7 @@ export function CollectorStep({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCollector, setEditingCollector] = useState<string | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
+  const [schemaFilter, setSchemaFilter] = useState<string>("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<{
@@ -137,9 +139,11 @@ export function CollectorStep({
   );
 
   // Fetch schemas with tables for the selected source
+  // When schemaFilter is set, uses schema-based discovery (reduces bandwidth)
   const { data: schemas, isLoading: schemasLoading } = useSchemasWithTables(
     selectedSourceId,
     organizationId,
+    schemaFilter.trim() || undefined,
   );
 
   // Flatten all tables from all schemas
@@ -376,13 +380,13 @@ export function CollectorStep({
 
   return (
     <div className="space-y-6">
-      {/* Add Button */}
+      {/* Add Button - always clickable; dialog shows empty state when no data sources */}
       <div className="flex items-center justify-end">
         <Button
+          type="button"
           onClick={() => setShowAddDialog(true)}
           size="sm"
           className="cursor-pointer"
-          disabled={dataSources.length === 0}
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Collector
@@ -459,6 +463,7 @@ export function CollectorStep({
               onValueChange={(value) => {
                 setSelectedSourceId(value);
                 setSelectedTables([]);
+                setSchemaFilter("");
                 setConnectionTestResult(null);
               }}
             >
@@ -536,6 +541,20 @@ export function CollectorStep({
 
           {selectedSourceId && (
             <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1">
+                  <Label htmlFor="schema-filter">
+                    Schema filter (optional)
+                  </Label>
+                  <Input
+                    id="schema-filter"
+                    placeholder="e.g. public — leave empty for all schemas"
+                    value={schemaFilter}
+                    onChange={(e) => setSchemaFilter(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
               <Label htmlFor="tables-select">Select Tables</Label>
               {schemasLoading ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">

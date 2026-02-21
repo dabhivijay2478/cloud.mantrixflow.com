@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/hooks/use-source-schemas";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
+import { toTransformations } from "@/components/data-pipelines/column-mapping-editor";
 import type { CollectorConfig } from "../../new/collector-step";
 import { CollectorStep } from "../../new/collector-step";
 import { EmitterStep } from "../../new/emitter-step";
@@ -371,7 +372,7 @@ export default function EditPipelinePage() {
       // Step 2: Update destination schema if needed
       const firstTransformer = collectors
         .flatMap((c) => c.transformers || [])
-        .find((t) => t.fieldMappings && t.fieldMappings.length > 0);
+        .find(() => true);
 
       if (firstTransformer?.fieldMappings && destinationSchema) {
         // Extract destination table from transformer
@@ -391,17 +392,14 @@ export default function EditPipelinePage() {
         const destTableName =
           destTableParts[1] || destTableParts[0] || destinationTable;
 
-        // Extract primary keys from field mappings if available
+        // Extract primary keys from field mappings (id column or isPrimaryKey)
         const primaryKeyFields =
           firstTransformer.fieldMappings
             ?.filter((fm) => {
-              const mapping = fm as { isPrimaryKey?: boolean };
-              return mapping.isPrimaryKey === true;
+              const m = fm as { isPrimaryKey?: boolean; destination?: string };
+              return m.isPrimaryKey === true || m.destination?.toLowerCase() === "id";
             })
-            .map((fm) => {
-              const mapping = fm as { destination: string };
-              return mapping.destination;
-            }) || [];
+            .map((fm) => (fm as { destination: string }).destination) || [];
 
         const writeMode: "append" | "upsert" | "replace" =
           primaryKeyFields.length > 0 ? "upsert" : "append";
@@ -422,12 +420,19 @@ export default function EditPipelinePage() {
         }
       }
 
-      // Step 3: Update pipeline
+      // Step 3: Update pipeline with transformations (column renames)
+      const fieldMappings = firstTransformer?.fieldMappings ?? [];
+      const columnRenames = Object.fromEntries(
+        fieldMappings
+          .filter((m) => m.source !== m.destination)
+          .map((m) => [m.source, m.destination]),
+      );
+      const transformations = toTransformations(columnRenames);
+
       await updatePipelineMutation.mutateAsync({
         name: pipeline.name,
         description: pipeline.description || undefined,
-        // Note: sourceSchemaId and destinationSchemaId remain the same
-        // unless schemas were recreated (which would require more complex logic)
+        transformations,
       });
 
       toast.success(
@@ -537,8 +542,8 @@ export default function EditPipelinePage() {
       </div>
 
       {/* Main Content - Single Scroll Area */}
-      <div className="flex-1 overflow-y-auto ">
-        <div className="mx-auto max-w-7xl">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {currentStep === "collector" && (
             <CollectorStep
               onComplete={handleCollectorComplete}

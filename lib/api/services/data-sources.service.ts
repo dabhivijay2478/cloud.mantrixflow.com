@@ -552,9 +552,12 @@ export class DataSourcesService {
   static async listSchemasWithTables(
     connectionId: string,
     orgId?: string,
+    schemaName?: string,
   ): Promise<Schema[]> {
     if (!orgId) throw new Error("Organization ID is required");
-    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId, {
+      schemaName,
+    });
 
     if (result.schemas && result.schemas.length > 0) {
       return result.schemas.map((schema) => ({
@@ -591,7 +594,9 @@ export class DataSourcesService {
     orgId?: string,
   ): Promise<Table[]> {
     if (!orgId) throw new Error("Organization ID is required");
-    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId, {
+      schemaName: schema,
+    });
 
     if (schema) {
       const foundSchema = result.schemas?.find((s) => s.name === schema);
@@ -611,8 +616,11 @@ export class DataSourcesService {
   ): Promise<TableSchema> {
     if (!orgId) throw new Error("Organization ID is required");
 
-    // Use discoverSchema to get full schema info including columns
-    const result = await DataSourcesService.discoverSchema(orgId, connectionId);
+    // Schema-based discovery: pass schema/table to reduce bandwidth
+    const result = await DataSourcesService.discoverSchema(orgId, connectionId, {
+      schemaName: schema,
+      tableName: table,
+    });
 
     // Normalize MongoDB response to match expected structure
     if (result.type === "mongodb" && result.databases) {

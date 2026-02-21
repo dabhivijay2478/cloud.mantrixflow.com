@@ -5,15 +5,23 @@ import {
   ChevronDown,
   ChevronRight,
   Database,
+  Filter,
   Folder,
   Loader2,
   RefreshCw,
   Table as TableIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeader } from "@/components/shared";
 import {
   useConnection,
@@ -62,12 +70,26 @@ export default function DataSourceDiscoverPage() {
     organizationId,
     dataSourceId,
   );
+  const [schemaFilter, setSchemaFilter] = useState<string | undefined>(
+    undefined,
+  );
+
+  const discoverOptions = useMemo(
+    () =>
+      schemaFilter ? { schemaName: schemaFilter } : undefined,
+    [schemaFilter],
+  );
+
   const {
     data: discoverData,
     isLoading: discoverLoading,
     refetch: refetchDiscover,
     isRefetching,
-  } = useDiscoverSchemaFull(organizationId, dataSourceId);
+  } = useDiscoverSchemaFull(
+    organizationId,
+    dataSourceId,
+    discoverOptions,
+  );
 
   const [expandedSchemas, setExpandedSchemas] = useState<Set<string>>(new Set());
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
@@ -186,13 +208,45 @@ export default function DataSourceDiscoverPage() {
   const hasSchemas = schemaData?.schemas && schemaData.schemas.length > 0;
   const hasDatabases = schemaData?.databases && schemaData.databases.length > 0;
 
+  const schemaOptions = useMemo(() => {
+    const names = new Set<string>();
+    if (schemaData?.schemas) {
+      schemaData.schemas.forEach((s) => names.add(s.name));
+    }
+    if (schemaData?.databases) {
+      schemaData.databases.forEach((d) => names.add(d.name));
+    }
+    return Array.from(names).sort();
+  }, [schemaData]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Discover Schema"
         description={`Databases, schemas, tables, and columns for ${dataSourceData.name}`}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {(hasSchemas || hasDatabases) && schemaOptions.length > 0 && (
+              <Select
+                value={schemaFilter ?? "all"}
+                onValueChange={(v) =>
+                  setSchemaFilter(v === "all" ? undefined : v)
+                }
+              >
+                <SelectTrigger className="w-[180px] h-9">
+                  <Filter className="h-4 w-4 mr-1.5 text-muted-foreground shrink-0" />
+                  <SelectValue placeholder="Filter by schema" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All schemas</SelectItem>
+                  {schemaOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -230,6 +284,10 @@ export default function DataSourceDiscoverPage() {
               <p>No schemas or databases discovered.</p>
               <p className="text-sm mt-1">
                 Click Refresh to discover the schema.
+              </p>
+              <p className="text-xs mt-2">
+                After discovery, use the schema filter to limit refreshes to a
+                specific schema and reduce load time.
               </p>
             </div>
           ) : (

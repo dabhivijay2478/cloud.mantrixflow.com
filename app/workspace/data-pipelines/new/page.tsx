@@ -1,5 +1,6 @@
 "use client";
 
+import { toTransformations } from "@/components/data-pipelines/column-mapping-editor";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
@@ -294,10 +295,19 @@ export default function NewPipelinePage() {
       const destTableName =
         destTableParts[1] || destTableParts[0] || destinationTable;
 
-      // Clean Engine: dbt handles transforms in Meltano job.
+      // Convert fieldMappings to transformations (rename only) for column_renames in ETL
+      const fieldMappings = (firstTransformer as Transformer & { fieldMappings?: Array<{ source: string; destination: string }> }).fieldMappings ?? [];
+      const columnRenames = Object.fromEntries(
+        fieldMappings
+          .filter((m) => m.source !== m.destination)
+          .map((m) => [m.source, m.destination]),
+      );
+      const transformations = toTransformations(columnRenames);
 
       // Extract primary keys from field mappings
-      const primaryKeyFields: string[] = []; // Empty for now - can be extracted from script if needed
+      const primaryKeyFields = fieldMappings
+        .filter((m) => m.destination?.toLowerCase() === "id")
+        .map((m) => m.destination);
 
       // Determine write mode (default to append, could be enhanced)
       const writeMode: "append" | "upsert" | "replace" =
@@ -347,7 +357,7 @@ export default function NewPipelinePage() {
         scheduleValue: "2",
         scheduleTimezone:
           Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-        transformations: [],
+        transformations,
       });
 
       toast.success(
@@ -408,7 +418,7 @@ export default function NewPipelinePage() {
 
       {/* Main Content - Single Scroll Area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {currentStep === "collector" && (
             <CollectorStep
               onComplete={handleCollectorComplete}

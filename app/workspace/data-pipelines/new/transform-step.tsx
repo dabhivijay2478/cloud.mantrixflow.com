@@ -12,7 +12,13 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  ColumnMappingEditor,
+  fromFieldMappings,
+  toFieldMappings,
+  type ColumnMappingValue,
+} from "@/components/data-pipelines/column-mapping-editor";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +104,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [fieldMappings, setFieldMappings] = useState<
     Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
   >([]);
+  const [columnMapping, setColumnMapping] = useState<ColumnMappingValue>({
+    selected: [],
+    mappings: {},
+  });
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
   const [selectedDbtModels, setSelectedDbtModels] = useState<string[]>([]);
 
@@ -213,7 +223,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     });
   }, [selectedCollector, sourceDataSource]);
 
-  // Fetch schemas for source tables
+  // Schema-based discovery: only fetch schema for collector-defined tables (reduces bandwidth)
   const sourceSchemaQueries = useQueries({
     queries: sourceTableQueries.map(
       ({ tableName: _tableName, schema, table, connectionId, isMongoDB }) => ({
@@ -346,6 +356,33 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     return [];
   }, [destinationSchemaQuery, destinationTableQuery]);
 
+  // Source columns for ColumnMappingEditor (ColumnInfo format; use short name for API)
+  const sourceColumnsForMapping = useMemo(() => {
+    const seen = new Set<string>();
+    return sourceFields
+      .map((f) => {
+        const shortName = f.name.includes(".") ? f.name.split(".").pop() || f.name : f.name;
+        return { name: shortName, type: f.type, nullable: true };
+      })
+      .filter((c) => {
+        if (seen.has(c.name)) return false;
+        seen.add(c.name);
+        return true;
+      });
+  }, [sourceFields]);
+
+  const initializedEditRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editingTransform || sourceColumnsForMapping.length === 0) return;
+    if (initializedEditRef.current === editingTransform) return;
+    const transform = collectors
+      .flatMap((c) => c.transformers || [])
+      .find((t) => t.id === editingTransform);
+    if (!transform?.fieldMappings?.length) return;
+    setColumnMapping(fromFieldMappings(sourceColumnsForMapping, transform.fieldMappings));
+    initializedEditRef.current = editingTransform;
+  }, [editingTransform, sourceColumnsForMapping, collectors]);
+
   const handleAddTransform = () => {
     if (
       !selectedCollectorId ||
@@ -355,27 +392,20 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     )
       return;
 
-    // Clean Engine: Transformations handled by dbt in Meltano job.
-
-    // Ensure fieldMappings is always an array
-    const validFieldMappings = Array.isArray(fieldMappings)
-      ? fieldMappings
-      : [];
+    const validFieldMappings = toFieldMappings(columnMapping);
+    const pkFromMappings = validFieldMappings.find(
+      (m) => m.destination.toLowerCase() === "id",
+    )?.destination;
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings: [], // dbt handles transforms in Meltano job
+      fieldMappings: validFieldMappings,
       destinationTable: selectedDestinationTable,
       dbtModels: selectedDbtModels.length > 0 ? selectedDbtModels : undefined,
-      primaryKeyField:
-        primaryKeyField ||
-        validFieldMappings.find(
-          (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id",
-        )?.destination ||
-        "",
+      primaryKeyField: primaryKeyField || pkFromMappings || "",
     };
 
     const updatedCollectors = collectors.map((collector) => {
@@ -393,11 +423,13 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     onComplete(updatedCollectors);
     setShowAddDialog(false);
     setEditingTransform(null);
+    initializedEditRef.current = null;
     setSelectedCollectorId("");
     setSelectedEmitterId("");
     setSelectedDestinationTable("");
     setTransformName("");
     setFieldMappings([]);
+    setColumnMapping({ selected: [], mappings: {} });
     setSelectedDbtModels([]);
   };
 
@@ -505,16 +537,15 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         <Badge variant="outline">{row.original.emitterName}</Badge>
       ),
     },
-    // Field mappings column commented out - only scripts allowed for now
-    // {
-    //   accessorKey: "fieldMappings",
-    //   header: "Fields Mapped",
-    //   cell: ({ row }) => (
-    //     <Badge variant="secondary">
-    //       {row.original.fieldMappings?.length || 0} fields
-    //     </Badge>
-    //   ),
-    // },
+    {
+      accessorKey: "fieldMappings",
+      header: "Fields Mapped",
+      cell: ({ row }) => (
+        <Badge variant="secondary">
+          {row.original.fieldMappings?.length || 0} fields
+        </Badge>
+      ),
+    },
     {
       accessorKey: "dbtModels",
       header: "Transform",
@@ -604,6 +635,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           "name",
           "collectorName",
           "emitterName",
+          "fieldMappings",
           "dbtModels",
           "actions",
         ]}
@@ -651,6 +683,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   setSelectedCollectorId(value);
                   setSelectedEmitterId("");
                   setFieldMappings([]);
+                  setColumnMapping({ selected: [], mappings: {} });
                 }}
                 disabled={!!editingTransform}
               >
@@ -706,6 +739,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   setSelectedEmitterId(value);
                   setSelectedDestinationTable("");
                   setFieldMappings([]);
+                  setColumnMapping({ selected: [], mappings: {} });
                 }}
                 disabled={!!editingTransform || !selectedCollectorId}
               >
@@ -759,6 +793,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   onValueChange={(value) => {
                     setSelectedDestinationTable(value);
                     setFieldMappings([]);
+                    setColumnMapping({ selected: [], mappings: {} });
                   }}
                 >
                   <SelectTrigger className="h-10 w-full">
@@ -823,53 +858,48 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   </div>
                 )}
 
-                {/* Clean Engine: Transformations handled by dbt in Meltano job */}
-                <div className="rounded-lg border border-muted bg-muted/30 p-4 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Code className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-sm font-medium">
-                      Transformations
-                    </Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Transformations are handled by <strong>dbt</strong> in the
-                    Meltano pipeline. Column mapping and data quality rules run
-                    as part of the sync job. No Python script required.
-                  </p>
-                  {dbtModels.length > 0 && (
-                    <div className="space-y-2">
+                {/* Column mapping: select columns and map/rename for table-to-table migration */}
+                <ColumnMappingEditor
+                  sourceColumns={sourceColumnsForMapping}
+                  value={columnMapping}
+                  onChange={setColumnMapping}
+                />
+                {dbtModels.length > 0 && (
+                  <div className="rounded-lg border border-muted bg-muted/30 p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Code className="h-4 w-4 text-muted-foreground" />
                       <Label className="text-sm font-medium">
                         dbt Models (optional)
                       </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Leave empty to run all models. Select specific models to
-                        run (backend support coming soon).
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {dbtModels.map((model) => {
-                          const isSelected =
-                            selectedDbtModels.includes(model);
-                          return (
-                            <Badge
-                              key={model}
-                              variant={isSelected ? "default" : "outline"}
-                              className="cursor-pointer"
-                              onClick={() =>
-                                setSelectedDbtModels((prev) =>
-                                  isSelected
-                                    ? prev.filter((m) => m !== model)
-                                    : [...prev, model],
-                                )
-                              }
-                            >
-                              {model}
-                            </Badge>
-                          );
-                        })}
-                      </div>
                     </div>
-                  )}
-                </div>
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty to run all models. Select specific models to
+                      run.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {dbtModels.map((model) => {
+                        const isSelected =
+                          selectedDbtModels.includes(model);
+                        return (
+                          <Badge
+                            key={model}
+                            variant={isSelected ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() =>
+                              setSelectedDbtModels((prev) =>
+                                isSelected
+                                  ? prev.filter((m) => m !== model)
+                                  : [...prev, model],
+                              )
+                            }
+                          >
+                            {model}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
         </div>

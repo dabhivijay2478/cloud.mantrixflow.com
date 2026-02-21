@@ -381,9 +381,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
   return (
     <div className="space-y-6">
-      {/* Add Button */}
+      {/* Add Button - always clickable; dialog shows empty state when no collectors */}
       <div className="flex items-center justify-end">
         <Button
+          type="button"
           onClick={() => setShowAddDialog(true)}
           size="sm"
           className="cursor-pointer"

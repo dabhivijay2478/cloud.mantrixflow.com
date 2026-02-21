@@ -238,14 +238,23 @@ export function useSchemas(connectionId: string | undefined, orgId?: string) {
 export function useSchemasWithTables(
   connectionId: string | undefined,
   orgId?: string,
+  schemaName?: string,
 ) {
   return useQuery({
-    queryKey: [...dataSourcesKeys.schemas(connectionId || ""), "with-tables"],
+    queryKey: [
+      ...dataSourcesKeys.schemas(connectionId || ""),
+      "with-tables",
+      schemaName ?? "all",
+    ],
     queryFn: () => {
       if (!connectionId || !orgId) {
         throw new Error("Connection ID and Organization ID are required");
       }
-      return DataSourcesService.listSchemasWithTables(connectionId, orgId);
+      return DataSourcesService.listSchemasWithTables(
+        connectionId,
+        orgId,
+        schemaName,
+      );
     },
     enabled: !!connectionId && !!orgId,
   });

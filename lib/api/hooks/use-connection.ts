@@ -17,8 +17,19 @@ export const connectionKeys = {
   details: () => [...connectionKeys.all, "detail"] as const,
   detail: (organizationId: string, dataSourceId: string) =>
     [...connectionKeys.details(), organizationId, dataSourceId] as const,
-  discover: (organizationId: string, dataSourceId: string) =>
-    [...connectionKeys.all, "discover", organizationId, dataSourceId] as const,
+  discover: (
+    organizationId: string,
+    dataSourceId: string,
+    options?: { schemaName?: string; tableName?: string },
+  ) =>
+    [
+      ...connectionKeys.all,
+      "discover",
+      organizationId,
+      dataSourceId,
+      options?.schemaName ?? "",
+      options?.tableName ?? "",
+    ] as const,
 };
 
 /**
@@ -175,18 +186,25 @@ export function useTestConnection(
   });
 }
 
+export interface DiscoverSchemaOptions {
+  schemaName?: string;
+  tableName?: string;
+}
+
 /**
  * Hook to fetch full schema (databases, schemas, tables, columns with types)
- * Uses NestJS discover API - no row data, metadata only
+ * When schemaName/tableName provided, uses Meltano filter_schemas/filter_collections for schema-based discovery (reduces bandwidth)
  */
 export function useDiscoverSchemaFull(
   organizationId: string | undefined,
   dataSourceId: string | undefined,
+  options?: DiscoverSchemaOptions,
 ) {
   return useQuery({
     queryKey: connectionKeys.discover(
       organizationId || "",
       dataSourceId || "",
+      options,
     ),
     queryFn: () => {
       if (!organizationId || !dataSourceId) {
@@ -195,6 +213,7 @@ export function useDiscoverSchemaFull(
       return ConnectionService.discoverSchemaFull(
         organizationId,
         dataSourceId,
+        options,
       );
     },
     enabled: !!organizationId && !!dataSourceId,
@@ -226,6 +245,14 @@ export function useDiscoverSchema(
         });
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.detail(organizationId, dataSourceId),
+        });
+        // Invalidate all discover caches for this data source
+        queryClient.invalidateQueries({
+          predicate: (query) =>
+            query.queryKey[0] === "connections" &&
+            query.queryKey[1] === "discover" &&
+            query.queryKey[2] === organizationId &&
+            query.queryKey[3] === dataSourceId,
         });
         // Invalidate source schemas since discovery affects them
         queryClient.invalidateQueries({
