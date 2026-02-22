@@ -5,7 +5,6 @@ import {
   Check,
   MoreVertical,
   Search,
-  Table as TableIcon,
   Trash2,
   Unlink,
 } from "lucide-react";
@@ -370,17 +369,6 @@ export function DataSourceTable({
                               <>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    router.push(
-                                      `/workspace/data-sources/${dataSource.id}/query`,
-                                    );
-                                  }}
-                                >
-                                  <TableIcon className="mr-2 h-4 w-4" />
-                                  View table navigation
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
                                     if (onDisconnect) {
                                       onDisconnect(dataSource.id);
                                     }
@@ -390,6 +378,7 @@ export function DataSourceTable({
                                   <Unlink className="mr-2 h-4 w-4" />
                                   Disconnect
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                               </>
                             )}
                             <DropdownMenuItem

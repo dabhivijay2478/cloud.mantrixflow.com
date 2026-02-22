@@ -11,6 +11,7 @@ export interface Organization {
 export interface DataSource {
   id: string;
   name: string;
+  connectorRole?: "source" | "destination";
   type:
     | "postgres"
     | "mysql"

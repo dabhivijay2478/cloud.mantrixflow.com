@@ -139,6 +139,7 @@ export function AddConnectorContent({
         await createConnection.mutateAsync({
           name: data.name,
           connection_type: dataSource.type as CreateConnectionDto["connection_type"],
+          connector_role: connectorFilter === "destinations" ? "destination" : "source",
           config: config as unknown as CreateConnectionDto["config"],
         });
 
@@ -176,6 +177,13 @@ export function AddConnectorContent({
         }
         if (["shopify", "stripe", "airtable", "notion", "slack"].includes(sourceType)) {
           return { type: sourceType, api_key: data.api_key || "" };
+        }
+        if (sourceType === "faker") {
+          return {
+            type: "faker",
+            count: data.count ? parseInt(data.count, 10) : 1000,
+            seed: data.seed ? parseInt(data.seed, 10) : -1,
+          };
         }
         if (sourceType === "github") {
           const repos = (data.repositories || "")

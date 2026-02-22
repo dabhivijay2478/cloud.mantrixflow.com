@@ -6,7 +6,6 @@ import {
   Eye,
   MoreVertical,
   Plus,
-  Table as TableIcon,
   Trash2,
   Unlink,
 } from "lucide-react";
@@ -77,6 +76,7 @@ export default function DataSourcesPage() {
       id: conn.id,
       name: conn.name,
       type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb",
+      connectorRole: conn.connectorRole ?? "source",
       status: (conn.status === "active"
         ? "connected"
         : conn.status === "error"
@@ -217,6 +217,22 @@ export default function DataSourcesPage() {
         ),
       },
       {
+        accessorKey: "connectorRole",
+        header: "Role",
+        cell: ({ row }) => {
+          const role = row.original.connectorRole ?? "source";
+          return role === "destination" ? (
+            <Badge variant="secondary" className="font-medium">
+              Destination
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="font-medium">
+              Source
+            </Badge>
+          );
+        },
+      },
+      {
         accessorKey: "connections",
         header: "Connections",
         cell: ({ row }) => {
@@ -313,17 +329,6 @@ export default function DataSourcesPage() {
                 <DropdownMenuContent align="end">
                   {connected && (
                     <>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(
-                            `/workspace/data-sources/${dataSource.id}/query`,
-                          );
-                        }}
-                      >
-                        <TableIcon className="mr-2 h-4 w-4" />
-                        View table navigation
-                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
@@ -438,6 +443,7 @@ export default function DataSourcesPage() {
                 defaultVisibleColumns={[
                   "name",
                   "type",
+                  "connectorRole",
                   "connections",
                   "connectedAt",
                   "status",

@@ -64,6 +64,7 @@ export class DataSourcesService {
         name: dto.name,
         description: dto.description,
         sourceType: dto.source_type,
+        connectorRole: dto.connector_role,
         metadata: dto.metadata,
       },
     );
@@ -389,6 +390,7 @@ export class DataSourcesService {
     const dataSource = await DataSourcesService.createDataSource(orgId, {
       name: data.name,
       source_type: data.connection_type,
+      connector_role: data.connector_role,
       description: `Connection for ${data.name || data.connection_type}`,
     });
 
@@ -440,6 +442,8 @@ export class DataSourcesService {
               id: ds.id,
               name: ds.name,
               type: ds.sourceType,
+              connectorRole:
+                (ds.connectorRole ?? ds.connector_role) || "source",
               orgId: ds.organizationId,
               organizationId: ds.organizationId,
               status: ds.isActive ? "active" : "inactive",

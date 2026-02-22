@@ -843,7 +843,40 @@ export const connectionSchemas: Record<
   notion: {
     fields: [
       { name: "name", label: "Connection Name", type: "text", placeholder: "My Notion", required: true },
-      { name: "api_key", label: "Internal Integration Token", type: "password", placeholder: "secret_...", required: true },
+      {
+        name: "api_key",
+        label: "Internal Integration Token",
+        type: "password",
+        placeholder: "ntn_... or secret_...",
+        required: true,
+        description:
+          "From Notion: My integrations → your integration → Secrets tab. Important: Share at least one page with the integration (page ⋯ menu → Add connections → select your integration).",
+      },
+    ],
+    testConnection: true,
+  },
+  hubspot: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My HubSpot", required: true },
+      { name: "api_key", label: "Private App Access Token", type: "password", placeholder: "pat-...", required: true, description: "Create a private app in HubSpot and copy the access token" },
+    ],
+    testConnection: true,
+  },
+  salesforce: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Salesforce", required: true },
+      { name: "client_id", label: "Client ID", type: "text", placeholder: "Consumer key from Connected App", required: true },
+      { name: "client_secret", label: "Client Secret", type: "password", placeholder: "••••••••", required: true },
+      { name: "refresh_token", label: "Refresh Token", type: "password", placeholder: "••••••••", required: true, description: "Obtain via OAuth flow" },
+      { name: "is_sandbox", label: "Sandbox", type: "checkbox", required: false },
+    ],
+    testConnection: true,
+  },
+  "google-sheets": {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Google Sheets", required: true },
+      { name: "credentials_json", label: "Service Account JSON", type: "textarea", placeholder: '{"type":"service_account",...}', required: true, description: "Google Cloud service account with Sheets API access" },
+      { name: "spreadsheet_id", label: "Spreadsheet ID (optional)", type: "text", placeholder: "From URL: docs.google.com/spreadsheets/d/SPREADSHEET_ID/", required: false },
     ],
     testConnection: true,
   },
