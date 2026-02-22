@@ -242,6 +242,31 @@ export class DataPipelinesService {
   // ============================================================================
 
   /**
+   * Get sync state (cursor/LSN) for incremental/CDC pipelines.
+   * NestJS owns state — stored in pipeline.checkpoint.
+   */
+  static async getSyncState(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<{ pipeline_id: string; state: Record<string, unknown> | null; message: string }> {
+    return ApiClient.get(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/sync-state`,
+    );
+  }
+
+  /**
+   * Reset sync state — next run will do a full sync.
+   */
+  static async resetSyncState(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<{ pipeline_id: string; deleted: boolean; message: string }> {
+    return ApiClient.delete(
+      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/sync-state`,
+    );
+  }
+
+  /**
    * Get pipeline statistics
    */
   static async getPipelineStats(

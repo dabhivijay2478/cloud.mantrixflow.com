@@ -165,18 +165,49 @@ export class PythonETLService {
 
   /**
    * Discover schema from source
+   * Calls new-etl POST /discover with { source_type, source_config }
    */
   static async discoverSchema(
     sourceType: string,
     request: DiscoverSchemaRequest,
   ): Promise<DiscoverSchemaResponse> {
-    return PythonETLService.request<DiscoverSchemaResponse>(
-      `/discover-schema/${sourceType}`,
-      {
-        method: "POST",
-        body: JSON.stringify(request),
-      },
+    const etlSourceType = PythonETLService.toSourceType(
+      (request.source_type as string) || sourceType,
     );
+    const response = await PythonETLService.request<{
+      source_type: string;
+      streams: Array<{ name: string; columns: string[] }>;
+      total: number;
+    }>("/discover", {
+      method: "POST",
+      body: JSON.stringify({
+        source_type: etlSourceType,
+        source_config: request.connection_config || request.source_config || {},
+      }),
+    });
+
+    // Map new-etl streams to DiscoverSchemaResponse
+    const columns: ColumnInfo[] =
+      response.streams?.[0]?.columns?.map((c) => ({
+        name: c,
+        type: "string",
+        nullable: true,
+      })) ?? [];
+    return {
+      columns,
+      primary_keys: [],
+      schemas: response.streams?.map((s) => ({
+        name: s.name,
+        tables: [
+          {
+            name: s.name,
+            schema: "public",
+            type: "table" as const,
+            columns: s.columns.map((col) => ({ name: col, type: "string", nullable: true })),
+          },
+        ],
+      })),
+    };
   }
 
   /**
@@ -252,8 +283,20 @@ export class PythonETLService {
   // =========================================================================
 
   /**
+   * Map frontend type to new-etl source_type (Airbyte connector name)
+   */
+  private static toSourceType(type: string): string {
+    const t = type?.toLowerCase() || "postgres";
+    if (t === "postgres" || t === "postgresql") return "source-postgres";
+    if (t === "mongodb") return "source-mongodb-v2";
+    if (t === "mysql") return "source-mysql";
+    if (t === "mssql" || t === "sqlserver") return "source-mssql";
+    return `source-${t}`;
+  }
+
+  /**
    * Test a data source connection
-   * Calls Python API to test connection configuration
+   * Calls new-etl POST /test-connection with { source_type, source_config }
    */
   static async testConnection(connectionData: {
     type: string;
@@ -278,23 +321,41 @@ export class PythonETLService {
     response_time_ms?: number;
     details?: Record<string, unknown>;
   }> {
-    // Map connection_string to connection_string_mongo for MongoDB
-    const requestData: Record<string, unknown> = { ...connectionData };
-    if (connectionData.type === "mongodb" && connectionData.connection_string) {
-      requestData.connection_string_mongo = connectionData.connection_string;
-      delete requestData.connection_string;
-    }
+    const { type, ...rest } = connectionData;
+    const sourceType = PythonETLService.toSourceType(type || "postgres");
 
-    return PythonETLService.request<{
+    // Build source_config for new-etl — pass through all fields so API connectors (shopify, stripe, etc.) work
+    const sourceConfig: Record<string, unknown> = {
+      ...rest,
+      host: rest.host,
+      port: rest.port,
+      database: rest.database,
+      username: rest.username,
+      password: rest.password,
+      connection_string:
+        type?.toLowerCase() === "mongodb"
+          ? rest.connection_string_mongo ?? rest.connection_string
+          : rest.connection_string,
+      extra: {
+        ssl: rest.ssl,
+        auth_source: rest.auth_source,
+        replica_set: rest.replica_set,
+        tls: rest.tls,
+      },
+    };
+
+    const response = await PythonETLService.request<{
       success: boolean;
       message?: string;
-      error?: string;
-      version?: string;
-      response_time_ms?: number;
-      details?: Record<string, unknown>;
     }>("/test-connection", {
       method: "POST",
-      body: JSON.stringify(requestData),
+      body: JSON.stringify({ source_type: sourceType, source_config: sourceConfig }),
     });
+
+    return {
+      success: response.success,
+      message: response.message,
+      error: response.success ? undefined : response.message,
+    };
   }
 }

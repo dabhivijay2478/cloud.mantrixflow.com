@@ -785,6 +785,94 @@ export const connectionSchemas: Record<
     ],
     testConnection: true,
   },
+  // ETL registry connectors — generic API key schema
+  shopify: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Shopify", required: true },
+      { name: "shop_name", label: "Shop Name", type: "text", placeholder: "myshop", required: true },
+      { name: "api_key", label: "Admin API Key", type: "password", placeholder: "shpat_...", required: true },
+    ],
+    testConnection: true,
+  },
+  stripe: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Stripe", required: true },
+      { name: "api_key", label: "Secret Key", type: "password", placeholder: "sk_...", required: true },
+    ],
+    testConnection: true,
+  },
+  github: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My GitHub", required: true },
+      { name: "api_key", label: "Personal Access Token", type: "password", placeholder: "ghp_...", required: true },
+      {
+        name: "repositories",
+        label: "Repositories",
+        type: "textarea",
+        placeholder: "myuser/myrepo myuser/another-repo\nOr use myuser/* for all your repos",
+        required: true,
+        description: "Space or newline-separated list. Format: owner/repo (e.g. myuser/myrepo). Use owner/* for all org repos.",
+      },
+    ],
+    testConnection: true,
+  },
+  "google-analytics": {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My GA", required: true },
+      { name: "credentials_json", label: "Service Account JSON", type: "textarea", placeholder: '{"type":"service_account",...}', required: true },
+      { name: "property_id", label: "Property ID", type: "text", placeholder: "123456789", required: false },
+    ],
+    testConnection: true,
+  },
+  "facebook-marketing": {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My FB Marketing", required: true },
+      { name: "api_key", label: "Access Token", type: "password", placeholder: "EAA...", required: true },
+      { name: "account_id", label: "Ad Account ID", type: "text", placeholder: "act_123", required: false },
+    ],
+    testConnection: true,
+  },
+  airtable: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Airtable", required: true },
+      { name: "api_key", label: "Personal Access Token", type: "password", placeholder: "pat...", required: true },
+    ],
+    testConnection: true,
+  },
+  notion: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Notion", required: true },
+      { name: "api_key", label: "Internal Integration Token", type: "password", placeholder: "secret_...", required: true },
+    ],
+    testConnection: true,
+  },
+  slack: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Slack", required: true },
+      { name: "api_key", label: "Bot Token", type: "password", placeholder: "xoxb-...", required: true },
+    ],
+    testConnection: true,
+  },
+  faker: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "Faker Data", required: true },
+      { name: "count", label: "Row Count", type: "number", placeholder: "1000", required: false },
+      { name: "seed", label: "Seed (optional)", type: "number", placeholder: "0", required: false },
+    ],
+    testConnection: true,
+  },
+  file: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "File Source", required: true },
+      { name: "url", label: "File URL", type: "text", placeholder: "https://example.com/data.csv", required: true },
+      { name: "format", label: "Format", type: "select", options: [
+        { value: "csv", label: "CSV" },
+        { value: "json", label: "JSON" },
+        { value: "parquet", label: "Parquet" },
+      ], required: false },
+    ],
+    testConnection: false,
+  },
 };
 
 // All available data sources
@@ -833,12 +921,7 @@ export const allDataSources = [
     type: "mssql" as const,
     iconType: "mssql",
   },
-  {
-    id: "postgres",
-    name: "Postgres",
-    type: "postgres" as const,
-    iconType: "postgres",
-  },
+  // postgres, mysql, mongodb come from ETL connectors (source-postgres, source-mysql, source-mongodb-v2)
   {
     id: "s3-data-lake",
     name: "S3 Data Lake",
@@ -888,13 +971,6 @@ export const allDataSources = [
     type: "weaviate" as const,
     iconType: "weaviate",
   },
-  { id: "mysql", name: "MySQL", type: "mysql" as const, iconType: "mysql" },
-  {
-    id: "mongodb",
-    name: "MongoDB",
-    type: "mongodb" as const,
-    iconType: "mongodb",
-  },
   {
     id: "google-sheets",
     name: "Google Sheets",
@@ -908,6 +984,27 @@ export const allDataSources = [
     iconType: "excel",
   },
   { id: "api", name: "REST API", type: "api" as const, iconType: "api" },
+  // ETL registry connectors (for data source page)
+  { id: "shopify", name: "Shopify", type: "shopify" as const, iconType: "api" },
+  { id: "stripe", name: "Stripe", type: "stripe" as const, iconType: "api" },
+  { id: "github", name: "GitHub", type: "github" as const, iconType: "api" },
+  {
+    id: "google-analytics",
+    name: "Google Analytics",
+    type: "google-analytics" as const,
+    iconType: "api",
+  },
+  {
+    id: "facebook-marketing",
+    name: "Facebook Marketing",
+    type: "facebook-marketing" as const,
+    iconType: "api",
+  },
+  { id: "airtable", name: "Airtable", type: "airtable" as const, iconType: "api" },
+  { id: "notion", name: "Notion", type: "notion" as const, iconType: "api" },
+  { id: "slack", name: "Slack", type: "slack" as const, iconType: "api" },
+  { id: "faker", name: "Faker", type: "faker" as const, iconType: "api" },
+  { id: "file", name: "File", type: "file" as const, iconType: "api" },
 ];
 
 // Note: Tables are now fetched from the API using useTables hook

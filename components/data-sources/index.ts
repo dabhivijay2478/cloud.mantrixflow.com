@@ -1,6 +1,8 @@
+export { AddConnectorContent } from "./add-connector-content";
 export { ConnectionSheet } from "./connection-sheet";
 export { allDataSources, connectionSchemas } from "./constants";
 export { DataSourceCard } from "./data-source-card";
+export { DataSourcePreviewDialog } from "./data-source-preview-dialog";
 export {
   DataSourceCardSkeleton,
   type DataSourceCardSkeletonProps,

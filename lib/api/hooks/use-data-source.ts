@@ -22,6 +22,10 @@ export const dataSourceKeys = {
     [...dataSourceKeys.details(), organizationId, dataSourceId] as const,
   types: (organizationId: string) =>
     [...dataSourceKeys.all, "types", organizationId] as const,
+  discover: (organizationId: string, dataSourceId: string) =>
+    [...dataSourceKeys.all, "discover", organizationId, dataSourceId] as const,
+  preview: (organizationId: string, dataSourceId: string, stream?: string) =>
+    [...dataSourceKeys.all, "preview", organizationId, dataSourceId, stream] as const,
 };
 
 /**
@@ -111,6 +115,58 @@ export function useSupportedDataSourceTypes(
       return DataSourceService.getSupportedTypes(organizationId);
     },
     enabled: !!organizationId,
+  });
+}
+
+/**
+ * Hook to discover streams from a data source (ETL/Airbyte)
+ */
+export function useDiscoverStreams(
+  organizationId: string | undefined,
+  dataSourceId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: dataSourceKeys.discover(organizationId || "", dataSourceId || ""),
+    queryFn: () => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return DataSourceService.discoverStreams(organizationId, dataSourceId);
+    },
+    enabled: !!organizationId && !!dataSourceId && enabled,
+  });
+}
+
+/**
+ * Hook to preview data from a data source (ETL/Airbyte)
+ */
+export function usePreviewData(
+  organizationId: string | undefined,
+  dataSourceId: string | undefined,
+  options?: { source_stream?: string; limit?: number },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: dataSourceKeys.preview(
+      organizationId || "",
+      dataSourceId || "",
+      options?.source_stream,
+    ),
+    queryFn: () => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return DataSourceService.previewData(organizationId, dataSourceId, {
+        source_stream: options?.source_stream,
+        limit: options?.limit ?? 50,
+      });
+    },
+    enabled:
+      !!organizationId &&
+      !!dataSourceId &&
+      !!options?.source_stream &&
+      enabled,
   });
 }
 

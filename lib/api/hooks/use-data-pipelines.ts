@@ -74,6 +74,8 @@ export const dataPipelinesKeys = {
       organizationId,
       pipelineId,
     ] as const,
+  syncState: (organizationId: string, pipelineId: string) =>
+    [...dataPipelinesKeys.all, "sync-state", organizationId, pipelineId] as const,
 };
 
 // ============================================================================
@@ -782,6 +784,56 @@ export function usePipelineRun(
         return 5000;
       }
       return false;
+    },
+  });
+}
+
+/**
+ * Get sync state (cursor/LSN) for incremental/CDC pipelines
+ */
+export function useGetSyncState(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
+  return useQuery({
+    queryKey: dataPipelinesKeys.syncState(organizationId || "", pipelineId || ""),
+    queryFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.getSyncState(organizationId, pipelineId);
+    },
+    enabled: !!organizationId && !!pipelineId,
+  });
+}
+
+/**
+ * Reset sync state — next run will do full sync
+ */
+export function useResetSyncState(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.resetSyncState(organizationId, pipelineId);
+    },
+    onSuccess: () => {
+      if (organizationId && pipelineId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.syncState(organizationId, pipelineId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.full(organizationId, pipelineId),
+        });
+      }
     },
   });
 }

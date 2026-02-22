@@ -44,7 +44,10 @@ import {
 import { useUsers } from "@/lib/api/hooks/use-users";
 import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
+import { usePipelineRealtime } from "@/lib/hooks/use-pipeline-realtime";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { RunStatusBadge } from "@/components/pipeline/RunStatusBadge";
+import { SyncModeBadge } from "@/components/pipeline/SyncModeBadge";
 import { toast } from "@/lib/utils/toast";
 
 export default function DataPipelinesPage() {
@@ -72,6 +75,13 @@ export default function DataPipelinesPage() {
   } = usePipelinesPaginated(organizationId, pagination);
   const pipelines = paginatedResult?.data;
   const deletePipeline = useDeletePipeline(organizationId);
+
+  // Live pipeline run updates via Supabase Realtime
+  usePipelineRealtime(organizationId ?? undefined, () => {
+    queryClient.invalidateQueries({
+      queryKey: dataPipelinesKeys.pipelines.lists(),
+    });
+  });
 
   // Get user info for creators
   const userIds =
@@ -283,25 +293,11 @@ export default function DataPipelinesPage() {
     }
 
     if (pipeline.lastRunStatus === "success") {
-      return (
-        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-          <div className={baseClasses}>
-            <CheckCircle2 className="h-3 w-3" />
-            Success
-          </div>
-        </Badge>
-      );
+      return <RunStatusBadge status="completed" />;
     }
 
     if (pipeline.lastRunStatus === "failed") {
-      return (
-        <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-          <div className={baseClasses}>
-            <XCircle className="h-3 w-3" />
-            Failed
-          </div>
-        </Badge>
-      );
+      return <RunStatusBadge status="failed" />;
     }
 
     // Handle new lifecycle statuses
@@ -337,14 +333,7 @@ export default function DataPipelinesPage() {
     }
 
     if (pipeline.status === "running" || pipeline.status === "initializing") {
-      return (
-        <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
-          <div className={baseClasses}>
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {pipeline.status === "initializing" ? "Initializing" : "Running"}
-          </div>
-        </Badge>
-      );
+      return <RunStatusBadge status="running" />;
     }
 
     if (pipeline.status === "listing") {
@@ -567,6 +556,13 @@ export default function DataPipelinesPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => getStatusBadge(row.original),
+    },
+    {
+      accessorKey: "syncMode",
+      header: "Sync Mode",
+      cell: ({ row }) => (
+        <SyncModeBadge mode={row.original.syncMode ?? "full"} />
+      ),
     },
     {
       accessorKey: "syncFrequency",

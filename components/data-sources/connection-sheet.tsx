@@ -67,6 +67,13 @@ interface ConnectionSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dataSourceId: string | null;
+  /** When provided, use this instead of looking up in allDataSources (for ETL connectors) */
+  dataSource?: {
+    id: string;
+    name: string;
+    type: string;
+    iconType: string;
+  } | null;
   onConnect: (data: ConnectionFormValues) => Promise<void>;
   onTestConnection?: (
     data: ConnectionFormValues,
@@ -77,6 +84,7 @@ export function ConnectionSheet({
   open,
   onOpenChange,
   dataSourceId,
+  dataSource: dataSourceProp,
   onConnect,
   onTestConnection,
 }: ConnectionSheetProps) {
@@ -99,9 +107,9 @@ export function ConnectionSheet({
     }));
   };
 
-  const dataSource = dataSourceId
+  const dataSource = dataSourceProp ?? (dataSourceId
     ? allDataSources.find((ds) => ds.id === dataSourceId)
-    : null;
+    : null);
   const schema = dataSource ? connectionSchemas[dataSource.type] : null;
 
   const getDefaultValues = useCallback(() => {

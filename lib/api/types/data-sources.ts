@@ -7,11 +7,26 @@ export type DataSourceType =
   | "postgres"
   | "mysql"
   | "mongodb"
+  | "mssql"
   | "s3"
   | "api"
   | "bigquery"
   | "snowflake"
-  | "redshift";
+  | "redshift"
+  | "github"
+  | "shopify"
+  | "stripe"
+  | "hubspot"
+  | "salesforce"
+  | "google-sheets"
+  | "google-analytics"
+  | "facebook-marketing"
+  | "airtable"
+  | "notion"
+  | "slack"
+  | "faker"
+  | "file"
+  | (string & {}); // Allow other Airbyte connector types
 
 export interface DataSource {
   id: string;

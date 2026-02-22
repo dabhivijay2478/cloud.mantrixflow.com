@@ -144,6 +144,21 @@ export class DataSourceService {
   }
 
   /**
+   * Get available connectors (sources + destinations) from ETL registry
+   */
+  static async listConnectors(
+    organizationId: string,
+  ): Promise<{ sources: Array<{ id: string; type?: string; label: string; category?: string; cdc?: boolean }>; destinations: Array<{ id: string; label: string }> }> {
+    const result = await ApiClient.get<{ sources: unknown[]; destinations: unknown[] }>(
+      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources/connectors`,
+    );
+    return {
+      sources: (result?.sources ?? []) as Array<{ id: string; type?: string; label: string; category?: string; cdc?: boolean }>,
+      destinations: (result?.destinations ?? []) as Array<{ id: string; label: string }>,
+    };
+  }
+
+  /**
    * Get supported data source types with their schemas
    */
   static async getSupportedTypes(
@@ -151,6 +166,43 @@ export class DataSourceService {
   ): Promise<{ types: SupportedDataSourceType[] }> {
     return ApiClient.get<{ types: SupportedDataSourceType[] }>(
       `${DataSourceService.BASE_PATH}/${organizationId}/data-sources/types`,
+    );
+  }
+
+  /**
+   * Discover streams/tables from a data source using ETL (Airbyte)
+   */
+  static async discoverStreams(
+    organizationId: string,
+    dataSourceId: string,
+  ): Promise<{ streams: Array<{ name: string; columns?: string[] }> }> {
+    const result = await ApiClient.post<{ streams: Array<{ name: string; columns?: string[] }> }>(
+      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/discover`,
+      {},
+    );
+    return { streams: result.streams ?? [] };
+  }
+
+  /**
+   * Preview sample data from a data source using ETL (Airbyte)
+   */
+  static async previewData(
+    organizationId: string,
+    dataSourceId: string,
+    options?: { source_stream?: string; limit?: number },
+  ): Promise<{
+    stream: string;
+    records: Record<string, unknown>[];
+    columns: Array<{ name: string; type?: string } | string>;
+    total: number;
+    warning?: string;
+  }> {
+    return ApiClient.post(
+      `${DataSourceService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/preview`,
+      {
+        source_stream: options?.source_stream,
+        limit: options?.limit ?? 50,
+      },
     );
   }
 }
