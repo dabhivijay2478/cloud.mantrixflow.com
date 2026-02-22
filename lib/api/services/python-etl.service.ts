@@ -324,7 +324,68 @@ export class PythonETLService {
     const { type, ...rest } = connectionData;
     const sourceType = PythonETLService.toSourceType(type || "postgres");
 
-    // Build source_config for new-etl — pass through all fields so API connectors (shopify, stripe, etc.) work
+    // MongoDB: connection_string OR individual (host, port, username, password) per Airbyte spec
+    if (type?.toLowerCase() === "mongodb") {
+      const connStr = rest.connection_string_mongo ?? rest.connection_string;
+      const sourceConfig: Record<string, unknown> = {
+        extra: {},
+      };
+      if (connStr) {
+        sourceConfig.connection_string = connStr;
+      } else {
+        sourceConfig.host = rest.host ?? "";
+        sourceConfig.port = rest.port ?? 27017;
+        sourceConfig.database = rest.database ?? "admin";
+        sourceConfig.username = rest.username ?? "";
+        sourceConfig.password = rest.password ?? "";
+      }
+      const dbs = rest.databases;
+      if (Array.isArray(dbs) && dbs.length) {
+        sourceConfig.databases = dbs;
+      } else if (typeof dbs === "string" && dbs.trim()) {
+        sourceConfig.databases = dbs.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      const response = await PythonETLService.request<{
+        success: boolean;
+        message?: string;
+      }>("/test-connection", {
+        method: "POST",
+        body: JSON.stringify({ source_type: sourceType, source_config: sourceConfig }),
+      });
+      return {
+        success: response.success,
+        message: response.message,
+        error: response.success ? undefined : response.message,
+      };
+    }
+
+    // Snowflake: host = account identifier, extra.warehouse, extra.schema
+    if (type?.toLowerCase() === "snowflake") {
+      const sourceConfig: Record<string, unknown> = {
+        host: rest.host ?? rest.account ?? "",
+        database: rest.database ?? "",
+        username: rest.username ?? "",
+        password: rest.password ?? "",
+        extra: {
+          warehouse: rest.warehouse ?? (rest.extra as Record<string, unknown>)?.warehouse ?? "",
+          schema: rest.schema ?? (rest.extra as Record<string, unknown>)?.schema ?? "PUBLIC",
+        },
+      };
+      const response = await PythonETLService.request<{
+        success: boolean;
+        message?: string;
+      }>("/test-connection", {
+        method: "POST",
+        body: JSON.stringify({ source_type: sourceType, source_config: sourceConfig }),
+      });
+      return {
+        success: response.success,
+        message: response.message,
+        error: response.success ? undefined : response.message,
+      };
+    }
+
+    // Build source_config for other connectors
     const sourceConfig: Record<string, unknown> = {
       ...rest,
       host: rest.host,
@@ -332,11 +393,9 @@ export class PythonETLService {
       database: rest.database,
       username: rest.username,
       password: rest.password,
-      connection_string:
-        type?.toLowerCase() === "mongodb"
-          ? rest.connection_string_mongo ?? rest.connection_string
-          : rest.connection_string,
+      connection_string: rest.connection_string,
       extra: {
+        ...(rest.extra as Record<string, unknown>),
         ssl: rest.ssl,
         auth_source: rest.auth_source,
         replica_set: rest.replica_set,

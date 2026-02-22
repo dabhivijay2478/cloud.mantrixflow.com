@@ -118,8 +118,11 @@ export function ConnectionSheet({
     schema.fields.forEach((field) => {
       defaults[field.name] = "";
     });
+    if (dataSource?.type === "mongodb" && "useConnectionString" in defaults) {
+      defaults.useConnectionString = "true";
+    }
     return defaults;
-  }, [schema]);
+  }, [schema, dataSource?.type]);
 
   const form = useForm<ConnectionFormValues>({
     // @ts-expect-error - Custom resolver with dynamic schema
@@ -160,12 +163,12 @@ export function ConnectionSheet({
   useEffect(() => {
     if (open && schema && dataSource) {
       schema.fields.forEach((field) => {
-        // MongoDB: default connection method to individual fields
+        // MongoDB: default to connection string (Atlas)
         if (
           field.name === "useConnectionString" &&
           !form.getValues("useConnectionString")
         ) {
-          form.setValue("useConnectionString", "false");
+          form.setValue("useConnectionString", "true");
         }
         // MySQL / Postgres: default SSL to disabled if not set
         if (

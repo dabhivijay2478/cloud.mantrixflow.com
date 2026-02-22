@@ -163,30 +163,39 @@ export const connectionSchemas: Record<
         label: "Connection Method",
         type: "select",
         required: true,
-        description: "Choose how to connect to MongoDB",
+        description: "Connection string (Atlas) or individual host/credentials",
         options: [
           { value: "true", label: "Connection String (Atlas/SRV)" },
-          { value: "false", label: "Individual Fields" },
+          { value: "false", label: "Individual (Host, Port, Username, Password)" },
         ],
       },
-      // Connection string mode - only need connection string
       {
         name: "connection_string",
         label: "Connection String",
         type: "password",
-        placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/mydb",
+        placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/?appName=Cluster0",
         required: true,
         description:
-          "Full MongoDB connection string (supports Atlas SRV format). The database name can be included in the connection string.",
+          "Full MongoDB connection string (Atlas SRV). Include username and password. URL-encode special chars (@ → %40, : → %3A).",
         dependsOn: { field: "useConnectionString", value: "true" },
       },
-      // Individual fields mode
+      {
+        name: "databases",
+        label: "Databases",
+        type: "text",
+        placeholder: "sample_mflix, test (comma-separated, or leave empty for admin)",
+        required: false,
+        description:
+          "Databases to sync. Comma-separated (e.g. sample_mflix, test). Airbyte discovers collections from these. Leave empty to use admin.",
+        dependsOn: { field: "useConnectionString", value: "true" },
+      },
       {
         name: "host",
         label: "Host",
         type: "text",
-        placeholder: "localhost or cluster.mongodb.net",
+        placeholder: "cluster0.xxxxx.mongodb.net or localhost",
         required: true,
+        description: "MongoDB host (Atlas: cluster.xxxxx.mongodb.net)",
         dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
@@ -195,16 +204,16 @@ export const connectionSchemas: Record<
         type: "number",
         placeholder: "27017",
         required: false,
-        description: "Default: 27017",
+        description: "Port (default 27017; Atlas SRV uses 27017)",
         dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
         name: "database",
         label: "Database",
         type: "text",
-        placeholder: "mydb",
-        required: true,
-        description: "The database name to connect to",
+        placeholder: "admin",
+        required: false,
+        description: "Default database for auth",
         dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
@@ -212,8 +221,7 @@ export const connectionSchemas: Record<
         label: "Username",
         type: "text",
         placeholder: "user",
-        required: false,
-        description: "Leave empty for unauthenticated connections",
+        required: true,
         dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
@@ -221,37 +229,16 @@ export const connectionSchemas: Record<
         label: "Password",
         type: "password",
         placeholder: "••••••••",
-        required: false,
+        required: true,
         dependsOn: { field: "useConnectionString", value: "false" },
       },
       {
-        name: "authSource",
-        label: "Auth Database",
+        name: "databases",
+        label: "Databases",
         type: "text",
-        placeholder: "admin",
+        placeholder: "sample_mflix, test (comma-separated)",
         required: false,
-        description: "The database to authenticate against (default: admin)",
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "replicaSet",
-        label: "Replica Set",
-        type: "text",
-        placeholder: "rs0",
-        required: false,
-        description: "Replica set name (optional)",
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "tls",
-        label: "Enable TLS/SSL",
-        type: "select",
-        required: false,
-        description: "Enable TLS for secure connections",
-        options: [
-          { value: "false", label: "Disabled" },
-          { value: "true", label: "Enabled" },
-        ],
+        description: "Databases to sync. Comma-separated. Leave empty for admin.",
         dependsOn: { field: "useConnectionString", value: "false" },
       },
     ],
@@ -260,6 +247,13 @@ export const connectionSchemas: Record<
   },
   mssql: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My MS SQL Connection",
+        required: true,
+      },
       {
         name: "host",
         label: "Server",
@@ -302,6 +296,13 @@ export const connectionSchemas: Record<
   bigquery: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My BigQuery",
+        required: true,
+      },
+      {
         name: "projectId",
         label: "Project ID",
         type: "text",
@@ -329,11 +330,20 @@ export const connectionSchemas: Record<
   snowflake: {
     fields: [
       {
-        name: "account",
-        label: "Account",
+        name: "name",
+        label: "Connection Name",
         type: "text",
-        placeholder: "myaccount",
+        placeholder: "My Snowflake",
         required: true,
+      },
+      {
+        name: "account",
+        label: "Account identifier",
+        type: "text",
+        placeholder: "orgname-accountname or orgname-accountname.snowflakecomputing.com",
+        required: true,
+        description:
+          "Full account identifier from Snowflake URL (format: org-account). Find in Account → Admin → Accounts or in your login URL.",
       },
       {
         name: "warehouse",
@@ -376,6 +386,13 @@ export const connectionSchemas: Record<
   redshift: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Redshift",
+        required: true,
+      },
+      {
         name: "host",
         label: "Host",
         type: "text",
@@ -416,6 +433,13 @@ export const connectionSchemas: Record<
   },
   clickhouse: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My ClickHouse",
+        required: true,
+      },
       {
         name: "host",
         label: "Host",
@@ -458,6 +482,13 @@ export const connectionSchemas: Record<
   s3: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My S3",
+        required: true,
+      },
+      {
         name: "bucket",
         label: "Bucket Name",
         type: "text",
@@ -490,6 +521,13 @@ export const connectionSchemas: Record<
   },
   "s3-datalake": {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My S3 Datalake",
+        required: true,
+      },
       {
         name: "bucket",
         label: "Bucket Name",
@@ -531,6 +569,13 @@ export const connectionSchemas: Record<
   "azure-blob-storage": {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Azure Blob",
+        required: true,
+      },
+      {
         name: "accountName",
         label: "Account Name",
         type: "text",
@@ -556,6 +601,13 @@ export const connectionSchemas: Record<
   },
   databricks: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Databricks",
+        required: true,
+      },
       {
         name: "serverHostname",
         label: "Server Hostname",
@@ -583,6 +635,13 @@ export const connectionSchemas: Record<
   pinecone: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Pinecone",
+        required: true,
+      },
+      {
         name: "apiKey",
         label: "API Key",
         type: "password",
@@ -608,6 +667,13 @@ export const connectionSchemas: Record<
   },
   milvus: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Milvus",
+        required: true,
+      },
       {
         name: "host",
         label: "Host",
@@ -642,6 +708,13 @@ export const connectionSchemas: Record<
   weaviate: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Weaviate",
+        required: true,
+      },
+      {
         name: "url",
         label: "Weaviate URL",
         type: "text",
@@ -660,6 +733,13 @@ export const connectionSchemas: Record<
   },
   pgvector: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My pgvector",
+        required: true,
+      },
       {
         name: "host",
         label: "Host",
@@ -702,6 +782,13 @@ export const connectionSchemas: Record<
   "snowflake-cortex": {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Snowflake Cortex",
+        required: true,
+      },
+      {
         name: "account",
         label: "Account",
         type: "text",
@@ -741,6 +828,13 @@ export const connectionSchemas: Record<
   },
   api: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My API",
+        required: true,
+      },
       {
         name: "endpoint",
         label: "API Endpoint",
