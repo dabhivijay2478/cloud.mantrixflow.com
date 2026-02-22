@@ -809,9 +809,10 @@ export const connectionSchemas: Record<
         name: "repositories",
         label: "Repositories",
         type: "textarea",
-        placeholder: "myuser/myrepo myuser/another-repo\nOr use myuser/* for all your repos",
+        placeholder: "username/repo1 username/repo2",
         required: true,
-        description: "Space or newline-separated list. Format: owner/repo (e.g. myuser/myrepo). Use owner/* for all org repos.",
+        description:
+          "Space or newline-separated. Format: owner/repo. For personal accounts, list each repo (e.g. username/repo1 username/repo2). owner/* only works for GitHub organizations, not personal accounts.",
       },
     ],
     testConnection: true,
