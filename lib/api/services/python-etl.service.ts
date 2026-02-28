@@ -57,16 +57,6 @@ export interface CollectResponse {
   metadata?: Record<string, unknown>;
 }
 
-export interface TransformRequest {
-  rows: Record<string, unknown>[];
-  transform_script: string;
-}
-
-export interface TransformResponse {
-  transformed_rows: Record<string, unknown>[];
-  errors: Array<{ message: string; row?: number; error?: string }>;
-}
-
 export interface EmitRequest {
   destination_type: string;
   connection_config: Record<string, unknown>;
@@ -178,6 +168,7 @@ export class PythonETLService {
       source_type: string;
       streams: Array<{ name: string; columns: string[] }>;
       total: number;
+      error?: string;
     }>("/discover", {
       method: "POST",
       body: JSON.stringify({
@@ -186,7 +177,35 @@ export class PythonETLService {
       }),
     });
 
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
     // Map new-etl streams to DiscoverSchemaResponse
+    // Parse stream names: "schema.table" -> schema + table; "table" -> public + table
+    const schemaMap = new Map<
+      string,
+      { tables: Array<{ name: string; schema: string; type: "table"; columns: ColumnInfo[] }> }
+    >();
+    for (const s of response.streams ?? []) {
+      const parts = s.name.includes(".") ? s.name.split(".", 2) : [null, s.name];
+      const schema = parts[0] ?? "public";
+      const table = parts[1] ?? s.name;
+      const tableInfo = {
+        name: table,
+        schema,
+        type: "table" as const,
+        columns: s.columns.map((col) => ({ name: col, type: "string", nullable: true })),
+      };
+      if (!schemaMap.has(schema)) {
+        schemaMap.set(schema, { tables: [] });
+      }
+      schemaMap.get(schema)!.tables.push(tableInfo);
+    }
+    const schemas = Array.from(schemaMap.entries()).map(([name, data]) => ({
+      name,
+      tables: data.tables,
+    }));
     const columns: ColumnInfo[] =
       response.streams?.[0]?.columns?.map((c) => ({
         name: c,
@@ -196,17 +215,7 @@ export class PythonETLService {
     return {
       columns,
       primary_keys: [],
-      schemas: response.streams?.map((s) => ({
-        name: s.name,
-        tables: [
-          {
-            name: s.name,
-            schema: "public",
-            type: "table" as const,
-            columns: s.columns.map((col) => ({ name: col, type: "string", nullable: true })),
-          },
-        ],
-      })),
+      schemas,
     };
   }
 
@@ -218,18 +227,6 @@ export class PythonETLService {
     request: CollectRequest,
   ): Promise<CollectResponse> {
     return PythonETLService.request<CollectResponse>(`/collect/${sourceType}`, {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Transform data
-   */
-  static async transform(
-    request: TransformRequest,
-  ): Promise<TransformResponse> {
-    return PythonETLService.request<TransformResponse>("/transform", {
       method: "POST",
       body: JSON.stringify(request),
     });

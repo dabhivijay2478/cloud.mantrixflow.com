@@ -57,19 +57,51 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
 
+  // Filter to only destination connections (emitter = destinations)
+  const destinationConnections =
+    (connections ?? []).filter(
+      (conn) => (conn.connectorRole ?? "source") === "destination",
+    );
+
+  // Source connections for collector name lookup
+  const sourceConnections =
+    (connections ?? []).filter(
+      (conn) => (conn.connectorRole ?? "source") === "source",
+    );
+
   // Convert API connections to destination format
-  // All connections from the PostgreSQL endpoint are PostgreSQL connections
-  // Emitters don't need connection config fields - they use existing connections
-  const availableDestinations = (connections || []).map((conn) => ({
+  const availableDestinations = destinationConnections.map((conn) => ({
     id: conn.id,
     name: conn.name,
     type: "database",
     icon: Database,
   }));
 
-  // Convert API connections to DataSource format for compatibility
-  const dataSources =
-    connections?.map((conn) => ({
+  // Source data for collector name display
+  const sourceDataSources = sourceConnections.map((conn) => ({
+    id: conn.id,
+    name: conn.name,
+    type: (conn.type || "postgres") as
+      | "postgres"
+      | "mysql"
+      | "mongodb"
+      | "s3"
+      | "api"
+      | "bigquery"
+      | "snowflake"
+      | "redshift"
+      | "clickhouse",
+    status:
+      conn.status === "active"
+        ? ("connected" as const)
+        : ("disconnected" as const),
+    organizationId: conn.orgId || organizationId,
+    connectedAt: conn.lastConnectedAt || undefined,
+    tables: [] as { name: string }[],
+  }));
+
+  // Destination data for emitter dropdown and test connection
+  const destinationDataSources = destinationConnections.map((conn) => ({
       id: conn.id,
       name: conn.name,
       type: (conn.type || "postgres") as
@@ -89,7 +121,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
       organizationId: conn.orgId || organizationId,
       connectedAt: conn.lastConnectedAt || undefined,
       tables: [],
-    })) || [];
+    }));
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEmitter, setEditingEmitter] = useState<string | null>(null);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
@@ -114,7 +146,9 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const allEmitters: Array<
     EmitterConfig & { collectorName: string; collectorId: string }
   > = collectors.flatMap((collector) => {
-    const source = dataSources.find((ds) => ds.id === collector.sourceId);
+    const source = sourceDataSources.find(
+      (ds) => ds.id === collector.sourceId,
+    );
     const collectorName =
       source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
     // Emitters are stored directly on collectors, not on transformers
@@ -200,7 +234,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     setConnectionTestResult(null);
 
     try {
-      const selectedDestination = dataSources.find(
+      const selectedDestination = destinationDataSources.find(
         (ds) => ds.id === selectedDestinationId,
       );
       const sourceType = selectedDestination?.type || "postgres";
@@ -453,7 +487,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                   </div>
                 ) : (
                   collectors.map((collector) => {
-                    const source = dataSources.find(
+                    const source = sourceDataSources.find(
                       (ds) => ds.id === collector.sourceId,
                     );
                     const selectedTablesCount =

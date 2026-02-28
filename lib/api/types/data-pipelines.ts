@@ -236,7 +236,9 @@ export interface PipelineDestinationSchema {
   destinationSchema: string;
   destinationTable: string;
   destinationTableExists: boolean;
-  transformScript?: string | null;
+  transformType?: string | null;
+  dbtModel?: string | null;
+  customSql?: string | null;
   writeMode: WriteMode;
   upsertKey?: string[] | null;
   name?: string | null;
@@ -254,7 +256,9 @@ export interface CreateDestinationSchemaDto {
   destinationSchema?: string;
   destinationTable: string;
   destinationTableExists?: boolean;
-  transformScript?: string; // Custom Python transform script
+  transformType?: string; // 'dbt'
+  dbtModel?: string; // dbt model name (legacy)
+  customSql?: string; // Custom SQL - runs through dbt against raw_input
   writeMode?: WriteMode;
   upsertKey?: string[];
   name?: string;
@@ -264,7 +268,9 @@ export interface UpdateDestinationSchemaDto {
   name?: string;
   destinationSchema?: string;
   destinationTable?: string;
-  transformScript?: string;
+  transformType?: string;
+  dbtModel?: string;
+  customSql?: string;
   writeMode?: WriteMode;
   upsertKey?: string[];
   isActive?: boolean;

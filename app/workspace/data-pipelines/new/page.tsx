@@ -85,23 +85,20 @@ export default function NewPipelinePage() {
     // This fixes the issue where newly created transformers aren't detected on first save
     const collectorsToUse = collectorsOverride || config.collectors;
 
-    // Validate that at least one transformer with transform script exists
-    // Only script-based transformations are allowed for now (field mappings are commented out)
+    // Validate that at least one transformer has dbt SQL
     const hasValidTransformers = collectorsToUse.some((collector) => {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
-
-      return collector.transformers.some((t) => {
-        // Check if transformScript exists and is not empty
-        return t.transformScript && t.transformScript.trim().length > 0;
-      });
+      return collector.transformers.some(
+        (t) => (t as { customSql?: string }).customSql?.trim(),
+      );
     });
 
     if (!hasValidTransformers) {
       toast.error(
-        "Missing transform script",
-        "Please configure at least one transformer with a Python transform script before creating the pipeline.",
+        "Missing transform config",
+        "Please configure at least one transformer with Custom SQL before creating the pipeline.",
       );
       return;
     }
@@ -268,19 +265,15 @@ export default function NewPipelinePage() {
       // Get destination connection ID from emitters
       const destinationConnectionId = allDestinationIds[0];
 
-      // Extract destination information from transformers
-      // Only script-based transformations are allowed for now
+      // Extract destination information from transformers (Custom SQL required)
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => t.transformScript?.trim());
+        .find((t) => (t as { customSql?: string }).customSql?.trim());
 
-      // Check if transformer has transformScript
-      const hasTransformScript = firstTransformer?.transformScript?.trim();
-
-      if (!firstTransformer || !hasTransformScript) {
+      if (!firstTransformer) {
         toast.error(
           "No transformation configured",
-          "Please configure a Python transform script in the transform step.",
+          "Please configure Custom SQL in the transform step.",
         );
         setIsCreating(false);
         return;
@@ -304,10 +297,15 @@ export default function NewPipelinePage() {
       const destTableName =
         destTableParts[1] || destTableParts[0] || destinationTable;
 
-      // Transform script is already in firstTransformer.transformScript
+      const transformerWithConfig = firstTransformer as {
+        customSql?: string;
+        primaryKeyField?: string;
+      };
 
-      // Extract primary keys from field mappings (commented out - field mappings not used for now)
-      const primaryKeyFields: string[] = []; // Empty for now - can be extracted from script if needed
+      // Primary key from transformer (for upsert)
+      const primaryKeyFields: string[] = transformerWithConfig.primaryKeyField
+        ? [transformerWithConfig.primaryKeyField]
+        : [];
 
       // Determine write mode (default to append, could be enhanced)
       const writeMode: "append" | "upsert" | "replace" =
@@ -338,7 +336,8 @@ export default function NewPipelinePage() {
             dataSourceId: destinationConnectionId,
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            transformScript: firstTransformer.transformScript || "",
+            transformType: "dbt",
+            customSql: transformerWithConfig.customSql || undefined,
             writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,

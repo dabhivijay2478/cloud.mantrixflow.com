@@ -4,7 +4,6 @@ import { useQueries } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
-  Code,
   Database,
   Edit,
   Map as MapIcon,
@@ -12,8 +11,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { PythonScriptEditor } from "@/components/data-pipelines/python-script-editor";
+import { useMemo, useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useConnections,
   useSchemasWithTables,
@@ -46,14 +43,11 @@ export interface TransformConfig {
   name: string;
   collectorId: string;
   emitterId: string;
-  fieldMappings: Array<{
-    source: string;
-    destination: string;
-    isPrimaryKey?: boolean;
-  }>; // JSON array format with primary key flag (legacy - use transformScript instead)
-  transformScript?: string; // Custom Python transform script (preferred)
+  transformType: "dbt";
+  dbtModel?: string; // dbt model name (legacy)
+  customSql?: string; // Custom SQL - runs through dbt against raw_input
   destinationTable?: string; // Selected destination table (schema.table format)
-  primaryKeyField?: string; // Explicitly defined primary key field name
+  primaryKeyField?: string; // Primary key for upsert
   status?: "published" | "paused";
 }
 
@@ -95,36 +89,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [selectedDestinationTable, setSelectedDestinationTable] =
     useState<string>("");
   const [transformName, setTransformName] = useState("");
-  const [fieldMappings, setFieldMappings] = useState<
-    Array<{ source: string; destination: string; isPrimaryKey?: boolean }>
-  >([]);
-  const [generatedDestinationFields, setGeneratedDestinationFields] = useState<
-    Array<{ name: string; type: string; table: string }>
-  >([]);
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
-  const [transformScript, setTransformScript] = useState<string>("");
-  const [_transformMode, setTransformMode] = useState<"mappings" | "script">(
-    "script",
-  );
-
-  // Debug: Log when collectors prop changes
-  useEffect(() => {
-    console.log("TransformStep - Collectors prop changed:", {
-      collectorsCount: collectors.length,
-      collectors: collectors.map((c) => ({
-        id: c.id,
-        sourceId: c.sourceId,
-        transformersCount: c.transformers?.length || 0,
-        transformers:
-          c.transformers?.map((t) => ({
-            id: t.id,
-            name: t.name,
-            emitterId: t.emitterId,
-            fieldMappingsCount: t.fieldMappings?.length || 0,
-          })) || [],
-      })),
-    });
-  }, [collectors]);
+  const [customSql, setCustomSql] = useState<string>("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
@@ -147,21 +113,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   > = collectors.flatMap((collector) => {
     const source = dataSources.find((ds) => ds.id === collector.sourceId);
     const collectorTransformers = collector.transformers || [];
-
-    // Debug logging
-    if (collectorTransformers.length > 0) {
-      console.log("TransformStep - Found transformers for collector:", {
-        collectorId: collector.id,
-        transformersCount: collectorTransformers.length,
-        transformers: collectorTransformers.map((t) => ({
-          id: t.id,
-          name: t.name,
-          emitterId: t.emitterId,
-          fieldMappingsCount: t.fieldMappings?.length || 0,
-        })),
-      });
-    }
-
     return collectorTransformers.map((t) => {
       const transform = t as TransformConfig;
       const emitter = allEmitters.find((e) => e.id === transform.emitterId);
@@ -171,22 +122,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         collectorName:
           source?.name || `Data Source ${collector.sourceId.slice(-6)}`,
         emitterName: emitter?.destinationName || "Unknown",
-        fieldMappings: transform.fieldMappings || [],
       };
     });
-  });
-
-  // Debug logging for all transforms
-  console.log("TransformStep - All transforms:", {
-    collectorsCount: collectors.length,
-    allTransformsCount: allTransforms.length,
-    allTransforms: allTransforms.map((t) => ({
-      id: t.id,
-      name: t.name,
-      collectorId: t.collectorId,
-      emitterId: t.emitterId,
-      fieldMappingsCount: t.fieldMappings?.length || 0,
-    })),
   });
 
   const selectedCollector = collectors.find(
@@ -409,9 +346,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     ],
   });
 
-  // Build destination fields from fetched table schema + generated fields
+  // Build destination fields from fetched table schema (for primary key dropdown)
   const destinationFields = useMemo(() => {
-    if (!destinationTableQuery) return generatedDestinationFields;
+    if (!destinationTableQuery) return [];
     const queryResult = destinationSchemaQuery[0];
 
     // If we have actual table columns, use them
@@ -433,113 +370,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       });
     }
 
-    // Otherwise use generated fields
-    return generatedDestinationFields;
-  }, [
-    destinationSchemaQuery,
-    destinationTableQuery,
-    generatedDestinationFields,
-  ]);
-
-  const _handleAutoGenerate = () => {
-    if (sourceFields.length === 0) return;
-
-    // 1. Generate destination fields from source fields
-    // Flatten fields: "address.city" -> "address_city"
-    const newGenerations = sourceFields.map((sf) => ({
-      name: sf.name.replace(/\./g, "_"),
-      type: sf.type,
-      table: selectedDestinationTable || "generated",
-    }));
-
-    setGeneratedDestinationFields(newGenerations);
-
-    // 2. Create Mappings
-    const newMappings = newGenerations.map((df, index) => {
-      const sourceField = sourceFields[index];
-      // Determine if ID/PK
-      const isId =
-        sourceField.name === "_id" || sourceField.name.toLowerCase() === "id";
-
-      return {
-        source: sourceField.name,
-        destination: df.name,
-        isPrimaryKey: isId,
-      };
-    });
-
-    setFieldMappings(newMappings);
-  };
-
-  const _handleFieldMapping = (
-    sourceField: string,
-    destinationField: string,
-  ) => {
-    setFieldMappings((prev) => {
-      const existing = prev.findIndex(
-        (m) => m.destination === destinationField,
-      );
-      // Auto-set as primary key if this is the ID field
-      const isPrimaryKey =
-        destinationField.toLowerCase() === "id" ||
-        destinationField === primaryKeyField;
-
-      // If setting this as PK, remove PK from all other fields
-      const shouldSetAsPK =
-        isPrimaryKey || destinationField.toLowerCase() === "id";
-
-      if (existing >= 0) {
-        // Update existing mapping
-        const updated = prev.map((m) => {
-          if (m.destination === destinationField) {
-            return {
-              source: sourceField,
-              destination: destinationField,
-              isPrimaryKey: shouldSetAsPK,
-            };
-          }
-          // Remove PK from all other fields if this one is being set as PK
-          if (shouldSetAsPK && m.isPrimaryKey) {
-            return { ...m, isPrimaryKey: false };
-          }
-          return m;
-        });
-
-        // Update primary key field state
-        if (shouldSetAsPK) {
-          setPrimaryKeyField(destinationField);
-        } else if (destinationField === primaryKeyField) {
-          setPrimaryKeyField("");
-        }
-
-        return updated;
-      } else {
-        // Add new mapping - remove PK from all existing fields if this is being set as PK
-        const updated = prev.map((m) =>
-          shouldSetAsPK && m.isPrimaryKey ? { ...m, isPrimaryKey: false } : m,
-        );
-
-        const newMapping = {
-          source: sourceField,
-          destination: destinationField,
-          isPrimaryKey: shouldSetAsPK,
-        };
-
-        // Update primary key field state
-        if (shouldSetAsPK) {
-          setPrimaryKeyField(destinationField);
-        }
-
-        return [...updated, newMapping];
-      }
-    });
-  };
-
-  const _handleRemoveMapping = (destinationField: string) => {
-    setFieldMappings((prev) =>
-      prev.filter((m) => m.destination !== destinationField),
-    );
-  };
+    return [];
+  }, [destinationSchemaQuery, destinationTableQuery]);
 
   const handleAddTransform = () => {
     if (
@@ -550,52 +382,22 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     )
       return;
 
-    // Validate based on transform mode
-    // Only script mode is allowed for now - field mappings are commented out
-    if (!transformScript || !transformScript.trim()) {
-      alert("Please provide a Python transform script.");
+    if (!customSql?.trim()) {
+      alert(
+        "Please enter custom SQL (e.g. select id, company_name as name from raw_input).",
+      );
       return;
     }
-
-    // Field mappings validation commented out - only scripts allowed for now
-    // if (transformMode === "script") {
-    //   if (!transformScript || !transformScript.trim()) {
-    //     alert("Please provide a Python transform script.");
-    //     return;
-    //   }
-    // } else {
-    //   // Validate that field mappings exist and are not empty
-    //   if (
-    //     !fieldMappings ||
-    //     !Array.isArray(fieldMappings) ||
-    //     fieldMappings.length === 0
-    //   ) {
-    //     alert(
-    //       "Please configure at least one field mapping before saving the transformer.",
-    //     );
-    //     return;
-    //   }
-    // }
-
-    // Ensure fieldMappings is always an array
-    const validFieldMappings = Array.isArray(fieldMappings)
-      ? fieldMappings
-      : [];
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      fieldMappings: [], // Field mappings disabled for now - only scripts allowed
-      transformScript: transformScript, // Always use script mode
-      destinationTable: selectedDestinationTable, // Store selected destination table
-      primaryKeyField:
-        primaryKeyField ||
-        validFieldMappings.find(
-          (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id",
-        )?.destination ||
-        "",
+      transformType: "dbt",
+      customSql: customSql.trim(),
+      destinationTable: selectedDestinationTable,
+      primaryKeyField: primaryKeyField || undefined,
     };
 
     const updatedCollectors = collectors.map((collector) => {
@@ -617,9 +419,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedEmitterId("");
     setSelectedDestinationTable("");
     setTransformName("");
-    setFieldMappings([]);
-    setTransformScript("");
-    setTransformMode("script");
+    setPrimaryKeyField("");
+    setCustomSql("");
   };
 
   const handleDeleteTransform = (collectorId: string, transformId: string) => {
@@ -653,61 +454,17 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   };
 
   const handleEditTransform = (transform: TransformConfig) => {
-    console.log("handleEditTransform - Setting form state:", {
-      transformId: transform.id,
-      collectorId: transform.collectorId,
-      emitterId: transform.emitterId,
-      name: transform.name,
-      destinationTable: transform.destinationTable,
-      fieldMappingsCount: transform.fieldMappings?.length || 0,
-      fieldMappings: transform.fieldMappings,
-      availableEmittersCount: allEmitters.length,
-      allEmitters: allEmitters.map((e) => ({
-        id: e.id,
-        collectorId: e.collectorId,
-        destinationId: e.destinationId,
-        destinationName: e.destinationName,
-      })),
-    });
     setEditingTransform(transform.id);
     setSelectedCollectorId(transform.collectorId);
     setSelectedEmitterId(transform.emitterId);
     setTransformName(transform.name);
-    setFieldMappings(transform.fieldMappings || []);
     setSelectedDestinationTable(transform.destinationTable || "");
-    setPrimaryKeyField(
-      transform.primaryKeyField ||
-        transform.fieldMappings?.find(
-          (m) => m.isPrimaryKey || m.destination.toLowerCase() === "id",
-        )?.destination ||
-        "",
-    );
-    setTransformScript(transform.transformScript || "");
-    setTransformMode("script"); // Always use script mode - field mappings disabled
+    setPrimaryKeyField(transform.primaryKeyField || "");
+    setCustomSql(transform.customSql || "");
     setShowAddDialog(true);
   };
 
   const handleContinue = () => {
-    // Validate that at least one transformer has transform script
-    // Field mappings validation removed - only scripts allowed for now
-    const hasValidTransformers = collectors.some((collector) => {
-      return (
-        collector.transformers &&
-        collector.transformers.length > 0 &&
-        collector.transformers.some((t) => {
-          return t.transformScript && t.transformScript.trim().length > 0;
-        })
-      );
-    });
-
-    if (!hasValidTransformers) {
-      // This validation is handled in the parent component (page.tsx)
-      // We'll still allow continue but the parent will catch it
-      console.warn(
-        "No transformers with transform scripts found. Pipeline creation will fail.",
-      );
-    }
-
     onComplete(collectors);
   };
 
@@ -740,24 +497,17 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
         <Badge variant="outline">{row.original.emitterName}</Badge>
       ),
     },
-    // Field mappings column commented out - only scripts allowed for now
-    // {
-    //   accessorKey: "fieldMappings",
-    //   header: "Fields Mapped",
-    //   cell: ({ row }) => (
-    //     <Badge variant="secondary">
-    //       {row.original.fieldMappings?.length || 0} fields
-    //     </Badge>
-    //   ),
-    // },
     {
-      accessorKey: "transformScript",
-      header: "Script",
-      cell: ({ row }) => (
-        <Badge variant="secondary">
-          {row.original.transformScript ? "Configured" : "Not configured"}
-        </Badge>
-      ),
+      accessorKey: "transformType",
+      header: "Transform",
+      cell: ({ row }) => {
+        const cfg = row.original as TransformConfig;
+        return (
+          <Badge variant="secondary">
+            {cfg.customSql ? "Custom SQL" : "Not configured"}
+          </Badge>
+        );
+      },
     },
     {
       id: "actions",
@@ -834,7 +584,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           "name",
           "collectorName",
           "emitterName",
-          "transformScript",
+          "transformType",
           "actions",
         ]}
         fixedColumns={["name", "actions"]}
@@ -859,8 +609,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !selectedEmitterId ||
                 !transformName ||
                 !selectedDestinationTable ||
-                !transformScript ||
-                !transformScript.trim()
+                !customSql?.trim()
               }
               className="w-full sm:w-auto cursor-pointer"
             >
@@ -882,7 +631,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 onValueChange={(value) => {
                   setSelectedCollectorId(value);
                   setSelectedEmitterId("");
-                  setFieldMappings([]);
                 }}
                 disabled={!!editingTransform}
               >
@@ -937,7 +685,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 onValueChange={(value) => {
                   setSelectedEmitterId(value);
                   setSelectedDestinationTable("");
-                  setFieldMappings([]);
                 }}
                 disabled={!!editingTransform || !selectedCollectorId}
               >
@@ -967,20 +714,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
               </Select>
             </div>
 
-            {/* Transform Name Field */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">
-                Transform Name
-              </Label>
-              <Input
-                value={transformName}
-                onChange={(e) => setTransformName(e.target.value)}
-                placeholder="e.g., Customer Data Transform"
-                className="h-10 w-full"
-              />
-            </div>
-
-            {/* Destination Table Field - Conditionally Rendered */}
+            {/* Destination Table Field - Conditionally Rendered (before Transform Name so user selects it first) */}
             {selectedCollectorId && selectedEmitterId && (
               <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <Label className="text-sm font-medium text-foreground">
@@ -990,7 +724,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   value={selectedDestinationTable}
                   onValueChange={(value) => {
                     setSelectedDestinationTable(value);
-                    setFieldMappings([]);
                   }}
                 >
                   <SelectTrigger className="h-10 w-full">
@@ -1027,6 +760,19 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 </Select>
               </div>
             )}
+
+            {/* Transform Name Field */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground">
+                Transform Name
+              </Label>
+              <Input
+                value={transformName}
+                onChange={(e) => setTransformName(e.target.value)}
+                placeholder="e.g., Customer Data Transform"
+                className="h-10 w-full"
+              />
+            </div>
           </div>
 
           {selectedCollectorId &&
@@ -1055,105 +801,52 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   </div>
                 )}
 
-                {/* Transform Mode Tabs - Only script mode allowed for now */}
-                {/* Field mappings tab commented out - only scripts allowed */}
-                <Tabs value="script" onValueChange={() => {}}>
-                  <TabsList className="grid w-full grid-cols-1">
-                    <TabsTrigger
-                      value="script"
-                      className="flex items-center gap-2"
-                      disabled
+                {/* Custom SQL transform */}
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
+                      Custom SQL
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Runs through dbt — supports Jinja and dbt syntax. Use{" "}
+                      <code className="rounded bg-muted px-1">raw_input</code>{" "}
+                      as the source table.
+                    </p>
+                    <textarea
+                      placeholder="select id, company_name as name from raw_input"
+                      value={customSql}
+                      onChange={(e) => setCustomSql(e.target.value)}
+                      className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                      rows={5}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Primary key (for upsert)
+                    </Label>
+                    <Select
+                      value={primaryKeyField || "_none_"}
+                      onValueChange={(v) =>
+                        setPrimaryKeyField(v === "_none_" ? "" : v)
+                      }
                     >
-                      <Code className="h-4 w-4" />
-                      Python Script
-                    </TabsTrigger>
-                    {/* Field Mappings tab commented out for now */}
-                    {/* <TabsTrigger value="mappings" className="flex items-center gap-2">
-                    <MapIcon className="h-4 w-4" />
-                    Field Mappings
-                  </TabsTrigger> */}
-                  </TabsList>
-
-                  {/* Python Script Editor */}
-                  <TabsContent value="script" className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Transform Script
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Write a Python function that transforms source records.
-                        Use{" "}
-                        <code className="px-1 py-0.5 bg-muted rounded">
-                          record.get("source_field")
-                        </code>{" "}
-                        to read from source data.
-                      </p>
-                      <PythonScriptEditor
-                        value={transformScript}
-                        onChange={setTransformScript}
-                        sampleRecord={
-                          sourceFields.length > 0
-                            ? sourceFields.reduce(
-                                (acc, field) => {
-                                  // Create a sample record with example values based on field type
-                                  // Handle nested fields (e.g., "address.city")
-                                  const fieldPath = field.name.split(".");
-                                  const fieldName =
-                                    fieldPath[fieldPath.length - 1];
-
-                                  const exampleValue =
-                                    field.type === "integer" ||
-                                    field.type === "number"
-                                      ? 123
-                                      : field.type === "boolean"
-                                        ? true
-                                        : field.type === "date" ||
-                                            field.type === "timestamp"
-                                          ? "2024-01-01"
-                                          : fieldName
-                                                .toLowerCase()
-                                                .includes("email")
-                                            ? "example@email.com"
-                                            : fieldName
-                                                  .toLowerCase()
-                                                  .includes("url")
-                                              ? "https://example.com"
-                                              : `Sample ${fieldName}`;
-
-                                  // Set nested value
-                                  if (fieldPath.length > 1) {
-                                    let current = acc;
-                                    for (
-                                      let i = 0;
-                                      i < fieldPath.length - 1;
-                                      i++
-                                    ) {
-                                      if (!current[fieldPath[i]]) {
-                                        current[fieldPath[i]] = {};
-                                      }
-                                      current = current[fieldPath[i]] as Record<
-                                        string,
-                                        unknown
-                                      >;
-                                    }
-                                    current[fieldName] = exampleValue;
-                                  } else {
-                                    acc[field.name] = exampleValue;
-                                  }
-
-                                  return acc;
-                                },
-                                {} as Record<string, unknown>,
-                              )
-                            : undefined
-                        }
-                        height="500px"
-                      />
-                    </div>
-                  </TabsContent>
-
-                  {/* Field Mappings tab commented out - only scripts allowed for now */}
-                </Tabs>
+                      <SelectTrigger className="h-10 w-full max-w-xs">
+                        <SelectValue placeholder="Select primary key column" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none_">None (append only)</SelectItem>
+                        {destinationFields.map((f) => (
+                          <SelectItem key={f.name} value={f.name}>
+                            {f.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Optional. When set, writes use upsert mode.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
         </div>

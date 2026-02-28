@@ -54,10 +54,9 @@ export interface CollectorConfig {
     name: string;
     collectorId?: string;
     emitterId?: string;
-    fieldMappings?: Array<{ source: string; destination: string }>; // JSON array format
-    transformScript?: string; // Custom Python transform script (preferred over field mappings)
+    customSql?: string; // dbt SQL - runs against raw_input
     destinationTable?: string; // Selected destination table (schema.table format)
-    primaryKeyField?: string; // Explicitly defined primary key field name
+    primaryKeyField?: string; // Primary key for upsert
   }>;
 }
 
@@ -80,9 +79,15 @@ export function CollectorStep({
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
 
+  // Filter to only source connections (collector = data sources)
+  const sourceConnections =
+    connections?.filter(
+      (conn) => (conn.connectorRole ?? "source") === "source",
+    ) ?? [];
+
   // Convert API connections to DataSource format for compatibility
   const dataSources =
-    connections?.map((conn) => ({
+    sourceConnections.map((conn) => ({
       id: conn.id,
       name: conn.name,
       type: (conn.type || "postgres") as
@@ -102,7 +107,7 @@ export function CollectorStep({
       organizationId: conn.orgId || organizationId,
       connectedAt: conn.lastConnectedAt || undefined,
       tables: [], // Will be populated when needed
-    })) || [];
+    }));
 
   const [collectors, setCollectors] =
     useState<CollectorConfig[]>(initialCollectors);
