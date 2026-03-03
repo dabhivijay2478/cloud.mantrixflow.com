@@ -43,11 +43,14 @@ export interface TransformConfig {
   name: string;
   collectorId: string;
   emitterId: string;
-  transformType: "dbt";
-  dbtModel?: string; // dbt model name (legacy)
-  customSql?: string; // Custom SQL - runs through dbt against raw_input
+  transformType: "dlt" | "dbt";
   destinationTable?: string; // Selected destination table (schema.table format)
   primaryKeyField?: string; // Primary key for upsert
+  syncMode?: "full" | "incremental" | "cdc";
+  cursorField?: string; // Cursor for incremental sync
+  writeMode?: "append" | "upsert" | "replace";
+  columnMap?: Array<{ from_col: string; to_col: string }>; // Optional column mapping
+  customSql?: string; // When transformType is dbt
   status?: "published" | "paused";
 }
 
@@ -90,7 +93,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     useState<string>("");
   const [transformName, setTransformName] = useState("");
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
-  const [customSql, setCustomSql] = useState<string>("");
+  const [syncMode, setSyncMode] = useState<"full" | "incremental" | "cdc">("full");
+  const [cursorField, setCursorField] = useState<string>("");
+  const [writeMode, setWriteMode] = useState<"append" | "upsert" | "replace">("append");
+  const [columnMap, setColumnMap] = useState<Array<{ from_col: string; to_col: string }>>([]);
+  const [transformMode, setTransformMode] = useState<"mapping" | "customSql">("mapping");
+  const [customSql, setCustomSql] = useState("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
@@ -381,12 +389,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       !selectedDestinationTable
     )
       return;
-
-    if (!customSql?.trim()) {
-      alert(
-        "Please enter custom SQL (e.g. select id, company_name as name from raw_input).",
-      );
-      return;
+    if (transformMode === "customSql") {
+      if (!customSql?.trim()) return;
+      if (sourceDataSource?.type === "mongodb") return; // Custom SQL not supported for MongoDB
     }
 
     const newTransform: TransformConfig = {
@@ -394,10 +399,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      transformType: "dbt",
-      customSql: customSql.trim(),
+      transformType: transformMode === "customSql" ? "dbt" : "dlt",
       destinationTable: selectedDestinationTable,
       primaryKeyField: primaryKeyField || undefined,
+      syncMode,
+      cursorField: cursorField || undefined,
+      writeMode,
+      columnMap: transformMode === "mapping" && columnMap.length > 0 ? columnMap : undefined,
+      customSql: transformMode === "customSql" && customSql.trim() ? customSql.trim() : undefined,
     };
 
     const updatedCollectors = collectors.map((collector) => {
@@ -420,6 +429,11 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedDestinationTable("");
     setTransformName("");
     setPrimaryKeyField("");
+    setSyncMode("full");
+    setCursorField("");
+    setWriteMode("append");
+    setColumnMap([]);
+    setTransformMode("mapping");
     setCustomSql("");
   };
 
@@ -460,6 +474,11 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setTransformName(transform.name);
     setSelectedDestinationTable(transform.destinationTable || "");
     setPrimaryKeyField(transform.primaryKeyField || "");
+    setSyncMode(transform.syncMode || "full");
+    setCursorField(transform.cursorField || "");
+    setWriteMode(transform.writeMode || "append");
+    setColumnMap(transform.columnMap || []);
+    setTransformMode(transform.transformType === "dbt" ? "customSql" : "mapping");
     setCustomSql(transform.customSql || "");
     setShowAddDialog(true);
   };
@@ -499,12 +518,13 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     },
     {
       accessorKey: "transformType",
-      header: "Transform",
+      header: "Config",
       cell: ({ row }) => {
         const cfg = row.original as TransformConfig;
+        const modeLabel = cfg.transformType === "dbt" ? "Custom SQL" : "Mapping";
         return (
           <Badge variant="secondary">
-            {cfg.customSql ? "Custom SQL" : "Not configured"}
+            {modeLabel} / {cfg.syncMode || "full"} / {cfg.writeMode || "append"}
           </Badge>
         );
       },
@@ -609,7 +629,9 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !selectedEmitterId ||
                 !transformName ||
                 !selectedDestinationTable ||
-                !customSql?.trim()
+                (transformMode === "customSql" && !customSql?.trim()) ||
+                (transformMode === "customSql" &&
+                  sourceDataSource?.type === "mongodb")
               }
               className="w-full sm:w-auto cursor-pointer"
             >
@@ -779,6 +801,69 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             selectedEmitterId &&
             selectedDestinationTable && (
               <div className="space-y-4">
+                {/* Transform mode: Field Mapping (dlt) or Custom SQL (dbt) */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Transform mode</Label>
+                  <div className="flex gap-2 rounded-lg border p-1">
+                    <button
+                      type="button"
+                      onClick={() => setTransformMode("mapping")}
+                      className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        transformMode === "mapping"
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      Field Mapping
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTransformMode("customSql")}
+                      className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        transformMode === "customSql"
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      Custom SQL
+                    </button>
+                  </div>
+                  {transformMode === "customSql" &&
+                    sourceDataSource?.type === "mongodb" && (
+                      <p className="text-xs text-amber-600 dark:text-amber-500">
+                        Custom SQL is only supported for Postgres sources. Use
+                        Field Mapping for MongoDB.
+                      </p>
+                    )}
+                  {transformMode === "customSql" &&
+                    sourceDataSource?.type !== "mongodb" &&
+                    (syncMode === "incremental" || syncMode === "cdc") && (
+                      <p className="text-xs text-muted-foreground">
+                        Postgres uses log-based CDC (WAL); no cursor required.
+                      </p>
+                    )}
+                </div>
+
+                {/* Custom SQL (when transformMode is customSql) */}
+                {transformMode === "customSql" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Custom SQL
+                    </Label>
+                    <textarea
+                      value={customSql}
+                      onChange={(e) => setCustomSql(e.target.value)}
+                      placeholder="SELECT id, UPPER(name) as name FROM {{source_table}}"
+                      className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      rows={5}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use {"{{source_table}}"} as placeholder for the source
+                      table (e.g. public.my_table).
+                    </p>
+                  </div>
+                )}
+
                 {/* Debug info */}
                 {process.env.NODE_ENV === "development" && (
                   <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
@@ -801,25 +886,76 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                   </div>
                 )}
 
-                {/* Custom SQL transform */}
+                {/* dlt config: sync mode, write mode, primary key */}
                 <div className="space-y-4">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">
-                      Custom SQL
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Runs through dbt — supports Jinja and dbt syntax. Use{" "}
-                      <code className="rounded bg-muted px-1">raw_input</code>{" "}
-                      as the source table.
-                    </p>
-                    <textarea
-                      placeholder="select id, company_name as name from raw_input"
-                      value={customSql}
-                      onChange={(e) => setCustomSql(e.target.value)}
-                      className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-                      rows={5}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Sync mode</Label>
+                      <Select
+                        value={syncMode}
+                        onValueChange={(v) =>
+                          setSyncMode(v as "full" | "incremental" | "cdc")
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full">Full</SelectItem>
+                          <SelectItem value="incremental">Incremental</SelectItem>
+                          <SelectItem value="cdc">CDC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Write mode</Label>
+                      <Select
+                        value={writeMode}
+                        onValueChange={(v) =>
+                          setWriteMode(v as "append" | "upsert" | "replace")
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="append">Append</SelectItem>
+                          <SelectItem value="upsert">Upsert</SelectItem>
+                          <SelectItem value="replace">Replace</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+                  {/* Cursor field: required for MongoDB incremental only (Postgres uses WAL) */}
+                  {sourceDataSource?.type === "mongodb" &&
+                    (syncMode === "incremental" || syncMode === "cdc") && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Cursor field (required for MongoDB incremental)
+                      </Label>
+                      <Select
+                        value={cursorField || "_none_"}
+                        onValueChange={(v) =>
+                          setCursorField(v === "_none_" ? "" : v)
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-full max-w-xs">
+                          <SelectValue placeholder="Select cursor column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none_">None</SelectItem>
+                          {sourceFields.map((f) => (
+                            <SelectItem key={f.name} value={f.name}>
+                              {f.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        e.g. _id, updatedAt, lastupdated
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
                       Primary key (for upsert)
@@ -846,6 +982,118 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       Optional. When set, writes use upsert mode.
                     </p>
                   </div>
+
+                  {/* Field Mapping: only when transformMode is mapping */}
+                  {transformMode === "mapping" && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
+                      Field Mapping
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Map source columns to destination columns. Only mapped
+                      columns are synced—unmapped source columns are excluded.
+                      Select &quot;— Skip —&quot; for destination columns you
+                      don&apos;t want to populate. Leave all unmapped to sync
+                      all columns.
+                    </p>
+                    <div className="border rounded-lg divide-y">
+                      {destinationFields.length === 0 &&
+                      sourceFields.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading columns...
+                        </div>
+                      ) : destinationFields.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No destination columns found
+                        </div>
+                      ) : (
+                        destinationFields.map((destField) => {
+                          const currentMapping = columnMap.find(
+                            (m) => m.to_col === destField.name,
+                          );
+                          const mappedFromCol = currentMapping?.from_col ?? "";
+                          const sourceFieldForValue =
+                            mappedFromCol &&
+                            sourceFields.find((f) => {
+                              const simple =
+                                f.name.includes(".")
+                                  ? f.name.split(".").pop()
+                                  : f.name;
+                              return simple === mappedFromCol;
+                            });
+                          const selectValue = sourceFieldForValue
+                            ? sourceFieldForValue.name
+                            : "_skip_";
+                          return (
+                            <div
+                              key={destField.name}
+                              className="flex items-center gap-3 p-3"
+                            >
+                              <span className="text-sm font-medium w-40 shrink-0 truncate">
+                                {destField.name}
+                              </span>
+                              <span className="text-muted-foreground">→</span>
+                              <Select
+                                value={selectValue}
+                                onValueChange={(v) => {
+                                  if (v === "_skip_") {
+                                    setColumnMap((prev) =>
+                                      prev.filter(
+                                        (m) => m.to_col !== destField.name,
+                                      ),
+                                    );
+                                  } else {
+                                    const fromCol =
+                                      v.includes(".")
+                                        ? v.split(".").pop() ?? v
+                                        : v;
+                                    setColumnMap((prev) => {
+                                      const filtered = prev.filter(
+                                        (m) => m.to_col !== destField.name,
+                                      );
+                                      return [
+                                        ...filtered,
+                                        {
+                                          from_col: fromCol,
+                                          to_col: destField.name,
+                                        },
+                                      ];
+                                    });
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="flex-1 min-w-0">
+                                  <SelectValue placeholder="Select source column" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="_skip_">
+                                    — Skip —
+                                  </SelectItem>
+                                  {sourceFields.map((srcField) => {
+                                    const simpleName =
+                                      srcField.name.includes(".")
+                                        ? srcField.name.split(".").pop() ?? srcField.name
+                                        : srcField.name;
+                                    return (
+                                      <SelectItem
+                                        key={`${srcField.name}-${destField.name}`}
+                                        value={srcField.name}
+                                      >
+                                        {simpleName}
+                                        {srcField.name !== simpleName &&
+                                          ` (${srcField.name})`}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                  )}
                 </div>
               </div>
             )}

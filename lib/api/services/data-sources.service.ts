@@ -4,6 +4,7 @@
  */
 
 import { ApiClient } from "../client";
+import { orgPath } from "../constants";
 import type {
   Connection,
   ConnectionHealth,
@@ -30,9 +31,8 @@ import type {
 } from "../types/data-sources";
 
 export class DataSourcesService {
-  // Base path is now organization-scoped
   private static basePath(organizationId: string) {
-    return `api/organizations/${organizationId}/data-sources`;
+    return `${orgPath(organizationId)}/data-sources`;
   }
 
   // ==========================================================================
@@ -247,8 +247,7 @@ export class DataSourcesService {
   }
 
   /**
-   * Discover schema for a data source - calls Python API directly
-   * Python handles schema discovery for all data source types
+   * Discover schema for a data source - calls NestJS API (proxies to ETL)
    */
   static async discoverSchema(
     organizationId: string,
@@ -267,43 +266,70 @@ export class DataSourcesService {
     }>;
     type?: string;
   }> {
-    // Get connection config first
-    const connection = await DataSourcesService.getConnection(
-      organizationId,
-      sourceId,
-      true,
+    const raw = await ApiClient.post<{
+      columns?: Array<{ name: string; type?: string; table?: string; nullable?: boolean }>;
+      primary_keys?: string[];
+      primaryKeys?: string[];
+      estimated_row_count?: number;
+      estimatedRowCount?: number;
+      streams?: Array<{ name: string }>;
+      schemas?: Array<{ name: string; tables: Array<{ name: string; schema: string; type?: string }> }>;
+      data?: {
+        columns?: Array<{ name: string; type?: string; table?: string; nullable?: boolean }>;
+        streams?: Array<{ name: string }>;
+      };
+    }>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/discover-schema`,
+      {
+        schema_name: options?.schemaName ?? "public",
+        table_name: options?.tableName,
+        query: options?.query,
+      },
     );
 
-    const connectionWithConfig = connection as Connection & {
-      config: Record<string, unknown>;
+    // Normalize response: ApiClient returns data.data when wrapped, so raw may already be unwrapped.
+    // Handle both { data: { columns, streams } } and direct { columns, streams } formats.
+    const rawObj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const inner =
+      rawObj.data !== undefined &&
+      rawObj.data !== null &&
+      typeof rawObj.data === "object" &&
+      !Array.isArray(rawObj.data)
+        ? (rawObj.data as Record<string, unknown>)
+        : rawObj;
+
+    const discovered = {
+      columns: (Array.isArray(inner.columns) ? inner.columns : []) as Array<{
+        name: string;
+        type?: string;
+        table?: string;
+        nullable?: boolean;
+      }>,
+      streams: (Array.isArray(inner.streams) ? inner.streams : []) as Array<{
+        name: string;
+      }>,
+      schemas: inner.schemas as
+        | Array<{ name: string; tables: Array<{ name: string; schema: string; type?: string }> }>
+        | undefined,
     };
-    if (!connection || !connectionWithConfig.config) {
-      throw new Error("Connection not configured for this data source");
+
+    let sourceType = "postgresql";
+    try {
+      const dataSource = await DataSourcesService.getDataSource(
+        organizationId,
+        sourceId,
+      );
+      sourceType =
+        dataSource.sourceType?.toLowerCase() === "postgres"
+          ? "postgresql"
+          : dataSource.sourceType?.toLowerCase() || "postgresql";
+    } catch {
+      // Infer from discovered data when getDataSource fails (e.g. 404)
+      if (discovered.streams?.some((s) => s.name.includes("."))) {
+        sourceType = "postgresql";
+      }
     }
 
-    // Get data source to determine source type
-    const dataSource = await DataSourcesService.getDataSource(
-      organizationId,
-      sourceId,
-    );
-    const sourceType =
-      dataSource.sourceType?.toLowerCase() === "postgres"
-        ? "postgresql"
-        : dataSource.sourceType?.toLowerCase() || "postgresql";
-
-    // Call Python service directly for schema discovery
-    const { PythonETLService } = await import("./python-etl.service");
-
-    const discovered = await PythonETLService.discoverSchema(sourceType, {
-      source_type: sourceType,
-      connection_config: connectionWithConfig.config as Record<string, unknown>,
-      source_config: {},
-      table_name: options?.tableName,
-      schema_name: options?.schemaName,
-      query: options?.query,
-    });
-
-    // Preferred shape from Python ETL discover endpoint.
     if (discovered.schemas && discovered.schemas.length > 0) {
       return {
         schemas: discovered.schemas.map((schema) => ({
@@ -311,30 +337,97 @@ export class DataSourcesService {
           tables: schema.tables.map((table) => ({
             name: table.name,
             schema: table.schema || schema.name,
-            type: table.type,
-            rowCount: table.rowCount,
+            type: (table.type as "table" | "view" | "materialized_view") ?? "table",
+            rowCount: undefined,
           })),
         })),
         type: sourceType,
       };
     }
 
-    // Backward-compatible fallback shape.
     if (sourceType === "mongodb") {
+      const schemaName = options?.schemaName ?? "public";
+      const tablesFromStreams =
+        discovered.streams?.map((s) => {
+          const parts = s.name.split(".");
+          const tableName = parts[1] ?? s.name;
+          const cols =
+            discovered.columns?.filter((c) => (c as { table?: string }).table === tableName) ??
+            discovered.columns ??
+            [];
+          return {
+            name: tableName,
+            schema: parts[0] ?? schemaName,
+            type: "table" as const,
+            columns: cols,
+          };
+        }) ?? [];
       return {
         databases: [],
+        tables: tablesFromStreams as Table[],
+        schemas: [{ name: schemaName, tables: tablesFromStreams }],
         type: "mongodb",
       };
     }
 
+    const schemaName = options?.schemaName ?? "public";
+    let tables: Table[];
+
+    // Streams-first: when streams exist, use them as source of truth for table names
+    if (discovered.streams && discovered.streams.length > 0) {
+      tables = discovered.streams.map((s) => {
+        const parts = s.name.split(".");
+        const tableName = parts.length > 1 ? parts[1]! : s.name;
+        const streamSchema = parts.length > 1 ? parts[0]! : schemaName;
+        const cols = (discovered.columns ?? []).filter((c) => {
+          const colAny = c as { table?: string; table_name?: string; tableName?: string };
+          const t = colAny.table ?? colAny.table_name ?? colAny.tableName;
+          return t === tableName;
+        });
+        return {
+          name: tableName,
+          schema: streamSchema,
+          type: "table" as const,
+          columns: cols,
+        };
+      });
+    } else {
+      // Fallback: build from columns only when no streams
+      const columnsByTable = new Map<string, typeof discovered.columns>();
+      for (const col of discovered.columns ?? []) {
+        const colAny = col as { table?: string; table_name?: string; tableName?: string };
+        const tableName =
+          colAny.table ?? colAny.table_name ?? colAny.tableName ?? "unknown";
+        if (!columnsByTable.has(tableName)) {
+          columnsByTable.set(tableName, []);
+        }
+        columnsByTable.get(tableName)!.push(col);
+      }
+      tables = Array.from(columnsByTable.entries()).map(
+        ([tableName, cols]) => ({
+          name: tableName,
+          schema: schemaName,
+          type: "table" as const,
+          columns: cols ?? [],
+        }),
+      );
+    }
+
+    // Defensive: warn in dev when we have streams/columns but tables ended up empty
+    if (
+      process.env.NODE_ENV === "development" &&
+      tables.length === 0 &&
+      ((discovered.streams?.length ?? 0) > 0 || (discovered.columns?.length ?? 0) > 0)
+    ) {
+      console.warn(
+        "[discoverSchema] Streams or columns present but tables empty:",
+        { streams: discovered.streams?.length, columns: discovered.columns?.length },
+      );
+    }
+
     return {
-      tables: discovered.columns.map((col) => ({
-        name: col.name,
-        schema: options?.schemaName || "public",
-        type: "table",
-        columns: [col],
-      })) as Table[],
-      schemas: options?.schemaName ? [{ name: options.schemaName }] : undefined,
+      tables,
+      schemas: [{ name: schemaName, tables }],
       type: sourceType,
     };
   }
@@ -348,32 +441,61 @@ export class DataSourcesService {
 
   /** @deprecated Use organization-scoped endpoints */
   /**
-   * Test connection - calls Python API directly
-   * Python handles connection testing for all data source types
-   */
-  /**
-   * Test connection - calls Python API directly
-   * Frontend should use this method for testing connections
+   * Test connection config (pre-save) - calls NestJS API
+   * Uses api/connectors/test-connection (no org scope, no Python ETL required)
    */
   static async testConnectionLegacy(
     _organizationId: string,
     data: TestConnectionDto,
   ): Promise<TestConnectionResponse> {
-    // Call Python API directly for connection testing
-    const { PythonETLService } = await import("./python-etl.service");
+    const connectionType = (data.type || "postgres").toLowerCase();
+    const effectiveType = connectionType === "postgresql" ? "postgres" : connectionType;
 
-    const result = await PythonETLService.testConnection({
-      ...data,
-      type: data.type || "postgres",
-      ssl: data.ssl ?? undefined,
-      sshTunnel: data.sshTunnel ?? undefined,
-    } as Parameters<typeof PythonETLService.testConnection>[0]);
+    const port =
+      typeof data.port === "number"
+        ? data.port
+        : data.port
+          ? parseInt(String(data.port), 10)
+          : effectiveType === "mongodb"
+            ? 27017
+            : 5432;
+
+    const config: Record<string, unknown> = {
+      host: data.host,
+      port,
+      database: data.database,
+      username: data.username,
+      password: data.password,
+      ssl: data.ssl,
+    };
+
+    if (effectiveType === "mongodb") {
+      const connStr =
+        (data as Record<string, unknown>).connection_string ??
+        (data as Record<string, unknown>).connection_string_mongo;
+      if (connStr) {
+        config.connection_string = connStr;
+      }
+      const databases = (data as Record<string, unknown>).databases;
+      if (databases) {
+        config.databases = databases;
+      }
+    }
+
+    const result = await ApiClient.post<{
+      success: boolean;
+      message?: string;
+      details?: Record<string, unknown>;
+    }>("api/connectors/test-connection", {
+      connectionType: effectiveType,
+      config,
+    });
 
     return {
       success: result.success,
-      error: result.error,
-      version: result.version,
-      responseTimeMs: result.response_time_ms,
+      error: result.success ? undefined : result.message,
+      version: result.details?.version as string | undefined,
+      responseTimeMs: result.details?.response_time_ms as number | undefined,
     };
   }
 
@@ -553,7 +675,7 @@ export class DataSourcesService {
     const result = await DataSourcesService.discoverSchema(orgId, connectionId);
 
     if (result.schemas && result.schemas.length > 0) {
-      return result.schemas.map((schema) => ({
+      const schemas = result.schemas.map((schema) => ({
         name: schema.name,
         tables: (schema.tables || []).map((table) => ({
           name: table.name,
@@ -562,6 +684,26 @@ export class DataSourcesService {
           rowCount: table.rowCount,
         })),
       }));
+      // Fallback: when schemas have no tables but result.tables exists (e.g. MongoDB path), merge by schema
+      const hasTables = schemas.some((s) => s.tables.length > 0);
+      if (!hasTables && result.tables && result.tables.length > 0) {
+        const bySchema = new Map<string, typeof result.tables>();
+        for (const t of result.tables) {
+          const schemaName = t.schema || "public";
+          if (!bySchema.has(schemaName)) bySchema.set(schemaName, []);
+          bySchema.get(schemaName)!.push(t);
+        }
+        return Array.from(bySchema.entries()).map(([name, tables]) => ({
+          name,
+          tables: tables.map((table) => ({
+            name: table.name,
+            schema: table.schema || name,
+            type: table.type || "table",
+            rowCount: table.rowCount,
+          })),
+        }));
+      }
+      return schemas;
     }
 
     if (result.databases && result.databases.length > 0) {

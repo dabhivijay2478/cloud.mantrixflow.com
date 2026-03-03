@@ -5,6 +5,7 @@
  */
 
 import { ApiClient, type PaginatedListResult } from "../client";
+import { orgPath } from "../constants";
 import type {
   ColumnInfo,
   CreateDestinationSchemaDto,
@@ -20,8 +21,6 @@ import { DataSourcesService } from "./data-sources.service";
 import { PythonETLService } from "./python-etl.service";
 
 export class DestinationSchemasService {
-  private static readonly BASE_PATH = "api/organizations";
-
   /**
    * Create a new destination schema
    */
@@ -30,7 +29,7 @@ export class DestinationSchemasService {
     data: CreateDestinationSchemaDto,
   ): Promise<PipelineDestinationSchema> {
     return ApiClient.post<PipelineDestinationSchema>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas`,
       data,
     );
   }
@@ -42,7 +41,7 @@ export class DestinationSchemasService {
     organizationId: string,
   ): Promise<PipelineDestinationSchema[]> {
     return ApiClient.get<PipelineDestinationSchema[]>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas`,
     );
   }
 
@@ -59,7 +58,7 @@ export class DestinationSchemasService {
       offset: String(offset),
     });
     return ApiClient.getList<PipelineDestinationSchema>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas?${params}`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas?${params}`,
     );
   }
 
@@ -71,7 +70,7 @@ export class DestinationSchemasService {
     destinationSchemaId: string,
   ): Promise<PipelineDestinationSchema> {
     return ApiClient.get<PipelineDestinationSchema>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}`,
     );
   }
 
@@ -84,7 +83,7 @@ export class DestinationSchemasService {
     data: UpdateDestinationSchemaDto,
   ): Promise<PipelineDestinationSchema> {
     return ApiClient.patch<PipelineDestinationSchema>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}`,
       data,
     );
   }
@@ -97,7 +96,7 @@ export class DestinationSchemasService {
     destinationSchemaId: string,
   ): Promise<{ deletedId: string }> {
     return ApiClient.delete<{ deletedId: string }>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}`,
     );
   }
 
@@ -109,7 +108,7 @@ export class DestinationSchemasService {
     destinationSchemaId: string,
   ): Promise<SchemaValidationResult> {
     return ApiClient.post<SchemaValidationResult>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}/validate`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}/validate`,
     );
   }
 
@@ -121,7 +120,7 @@ export class DestinationSchemasService {
     destinationSchemaId: string,
   ): Promise<ValidationResult> {
     return ApiClient.post<ValidationResult>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}/validate-config`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}/validate-config`,
     );
   }
 
@@ -133,7 +132,7 @@ export class DestinationSchemasService {
     destinationSchemaId: string,
   ): Promise<TableExistsResult> {
     return ApiClient.get<TableExistsResult>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}/table-exists`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}/table-exists`,
     );
   }
 
@@ -145,7 +144,7 @@ export class DestinationSchemasService {
     destinationSchemaId: string,
   ): Promise<CreateTableResult> {
     return ApiClient.post<CreateTableResult>(
-      `${DestinationSchemasService.BASE_PATH}/${organizationId}/pipeline-destination-schemas/${destinationSchemaId}/create-table`,
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}/create-table`,
     );
   }
 
@@ -184,31 +183,27 @@ export class DestinationSchemasService {
 
     // Destination is always PostgreSQL in current architecture
     const sourceType = "postgresql";
+    const sourceStream =
+      schema.destinationSchema && schema.destinationTable
+        ? `${schema.destinationSchema}.${schema.destinationTable}`
+        : `public.${schema.destinationTable}`;
 
-    // Collect from destination table
-    const result = await PythonETLService.collect(sourceType, {
-      source_type: sourceType,
-      connection_config: connectionWithConfig.config as Record<string, unknown>,
-      source_config: {},
-      table_name: schema.destinationTable,
-      schema_name: schema.destinationSchema || "public",
-      sync_mode: "full",
+    // Preview from destination table (dlt-based)
+    const result = await PythonETLService.preview(sourceType, {
+      source_config: connectionWithConfig.config as Record<string, unknown>,
+      source_stream: sourceStream,
       limit: Math.min(limit, 100),
-      offset: 0,
     });
 
-    // Infer columns from first row if available
     const columns: ColumnInfo[] =
-      result.rows.length > 0
-        ? Object.keys(result.rows[0]).map((key) => ({
-            name: key,
-            type: typeof result.rows[0][key] === "number" ? "numeric" : "text",
-            nullable: true,
-          }))
-        : [];
+      result.columns?.map((name) => ({
+        name,
+        type: "text",
+        nullable: true,
+      })) ?? [];
 
     return {
-      rows: result.rows,
+      rows: result.records ?? [],
       columns,
     };
   }

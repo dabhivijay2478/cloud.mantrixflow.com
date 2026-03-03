@@ -57,6 +57,11 @@ export interface CollectorConfig {
     customSql?: string; // dbt SQL - runs against raw_input
     destinationTable?: string; // Selected destination table (schema.table format)
     primaryKeyField?: string; // Primary key for upsert
+    fieldMappings?: Array<
+      | { from_col: string; to_col: string }
+      | { source: string; destination: string; isPrimaryKey?: boolean }
+    >;
+    transformScript?: string;
   }>;
 }
 
@@ -73,41 +78,43 @@ export function CollectorStep({
   const { currentOrganization, datasets } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
-  // Fetch connections from API
-  // Note: Currently using legacy postgres connections API
-  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
+  // Fetch connections from API (dlt scope: PostgreSQL + MongoDB sources)
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
 
   // Filter to only source connections (collector = data sources)
+  // dlt scope: PostgreSQL + MongoDB only
   const sourceConnections =
     connections?.filter(
-      (conn) => (conn.connectorRole ?? "source") === "source",
+      (conn) =>
+        (conn.connectorRole ?? "source") === "source" &&
+        ["postgres", "postgresql", "mongodb"].includes(
+          (conn.type || "postgres").toLowerCase(),
+        ),
     ) ?? [];
 
   // Convert API connections to DataSource format for compatibility
-  const dataSources =
-    sourceConnections.map((conn) => ({
-      id: conn.id,
-      name: conn.name,
-      type: (conn.type || "postgres") as
-        | "postgres"
-        | "mysql"
-        | "mongodb"
-        | "s3"
-        | "api"
-        | "bigquery"
-        | "snowflake"
-        | "redshift"
-        | "clickhouse",
-      status:
-        conn.status === "active"
-          ? ("connected" as const)
-          : ("disconnected" as const),
-      organizationId: conn.orgId || organizationId,
-      connectedAt: conn.lastConnectedAt || undefined,
-      tables: [], // Will be populated when needed
-    }));
+  const dataSources = sourceConnections.map((c) => {
+    const rec = c as { status?: string; orgId?: string; lastConnectedAt?: string };
+    const statusVal: "connected" | "disconnected" =
+      rec.status === "active" ? "connected" : "disconnected";
+    const orgId = rec.orgId ?? organizationId ?? "";
+    const connectedAt = rec.lastConnectedAt;
+    const tables: string[] = [];
+    const isPostgres = ["postgres", "postgresql"].includes(
+      (c.type || "postgres").toLowerCase(),
+    );
+    const typeVal: "postgres" | "mongodb" = isPostgres ? "postgres" : "mongodb";
+    return {
+      id: c.id,
+      name: c.name,
+      type: typeVal,
+      status: statusVal,
+      organizationId: orgId,
+      connectedAt,
+      tables,
+    };
+  });
 
   const [collectors, setCollectors] =
     useState<CollectorConfig[]>(initialCollectors);
@@ -561,7 +568,7 @@ export function CollectorStep({
                       }}
                       selectedTables={new Set(selectedTables)}
                       searchable={true}
-                      isLoading={false}
+                      isLoading={schemasLoading}
                     />
                   </div>
                   {selectedTables.length > 0 && (

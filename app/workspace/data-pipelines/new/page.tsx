@@ -85,20 +85,20 @@ export default function NewPipelinePage() {
     // This fixes the issue where newly created transformers aren't detected on first save
     const collectorsToUse = collectorsOverride || config.collectors;
 
-    // Validate that at least one transformer has dbt SQL
-    const hasValidTransformers = collectorsToUse.some((collector) => {
+    // dlt: require at least one config (destination table + sync settings)
+    const hasValidConfig = collectorsToUse.some((collector) => {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
       return collector.transformers.some(
-        (t) => (t as { customSql?: string }).customSql?.trim(),
+        (t) => (t as { destinationTable?: string }).destinationTable?.trim(),
       );
     });
 
-    if (!hasValidTransformers) {
+    if (!hasValidConfig) {
       toast.error(
-        "Missing transform config",
-        "Please configure at least one transformer with Custom SQL before creating the pipeline.",
+        "Missing config",
+        "Please configure at least one mapping (collector → emitter → destination table) in the Config step.",
       );
       return;
     }
@@ -214,7 +214,6 @@ export default function NewPipelinePage() {
           "Failed to fetch data source, using default type:",
           error,
         );
-        // Try to get from connections cache if available
         const cachedConnection = connections?.find(
           (c) => c.id === primarySourceId,
         );
@@ -265,15 +264,15 @@ export default function NewPipelinePage() {
       // Get destination connection ID from emitters
       const destinationConnectionId = allDestinationIds[0];
 
-      // Extract destination information from transformers (Custom SQL required)
+      // Extract destination information from first configured transformer
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => (t as { customSql?: string }).customSql?.trim());
+        .find((t) => (t as { destinationTable?: string }).destinationTable?.trim());
 
       if (!firstTransformer) {
         toast.error(
-          "No transformation configured",
-          "Please configure Custom SQL in the transform step.",
+          "No config",
+          "Please configure destination table in the Config step.",
         );
         setIsCreating(false);
         return;
@@ -298,18 +297,41 @@ export default function NewPipelinePage() {
         destTableParts[1] || destTableParts[0] || destinationTable;
 
       const transformerWithConfig = firstTransformer as {
+        transformType?: "dlt" | "dbt";
         customSql?: string;
         primaryKeyField?: string;
+        syncMode?: "full" | "incremental" | "cdc";
+        cursorField?: string;
+        writeMode?: "append" | "upsert" | "replace";
+        columnMap?: Array<{ from_col: string; to_col: string }>;
       };
+
+      const destTransformType =
+        transformerWithConfig.transformType === "dbt" ? "dbt" : "dlt";
+      const customSql = transformerWithConfig.customSql?.trim();
+
+      if (destTransformType === "dbt" && !customSql) {
+        toast.error(
+          "Validation failed",
+          "Custom SQL is required when using Custom SQL transform mode.",
+        );
+        setIsCreating(false);
+        return;
+      }
 
       // Primary key from transformer (for upsert)
       const primaryKeyFields: string[] = transformerWithConfig.primaryKeyField
         ? [transformerWithConfig.primaryKeyField]
         : [];
 
-      // Determine write mode (default to append, could be enhanced)
+      // Write mode: from config or derive from primary key
       const writeMode: "append" | "upsert" | "replace" =
-        primaryKeyFields.length > 0 ? "upsert" : "append";
+        transformerWithConfig.writeMode ||
+        (primaryKeyFields.length > 0 ? "upsert" : "append");
+
+      // Sync mode and cursor for incremental/CDC
+      const syncMode = transformerWithConfig.syncMode || "full";
+      const incrementalColumn = transformerWithConfig.cursorField;
 
       if (!organizationId) {
         toast.error("Error", "Organization ID is required");
@@ -328,7 +350,8 @@ export default function NewPipelinePage() {
         },
       );
 
-      // Create destination schema in NestJS.
+      // Create destination schema in NestJS
+      // User selects from existing tables only, so destinationTableExists is always true
       const destinationSchema =
         await DestinationSchemasService.createDestinationSchema(
           organizationId,
@@ -336,14 +359,23 @@ export default function NewPipelinePage() {
             dataSourceId: destinationConnectionId,
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            transformType: "dbt",
-            customSql: transformerWithConfig.customSql || undefined,
+            transformType: destTransformType,
+            customSql: destTransformType === "dbt" ? customSql : undefined,
             writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
             name: `Destination: ${destTableName}`,
+            destinationTableExists: true,
           },
         );
+
+      // Column map for dlt apply_hints (from_col -> to_col)
+      const columnMap = transformerWithConfig.columnMap || [];
+      const transformations = columnMap.map((m) => ({
+        sourceColumn: m.from_col,
+        destinationColumn: m.to_col,
+        transformType: "rename" as const,
+      }));
 
       // Create pipeline referencing created schemas.
       await DataPipelinesService.createPipeline(organizationId, {
@@ -351,12 +383,13 @@ export default function NewPipelinePage() {
         description: `Pipeline with ${collectorsToUse.length} collector(s)`,
         sourceSchemaId: sourceSchema.id,
         destinationSchemaId: destinationSchema.id,
-        syncMode: "incremental",
-        scheduleType: "minutes",
-        scheduleValue: "2",
+        syncMode,
+        incrementalColumn: incrementalColumn || undefined,
+        scheduleType: syncMode === "full" ? "none" : "minutes",
+        scheduleValue: syncMode === "full" ? "" : "2",
         scheduleTimezone:
           Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-        transformations: [],
+        transformations,
       });
 
       toast.success(
@@ -388,8 +421,8 @@ export default function NewPipelinePage() {
       },
       {
         id: "transform",
-        label: "Transform",
-        description: "Map fields to schema",
+        label: "Config",
+        description: "Sync mode, write mode, primary key",
       },
       {
         id: "configure",

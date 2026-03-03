@@ -6,7 +6,16 @@
  * CRUD operations still go through NestJS
  */
 
-import { ApiClient, type PaginatedListResult } from "../client";
+import {
+  createResource,
+  deleteResource,
+  getResource,
+  listResource,
+  listResourcePaginated,
+  updateResource,
+} from "../base-organization-service";
+import { ApiClient } from "../client";
+import { orgPath } from "../constants";
 import type {
   ColumnInfo,
   CreateSourceSchemaDto,
@@ -16,12 +25,8 @@ import type {
   UpdateSourceSchemaDto,
   ValidationResult,
 } from "../types/data-pipelines";
-import { DataSourcesService } from "./data-sources.service";
-import { PythonETLService } from "./python-etl.service";
 
 export class SourceSchemasService {
-  private static readonly BASE_PATH = "api/organizations";
-
   /**
    * Create a new source schema
    */
@@ -29,87 +34,78 @@ export class SourceSchemasService {
     organizationId: string,
     data: CreateSourceSchemaDto,
   ): Promise<PipelineSourceSchema> {
-    return ApiClient.post<PipelineSourceSchema>(
-      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas`,
+    return createResource<PipelineSourceSchema, CreateSourceSchemaDto>(
+      organizationId,
+      "pipeline-source-schemas",
       data,
     );
   }
 
-  /**
-   * List all source schemas for organization
-   */
   static async listSourceSchemas(
     organizationId: string,
   ): Promise<PipelineSourceSchema[]> {
-    return ApiClient.get<PipelineSourceSchema[]>(
-      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas`,
+    return listResource<PipelineSourceSchema>(
+      organizationId,
+      "pipeline-source-schemas",
     );
   }
 
-  /**
-   * List source schemas with server-side pagination
-   */
   static async listSourceSchemasPaginated(
     organizationId: string,
     limit: number = 20,
     offset: number = 0,
-  ): Promise<PaginatedListResult<PipelineSourceSchema>> {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    return ApiClient.getList<PipelineSourceSchema>(
-      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas?${params}`,
+  ): Promise<import("../client").PaginatedListResult<PipelineSourceSchema>> {
+    return listResourcePaginated<PipelineSourceSchema>(
+      organizationId,
+      "pipeline-source-schemas",
+      limit,
+      offset,
     );
   }
 
-  /**
-   * Get source schema by ID
-   */
   static async getSourceSchema(
     organizationId: string,
     sourceSchemaId: string,
   ): Promise<PipelineSourceSchema> {
-    return ApiClient.get<PipelineSourceSchema>(
-      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas/${sourceSchemaId}`,
+    return getResource<PipelineSourceSchema>(
+      organizationId,
+      "pipeline-source-schemas",
+      sourceSchemaId,
     );
   }
 
-  /**
-   * Update source schema
-   */
   static async updateSourceSchema(
     organizationId: string,
     sourceSchemaId: string,
     data: UpdateSourceSchemaDto,
   ): Promise<PipelineSourceSchema> {
-    return ApiClient.patch<PipelineSourceSchema>(
-      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas/${sourceSchemaId}`,
+    return updateResource<PipelineSourceSchema, UpdateSourceSchemaDto>(
+      organizationId,
+      "pipeline-source-schemas",
+      sourceSchemaId,
       data,
     );
   }
 
-  /**
-   * Delete source schema
-   */
   static async deleteSourceSchema(
     organizationId: string,
     sourceSchemaId: string,
   ): Promise<{ deletedId: string }> {
-    return ApiClient.delete<{ deletedId: string }>(
-      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas/${sourceSchemaId}`,
+    return deleteResource(
+      organizationId,
+      "pipeline-source-schemas",
+      sourceSchemaId,
     );
   }
 
   /**
    * Discover schema from source (columns, primary keys, row count)
-   * Calls Python service directly for ETL operations
+   * Calls NestJS API (proxies to ETL)
    */
   static async discoverSourceSchema(
     organizationId: string,
     sourceSchemaId: string,
   ): Promise<DiscoverSchemaResult> {
-    // Get source schema from NestJS (CRUD)
     const schema = await SourceSchemasService.getSourceSchema(
       organizationId,
       sourceSchemaId,
@@ -119,50 +115,30 @@ export class SourceSchemasService {
       throw new Error("Source schema must have a data source ID");
     }
 
-    // Get connection config from NestJS (with sensitive data)
-    const connection = await DataSourcesService.getConnection(
-      organizationId,
-      schema.dataSourceId,
-      true, // includeSensitive = true to get decrypted config
+    const discovered = await ApiClient.post<{
+      columns?: Array<{ name: string; type?: string; table?: string; nullable?: boolean }>;
+      primary_keys?: string[];
+      estimated_row_count?: number;
+    }>(
+      `${orgPath(organizationId)}/data-sources/${schema.dataSourceId}/discover-schema`,
+      {
+        schema_name: schema.sourceSchema ?? "public",
+        table_name: schema.sourceTable,
+        query: schema.sourceQuery,
+      },
     );
 
-    const connectionWithConfig = connection as typeof connection & {
-      config?: Record<string, unknown>;
-    };
-    if (!connectionWithConfig || !connectionWithConfig.config) {
-      throw new Error("Connection not configured for this data source");
-    }
-
-    // Normalize source type for Python service
-    const sourceType =
-      schema.sourceType?.toLowerCase() === "postgres"
-        ? "postgresql"
-        : schema.sourceType?.toLowerCase() || "postgresql";
-
-    // Call Python service directly
-    const discovered = await PythonETLService.discoverSchema(sourceType, {
-      source_type: sourceType,
-      connection_config: connectionWithConfig.config as Record<string, unknown>,
-      source_config: (schema.sourceConfig as Record<string, unknown>) || {},
-      table_name: schema.sourceTable || undefined,
-      schema_name: schema.sourceSchema || undefined,
-      query: schema.sourceQuery || undefined,
-    });
-
-    // Update schema in NestJS with discovered data
-    // Note: discoveredColumns, primaryKeys, and estimatedRowCount are stored
-    // in the schema's metadata, not as direct DTO fields
-    const updated = await SourceSchemasService.updateSourceSchema(
-      organizationId,
-      sourceSchemaId,
-      {} as UpdateSourceSchemaDto, // No updates needed, discovery is separate
-    );
+    const columns: ColumnInfo[] = (discovered.columns ?? []).map((c) => ({
+      name: c.name,
+      type: c.type ?? "string",
+      nullable: c.nullable ?? true,
+    }));
 
     return {
-      schema: updated,
+      schema,
       discovered: {
-        columns: discovered.columns,
-        primaryKeys: discovered.primary_keys,
+        columns,
+        primaryKeys: discovered.primary_keys ?? [],
         estimatedRowCount: discovered.estimated_row_count,
       },
     };
@@ -176,20 +152,19 @@ export class SourceSchemasService {
     sourceSchemaId: string,
   ): Promise<ValidationResult> {
     return ApiClient.post<ValidationResult>(
-      `${SourceSchemasService.BASE_PATH}/${organizationId}/pipeline-source-schemas/${sourceSchemaId}/validate`,
+      `${orgPath(organizationId)}/pipeline-source-schemas/${sourceSchemaId}/validate`,
     );
   }
 
   /**
    * Preview sample data from source
-   * Calls Python service directly for ETL operations
+   * Calls NestJS API (proxies to ETL)
    */
   static async previewSourceData(
     organizationId: string,
     sourceSchemaId: string,
     limit: number = 10,
   ): Promise<PreviewDataResult> {
-    // Get source schema from NestJS (CRUD)
     const schema = await SourceSchemasService.getSourceSchema(
       organizationId,
       sourceSchemaId,
@@ -199,45 +174,37 @@ export class SourceSchemasService {
       throw new Error("Source schema must have a data source ID");
     }
 
-    // Get connection config from NestJS (with sensitive data)
-    const connection = await DataSourcesService.getConnection(
-      organizationId,
-      schema.dataSourceId,
-      true, // includeSensitive = true to get decrypted config
-    );
+    const sourceStream =
+      schema.sourceSchema && schema.sourceTable
+        ? `${schema.sourceSchema}.${schema.sourceTable}`
+        : schema.sourceTable || "";
 
-    const connectionWithConfig = connection as typeof connection & {
-      config?: Record<string, unknown>;
-    };
-    if (!connectionWithConfig || !connectionWithConfig.config) {
-      throw new Error("Connection not configured for this data source");
+    if (!sourceStream) {
+      throw new Error("Source table/stream is required for preview");
     }
 
-    // Normalize source type for Python service
-    const sourceType =
-      schema.sourceType?.toLowerCase() === "postgres"
-        ? "postgresql"
-        : schema.sourceType?.toLowerCase() || "postgresql";
+    const result = await ApiClient.post<{
+      records?: unknown[];
+      columns?: string[];
+      total?: number;
+      stream?: string;
+    }>(
+      `${orgPath(organizationId)}/data-sources/${schema.dataSourceId}/preview`,
+      {
+        source_stream: sourceStream,
+        limit: Math.min(limit, 100),
+      },
+    );
 
-    // Call Python service directly to collect sample data
-    const result = await PythonETLService.collect(sourceType, {
-      source_type: sourceType,
-      connection_config: connectionWithConfig.config as Record<string, unknown>,
-      source_config: (schema.sourceConfig as Record<string, unknown>) || {},
-      table_name: schema.sourceTable || undefined,
-      schema_name: schema.sourceSchema || undefined,
-      query: schema.sourceQuery || undefined,
-      sync_mode: "full",
-      limit: Math.min(limit, 100), // Cap at 100 rows for preview
-      offset: 0,
-    });
-
-    // Get columns from discovered schema or infer from data
-    const columns = (schema.discoveredColumns as ColumnInfo[]) || [];
+    const discoveredColumns = (schema.discoveredColumns as ColumnInfo[]) || [];
+    const columns =
+      discoveredColumns.length > 0
+        ? discoveredColumns
+        : (result.columns || []).map((name) => ({ name, type: "string", nullable: true }));
 
     return {
-      rows: result.rows,
-      columns: columns.length > 0 ? columns : [], // Will be populated after discovery
+      rows: result.records || [],
+      columns,
     };
   }
 }

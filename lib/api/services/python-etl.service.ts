@@ -1,10 +1,10 @@
 /**
  * Python ETL Service Client
- * Direct client for calling Python FastAPI ETL microservice
- * Used ONLY for ETL operations: discover schema, collect, transform, emit, delta-check, test-connection
+ * Direct client for calling Python FastAPI ETL microservice (apps/new-etl)
+ * Used for: discover schema, preview, test-connection.
  *
- * CRUD operations (data sources, connections, pipelines) go through the NestJS API
- * via ApiClient / DataSourcesService / DataPipelinesService.
+ * Pipeline runs use NestJS runSync → Python POST /sync/run-sync.
+ * CRUD (data sources, connections, pipelines) goes through NestJS API.
  */
 
 import type { ColumnInfo } from "../types/data-pipelines";
@@ -33,46 +33,6 @@ export interface DiscoverSchemaResponse {
       rowCount?: number;
     }>;
   }>;
-}
-
-export interface CollectRequest {
-  source_type: string;
-  connection_config: Record<string, unknown>;
-  source_config?: Record<string, unknown>;
-  table_name?: string;
-  schema_name?: string;
-  query?: string;
-  sync_mode?: "full" | "incremental";
-  checkpoint?: Record<string, unknown>;
-  limit?: number;
-  offset?: number;
-  cursor?: string;
-}
-
-export interface CollectResponse {
-  rows: Record<string, unknown>[];
-  total_rows?: number;
-  next_cursor?: string;
-  has_more?: boolean;
-  metadata?: Record<string, unknown>;
-}
-
-export interface EmitRequest {
-  destination_type: string;
-  connection_config: Record<string, unknown>;
-  destination_config?: Record<string, unknown>;
-  table_name: string;
-  schema_name?: string;
-  rows: Record<string, unknown>[];
-  write_mode?: "append" | "upsert" | "replace";
-  upsert_key?: string[];
-}
-
-export interface EmitResponse {
-  rows_written: number;
-  rows_skipped: number;
-  rows_failed: number;
-  errors: Array<{ message: string; row?: number; error?: string }>;
 }
 
 export class PythonETLService {
@@ -155,7 +115,7 @@ export class PythonETLService {
 
   /**
    * Discover schema from source
-   * Calls new-etl POST /discover with { source_type, source_config }
+   * Calls new-etl POST /discover-schema/{sourceType}
    */
   static async discoverSchema(
     sourceType: string,
@@ -165,15 +125,19 @@ export class PythonETLService {
       (request.source_type as string) || sourceType,
     );
     const response = await PythonETLService.request<{
-      source_type: string;
-      streams: Array<{ name: string; columns: string[] }>;
-      total: number;
+      columns: ColumnInfo[];
+      primary_keys: string[];
+      estimated_row_count?: number;
       error?: string;
-    }>("/discover", {
+    }>(`/discover-schema/${etlSourceType}`, {
       method: "POST",
       body: JSON.stringify({
         source_type: etlSourceType,
-        source_config: request.connection_config || request.source_config || {},
+        connection_config: request.connection_config || request.source_config || {},
+        source_config: request.source_config || {},
+        table_name: request.table_name,
+        schema_name: request.schema_name,
+        query: request.query,
       }),
     });
 
@@ -181,92 +145,32 @@ export class PythonETLService {
       throw new Error(response.error);
     }
 
-    // Map new-etl streams to DiscoverSchemaResponse
-    // Parse stream names: "schema.table" -> schema + table; "table" -> public + table
-    const schemaMap = new Map<
-      string,
-      { tables: Array<{ name: string; schema: string; type: "table"; columns: ColumnInfo[] }> }
-    >();
-    for (const s of response.streams ?? []) {
-      const parts = s.name.includes(".") ? s.name.split(".", 2) : [null, s.name];
-      const schema = parts[0] ?? "public";
-      const table = parts[1] ?? s.name;
-      const tableInfo = {
-        name: table,
-        schema,
-        type: "table" as const,
-        columns: s.columns.map((col) => ({ name: col, type: "string", nullable: true })),
-      };
-      if (!schemaMap.has(schema)) {
-        schemaMap.set(schema, { tables: [] });
-      }
-      schemaMap.get(schema)!.tables.push(tableInfo);
-    }
-    const schemas = Array.from(schemaMap.entries()).map(([name, data]) => ({
-      name,
-      tables: data.tables,
-    }));
-    const columns: ColumnInfo[] =
-      response.streams?.[0]?.columns?.map((c) => ({
-        name: c,
-        type: "string",
-        nullable: true,
-      })) ?? [];
     return {
-      columns,
-      primary_keys: [],
-      schemas,
+      columns: response.columns || [],
+      primary_keys: response.primary_keys || [],
+      estimated_row_count: response.estimated_row_count,
     };
   }
 
   /**
-   * Collect data from source
+   * Preview first N rows from source (dlt-based, no write)
    */
-  static async collect(
+  static async preview(
     sourceType: string,
-    request: CollectRequest,
-  ): Promise<CollectResponse> {
-    return PythonETLService.request<CollectResponse>(`/collect/${sourceType}`, {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Emit data to destination
-   */
-  static async emit(
-    destinationType: string,
-    request: EmitRequest,
-  ): Promise<EmitResponse> {
-    return PythonETLService.request<EmitResponse>(`/emit/${destinationType}`, {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Delta check for changes
-   */
-  static async deltaCheck(
-    sourceType: string,
-    connectionConfig: Record<string, unknown>,
-    sourceConfig: Record<string, unknown>,
-    tableName?: string,
-    schemaName?: string,
-    checkpoint?: Record<string, unknown>,
-  ): Promise<{ has_changes: boolean; checkpoint?: Record<string, unknown> }> {
-    return PythonETLService.request<{
-      has_changes: boolean;
-      checkpoint?: Record<string, unknown>;
-    }>(`/delta-check/${sourceType}`, {
+    request: {
+      source_config: Record<string, unknown>;
+      source_stream: string;
+      limit?: number;
+    },
+  ): Promise<{ records: Record<string, unknown>[]; columns: string[]; total: number; stream: string }> {
+    const etlType = PythonETLService.toSourceType(sourceType);
+    return PythonETLService.request("/preview", {
       method: "POST",
       body: JSON.stringify({
-        connection_config: connectionConfig,
-        source_config: sourceConfig,
-        table_name: tableName,
-        schema_name: schemaName,
-        checkpoint,
+        source_type: etlType,
+        source_config: request.source_config,
+        source_stream: request.source_stream,
+        limit: request.limit ?? 50,
       }),
     });
   }

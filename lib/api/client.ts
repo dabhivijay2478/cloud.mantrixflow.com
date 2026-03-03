@@ -171,6 +171,7 @@ export interface PaginatedListResult<T> {
   limit: number;
   offset: number;
   hasMore: boolean;
+  nextCursor?: string | null;
 }
 
 /**
@@ -200,6 +201,7 @@ async function handleListResponse<T>(
       limit: pagination?.limit ?? data.length,
       offset: pagination?.offset ?? 0,
       hasMore: pagination?.hasMore ?? false,
+      nextCursor: pagination?.nextCursor ?? undefined,
     };
   }
 

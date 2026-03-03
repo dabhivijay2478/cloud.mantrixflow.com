@@ -51,16 +51,17 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
-  // Fetch connections from API instead of workspace store
-  // Note: Currently using legacy postgres connections API
-  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
+  // Fetch connections from API (dlt scope: PostgreSQL destination only)
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
 
   // Filter to only destination connections (emitter = destinations)
+  // dlt scope: PostgreSQL destination only
   const destinationConnections =
     (connections ?? []).filter(
-      (conn) => (conn.connectorRole ?? "source") === "destination",
+      (conn) =>
+        (conn.connectorRole ?? "source") === "destination" &&
+        ["postgres", "postgresql"].includes((conn.type || "postgres").toLowerCase()),
     );
 
   // Source connections for collector name lookup

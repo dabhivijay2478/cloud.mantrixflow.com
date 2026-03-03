@@ -4,6 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { handleApiError } from "../error-handler";
 import { DestinationSchemasService } from "../services/destination-schemas.service";
 import type {
   CreateDestinationSchemaDto,
@@ -144,6 +145,7 @@ export function useCreateDestinationSchema(organizationId: string | undefined) {
         data,
       );
     },
+    onError: (error) => handleApiError(error),
     onSuccess: () => {
       if (organizationId) {
         // Invalidate all destination schema list queries (including paginated)
@@ -179,6 +181,7 @@ export function useUpdateDestinationSchema(
         data,
       );
     },
+    onError: (error) => handleApiError(error),
     onSuccess: (updatedSchema) => {
       if (organizationId && schemaId) {
         // Update cache with new data
@@ -220,6 +223,7 @@ export function useDeleteDestinationSchema(organizationId: string | undefined) {
         schemaId,
       );
     },
+    onError: (error) => handleApiError(error),
     onSuccess: (_, deletedSchemaId) => {
       if (organizationId) {
         // Remove all caches specific to the deleted schema

@@ -96,7 +96,7 @@ export function DataSourceTable({
         status: isConnected(ds.id)
           ? ("connected" as const)
           : ("disconnected" as const),
-      }));
+      })) as DataSource[];
       // If showOnlyConnected is true but no connections, filter by connected status
       if (showOnlyConnected) {
         filtered = filtered.filter((ds) => isConnected(ds.id));

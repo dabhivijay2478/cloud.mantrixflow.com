@@ -66,16 +66,16 @@ export class EtlService {
   }
 
   static async listConnectors(): Promise<EtlConnectorsResponse> {
-    return ApiClient.get(`${EtlService.BASE_PATH}/connectors`);
+    return ApiClient.get("api/connectors/metadata");
   }
 
   static async getCdcSetup(sourceType: string): Promise<EtlCdcSetupResponse> {
     return ApiClient.get(
-      `${EtlService.BASE_PATH}/connectors/${encodeURIComponent(sourceType)}/cdc-setup`,
+      `api/connectors/${encodeURIComponent(sourceType)}/cdc-setup`,
     );
   }
 
   static async health(): Promise<{ status: string }> {
-    return ApiClient.get(`${EtlService.BASE_PATH}/health`);
+    return ApiClient.get("api/connectors/health");
   }
 }

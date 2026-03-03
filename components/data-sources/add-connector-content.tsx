@@ -7,44 +7,24 @@ import {
   ConnectionSheet,
   DataSourceGrid,
 } from "@/components/data-sources";
-import { PageHeader, PageHeaderSkeleton } from "@/components/shared";
+import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { connectorsConfig } from "@/config/connectors";
 import { type CreateConnectionDto } from "@/lib/api";
 import {
   useCreateConnection,
   useTestConnection as useTestConnectionLegacy,
 } from "@/lib/api/hooks/use-data-sources";
-import { useEtlConnectors } from "@/lib/api/hooks/use-etl-connectors";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
-const ETL_ID_TO_DISPLAY: Record<string, string> = {
-  "source-postgres": "postgres",
-  "source-mysql": "mysql",
-  "source-mongodb-v2": "mongodb",
-  "source-mssql": "ms-sql-server",
-  "source-snowflake": "snowflake",
-  "source-bigquery": "bigquery",
-  "source-s3": "s3",
-  "source-shopify": "shopify",
-  "source-stripe": "stripe",
-  "source-hubspot": "hubspot",
-  "source-salesforce": "salesforce",
-  "source-github": "github",
-  "source-google-sheets": "google-sheets",
-  "source-google-analytics": "google-analytics",
-  "source-facebook-marketing": "facebook-marketing",
-  "source-airtable": "airtable",
-  "source-notion": "notion",
-  "source-slack": "slack",
-  "source-faker": "faker",
-  "source-file": "file",
-};
-
-function getDisplayId(etlId: string): string {
-  if (ETL_ID_TO_DISPLAY[etlId]) return ETL_ID_TO_DISPLAY[etlId];
-  return etlId.replace(/^source-/, "").replace(/-v\d+$/, "");
+/** Map connector id to display/connection type */
+function getDisplayId(connectorId: string): string {
+  return connectorId
+    .replace(/^source-/, "")
+    .replace(/^destination-/, "")
+    .replace(/-v\d+$/, "");
 }
 
 interface AddConnectorContentProps {
@@ -60,40 +40,36 @@ export function AddConnectorContent({
   const [showConnectionSheet, setShowConnectionSheet] = useState(false);
   const [connectingDataSourceId, setConnectingDataSourceId] = useState<string | null>(null);
 
-  const { data: etlConnectors, isLoading, isError } = useEtlConnectors();
   const createConnection = useCreateConnection(organizationId);
   const testConnection = useTestConnectionLegacy(organizationId);
 
   const sourceConnectors = useMemo(() => {
-    if (!etlConnectors?.sources?.length) return [];
-    return etlConnectors.sources.map((s) => {
-      const raw = typeof s === "string" ? { id: s, label: s } : s;
-      const etlId = raw.id || (raw as { type?: string }).type || "";
-      const displayId = getDisplayId(etlId);
+    return connectorsConfig.sources.map((s) => {
+      const displayId = getDisplayId(s.id);
       return {
         id: displayId,
-        name: raw.label,
+        name: s.label,
         type: displayId,
         iconType: displayId,
         disabled: false as const,
+        connectionSchema: s.connectionSchema,
       };
     });
-  }, [etlConnectors?.sources]);
+  }, []);
 
   const destinationConnectors = useMemo(() => {
-    if (!etlConnectors?.destinations?.length) return [];
-    return etlConnectors.destinations.map((d) => {
-      const raw = typeof d === "string" ? { id: d, label: d } : d;
-      const displayId = raw.id?.replace(/^destination-/, "") || raw.id || raw.label;
+    return connectorsConfig.destinations.map((d) => {
+      const displayId = d.id.replace(/^destination-/, "") || d.id;
       return {
         id: displayId,
-        name: raw.label,
+        name: d.label,
         type: displayId,
         iconType: displayId,
         disabled: false as const,
+        connectionSchema: d.connectionSchema,
       };
     });
-  }, [etlConnectors?.destinations]);
+  }, []);
 
   const enabledDataSources = useMemo(
     () => [...sourceConnectors, ...destinationConnectors],
@@ -117,32 +93,17 @@ export function AddConnectorContent({
 
       try {
         const config: Record<string, unknown> = {};
+        const skipKeys = ["name", "useConnectionString"];
         Object.entries(data).forEach(([key, value]) => {
-          if (key === "name" || !value) return;
+          if (skipKeys.includes(key) || value === undefined || value === "") return;
           config[key] = key === "port" ? parseInt(value, 10) : value;
         });
 
-        if (["postgres", "mysql", "mssql", "redshift", "clickhouse", "mongodb"].includes(dataSource.type)) {
-          if (data.ssl === "true" || data.tls === "true") {
-            if (dataSource.type !== "mongodb") config.ssl = { enabled: true };
-          }
+        if (dataSource.type === "postgres" && (data.ssl === "true" || data.tls === "true")) {
+          config.ssl = { enabled: true };
         }
 
-        // Snowflake: API expects account, warehouse, database, schema, username, password
-        if (dataSource.type === "snowflake") {
-          const snowflakeConfig: Record<string, unknown> = {
-            account: data.account || "",
-            warehouse: data.warehouse || "",
-            database: data.database || "",
-            schema: data.schema || "PUBLIC",
-            username: data.username || "",
-            password: data.password || "",
-          };
-          Object.keys(config).forEach((k) => delete config[k]);
-          Object.assign(config, snowflakeConfig);
-        }
-
-        // MongoDB: connection_string OR individual (host, port, username, password) per Airbyte spec
+        // MongoDB: connection_string OR individual (host, port, username, password) per ETL spec
         if (dataSource.type === "mongodb") {
           const useConnStr = data.useConnectionString === "true";
           const mongodbConfig: Record<string, unknown> = {};
@@ -193,7 +154,10 @@ export function AddConnectorContent({
       const sourceType = (foundDataSource as { type?: string })?.type || "postgres";
 
       const buildTestData = (): Record<string, unknown> => {
-        const base = {
+        const sslEnabled =
+          sourceType === "postgres" &&
+          (data.ssl === "true" || data.ssl === "enabled" || data.tls === "true");
+        const base: Record<string, unknown> = {
           type: sourceType,
           host: data.host || "",
           port: data.port ? parseInt(data.port, 10) : 5432,
@@ -201,60 +165,28 @@ export function AddConnectorContent({
           username: data.username || "",
           password: data.password || "",
         };
+        if (sslEnabled) {
+          base.ssl = { enabled: true };
+        }
         if (sourceType === "mongodb") {
           const dbs = (data.databases || "")
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean);
-          const base: Record<string, unknown> = {
+          const mongoBase: Record<string, unknown> = {
             type: "mongodb",
             ...(dbs.length ? { databases: dbs } : {}),
           };
           if (data.connection_string && data.useConnectionString !== "false") {
-            return { ...base, connection_string: data.connection_string };
+            return { ...mongoBase, connection_string: data.connection_string };
           }
           return {
-            ...base,
+            ...mongoBase,
             host: data.host || "",
             port: data.port ? parseInt(data.port, 10) : 27017,
             database: data.database || "admin",
             username: data.username || "",
             password: data.password || "",
-          };
-        }
-        if (["shopify", "stripe", "airtable", "notion", "slack"].includes(sourceType)) {
-          return { type: sourceType, api_key: data.api_key || "" };
-        }
-        if (sourceType === "faker") {
-          return {
-            type: "faker",
-            count: data.count ? parseInt(data.count, 10) : 1000,
-            seed: data.seed ? parseInt(data.seed, 10) : -1,
-          };
-        }
-        if (sourceType === "github") {
-          const repos = (data.repositories || "")
-            .replace(/\n/g, " ")
-            .split(/\s+/)
-            .map((r) => r.trim())
-            .filter(Boolean);
-          return {
-            type: "github",
-            api_key: data.api_key || "",
-            repositories: repos,
-          };
-        }
-        if (sourceType === "snowflake") {
-          return {
-            type: "snowflake",
-            host: data.account || "",
-            database: data.database || "",
-            username: data.username || "",
-            password: data.password || "",
-            extra: {
-              warehouse: data.warehouse || "",
-              schema: data.schema || "PUBLIC",
-            },
           };
         }
         return base;
@@ -275,28 +207,6 @@ export function AddConnectorContent({
     },
     [connectingDataSourceId, enabledDataSources, testConnection],
   );
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeaderSkeleton showAction />
-        <div className="flex justify-center py-12 text-muted-foreground">Loading connectors...</div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Add connector" />
-        <div className="rounded-lg border border-dashed border-amber-500/50 bg-amber-500/5 p-8 text-center">
-          <p className="text-sm font-medium text-amber-600 dark:text-amber-500">
-            Unable to load connectors
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

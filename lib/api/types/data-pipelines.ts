@@ -16,7 +16,7 @@ export type PipelineDataSourceType =
   | "bigquery"
   | "snowflake";
 
-export type SyncMode = "full" | "incremental";
+export type SyncMode = "full" | "incremental" | "cdc";
 export type SyncFrequency =
   | "manual"
   | "minutes"
@@ -237,6 +237,7 @@ export interface PipelineDestinationSchema {
   destinationTable: string;
   destinationTableExists: boolean;
   transformType?: string | null;
+  transformScript?: string | null;
   dbtModel?: string | null;
   customSql?: string | null;
   writeMode: WriteMode;
@@ -256,9 +257,9 @@ export interface CreateDestinationSchemaDto {
   destinationSchema?: string;
   destinationTable: string;
   destinationTableExists?: boolean;
-  transformType?: string; // 'dbt'
-  dbtModel?: string; // dbt model name (legacy)
-  customSql?: string; // Custom SQL - runs through dbt against raw_input
+  transformType?: string; // 'dlt' (default, data load tool) or 'dbt'
+  dbtModel?: string; // only when transformType is dbt
+  customSql?: string; // only when transformType is dbt; ignored for dlt
   writeMode?: WriteMode;
   upsertKey?: string[];
   name?: string;
@@ -269,6 +270,7 @@ export interface UpdateDestinationSchemaDto {
   destinationSchema?: string;
   destinationTable?: string;
   transformType?: string;
+  transformScript?: string;
   dbtModel?: string;
   customSql?: string;
   writeMode?: WriteMode;

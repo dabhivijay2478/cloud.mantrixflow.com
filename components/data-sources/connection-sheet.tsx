@@ -30,12 +30,28 @@ import { getIconComponent } from "./utils";
 
 type ConnectionFormValues = Record<string, string>;
 
-// Dynamic schema builder based on data source type and current form values
+type ConnectionFieldSchema = {
+  name: string;
+  label: string;
+  type: "text" | "password" | "number" | "textarea" | "select" | "checkbox" | "file";
+  placeholder?: string;
+  required?: boolean;
+  description?: string;
+  options?: Array<{ value: string; label: string }>;
+  dependsOn?: { field: string; value: string | boolean };
+};
+
+type ConnectionSchemaType = {
+  fields: ConnectionFieldSchema[];
+  connectionString?: boolean;
+  testConnection?: boolean;
+};
+
+// Dynamic schema builder based on schema and current form values
 const buildConnectionSchema = (
-  dataSourceType: string,
+  schema: ConnectionSchemaType | null | undefined,
   formValues: ConnectionFormValues,
 ) => {
-  const schema = connectionSchemas[dataSourceType];
   if (!schema) {
     return z.object({}).passthrough();
   }
@@ -43,7 +59,7 @@ const buildConnectionSchema = (
   const schemaObject: Record<string, z.ZodTypeAny> = {};
 
   // Add all fields from schema
-  schema.fields.forEach((field) => {
+  schema.fields.forEach((field: ConnectionFieldSchema) => {
     // Check if field is visible/active based on dependsOn
     let isVisible = true;
     if (field.dependsOn) {
@@ -67,12 +83,13 @@ interface ConnectionSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dataSourceId: string | null;
-  /** When provided, use this instead of looking up in allDataSources (for ETL connectors) */
+  /** When provided, use this instead of looking up in allDataSources. connectionSchema overrides constants lookup. */
   dataSource?: {
     id: string;
     name: string;
     type: string;
     iconType: string;
+    connectionSchema?: ConnectionSchemaType;
   } | null;
   onConnect: (data: ConnectionFormValues) => Promise<void>;
   onTestConnection?: (
@@ -110,12 +127,16 @@ export function ConnectionSheet({
   const dataSource = dataSourceProp ?? (dataSourceId
     ? allDataSources.find((ds) => ds.id === dataSourceId)
     : null);
-  const schema = dataSource ? connectionSchemas[dataSource.type] : null;
+  const schema = dataSource
+    ? ("connectionSchema" in dataSource && dataSource.connectionSchema
+        ? dataSource.connectionSchema
+        : connectionSchemas[dataSource.type])
+    : null;
 
   const getDefaultValues = useCallback(() => {
     if (!schema) return {};
     const defaults: Record<string, string> = {};
-    schema.fields.forEach((field) => {
+    schema.fields.forEach((field: ConnectionFieldSchema) => {
       defaults[field.name] = "";
     });
     if (dataSource?.type === "mongodb" && "useConnectionString" in defaults) {
@@ -131,8 +152,8 @@ export function ConnectionSheet({
         return { values: values as ConnectionFormValues, errors: {} };
       }
       // Pass current values to schema builder for dynamic validation
-      const schema = buildConnectionSchema(dataSource.type, values);
-      const result = schema.safeParse(values);
+      const zodSchema = buildConnectionSchema(schema, values);
+      const result = zodSchema.safeParse(values);
       if (result.success) {
         return { values: result.data as ConnectionFormValues, errors: {} };
       }
@@ -298,7 +319,7 @@ export function ConnectionSheet({
               className="space-y-6"
             >
               <div className="grid gap-4">
-                {schema.fields.map((field, index) => {
+                {schema.fields.map((field: ConnectionFieldSchema, index: number) => {
                   // Check if field should be visible
                   if (field.dependsOn) {
                     const dependencyValue = allValues[field.dependsOn.field];
@@ -374,7 +395,7 @@ export function ConnectionSheet({
                               <SelectValue placeholder={field.placeholder} />
                             </SelectTrigger>
                             <SelectContent>
-                              {field.options?.map((option) => (
+                              {field.options?.map((option: { value: string; label: string }) => (
                                 <SelectItem
                                   key={option.value}
                                   value={option.value}
