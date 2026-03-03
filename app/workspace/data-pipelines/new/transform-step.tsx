@@ -43,13 +43,13 @@ export interface TransformConfig {
   name: string;
   collectorId: string;
   emitterId: string;
-  transformType: "dlt" | "dbt";
+  transformType: "script" | "dbt";
   destinationTable?: string; // Selected destination table (schema.table format)
   primaryKeyField?: string; // Primary key for upsert
   syncMode?: "full" | "incremental" | "cdc";
   cursorField?: string; // Cursor for incremental sync
   writeMode?: "append" | "upsert" | "replace";
-  columnMap?: Array<{ from_col: string; to_col: string }>; // Optional column mapping
+  transformScript?: string; // When transformType is script (Python)
   customSql?: string; // When transformType is dbt
   status?: "published" | "paused";
 }
@@ -96,8 +96,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [syncMode, setSyncMode] = useState<"full" | "incremental" | "cdc">("full");
   const [cursorField, setCursorField] = useState<string>("");
   const [writeMode, setWriteMode] = useState<"append" | "upsert" | "replace">("append");
-  const [columnMap, setColumnMap] = useState<Array<{ from_col: string; to_col: string }>>([]);
-  const [transformMode, setTransformMode] = useState<"mapping" | "customSql">("mapping");
+  const [transformMode, setTransformMode] = useState<"script" | "customSql">("script");
+  const [transformScript, setTransformScript] = useState("");
   const [customSql, setCustomSql] = useState("");
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
@@ -393,19 +393,22 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       if (!customSql?.trim()) return;
       if (sourceDataSource?.type === "mongodb") return; // Custom SQL not supported for MongoDB
     }
+    if (transformMode === "script") {
+      if (!transformScript?.trim()) return;
+    }
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
       name: transformName,
       collectorId: selectedCollectorId,
       emitterId: selectedEmitterId,
-      transformType: transformMode === "customSql" ? "dbt" : "dlt",
+      transformType: transformMode === "customSql" ? "dbt" : "script",
       destinationTable: selectedDestinationTable,
       primaryKeyField: primaryKeyField || undefined,
       syncMode,
       cursorField: cursorField || undefined,
       writeMode,
-      columnMap: transformMode === "mapping" && columnMap.length > 0 ? columnMap : undefined,
+      transformScript: transformMode === "script" && transformScript.trim() ? transformScript.trim() : undefined,
       customSql: transformMode === "customSql" && customSql.trim() ? customSql.trim() : undefined,
     };
 
@@ -432,8 +435,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSyncMode("full");
     setCursorField("");
     setWriteMode("append");
-    setColumnMap([]);
-    setTransformMode("mapping");
+    setTransformMode("script");
+    setTransformScript("");
     setCustomSql("");
   };
 
@@ -477,8 +480,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSyncMode(transform.syncMode || "full");
     setCursorField(transform.cursorField || "");
     setWriteMode(transform.writeMode || "append");
-    setColumnMap(transform.columnMap || []);
-    setTransformMode(transform.transformType === "dbt" ? "customSql" : "mapping");
+    setTransformMode(transform.transformType === "dbt" ? "customSql" : "script");
+    setTransformScript(transform.transformScript || "");
     setCustomSql(transform.customSql || "");
     setShowAddDialog(true);
   };
@@ -521,7 +524,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       header: "Config",
       cell: ({ row }) => {
         const cfg = row.original as TransformConfig;
-        const modeLabel = cfg.transformType === "dbt" ? "Custom SQL" : "Mapping";
+        const modeLabel = cfg.transformType === "dbt" ? "Custom SQL" : "Script";
         return (
           <Badge variant="secondary">
             {modeLabel} / {cfg.syncMode || "full"} / {cfg.writeMode || "append"}
@@ -631,7 +634,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !selectedDestinationTable ||
                 (transformMode === "customSql" && !customSql?.trim()) ||
                 (transformMode === "customSql" &&
-                  sourceDataSource?.type === "mongodb")
+                  sourceDataSource?.type === "mongodb") ||
+                (transformMode === "script" && !transformScript?.trim())
               }
               className="w-full sm:w-auto cursor-pointer"
             >
@@ -801,20 +805,20 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             selectedEmitterId &&
             selectedDestinationTable && (
               <div className="space-y-4">
-                {/* Transform mode: Field Mapping (dlt) or Custom SQL (dbt) */}
+                {/* Transform mode: Script (Python) or Custom SQL (dbt) */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Transform mode</Label>
                   <div className="flex gap-2 rounded-lg border p-1">
                     <button
                       type="button"
-                      onClick={() => setTransformMode("mapping")}
+                      onClick={() => setTransformMode("script")}
                       className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        transformMode === "mapping"
+                        transformMode === "script"
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-muted"
                       }`}
                     >
-                      Field Mapping
+                      Script
                     </button>
                     <button
                       type="button"
@@ -832,7 +836,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     sourceDataSource?.type === "mongodb" && (
                       <p className="text-xs text-amber-600 dark:text-amber-500">
                         Custom SQL is only supported for Postgres sources. Use
-                        Field Mapping for MongoDB.
+                        Script for MongoDB.
                       </p>
                     )}
                   {transformMode === "customSql" &&
@@ -843,6 +847,29 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       </p>
                     )}
                 </div>
+
+                {/* Script (when transformMode is script) */}
+                {transformMode === "script" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Python transform script
+                    </Label>
+                    <textarea
+                      value={transformScript}
+                      onChange={(e) => setTransformScript(e.target.value)}
+                      placeholder={`def transform(row):
+    # row is dict; return modified dict
+    if row.get("company_id") is None:
+        row["company_id"] = ""
+    return row`}
+                      className="min-h-[160px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      rows={8}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Define <code className="rounded bg-muted px-1">def transform(row)</code> that receives each row as a dict and returns the transformed dict.
+                    </p>
+                  </div>
+                )}
 
                 {/* Custom SQL (when transformMode is customSql) */}
                 {transformMode === "customSql" && (
@@ -983,117 +1010,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     </p>
                   </div>
 
-                  {/* Field Mapping: only when transformMode is mapping */}
-                  {transformMode === "mapping" && (
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">
-                      Field Mapping
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Map source columns to destination columns. Only mapped
-                      columns are synced—unmapped source columns are excluded.
-                      Select &quot;— Skip —&quot; for destination columns you
-                      don&apos;t want to populate. Leave all unmapped to sync
-                      all columns.
-                    </p>
-                    <div className="border rounded-lg divide-y">
-                      {destinationFields.length === 0 &&
-                      sourceFields.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                          Loading columns...
-                        </div>
-                      ) : destinationFields.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                          No destination columns found
-                        </div>
-                      ) : (
-                        destinationFields.map((destField) => {
-                          const currentMapping = columnMap.find(
-                            (m) => m.to_col === destField.name,
-                          );
-                          const mappedFromCol = currentMapping?.from_col ?? "";
-                          const sourceFieldForValue =
-                            mappedFromCol &&
-                            sourceFields.find((f) => {
-                              const simple =
-                                f.name.includes(".")
-                                  ? f.name.split(".").pop()
-                                  : f.name;
-                              return simple === mappedFromCol;
-                            });
-                          const selectValue = sourceFieldForValue
-                            ? sourceFieldForValue.name
-                            : "_skip_";
-                          return (
-                            <div
-                              key={destField.name}
-                              className="flex items-center gap-3 p-3"
-                            >
-                              <span className="text-sm font-medium w-40 shrink-0 truncate">
-                                {destField.name}
-                              </span>
-                              <span className="text-muted-foreground">→</span>
-                              <Select
-                                value={selectValue}
-                                onValueChange={(v) => {
-                                  if (v === "_skip_") {
-                                    setColumnMap((prev) =>
-                                      prev.filter(
-                                        (m) => m.to_col !== destField.name,
-                                      ),
-                                    );
-                                  } else {
-                                    const fromCol =
-                                      v.includes(".")
-                                        ? v.split(".").pop() ?? v
-                                        : v;
-                                    setColumnMap((prev) => {
-                                      const filtered = prev.filter(
-                                        (m) => m.to_col !== destField.name,
-                                      );
-                                      return [
-                                        ...filtered,
-                                        {
-                                          from_col: fromCol,
-                                          to_col: destField.name,
-                                        },
-                                      ];
-                                    });
-                                  }
-                                }}
-                              >
-                                <SelectTrigger className="flex-1 min-w-0">
-                                  <SelectValue placeholder="Select source column" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="_skip_">
-                                    — Skip —
-                                  </SelectItem>
-                                  {sourceFields.map((srcField) => {
-                                    const simpleName =
-                                      srcField.name.includes(".")
-                                        ? srcField.name.split(".").pop() ?? srcField.name
-                                        : srcField.name;
-                                    return (
-                                      <SelectItem
-                                        key={`${srcField.name}-${destField.name}`}
-                                        value={srcField.name}
-                                      >
-                                        {simpleName}
-                                        {srcField.name !== simpleName &&
-                                          ` (${srcField.name})`}
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                  )}
                 </div>
               </div>
             )}

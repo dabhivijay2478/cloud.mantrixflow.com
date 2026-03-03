@@ -297,23 +297,32 @@ export default function NewPipelinePage() {
         destTableParts[1] || destTableParts[0] || destinationTable;
 
       const transformerWithConfig = firstTransformer as {
-        transformType?: "dlt" | "dbt";
+        transformType?: "script" | "dbt";
+        transformScript?: string;
         customSql?: string;
         primaryKeyField?: string;
         syncMode?: "full" | "incremental" | "cdc";
         cursorField?: string;
         writeMode?: "append" | "upsert" | "replace";
-        columnMap?: Array<{ from_col: string; to_col: string }>;
       };
 
       const destTransformType =
-        transformerWithConfig.transformType === "dbt" ? "dbt" : "dlt";
+        transformerWithConfig.transformType === "dbt" ? "dbt" : "script";
       const customSql = transformerWithConfig.customSql?.trim();
+      const transformScript = transformerWithConfig.transformScript?.trim();
 
       if (destTransformType === "dbt" && !customSql) {
         toast.error(
           "Validation failed",
           "Custom SQL is required when using Custom SQL transform mode.",
+        );
+        setIsCreating(false);
+        return;
+      }
+      if (destTransformType === "script" && !transformScript) {
+        toast.error(
+          "Validation failed",
+          "Python transform script is required when using Script transform mode.",
         );
         setIsCreating(false);
         return;
@@ -360,6 +369,7 @@ export default function NewPipelinePage() {
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
             transformType: destTransformType,
+            transformScript: destTransformType === "script" ? transformScript : undefined,
             customSql: destTransformType === "dbt" ? customSql : undefined,
             writeMode,
             upsertKey:
@@ -369,15 +379,7 @@ export default function NewPipelinePage() {
           },
         );
 
-      // Column map for dlt apply_hints (from_col -> to_col)
-      const columnMap = transformerWithConfig.columnMap || [];
-      const transformations = columnMap.map((m) => ({
-        sourceColumn: m.from_col,
-        destinationColumn: m.to_col,
-        transformType: "rename" as const,
-      }));
-
-      // Create pipeline referencing created schemas.
+      // Create pipeline referencing created schemas (no transformations - use script/dbt only)
       await DataPipelinesService.createPipeline(organizationId, {
         name: pipelineName.trim(),
         description: `Pipeline with ${collectorsToUse.length} collector(s)`,
@@ -389,7 +391,6 @@ export default function NewPipelinePage() {
         scheduleValue: syncMode === "full" ? "" : "2",
         scheduleTimezone:
           Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-        transformations,
       });
 
       toast.success(

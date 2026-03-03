@@ -19,7 +19,6 @@ export type PipelineDataSourceType =
 export type SyncMode = "full" | "incremental" | "cdc";
 export type SyncFrequency =
   | "manual"
-  | "minutes"
   | "hourly"
   | "daily"
   | "weekly";
@@ -139,6 +138,7 @@ export interface UpdatePipelineDto {
 export interface RunPipelineDto {
   triggerType?: TriggerType;
   batchSize?: number;
+  forceFullSync?: boolean;
 }
 
 export interface DryRunPipelineDto {
@@ -257,9 +257,10 @@ export interface CreateDestinationSchemaDto {
   destinationSchema?: string;
   destinationTable: string;
   destinationTableExists?: boolean;
-  transformType?: string; // 'dlt' (default, data load tool) or 'dbt'
+  transformType?: string; // 'script' or 'dbt'
   dbtModel?: string; // only when transformType is dbt
-  customSql?: string; // only when transformType is dbt; ignored for dlt
+  customSql?: string; // only when transformType is dbt
+  transformScript?: string; // only when transformType is script
   writeMode?: WriteMode;
   upsertKey?: string[];
   name?: string;
