@@ -7,7 +7,6 @@
 import { ApiClient, type PaginatedListResult } from "../client";
 import { orgPath } from "../constants";
 import type {
-  ColumnInfo,
   CreateDestinationSchemaDto,
   CreateTableResult,
   PipelineDestinationSchema,
@@ -17,8 +16,6 @@ import type {
   UpdateDestinationSchemaDto,
   ValidationResult,
 } from "../types/data-pipelines";
-import { DataSourcesService } from "./data-sources.service";
-import { PythonETLService } from "./python-etl.service";
 
 export class DestinationSchemasService {
   /**
@@ -149,62 +146,18 @@ export class DestinationSchemasService {
   }
 
   /**
-   * Preview sample data from destination table
-   * Calls Python ETL collect endpoint to read top N rows from the destination
+   * Preview transformed output for the linked pipeline without writing data.
    */
   static async previewDestinationData(
     organizationId: string,
     destinationSchemaId: string,
     limit: number = 10,
   ): Promise<PreviewDataResult> {
-    // Get destination schema from NestJS (CRUD)
-    const schema = await DestinationSchemasService.getDestinationSchema(
-      organizationId,
-      destinationSchemaId,
+    return ApiClient.post<PreviewDataResult>(
+      `${orgPath(organizationId)}/pipeline-destination-schemas/${destinationSchemaId}/preview`,
+      {
+        limit: Math.min(limit, 100),
+      },
     );
-
-    if (!schema.dataSourceId) {
-      throw new Error("Destination schema must have a data source ID");
-    }
-
-    // Get connection config from NestJS (with sensitive data)
-    const connection = await DataSourcesService.getConnection(
-      organizationId,
-      schema.dataSourceId,
-      true,
-    );
-
-    const connectionWithConfig = connection as typeof connection & {
-      config?: Record<string, unknown>;
-    };
-    if (!connectionWithConfig?.config) {
-      throw new Error("Connection not configured for this destination");
-    }
-
-    // Destination is always PostgreSQL in current architecture
-    const sourceType = "postgresql";
-    const sourceStream =
-      schema.destinationSchema && schema.destinationTable
-        ? `${schema.destinationSchema}.${schema.destinationTable}`
-        : `public.${schema.destinationTable}`;
-
-    // Preview from destination table (dlt-based)
-    const result = await PythonETLService.preview(sourceType, {
-      source_config: connectionWithConfig.config as Record<string, unknown>,
-      source_stream: sourceStream,
-      limit: Math.min(limit, 100),
-    });
-
-    const columns: ColumnInfo[] =
-      result.columns?.map((name) => ({
-        name,
-        type: "text",
-        nullable: true,
-      })) ?? [];
-
-    return {
-      rows: result.records ?? [],
-      columns,
-    };
   }
 }

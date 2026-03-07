@@ -235,15 +235,28 @@ export class DataSourcesService {
   }
 
   static async testConnection(
-    _organizationId: string,
-    _sourceId: string,
+    organizationId: string,
+    sourceId: string,
   ): Promise<TestConnectionResponse> {
-    // This endpoint tests an existing connection by data source ID
-    // For now, we'll need to get the connection config first, then test it
-    // TODO: Implement fetching connection config and testing it via Python API
-    throw new Error(
-      "Test connection by source ID not yet implemented. Use testConnectionLegacy with connection config instead.",
+    const result = await ApiClient.post<{
+      success: boolean;
+      message?: string;
+      error?: string;
+      details?: {
+        version?: string;
+        response_time_ms?: number;
+      };
+    }>(
+      `${DataSourcesService.basePath(organizationId)}/${sourceId}/test-connection`,
+      {},
     );
+
+    return {
+      success: result.success,
+      error: result.error,
+      version: result.details?.version,
+      responseTimeMs: result.details?.response_time_ms,
+    };
   }
 
   /**
@@ -267,15 +280,28 @@ export class DataSourcesService {
     type?: string;
   }> {
     const raw = await ApiClient.post<{
-      columns?: Array<{ name: string; type?: string; table?: string; nullable?: boolean }>;
+      columns?: Array<{
+        name: string;
+        type?: string;
+        table?: string;
+        nullable?: boolean;
+      }>;
       primary_keys?: string[];
       primaryKeys?: string[];
       estimated_row_count?: number;
       estimatedRowCount?: number;
       streams?: Array<{ name: string }>;
-      schemas?: Array<{ name: string; tables: Array<{ name: string; schema: string; type?: string }> }>;
+      schemas?: Array<{
+        name: string;
+        tables: Array<{ name: string; schema: string; type?: string }>;
+      }>;
       data?: {
-        columns?: Array<{ name: string; type?: string; table?: string; nullable?: boolean }>;
+        columns?: Array<{
+          name: string;
+          type?: string;
+          table?: string;
+          nullable?: boolean;
+        }>;
         streams?: Array<{ name: string }>;
       };
     }>(
@@ -289,7 +315,8 @@ export class DataSourcesService {
 
     // Normalize response: ApiClient returns data.data when wrapped, so raw may already be unwrapped.
     // Handle both { data: { columns, streams } } and direct { columns, streams } formats.
-    const rawObj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const rawObj =
+      raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
     const inner =
       rawObj.data !== undefined &&
       rawObj.data !== null &&
@@ -309,24 +336,24 @@ export class DataSourcesService {
         name: string;
       }>,
       schemas: inner.schemas as
-        | Array<{ name: string; tables: Array<{ name: string; schema: string; type?: string }> }>
+        | Array<{
+            name: string;
+            tables: Array<{ name: string; schema: string; type?: string }>;
+          }>
         | undefined,
     };
 
-    let sourceType = "postgresql";
+    let sourceType = "postgres";
     try {
       const dataSource = await DataSourcesService.getDataSource(
         organizationId,
         sourceId,
       );
-      sourceType =
-        dataSource.sourceType?.toLowerCase() === "postgres"
-          ? "postgresql"
-          : dataSource.sourceType?.toLowerCase() || "postgresql";
+      sourceType = dataSource.sourceType?.toLowerCase() || "postgres";
     } catch {
       // Infer from discovered data when getDataSource fails (e.g. 404)
       if (discovered.streams?.some((s) => s.name.includes("."))) {
-        sourceType = "postgresql";
+        sourceType = "postgres";
       }
     }
 
@@ -337,7 +364,8 @@ export class DataSourcesService {
           tables: schema.tables.map((table) => ({
             name: table.name,
             schema: table.schema || schema.name,
-            type: (table.type as "table" | "view" | "materialized_view") ?? "table",
+            type:
+              (table.type as "table" | "view" | "materialized_view") ?? "table",
             rowCount: undefined,
           })),
         })),
@@ -352,7 +380,9 @@ export class DataSourcesService {
           const parts = s.name.split(".");
           const tableName = parts[1] ?? s.name;
           const cols =
-            discovered.columns?.filter((c) => (c as { table?: string }).table === tableName) ??
+            discovered.columns?.filter(
+              (c) => (c as { table?: string }).table === tableName,
+            ) ??
             discovered.columns ??
             [];
           return {
@@ -377,10 +407,15 @@ export class DataSourcesService {
     if (discovered.streams && discovered.streams.length > 0) {
       tables = discovered.streams.map((s) => {
         const parts = s.name.split(".");
-        const tableName = parts.length > 1 ? parts[1]! : s.name;
-        const streamSchema = parts.length > 1 ? parts[0]! : schemaName;
+        const tableName = parts.length > 1 ? (parts[1] ?? s.name) : s.name;
+        const streamSchema =
+          parts.length > 1 ? (parts[0] ?? schemaName) : schemaName;
         const cols = (discovered.columns ?? []).filter((c) => {
-          const colAny = c as { table?: string; table_name?: string; tableName?: string };
+          const colAny = c as {
+            table?: string;
+            table_name?: string;
+            tableName?: string;
+          };
           const t = colAny.table ?? colAny.table_name ?? colAny.tableName;
           return t === tableName;
         });
@@ -395,13 +430,17 @@ export class DataSourcesService {
       // Fallback: build from columns only when no streams
       const columnsByTable = new Map<string, typeof discovered.columns>();
       for (const col of discovered.columns ?? []) {
-        const colAny = col as { table?: string; table_name?: string; tableName?: string };
+        const colAny = col as {
+          table?: string;
+          table_name?: string;
+          tableName?: string;
+        };
         const tableName =
           colAny.table ?? colAny.table_name ?? colAny.tableName ?? "unknown";
         if (!columnsByTable.has(tableName)) {
           columnsByTable.set(tableName, []);
         }
-        columnsByTable.get(tableName)!.push(col);
+        columnsByTable.get(tableName)?.push(col);
       }
       tables = Array.from(columnsByTable.entries()).map(
         ([tableName, cols]) => ({
@@ -417,11 +456,15 @@ export class DataSourcesService {
     if (
       process.env.NODE_ENV === "development" &&
       tables.length === 0 &&
-      ((discovered.streams?.length ?? 0) > 0 || (discovered.columns?.length ?? 0) > 0)
+      ((discovered.streams?.length ?? 0) > 0 ||
+        (discovered.columns?.length ?? 0) > 0)
     ) {
       console.warn(
         "[discoverSchema] Streams or columns present but tables empty:",
-        { streams: discovered.streams?.length, columns: discovered.columns?.length },
+        {
+          streams: discovered.streams?.length,
+          columns: discovered.columns?.length,
+        },
       );
     }
 
@@ -449,7 +492,8 @@ export class DataSourcesService {
     data: TestConnectionDto,
   ): Promise<TestConnectionResponse> {
     const connectionType = (data.type || "postgres").toLowerCase();
-    const effectiveType = connectionType === "postgresql" ? "postgres" : connectionType;
+    const effectiveType =
+      connectionType === "postgresql" ? "postgres" : connectionType;
 
     const port =
       typeof data.port === "number"
@@ -499,7 +543,10 @@ export class DataSourcesService {
     };
   }
 
-  /** @deprecated Use organization-scoped endpoints */
+  /**
+   * Create data source and connection atomically.
+   * Uses POST /data-sources/with-connection to prevent orphaned data sources on failure.
+   */
   static async createConnection(
     data: CreateConnectionDto,
     orgId?: string,
@@ -508,46 +555,40 @@ export class DataSourcesService {
       throw new Error("Organization ID is required to create a connection");
     }
 
-    // 1. Create Data Source
-    const dataSource = await DataSourcesService.createDataSource(orgId, {
+    const result = await ApiClient.post<{
+      id: string;
+      name: string;
+      connection: {
+        id: string;
+        status: string;
+        config: Record<string, unknown>;
+        connectionType?: string;
+        connection_type?: string;
+      };
+    }>(`${DataSourcesService.basePath(orgId)}/with-connection`, {
       name: data.name,
-      source_type: data.connection_type,
+      connection_type: data.connection_type,
       connector_role: data.connector_role,
-      description: `Connection for ${data.name || data.connection_type}`,
+      config: data.config,
     });
 
-    // 2. Configure Connection
-    // Map snake_case from frontend DTO to camelCase for backend if needed
-    // or pass as is if backend controller uses same DTO
-    const connectionResult = await DataSourcesService.createOrUpdateConnection(
-      orgId,
-      dataSource.id,
-      {
-        ...data,
-      } as CreateConnectionDto,
-    );
+    const conn = result.connection;
+    const connectionType =
+      conn.connectionType || conn.connection_type || data.connection_type;
+    const now = new Date().toISOString();
 
-    const connection = connectionResult as Connection & {
-      config: Record<string, unknown>;
-    }; // Cast to access properties not in Connection interface
-
-    // 3. Return combined object matching Connection interface
-    // Note: Frontend uses DataSource ID as Connection ID in listings
     return {
-      id: dataSource.id,
-      organizationId: dataSource.organizationId,
-      name: dataSource.name,
-      type: dataSource.sourceType,
-      status: connection.status,
-      // map other fields
-      created_at: dataSource.createdAt,
-      createdAt: dataSource.createdAt,
-      updated_at: dataSource.updatedAt,
-      updatedAt: dataSource.updatedAt,
-
-      connection_type: connection.type || dataSource.sourceType,
-
-      config: connection.config,
+      id: result.id,
+      organizationId: orgId,
+      name: result.name,
+      type: connectionType,
+      status: (conn.status as Connection["status"]) || "inactive",
+      config: conn.config || {},
+      created_at: now,
+      createdAt: now,
+      updated_at: now,
+      updatedAt: now,
+      connection_type: connectionType,
     } as unknown as Connection;
   }
 
@@ -691,7 +732,7 @@ export class DataSourcesService {
         for (const t of result.tables) {
           const schemaName = t.schema || "public";
           if (!bySchema.has(schemaName)) bySchema.set(schemaName, []);
-          bySchema.get(schemaName)!.push(t);
+          bySchema.get(schemaName)?.push(t);
         }
         return Array.from(bySchema.entries()).map(([name, tables]) => ({
           name,

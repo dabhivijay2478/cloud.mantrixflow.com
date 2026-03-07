@@ -29,12 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useConnection } from "@/lib/api/hooks/use-connection";
 import {
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
-import { PythonETLService } from "@/lib/api/services/python-etl.service";
+import { ConnectionService } from "@/lib/api/services/connection.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export interface CollectorConfig {
@@ -86,29 +85,26 @@ export function CollectorStep({
   // dlt scope: PostgreSQL + MongoDB only
   const sourceConnections =
     connections?.filter(
-      (conn) =>
-        (conn.connectorRole ?? "source") === "source" &&
-        ["postgres", "postgresql", "mongodb"].includes(
-          (conn.type || "postgres").toLowerCase(),
-        ),
+      (conn) => (conn.connectorRole ?? "source") === "source",
     ) ?? [];
 
   // Convert API connections to DataSource format for compatibility
   const dataSources = sourceConnections.map((c) => {
-    const rec = c as { status?: string; orgId?: string; lastConnectedAt?: string };
+    const rec = c as {
+      status?: string;
+      orgId?: string;
+      lastConnectedAt?: string;
+    };
     const statusVal: "connected" | "disconnected" =
       rec.status === "active" ? "connected" : "disconnected";
     const orgId = rec.orgId ?? organizationId ?? "";
     const connectedAt = rec.lastConnectedAt;
     const tables: string[] = [];
-    const isPostgres = ["postgres", "postgresql"].includes(
-      (c.type || "postgres").toLowerCase(),
-    );
-    const typeVal: "postgres" | "mongodb" = isPostgres ? "postgres" : "mongodb";
+    const connectionType = (c.type || "postgres").toLowerCase();
     return {
       id: c.id,
       name: c.name,
-      type: typeVal,
+      type: connectionType,
       status: statusVal,
       organizationId: orgId,
       connectedAt,
@@ -128,13 +124,6 @@ export function CollectorStep({
     message?: string;
     error?: string;
   } | null>(null);
-
-  // Get connection details for testing
-  const { data: connection } = useConnection(
-    organizationId,
-    selectedSourceId,
-    true, // includeSensitive to get full config for testing
-  );
 
   // Update collectors when initialCollectors prop changes (for edit mode)
   useEffect(() => {
@@ -220,10 +209,10 @@ export function CollectorStep({
   };
 
   const handleTestConnection = async () => {
-    if (!selectedSourceId || !connection?.config || !organizationId) {
+    if (!selectedSourceId || !organizationId) {
       setConnectionTestResult({
         success: false,
-        error: "Please select a data source with a configured connection",
+        error: "Please select a data source before testing the connection",
       });
       return;
     }
@@ -232,34 +221,14 @@ export function CollectorStep({
     setConnectionTestResult(null);
 
     try {
-      const selectedSource = dataSources.find(
-        (ds) => ds.id === selectedSourceId,
+      const result = await ConnectionService.testConnection(
+        organizationId,
+        selectedSourceId,
       );
-      const sourceType = selectedSource?.type || "postgres";
-
-      // Map connection config to test connection format
-      const testConfig = {
-        type: sourceType,
-        ...(connection.config as unknown as Record<string, unknown>),
-      } as {
-        type: string;
-        [key: string]: unknown;
-      };
-
-      // Normalize field names (safely access union type properties)
-      const config = connection.config as unknown as Record<string, unknown>;
-      if (config.username && !testConfig.username) {
-        testConfig.username = config.username;
-      }
-      if (config.user && !testConfig.user) {
-        testConfig.user = config.user;
-      }
-
-      const result = await PythonETLService.testConnection(testConfig);
 
       setConnectionTestResult({
         success: result.success,
-        message: result.message || "Connection successful",
+        message: result.message,
         error: result.error,
       });
     } catch (error) {

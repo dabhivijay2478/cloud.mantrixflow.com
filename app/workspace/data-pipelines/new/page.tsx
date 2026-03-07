@@ -1,5 +1,6 @@
 "use client";
 
+import { XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
@@ -14,7 +15,6 @@ import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { DestinationSchemasService } from "@/lib/api/services/destination-schemas.service";
 import { SourceSchemasService } from "@/lib/api/services/source-schemas.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { XCircle } from "lucide-react";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
 import { CollectorStep } from "./collector-step";
@@ -28,14 +28,9 @@ interface PipelineConfig {
 }
 
 type Transformer = CollectorConfig["transformers"][number];
-type SourceType = "postgres";
 
-function normalizeSourceType(sourceType: string | undefined): SourceType {
-  const normalized = sourceType?.toLowerCase() || "postgres";
-  if (normalized === "postgresql" || normalized === "postgres") {
-    return "postgres";
-  }
-  return "postgres";
+function normalizeSourceType(sourceType: string | undefined): string {
+  return sourceType?.trim().toLowerCase() || "postgres";
 }
 
 export default function NewPipelinePage() {
@@ -88,8 +83,8 @@ export default function NewPipelinePage() {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
-      return collector.transformers.some(
-        (t) => (t as { destinationTable?: string }).destinationTable?.trim(),
+      return collector.transformers.some((t) =>
+        (t as { destinationTable?: string }).destinationTable?.trim(),
       );
     });
 
@@ -144,6 +139,9 @@ export default function NewPipelinePage() {
     const allDestinationIds = [
       ...new Set(allEmitters.map((e) => e.destinationId)),
     ];
+    const allTransformers = collectorsToUse.flatMap(
+      (collector) => collector.transformers || [],
+    );
 
     // Validate that we have emitters
     if (allEmitters.length === 0) {
@@ -175,6 +173,30 @@ export default function NewPipelinePage() {
       return;
     }
 
+    if (collectorsToUse.length !== 1) {
+      toast.error(
+        "Unsupported pipeline shape",
+        "This Singer pipeline flow currently supports exactly one source connection per pipeline.",
+      );
+      return;
+    }
+
+    if (allEmitters.length !== 1 || allDestinationIds.length !== 1) {
+      toast.error(
+        "Unsupported pipeline shape",
+        "This Singer pipeline flow currently supports exactly one destination per pipeline.",
+      );
+      return;
+    }
+
+    if (allTransformers.length !== 1) {
+      toast.error(
+        "Unsupported pipeline shape",
+        "This Singer pipeline flow currently supports exactly one transform per pipeline.",
+      );
+      return;
+    }
+
     // Note: emitters mapping is no longer needed for schema-based API
     // The destination schema is created directly from transformer field mappings
 
@@ -183,6 +205,15 @@ export default function NewPipelinePage() {
       const firstCollector = collectorsToUse[0];
       const primarySourceId = firstCollector.sourceId;
       const firstTable = firstCollector.selectedTables[0];
+
+      if (firstCollector.selectedTables.length !== 1) {
+        toast.error(
+          "Unsupported pipeline shape",
+          "This Singer pipeline flow currently supports exactly one source table per pipeline.",
+        );
+        setIsCreating(false);
+        return;
+      }
 
       if (!firstTable) {
         toast.error(
@@ -194,7 +225,7 @@ export default function NewPipelinePage() {
       }
 
       // Get data source to determine source type.
-      let sourceType: SourceType = "postgres";
+      let sourceType = "postgres";
       try {
         if (!organizationId) {
           throw new Error("Organization ID is required");
@@ -248,7 +279,9 @@ export default function NewPipelinePage() {
       // Extract destination information from first configured transformer
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => (t as { destinationTable?: string }).destinationTable?.trim());
+        .find((t) =>
+          (t as { destinationTable?: string }).destinationTable?.trim(),
+        );
 
       if (!firstTransformer) {
         toast.error(
@@ -293,6 +326,15 @@ export default function NewPipelinePage() {
       const customSql = transformerWithConfig.customSql?.trim();
       const transformScript = transformerWithConfig.transformScript?.trim();
 
+      if (destTransformType !== "script") {
+        toast.error(
+          "Unsupported transform mode",
+          "Singer pipelines currently support Python script transforms only.",
+        );
+        setIsCreating(false);
+        return;
+      }
+
       if (destTransformType === "dbt" && !customSql) {
         toast.error(
           "Validation failed",
@@ -311,12 +353,11 @@ export default function NewPipelinePage() {
       }
 
       // Primary key from transformer (for upsert) — support upsertKey (multi) or legacy primaryKeyField
-      const primaryKeyFields: string[] =
-        transformerWithConfig.upsertKey?.length
-          ? transformerWithConfig.upsertKey
-          : transformerWithConfig.primaryKeyField
-            ? [transformerWithConfig.primaryKeyField]
-            : [];
+      const primaryKeyFields: string[] = transformerWithConfig.upsertKey?.length
+        ? transformerWithConfig.upsertKey
+        : transformerWithConfig.primaryKeyField
+          ? [transformerWithConfig.primaryKeyField]
+          : [];
 
       // Write mode: from config or derive from primary key
       const writeMode: "append" | "upsert" | "replace" =
@@ -326,7 +367,9 @@ export default function NewPipelinePage() {
       // Sync mode and cursor for incremental/CDC — map to API SyncMode
       const rawSyncMode = transformerWithConfig.syncMode || "full";
       const syncMode: "full" | "log_based" =
-        rawSyncMode === "incremental" || rawSyncMode === "cdc" || rawSyncMode === "log_based"
+        rawSyncMode === "incremental" ||
+        rawSyncMode === "cdc" ||
+        rawSyncMode === "log_based"
           ? "log_based"
           : "full";
       const incrementalColumn = transformerWithConfig.cursorField;
@@ -358,7 +401,8 @@ export default function NewPipelinePage() {
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
             transformType: destTransformType,
-            transformScript: destTransformType === "script" ? transformScript : undefined,
+            transformScript:
+              destTransformType === "script" ? transformScript : undefined,
             customSql: destTransformType === "dbt" ? customSql : undefined,
             writeMode,
             upsertKey:
@@ -371,7 +415,7 @@ export default function NewPipelinePage() {
       // Create pipeline referencing created schemas (no transformations - use script/dbt only)
       await DataPipelinesService.createPipeline(organizationId, {
         name: pipelineName.trim(),
-        description: `Pipeline with ${collectorsToUse.length} collector(s)`,
+        description: `Pipeline from ${sourceSchemaName}.${sourceTableName} to ${destSchemaName}.${destTableName}`,
         sourceSchemaId: sourceSchema.id,
         destinationSchemaId: destinationSchema.id,
         syncMode,

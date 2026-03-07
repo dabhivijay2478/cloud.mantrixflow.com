@@ -23,8 +23,8 @@ import {
   CdcSetupModal,
   DataPreviewTable,
   ScheduleEditor,
-  TransformCodeView,
   SchemaView,
+  TransformCodeView,
 } from "@/components/data-pipelines";
 import { LoadingState } from "@/components/shared";
 import { ConfirmationModal } from "@/components/shared/confirmation-modal";
@@ -70,7 +70,9 @@ export default function PipelineDetailPage() {
   // CDC setup modal (when LOG_BASED and CDC not verified)
   const [showCdcSetup, setShowCdcSetup] = useState(false);
   // Expanded error for run history (runId -> expanded)
-  const [expandedRunErrors, setExpandedRunErrors] = useState<Record<string, boolean>>({});
+  const [expandedRunErrors, setExpandedRunErrors] = useState<
+    Record<string, boolean>
+  >({});
 
   // Schedule editing state
   const [scheduleConfig, setScheduleConfig] = useState<{
@@ -590,22 +592,24 @@ export default function PipelineDetailPage() {
                 <Pause className="h-4 w-4 mr-2" />
                 Pause Auto-Sync
               </Button>
-              {(pipeline.syncMode === "cdc" || pipeline.syncMode === "log_based") &&
-              !cdcVerified && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowCdcSetup(true)}
-                >
-                  Set Up CDC
-                </Button>
-              )}
+              {(pipeline.syncMode === "cdc" ||
+                pipeline.syncMode === "log_based") &&
+                !cdcVerified && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCdcSetup(true)}
+                  >
+                    Set Up CDC
+                  </Button>
+                )}
               <Button
                 onClick={handleRun}
                 disabled={runPipeline.isPending}
                 variant="secondary"
               >
                 <Zap className="h-4 w-4 mr-2" />
-                {(pipeline.syncMode === "cdc" || pipeline.syncMode === "log_based") &&
+                {(pipeline.syncMode === "cdc" ||
+                  pipeline.syncMode === "log_based") &&
                 !pipeline.fullRefreshCompletedAt
                   ? "Run Initial Sync"
                   : "Sync Now"}
@@ -784,44 +788,49 @@ export default function PipelineDetailPage() {
                           </div>
                         </div>
                       </div>
-                      {run.status === "failed" && (() => {
-                        const errMsg = run.errorMessage ?? (run as { error_message?: string }).error_message ?? "Unknown error";
-                        return (
-                        <div className="border-t bg-destructive/5 px-3 py-2">
-                          <div className="flex items-start gap-2">
-                            <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-medium text-destructive mb-1">
-                                Error
-                              </p>
-                              <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words font-sans">
-                                {expandedRunErrors[run.id]
-                                  ? errMsg
-                                  : errMsg.length > 500
-                                    ? `${errMsg.slice(0, 500)}...`
-                                    : errMsg}
-                              </pre>
-                              {errMsg.length > 500 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="mt-2 h-7 text-xs"
-                                  onClick={() =>
-                                    setExpandedRunErrors((prev) => ({
-                                      ...prev,
-                                      [run.id]: !prev[run.id],
-                                    }))
-                                  }
-                                >
-                                  {expandedRunErrors[run.id]
-                                    ? "Show less"
-                                    : "Show more"}
-                                </Button>
-                              )}
+                      {run.status === "failed" &&
+                        (() => {
+                          const errMsg =
+                            run.errorMessage ??
+                            (run as { error_message?: string }).error_message ??
+                            "Unknown error";
+                          return (
+                            <div className="border-t bg-destructive/5 px-3 py-2">
+                              <div className="flex items-start gap-2">
+                                <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium text-destructive mb-1">
+                                    Error
+                                  </p>
+                                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words font-sans">
+                                    {expandedRunErrors[run.id]
+                                      ? errMsg
+                                      : errMsg.length > 500
+                                        ? `${errMsg.slice(0, 500)}...`
+                                        : errMsg}
+                                  </pre>
+                                  {errMsg.length > 500 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="mt-2 h-7 text-xs"
+                                      onClick={() =>
+                                        setExpandedRunErrors((prev) => ({
+                                          ...prev,
+                                          [run.id]: !prev[run.id],
+                                        }))
+                                      }
+                                    >
+                                      {expandedRunErrors[run.id]
+                                        ? "Show less"
+                                        : "Show more"}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      );})()}
+                          );
+                        })()}
                     </div>
                   ))}
                 </div>
@@ -859,7 +868,9 @@ export default function PipelineDetailPage() {
                     variant="link"
                     className="h-auto p-0 text-sm"
                     onClick={() =>
-                      router.push(`/workspace/data-pipelines/${pipelineId}/edit`)
+                      router.push(
+                        `/workspace/data-pipelines/${pipelineId}/edit`,
+                      )
                     }
                     type="button"
                   >
@@ -880,7 +891,7 @@ export default function PipelineDetailPage() {
               Preview transformed data (top 10 rows)
             </p>
             <DataPreviewTable
-              title="Source Data Preview"
+              title="Incoming Data Preview"
               description={
                 pipeline.sourceSchema?.sourceTable
                   ? `${pipeline.sourceSchema.sourceSchema || "public"}.${pipeline.sourceSchema.sourceTable}`
@@ -894,7 +905,7 @@ export default function PipelineDetailPage() {
               showRecordCountLabel
             />
             <DataPreviewTable
-              title="Destination Data Preview"
+              title="Transformed Output Preview"
               description={
                 pipeline.destinationSchema
                   ? `${pipeline.destinationSchema.destinationSchema}.${pipeline.destinationSchema.destinationTable}`
@@ -928,12 +939,19 @@ export default function PipelineDetailPage() {
                     : undefined
                 }
                 fields={
-                  pipeline.sourceSchema?.discoveredColumns?.map((c) => ({
-                    name: c.name,
-                    type: c.type ?? "string",
-                    nullable: c.nullable,
-                    isPrimaryKey: c.primaryKey ?? false,
-                  })) ?? []
+                  pipeline.sourceSchema?.discoveredColumns?.length
+                    ? pipeline.sourceSchema.discoveredColumns.map((c) => ({
+                        name: c.name,
+                        type: c.type ?? "string",
+                        nullable: c.nullable,
+                        isPrimaryKey: c.primaryKey ?? false,
+                      }))
+                    : (sourcePreview?.columns ?? []).map((column) => ({
+                        name: column.name,
+                        type: column.type ?? "string",
+                        nullable: column.nullable ?? true,
+                        isPrimaryKey: column.primaryKey ?? false,
+                      }))
                 }
                 lastRefreshedAt={pipeline.sourceSchema?.lastDiscoveredAt}
                 emptyMessage="Run schema discovery in the pipeline editor to populate."
@@ -977,7 +995,7 @@ export default function PipelineDetailPage() {
                         }))
                       : []
                 }
-                lastRefreshedAt={pipeline.destinationSchema?.lastSyncedAt}
+                lastRefreshedAt={pipeline.destinationSchema?.updatedAt}
                 emptyMessage="Run preview or sync to populate outgoing schema."
               />
             </CardContent>
@@ -1274,8 +1292,14 @@ export default function PipelineDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Name *</label>
+                <label
+                  htmlFor="pipeline-name-input"
+                  className="text-sm font-medium"
+                >
+                  Name *
+                </label>
                 <input
+                  id="pipeline-name-input"
                   type="text"
                   defaultValue={pipeline.name}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -1289,8 +1313,14 @@ export default function PipelineDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
+                <label
+                  htmlFor="pipeline-description-input"
+                  className="text-sm font-medium"
+                >
+                  Description
+                </label>
                 <textarea
+                  id="pipeline-description-input"
                   defaultValue={pipeline.description ?? ""}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   placeholder="Optional description"

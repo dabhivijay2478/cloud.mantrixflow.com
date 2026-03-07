@@ -7,14 +7,10 @@
 // ENUMS (matching backend)
 // ============================================================================
 
-export type PipelineDataSourceType = "postgres" | "redshift";
+export type PipelineDataSourceType = string;
 
 export type SyncMode = "full" | "log_based" | "cdc" | "incremental";
-export type SyncFrequency =
-  | "manual"
-  | "hourly"
-  | "daily"
-  | "weekly";
+export type SyncFrequency = "manual" | "hourly" | "daily" | "weekly";
 export type WriteMode = "append" | "upsert" | "replace";
 export type PipelineStatus =
   | "idle"
