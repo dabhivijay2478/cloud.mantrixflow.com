@@ -103,29 +103,6 @@ export function AddConnectorContent({
           config.ssl = { enabled: true };
         }
 
-        // MongoDB: connection_string OR individual (host, port, username, password) per ETL spec
-        if (dataSource.type === "mongodb") {
-          const useConnStr = data.useConnectionString === "true";
-          const mongodbConfig: Record<string, unknown> = {};
-          if (useConnStr && config.connection_string) {
-            mongodbConfig.connection_string = config.connection_string;
-          } else if (!useConnStr && config.host && config.username && config.password) {
-            mongodbConfig.host = config.host;
-            mongodbConfig.port = config.port ? parseInt(String(config.port), 10) : 27017;
-            mongodbConfig.username = config.username;
-            mongodbConfig.password = config.password;
-            mongodbConfig.database = config.database || "admin";
-          }
-          const dbs = (data.databases || "")
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-          if (dbs.length) mongodbConfig.databases = dbs;
-          mongodbConfig.extra = {};
-          Object.keys(config).forEach((k) => delete config[k]);
-          Object.assign(config, mongodbConfig);
-        }
-
         await createConnection.mutateAsync({
           name: data.name,
           connection_type: dataSource.type as CreateConnectionDto["connection_type"],
@@ -167,27 +144,6 @@ export function AddConnectorContent({
         };
         if (sslEnabled) {
           base.ssl = { enabled: true };
-        }
-        if (sourceType === "mongodb") {
-          const dbs = (data.databases || "")
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-          const mongoBase: Record<string, unknown> = {
-            type: "mongodb",
-            ...(dbs.length ? { databases: dbs } : {}),
-          };
-          if (data.connection_string && data.useConnectionString !== "false") {
-            return { ...mongoBase, connection_string: data.connection_string };
-          }
-          return {
-            ...mongoBase,
-            host: data.host || "",
-            port: data.port ? parseInt(data.port, 10) : 27017,
-            database: data.database || "admin",
-            username: data.username || "",
-            password: data.password || "",
-          };
         }
         return base;
       };

@@ -75,7 +75,7 @@ export default function DataSourcesPage() {
     return {
       id: conn.id,
       name: conn.name,
-      type: (conn.type || "postgres") as "postgres" | "mysql" | "mongodb",
+      type: (conn.type || "postgres") as "postgres",
       connectorRole: conn.connectorRole ?? "source",
       status: (conn.status === "active"
         ? "connected"

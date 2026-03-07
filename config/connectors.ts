@@ -68,89 +68,6 @@ const postgresConnectionSchema: ConnectionSchema = {
   testConnection: true,
 };
 
-const mongodbConnectionSchema: ConnectionSchema = {
-  fields: [
-    { name: "name", label: "Connection Name", type: "text", placeholder: "My MongoDB Connection", required: true },
-    {
-      name: "useConnectionString",
-      label: "Connection Method",
-      type: "select",
-      required: true,
-      options: [
-        { value: "true", label: "Connection String (Atlas/SRV)" },
-        { value: "false", label: "Individual (Host, Port, Username, Password)" },
-      ],
-    },
-    {
-      name: "connection_string",
-      label: "Connection String",
-      type: "password",
-      placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/?appName=Cluster0",
-      required: true,
-      dependsOn: { field: "useConnectionString", value: "true" },
-    },
-    {
-      name: "databases",
-      label: "Databases",
-      type: "text",
-      placeholder: "sample_mflix, test (comma-separated)",
-      required: false,
-      dependsOn: { field: "useConnectionString", value: "true" },
-    },
-    {
-      name: "host",
-      label: "Host",
-      type: "text",
-      placeholder: "cluster0.xxxxx.mongodb.net or localhost",
-      required: true,
-      dependsOn: { field: "useConnectionString", value: "false" },
-    },
-    {
-      name: "port",
-      label: "Port",
-      type: "number",
-      placeholder: "27017",
-      required: false,
-      default: 27017,
-      dependsOn: { field: "useConnectionString", value: "false" },
-    },
-    {
-      name: "database",
-      label: "Database",
-      type: "text",
-      placeholder: "admin",
-      required: false,
-      dependsOn: { field: "useConnectionString", value: "false" },
-    },
-    {
-      name: "username",
-      label: "Username",
-      type: "text",
-      placeholder: "user",
-      required: true,
-      dependsOn: { field: "useConnectionString", value: "false" },
-    },
-    {
-      name: "password",
-      label: "Password",
-      type: "password",
-      placeholder: "••••••••",
-      required: true,
-      dependsOn: { field: "useConnectionString", value: "false" },
-    },
-    {
-      name: "databases",
-      label: "Databases",
-      type: "text",
-      placeholder: "sample_mflix, test (comma-separated)",
-      required: false,
-      dependsOn: { field: "useConnectionString", value: "false" },
-    },
-  ],
-  connectionString: true,
-  testConnection: true,
-};
-
 export const connectorsConfig = {
   sources: [
     {
@@ -159,13 +76,6 @@ export const connectorsConfig = {
       category: "Database",
       cdc: true,
       connectionSchema: postgresConnectionSchema,
-    },
-    {
-      id: "source-mongodb-v2",
-      label: "MongoDB",
-      category: "Database",
-      cdc: false,
-      connectionSchema: mongodbConnectionSchema,
     },
   ] as ConnectorSource[],
   destinations: [
