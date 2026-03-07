@@ -30,6 +30,7 @@ import {
 } from "@/lib/api/hooks/use-data-sources";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
 import type { EmitterConfig } from "./emitter-step";
 
@@ -45,10 +46,13 @@ export interface TransformConfig {
   emitterId: string;
   transformType: "script" | "dbt";
   destinationTable?: string; // Selected destination table (schema.table format)
-  primaryKeyField?: string; // Primary key for upsert
-  syncMode?: "full" | "incremental" | "cdc";
-  cursorField?: string; // Cursor for incremental sync
-  writeMode?: "append" | "upsert" | "replace";
+  /** Primary keys for upsert (multi-select). Replaces primaryKeyField. */
+  upsertKey?: string[];
+  /** @deprecated Use upsertKey. Kept for migration from single primaryKeyField. */
+  primaryKeyField?: string;
+  syncMode?: "full" | "log_based";
+  cursorField?: string;
+  writeMode?: "append" | "upsert";
   transformScript?: string; // When transformType is script (Python)
   customSql?: string; // When transformType is dbt
   status?: "published" | "paused";
@@ -92,10 +96,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   const [selectedDestinationTable, setSelectedDestinationTable] =
     useState<string>("");
   const [transformName, setTransformName] = useState("");
-  const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
-  const [syncMode, setSyncMode] = useState<"full" | "incremental" | "cdc">("full");
+  const [upsertKey, setUpsertKey] = useState<string[]>([]);
+  const [syncMode, setSyncMode] = useState<"full" | "log_based">("full");
   const [cursorField, setCursorField] = useState<string>("");
-  const [writeMode, setWriteMode] = useState<"append" | "upsert" | "replace">("append");
+  const [writeMode, setWriteMode] = useState<"append" | "upsert">("append");
   const [transformMode, setTransformMode] = useState<"script" | "customSql">("script");
   const [transformScript, setTransformScript] = useState("");
   const [customSql, setCustomSql] = useState("");
@@ -396,6 +400,13 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     if (transformMode === "script") {
       if (!transformScript?.trim()) return;
     }
+    if (writeMode === "upsert" && upsertKey.length === 0) {
+      toast.error(
+        "Primary key required",
+        "Select at least one column as primary key for upsert mode.",
+      );
+      return;
+    }
 
     const newTransform: TransformConfig = {
       id: editingTransform || `transform_${Date.now()}`,
@@ -404,7 +415,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       emitterId: selectedEmitterId,
       transformType: transformMode === "customSql" ? "dbt" : "script",
       destinationTable: selectedDestinationTable,
-      primaryKeyField: primaryKeyField || undefined,
+      upsertKey: upsertKey.length > 0 ? upsertKey : undefined,
       syncMode,
       cursorField: cursorField || undefined,
       writeMode,
@@ -431,7 +442,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedEmitterId("");
     setSelectedDestinationTable("");
     setTransformName("");
-    setPrimaryKeyField("");
+    setUpsertKey([]);
     setSyncMode("full");
     setCursorField("");
     setWriteMode("append");
@@ -476,7 +487,13 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedEmitterId(transform.emitterId);
     setTransformName(transform.name);
     setSelectedDestinationTable(transform.destinationTable || "");
-    setPrimaryKeyField(transform.primaryKeyField || "");
+    setUpsertKey(
+      transform.upsertKey?.length
+        ? transform.upsertKey
+        : transform.primaryKeyField
+          ? [transform.primaryKeyField]
+          : [],
+    );
     setSyncMode(transform.syncMode || "full");
     setCursorField(transform.cursorField || "");
     setWriteMode(transform.writeMode || "append");
@@ -841,7 +858,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     )}
                   {transformMode === "customSql" &&
                     sourceDataSource?.type !== "mongodb" &&
-                    (syncMode === "incremental" || syncMode === "cdc") && (
+                    syncMode === "log_based" && (
                       <p className="text-xs text-muted-foreground">
                         Postgres uses log-based CDC (WAL); no cursor required.
                       </p>
@@ -857,16 +874,24 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     <textarea
                       value={transformScript}
                       onChange={(e) => setTransformScript(e.target.value)}
-                      placeholder={`def transform(row):
-    # row is dict; return modified dict
-    if row.get("company_id") is None:
-        row["company_id"] = ""
-    return row`}
+                      placeholder={`def transform(record):
+    """Transform incoming record. Return dict for output, None to skip."""
+    # Skip record if required field missing
+    key = record.get("id")
+    if not key:
+        return None
+    # Field derivation: create display_name from store_name or location_name
+    display_name = record.get("store_name") or record.get("location_name") or ""
+    return {
+        "id": key,
+        "displayName": display_name,
+        # Add more field mappings as needed
+    }`}
                       className="min-h-[160px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       rows={8}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Define <code className="rounded bg-muted px-1">def transform(row)</code> that receives each row as a dict and returns the transformed dict.
+                      Define <code className="rounded bg-muted px-1">def transform(record)</code> that receives each row as a dict. Return a dict for output, or <code className="rounded bg-muted px-1">None</code> to skip the record.
                     </p>
                   </div>
                 )}
@@ -921,7 +946,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       <Select
                         value={syncMode}
                         onValueChange={(v) =>
-                          setSyncMode(v as "full" | "incremental" | "cdc")
+                          setSyncMode(v as "full" | "log_based")
                         }
                       >
                         <SelectTrigger className="h-10 w-full">
@@ -929,8 +954,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="full">Full</SelectItem>
-                          <SelectItem value="incremental">Incremental</SelectItem>
-                          <SelectItem value="cdc">CDC</SelectItem>
+                          <SelectItem value="log_based">CDC / Log-based replication</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -939,7 +963,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       <Select
                         value={writeMode}
                         onValueChange={(v) =>
-                          setWriteMode(v as "append" | "upsert" | "replace")
+                          setWriteMode(v as "append" | "upsert")
                         }
                       >
                         <SelectTrigger className="h-10 w-full">
@@ -948,14 +972,13 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                         <SelectContent>
                           <SelectItem value="append">Append</SelectItem>
                           <SelectItem value="upsert">Upsert</SelectItem>
-                          <SelectItem value="replace">Replace</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   {/* Cursor field: required for MongoDB incremental only (Postgres uses WAL) */}
                   {sourceDataSource?.type === "mongodb" &&
-                    (syncMode === "incremental" || syncMode === "cdc") && (
+                    syncMode === "log_based" && (
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">
                         Cursor field (required for MongoDB incremental)
@@ -987,26 +1010,45 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     <Label className="text-sm font-medium">
                       Primary key (for upsert)
                     </Label>
-                    <Select
-                      value={primaryKeyField || "_none_"}
-                      onValueChange={(v) =>
-                        setPrimaryKeyField(v === "_none_" ? "" : v)
-                      }
-                    >
-                      <SelectTrigger className="h-10 w-full max-w-xs">
-                        <SelectValue placeholder="Select primary key column" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none_">None (append only)</SelectItem>
-                        {destinationFields.map((f) => (
-                          <SelectItem key={f.name} value={f.name}>
-                            {f.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="rounded-md border border-input p-3 space-y-2 max-h-40 overflow-y-auto">
+                      {destinationFields.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Select a destination table to choose primary key columns.
+                        </p>
+                      ) : (
+                        destinationFields.map((f) => (
+                          <label
+                            key={f.name}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={upsertKey.includes(f.name)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setUpsertKey((prev) => [...prev, f.name]);
+                                } else {
+                                  setUpsertKey((prev) =>
+                                    prev.filter((k) => k !== f.name),
+                                  );
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-input"
+                            />
+                            <span className="text-sm font-mono">{f.name}</span>
+                            {f.type !== "unknown" && (
+                              <span className="text-xs text-muted-foreground">
+                                ({f.type})
+                              </span>
+                            )}
+                          </label>
+                        ))
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Optional. When set, writes use upsert mode.
+                      {writeMode === "upsert"
+                        ? "Select one or more columns for upsert. Records with the same key will be overwritten."
+                        : "Optional. When set with upsert write mode, records with the same key will be overwritten."}
                     </p>
                   </div>
 

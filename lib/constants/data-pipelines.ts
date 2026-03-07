@@ -315,9 +315,9 @@ export const SYNC_MODES: {
     description: "Sync all data from source on each run",
   },
   {
-    value: "incremental",
-    label: "Incremental Sync",
-    description: "Only sync new or changed records",
+    value: "log_based",
+    label: "CDC / Log-based replication",
+    description: "Incremental sync via PostgreSQL WAL (change data capture)",
   },
 ];
 
@@ -346,11 +346,6 @@ export const WRITE_MODES: {
     value: "upsert",
     label: "Upsert",
     description: "Insert or update based on primary key",
-  },
-  {
-    value: "replace",
-    label: "Replace",
-    description: "Drop and recreate table with new data",
   },
 ];
 

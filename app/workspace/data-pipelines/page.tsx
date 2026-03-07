@@ -304,9 +304,8 @@ export default function DataPipelinesPage() {
     if (pipeline.status === "idle") {
       // Check if auto-sync is enabled and has run before
       const hasAutoSync =
-        pipeline.syncMode === "incremental" ||
-        (pipeline.scheduleType && pipeline.scheduleType !== "none") ||
-        pipeline.syncFrequency === "minutes";
+        pipeline.syncMode === "log_based" ||
+        (pipeline.scheduleType && pipeline.scheduleType !== "none");
       const hasRun =
         (pipeline.totalRowsProcessed && pipeline.totalRowsProcessed > 0) ||
         pipeline.lastRunAt;
@@ -417,7 +416,7 @@ export default function DataPipelinesPage() {
     // Format display text
     let displayText =
       frequency?.charAt(0).toUpperCase() + frequency?.slice(1) || "Manual";
-    if (frequency === "minutes" || scheduleType === "minutes") {
+    if (scheduleType === "minutes") {
       displayText = `Every ${scheduleValue || "2"} min`;
     } else if (scheduleType && scheduleType !== "none") {
       displayText =
@@ -622,11 +621,10 @@ export default function DataPipelinesPage() {
           pausePipelineMutation.isPending ||
           resumePipelineMutation.isPending;
 
-        // Check if auto-sync is enabled (incremental mode or has schedule)
+        // Check if auto-sync is enabled (log_based mode or has schedule)
         const hasAutoSync =
-          pipeline.syncMode === "incremental" ||
-          (pipeline.scheduleType && pipeline.scheduleType !== "none") ||
-          pipeline.syncFrequency === "minutes";
+          pipeline.syncMode === "log_based" ||
+          (pipeline.scheduleType && pipeline.scheduleType !== "none");
 
         // Check if first run completed (has processed rows or last run exists)
         const hasRun =

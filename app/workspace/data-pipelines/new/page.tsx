@@ -4,14 +4,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/api/error-handler";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
 import { DestinationSchemasService } from "@/lib/api/services/destination-schemas.service";
 import { SourceSchemasService } from "@/lib/api/services/source-schemas.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { XCircle } from "lucide-react";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
 import { CollectorStep } from "./collector-step";
@@ -77,6 +80,7 @@ export default function NewPipelinePage() {
   };
 
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleCreatePipeline = async (
     collectorsOverride?: CollectorConfig[],
@@ -130,6 +134,7 @@ export default function NewPipelinePage() {
     }
 
     setIsCreating(true);
+    setCreateError(null);
 
     // Get all unique source IDs and destination IDs
     const _allSourceIds = [...new Set(collectorsToUse.map((c) => c.sourceId))];
@@ -301,7 +306,8 @@ export default function NewPipelinePage() {
         transformScript?: string;
         customSql?: string;
         primaryKeyField?: string;
-        syncMode?: "full" | "incremental" | "cdc";
+        upsertKey?: string[];
+        syncMode?: "full" | "incremental" | "cdc" | "log_based";
         cursorField?: string;
         writeMode?: "append" | "upsert" | "replace";
       };
@@ -328,18 +334,25 @@ export default function NewPipelinePage() {
         return;
       }
 
-      // Primary key from transformer (for upsert)
-      const primaryKeyFields: string[] = transformerWithConfig.primaryKeyField
-        ? [transformerWithConfig.primaryKeyField]
-        : [];
+      // Primary key from transformer (for upsert) — support upsertKey (multi) or legacy primaryKeyField
+      const primaryKeyFields: string[] =
+        transformerWithConfig.upsertKey?.length
+          ? transformerWithConfig.upsertKey
+          : transformerWithConfig.primaryKeyField
+            ? [transformerWithConfig.primaryKeyField]
+            : [];
 
       // Write mode: from config or derive from primary key
       const writeMode: "append" | "upsert" | "replace" =
         transformerWithConfig.writeMode ||
         (primaryKeyFields.length > 0 ? "upsert" : "append");
 
-      // Sync mode and cursor for incremental/CDC
-      const syncMode = transformerWithConfig.syncMode || "full";
+      // Sync mode and cursor for incremental/CDC — map to API SyncMode
+      const rawSyncMode = transformerWithConfig.syncMode || "full";
+      const syncMode: "full" | "log_based" =
+        rawSyncMode === "incremental" || rawSyncMode === "cdc" || rawSyncMode === "log_based"
+          ? "log_based"
+          : "full";
       const incrementalColumn = transformerWithConfig.cursorField;
 
       if (!organizationId) {
@@ -399,10 +412,9 @@ export default function NewPipelinePage() {
       );
       router.push("/workspace/data-pipelines");
     } catch (error) {
-      toast.error(
-        "Failed to create pipeline",
-        error instanceof Error ? error.message : "Unknown error occurred",
-      );
+      const message = getApiErrorMessage(error);
+      setCreateError(message);
+      toast.error("Failed to create pipeline", message);
     } finally {
       setIsCreating(false);
     }
@@ -495,7 +507,10 @@ export default function NewPipelinePage() {
                     type="text"
                     placeholder="e.g. Company Roles Sync, Daily Users Import..."
                     value={pipelineName}
-                    onChange={(e) => setPipelineName(e.target.value)}
+                    onChange={(e) => {
+                      setPipelineName(e.target.value);
+                      if (createError) setCreateError(null);
+                    }}
                     className="mt-1.5"
                     autoFocus
                   />
@@ -505,6 +520,21 @@ export default function NewPipelinePage() {
                     </p>
                   )}
                 </div>
+                {createError && (
+                  <Card className="mt-6 border-destructive/50 bg-destructive/5">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
+                        <XCircle className="h-4 w-4" />
+                        Validation Error
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <pre className="text-sm text-muted-foreground whitespace-pre-wrap break-words font-sans max-h-48 overflow-y-auto">
+                        {createError}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                )}
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Button
                     variant="outline"

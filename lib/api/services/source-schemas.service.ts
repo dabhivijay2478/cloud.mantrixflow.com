@@ -174,9 +174,10 @@ export class SourceSchemasService {
       throw new Error("Source schema must have a data source ID");
     }
 
+    // Tap-postgres uses schema-table (dash); normalize from schema.table (dot)
     const sourceStream =
       schema.sourceSchema && schema.sourceTable
-        ? `${schema.sourceSchema}.${schema.sourceTable}`
+        ? `${schema.sourceSchema}-${schema.sourceTable}`
         : schema.sourceTable || "";
 
     if (!sourceStream) {

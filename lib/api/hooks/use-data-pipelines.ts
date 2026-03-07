@@ -5,6 +5,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { handleApiError } from "../error-handler";
 import { DataPipelinesService } from "../services/data-pipelines.service";
 import type {
   CreatePipelineDto,
@@ -95,6 +96,7 @@ export function useCreatePipeline(organizationId: string | undefined) {
       }
       return DataPipelinesService.createPipeline(organizationId, data);
     },
+    onError: (error) => handleApiError(error),
     onSuccess: () => {
       if (organizationId) {
         // Invalidate all pipeline list queries (including paginated)

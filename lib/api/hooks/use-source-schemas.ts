@@ -4,6 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { handleApiError } from "../error-handler";
 import { SourceSchemasService } from "../services/source-schemas.service";
 import type {
   CreateSourceSchemaDto,
@@ -125,6 +126,7 @@ export function useCreateSourceSchema(organizationId: string | undefined) {
       }
       return SourceSchemasService.createSourceSchema(organizationId, data);
     },
+    onError: (error) => handleApiError(error),
     onSuccess: () => {
       if (organizationId) {
         // Invalidate all source schema list queries (including paginated)

@@ -16,7 +16,7 @@ export type PipelineDataSourceType =
   | "bigquery"
   | "snowflake";
 
-export type SyncMode = "full" | "incremental" | "cdc";
+export type SyncMode = "full" | "log_based";
 export type SyncFrequency =
   | "manual"
   | "hourly"
@@ -314,6 +314,12 @@ export interface Pipeline {
   lastScheduledRunAt?: string | null;
   nextScheduledRunAt?: string | null;
   checkpoint?: Record<string, unknown> | null;
+  // Singer ETL fields
+  singerState?: Record<string, unknown> | null;
+  fullRefreshCompletedAt?: string | null;
+  replicationSlotName?: string | null;
+  emitMethod?: string | null;
+  transformType?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -346,6 +352,14 @@ export interface PipelineRun {
   errorStack?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  // Singer ETL fields
+  rowsDeleted?: number | null;
+  lsnStart?: number | null;
+  lsnEnd?: number | null;
+  collectionMethodUsed?: string | null;
+  emitMethodUsed?: string | null;
+  sourceTool?: string | null;
+  destTool?: string | null;
   createdAt: string;
   updatedAt: string;
 }
