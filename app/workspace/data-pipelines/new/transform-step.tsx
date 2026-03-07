@@ -70,16 +70,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     connections?.map((conn) => ({
       id: conn.id,
       name: conn.name,
-      type: (conn.type || "postgres") as
-        | "postgres"
-        | "mysql"
-        | "mongodb"
-        | "s3"
-        | "api"
-        | "bigquery"
-        | "snowflake"
-        | "redshift"
-        | "clickhouse",
+      type: (conn.type || "postgres") as "postgres" | "redshift",
       status:
         conn.status === "active"
           ? ("connected" as const)
@@ -168,13 +159,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     );
   }, [destinationSchemas]);
 
-  // Get source data source type to handle MongoDB differently
-  const sourceDataSource = useMemo(() => {
-    if (!selectedCollector) return null;
-    return dataSources.find((ds) => ds.id === selectedCollector.sourceId);
-  }, [selectedCollector, dataSources]);
-
-  // Parse selected tables and prepare queries for source (collector)
+  // Parse selected tables and prepare queries for source (collector) — PostgreSQL only
   const sourceTableQueries = useMemo(() => {
     if (
       !selectedCollector ||
@@ -185,43 +170,34 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     }
 
     return selectedCollector.selectedTables.map((tableName) => {
-      // For MongoDB: format is "database.collection" or just "collection"
-      // For SQL: format is "schema.table" or just "table"
-      const isMongoDB = sourceDataSource?.type === "mongodb";
-
       if (tableName.includes(".")) {
         const parts = tableName.split(".");
         return {
           tableName,
-          schema: parts[0], // database for MongoDB, schema for SQL
-          table: parts[1], // collection for MongoDB, table for SQL
+          schema: parts[0],
+          table: parts[1],
           connectionId: selectedCollector.sourceId,
-          isMongoDB,
-        };
-      } else {
-        // No schema/database prefix
-        return {
-          tableName,
-          schema: isMongoDB ? undefined : "public", // MongoDB: search all, SQL: default to public
-          table: tableName,
-          connectionId: selectedCollector.sourceId,
-          isMongoDB,
         };
       }
+      return {
+        tableName,
+        schema: "public",
+        table: tableName,
+        connectionId: selectedCollector.sourceId,
+      };
     });
-  }, [selectedCollector, sourceDataSource]);
+  }, [selectedCollector]);
 
   // Fetch schemas for source tables
   const sourceSchemaQueries = useQueries({
     queries: sourceTableQueries.map(
-      ({ tableName: _tableName, schema, table, connectionId, isMongoDB }) => ({
+      ({ tableName: _tableName, schema, table, connectionId }) => ({
         queryKey: [
           "table-schema",
           connectionId,
           table,
           schema || "none",
           "source",
-          isMongoDB ? "mongodb" : "sql",
         ],
         queryFn: async () => {
           try {
@@ -270,12 +246,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       if (query.data?.columns && query.data.columns.length > 0) {
         const tableInfo = sourceTableQueries[index];
         query.data.columns.forEach((col) => {
-          // For MongoDB, use field name directly (may include nested paths like "address.city")
-          // For SQL, prefix with table name
-          const fieldName = tableInfo.isMongoDB
-            ? col.name
-            : `${tableInfo.tableName}.${col.name}`;
-
+          const fieldName = `${tableInfo.tableName}.${col.name}`;
           fields.push({
             name: fieldName,
             type: col.dataType || "unknown",
@@ -395,7 +366,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       return;
     if (transformMode === "customSql") {
       if (!customSql?.trim()) return;
-      if (sourceDataSource?.type === "mongodb") return; // Custom SQL not supported for MongoDB
     }
     if (transformMode === "script") {
       if (!transformScript?.trim()) return;
@@ -650,8 +620,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                 !transformName ||
                 !selectedDestinationTable ||
                 (transformMode === "customSql" && !customSql?.trim()) ||
-                (transformMode === "customSql" &&
-                  sourceDataSource?.type === "mongodb") ||
                 (transformMode === "script" && !transformScript?.trim())
               }
               className="w-full sm:w-auto cursor-pointer"
@@ -850,14 +818,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     </button>
                   </div>
                   {transformMode === "customSql" &&
-                    sourceDataSource?.type === "mongodb" && (
-                      <p className="text-xs text-amber-600 dark:text-amber-500">
-                        Custom SQL is only supported for Postgres sources. Use
-                        Script for MongoDB.
-                      </p>
-                    )}
-                  {transformMode === "customSql" &&
-                    sourceDataSource?.type !== "mongodb" &&
                     syncMode === "log_based" && (
                       <p className="text-xs text-muted-foreground">
                         Postgres uses log-based CDC (WAL); no cursor required.
@@ -976,36 +936,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                       </Select>
                     </div>
                   </div>
-                  {/* Cursor field: required for MongoDB incremental only (Postgres uses WAL) */}
-                  {sourceDataSource?.type === "mongodb" &&
-                    syncMode === "log_based" && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Cursor field (required for MongoDB incremental)
-                      </Label>
-                      <Select
-                        value={cursorField || "_none_"}
-                        onValueChange={(v) =>
-                          setCursorField(v === "_none_" ? "" : v)
-                        }
-                      >
-                        <SelectTrigger className="h-10 w-full max-w-xs">
-                          <SelectValue placeholder="Select cursor column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none_">None</SelectItem>
-                          {sourceFields.map((f) => (
-                            <SelectItem key={f.name} value={f.name}>
-                              {f.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        e.g. _id, updatedAt, lastupdated
-                      </p>
-                    </div>
-                  )}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
                       Primary key (for upsert)

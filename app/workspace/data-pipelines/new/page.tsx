@@ -28,18 +28,12 @@ interface PipelineConfig {
 }
 
 type Transformer = CollectorConfig["transformers"][number];
-type SourceType = "postgres" | "mysql" | "mongodb";
+type SourceType = "postgres";
 
 function normalizeSourceType(sourceType: string | undefined): SourceType {
   const normalized = sourceType?.toLowerCase() || "postgres";
-  if (normalized === "postgresql") {
+  if (normalized === "postgresql" || normalized === "postgres") {
     return "postgres";
-  }
-  if (normalized === "mysql") {
-    return "mysql";
-  }
-  if (normalized === "mongodb") {
-    return "mongodb";
   }
   return "postgres";
 }
@@ -235,35 +229,17 @@ export default function NewPipelinePage() {
         }
       }
 
-      // Parse table name based on source type
-      // For MongoDB: format is "database.collection" or just "collection"
-      // For SQL: format is "schema.table" or just "table"
-      const isMongoDB = sourceType === "mongodb";
+      // Parse table name (PostgreSQL: schema.table or just table)
       let sourceSchemaName: string | undefined;
       let sourceTableName: string;
 
       if (firstTable.includes(".")) {
         const parts = firstTable.split(".");
-        if (isMongoDB) {
-          // MongoDB: "database.collection"
-          sourceSchemaName = parts[0]; // database name
-          sourceTableName = parts[1]; // collection name
-        } else {
-          // SQL: "schema.table"
-          sourceSchemaName = parts[0] || "public";
-          sourceTableName = parts[1] || parts[0] || firstTable;
-        }
+        sourceSchemaName = parts[0] || "public";
+        sourceTableName = parts[1] || parts[0] || firstTable;
       } else {
-        // No prefix - handle based on source type
-        if (isMongoDB) {
-          // MongoDB: just collection name, no database specified
-          sourceSchemaName = undefined; // Will search all databases
-          sourceTableName = firstTable;
-        } else {
-          // SQL: just table name, default to public schema
-          sourceSchemaName = "public";
-          sourceTableName = firstTable;
-        }
+        sourceSchemaName = "public";
+        sourceTableName = firstTable;
       }
 
       // Get destination connection ID from emitters

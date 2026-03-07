@@ -20,6 +20,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import {
+  CdcSetupModal,
   DataPreviewTable,
   ScheduleEditor,
   TransformCodeView,
@@ -50,6 +51,7 @@ import {
   useUpdatePipeline,
   useValidatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import { useCdcStatus } from "@/lib/api/hooks/use-data-source";
 import { usePreviewDestinationData } from "@/lib/api/hooks/use-destination-schemas";
 import { usePreviewSourceData } from "@/lib/api/hooks/use-source-schemas";
 import type { PipelineRun, ScheduleType } from "@/lib/api/types/data-pipelines";
@@ -65,6 +67,8 @@ export default function PipelineDetailPage() {
 
   // Delete confirmation modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // CDC setup modal (when LOG_BASED and CDC not verified)
+  const [showCdcSetup, setShowCdcSetup] = useState(false);
   // Expanded error for run history (runId -> expanded)
   const [expandedRunErrors, setExpandedRunErrors] = useState<Record<string, boolean>>({});
 
@@ -95,6 +99,20 @@ export default function PipelineDetailPage() {
     10,
   );
   const { data: stats } = usePipelineStats(organizationId, pipelineId);
+
+  // CDC status for LOG_BASED pipelines (source data source)
+  const sourceDataSourceId = pipeline?.sourceSchema?.dataSourceId;
+  const { data: cdcStatus } = useCdcStatus(
+    organizationId,
+    sourceDataSourceId ?? undefined,
+    !!(
+      organizationId &&
+      sourceDataSourceId &&
+      (pipeline?.syncMode === "cdc" || pipeline?.syncMode === "log_based")
+    ),
+  );
+  const cdcVerified =
+    cdcStatus?.cdc_prerequisites_status?.overall === "verified";
 
   // Mutations
   const runPipeline = useRunPipeline(organizationId, pipelineId);
@@ -352,6 +370,12 @@ export default function PipelineDetailPage() {
   }
 
   const handleRun = async () => {
+    const isCdcOrLogBased =
+      pipeline.syncMode === "cdc" || pipeline.syncMode === "log_based";
+    if (isCdcOrLogBased && !cdcVerified) {
+      setShowCdcSetup(true);
+      return;
+    }
     try {
       await runPipeline.mutateAsync(undefined);
       toast.success("Pipeline started", `${pipeline.name} is now running.`);
@@ -566,13 +590,25 @@ export default function PipelineDetailPage() {
                 <Pause className="h-4 w-4 mr-2" />
                 Pause Auto-Sync
               </Button>
+              {(pipeline.syncMode === "cdc" || pipeline.syncMode === "log_based") &&
+              !cdcVerified && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCdcSetup(true)}
+                >
+                  Set Up CDC
+                </Button>
+              )}
               <Button
                 onClick={handleRun}
                 disabled={runPipeline.isPending}
                 variant="secondary"
               >
                 <Zap className="h-4 w-4 mr-2" />
-                Sync Now
+                {(pipeline.syncMode === "cdc" || pipeline.syncMode === "log_based") &&
+                !pipeline.fullRefreshCompletedAt
+                  ? "Run Initial Sync"
+                  : "Sync Now"}
               </Button>
             </>
           )}
@@ -1378,6 +1414,16 @@ export default function PipelineDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* CDC Setup Modal */}
+      <CdcSetupModal
+        open={showCdcSetup}
+        onOpenChange={setShowCdcSetup}
+        organizationId={organizationId ?? undefined}
+        dataSourceId={sourceDataSourceId ?? undefined}
+        dataSourceName={pipeline?.sourceSchema?.name ?? pipeline?.name}
+        onVerified={() => refetch()}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

@@ -26,6 +26,8 @@ export const dataSourceKeys = {
     [...dataSourceKeys.all, "discover", organizationId, dataSourceId] as const,
   preview: (organizationId: string, dataSourceId: string, stream?: string) =>
     [...dataSourceKeys.all, "preview", organizationId, dataSourceId, stream] as const,
+  cdcStatus: (organizationId: string, dataSourceId: string) =>
+    [...dataSourceKeys.all, "cdc-status", organizationId, dataSourceId] as const,
 };
 
 /**
@@ -167,6 +169,93 @@ export function usePreviewData(
       !!dataSourceId &&
       !!options?.source_stream &&
       enabled,
+  });
+}
+
+/**
+ * Hook to fetch CDC status for a data source
+ */
+export function useCdcStatus(
+  organizationId: string | undefined,
+  dataSourceId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: dataSourceKeys.cdcStatus(organizationId || "", dataSourceId || ""),
+    queryFn: () => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return DataSourceService.getCdcStatus(organizationId, dataSourceId);
+    },
+    enabled: !!organizationId && !!dataSourceId && enabled,
+  });
+}
+
+/**
+ * Hook to verify a single CDC step
+ */
+export function useVerifyCdcStep(
+  organizationId: string | undefined,
+  dataSourceId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      step,
+      providerSelected,
+    }: {
+      step: string;
+      providerSelected?: string;
+    }) => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return DataSourceService.verifyCdcStep(
+        organizationId,
+        dataSourceId,
+        step,
+        providerSelected,
+      );
+    },
+    onSuccess: () => {
+      if (organizationId && dataSourceId) {
+        queryClient.invalidateQueries({
+          queryKey: dataSourceKeys.cdcStatus(organizationId, dataSourceId),
+        });
+      }
+    },
+  });
+}
+
+/**
+ * Hook to verify all CDC steps
+ */
+export function useVerifyCdcAll(
+  organizationId: string | undefined,
+  dataSourceId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (providerSelected?: string) => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return DataSourceService.verifyCdcAll(
+        organizationId,
+        dataSourceId,
+        providerSelected,
+      );
+    },
+    onSuccess: () => {
+      if (organizationId && dataSourceId) {
+        queryClient.invalidateQueries({
+          queryKey: dataSourceKeys.cdcStatus(organizationId, dataSourceId),
+        });
+      }
+    },
   });
 }
 

@@ -7,16 +7,9 @@
 // ENUMS (matching backend)
 // ============================================================================
 
-export type PipelineDataSourceType =
-  | "postgres"
-  | "mysql"
-  | "mongodb"
-  | "s3"
-  | "api"
-  | "bigquery"
-  | "snowflake";
+export type PipelineDataSourceType = "postgres" | "redshift";
 
-export type SyncMode = "full" | "log_based";
+export type SyncMode = "full" | "log_based" | "cdc" | "incremental";
 export type SyncFrequency =
   | "manual"
   | "hourly"
@@ -150,15 +143,11 @@ export interface DryRunPipelineDto {
 // ============================================================================
 
 export interface SourceConfig {
-  // Database (Postgres, MySQL)
+  // PostgreSQL
   host?: string;
   port?: number;
   database?: string;
   schema?: string;
-
-  // MongoDB
-  connectionString?: string;
-  collection?: string;
 
   // S3
   bucket?: string;
