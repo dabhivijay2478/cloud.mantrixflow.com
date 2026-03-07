@@ -87,6 +87,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
           message:
             errorData.error?.message ||
             errorData.meta?.message ||
+            errorData.message ||
             `HTTP ${response.status}: ${response.statusText}`,
           details: errorData.error?.details || errorData,
           suggestion: errorData.error?.suggestion,

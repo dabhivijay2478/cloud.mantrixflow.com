@@ -12,9 +12,11 @@ import { Button } from "@/components/ui/button";
 import { connectorsConfig } from "@/config/connectors";
 import { type CreateConnectionDto } from "@/lib/api";
 import {
+  useConnections,
   useCreateConnection,
   useTestConnection as useTestConnectionLegacy,
 } from "@/lib/api/hooks/use-data-sources";
+import { getApiErrorMessage } from "@/lib/api/error-handler";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
@@ -40,7 +42,10 @@ export function AddConnectorContent({
   const [showConnectionSheet, setShowConnectionSheet] = useState(false);
   const [connectingDataSourceId, setConnectingDataSourceId] = useState<string | null>(null);
 
-  const createConnection = useCreateConnection(organizationId);
+  const { data: existingConnections = [] } = useConnections(organizationId);
+  const createConnection = useCreateConnection(organizationId, {
+    showToastOnError: false,
+  });
   const testConnection = useTestConnectionLegacy(organizationId);
 
   const sourceConnectors = useMemo(() => {
@@ -91,6 +96,24 @@ export function AddConnectorContent({
         | undefined;
       if (!dataSource) return;
 
+      const name = (data.name ?? "").trim();
+      if (!name) {
+        showErrorToast("validationFailed", undefined, "Name is required.");
+        return;
+      }
+
+      const nameExists = existingConnections.some(
+        (c) => c.name?.toLowerCase() === name.toLowerCase(),
+      );
+      if (nameExists) {
+        showErrorToast(
+          "validationFailed",
+          undefined,
+          `A data source with name "${name}" already exists. Please choose a different name.`,
+        );
+        return;
+      }
+
       try {
         const config: Record<string, unknown> = {};
         const skipKeys = ["name", "useConnectionString"];
@@ -104,7 +127,7 @@ export function AddConnectorContent({
         }
 
         await createConnection.mutateAsync({
-          name: data.name,
+          name,
           connection_type: dataSource.type as CreateConnectionDto["connection_type"],
           connector_role: connectorFilter === "destinations" ? "destination" : "source",
           config: config as unknown as CreateConnectionDto["config"],
@@ -118,11 +141,18 @@ export function AddConnectorContent({
         showErrorToast(
           "connectFailed",
           "Data Source",
-          error instanceof Error ? error.message : "Unable to connect.",
+          getApiErrorMessage(error),
         );
       }
     },
-    [connectingDataSourceId, enabledDataSources, createConnection, onSuccess],
+    [
+      connectingDataSourceId,
+      enabledDataSources,
+      existingConnections,
+      createConnection,
+      connectorFilter,
+      onSuccess,
+    ],
   );
 
   const handleTestConnection = useCallback(

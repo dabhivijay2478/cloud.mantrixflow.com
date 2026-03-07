@@ -70,12 +70,17 @@ export function useTestConnection(orgId?: string) {
   });
 }
 
-export function useCreateConnection(orgId?: string) {
+export function useCreateConnection(
+  orgId?: string,
+  options?: { showToastOnError?: boolean },
+) {
   const queryClient = useQueryClient();
+  const showToastOnError = options?.showToastOnError ?? true;
   return useMutation({
     mutationFn: (data: CreateConnectionDto) =>
       DataSourcesService.createConnection(data, orgId),
-    onError: (error) => handleApiError(error),
+    onError: (error) =>
+      showToastOnError ? handleApiError(error) : undefined,
     onSuccess: () => {
       // Invalidate all connection list queries
       queryClient.invalidateQueries({

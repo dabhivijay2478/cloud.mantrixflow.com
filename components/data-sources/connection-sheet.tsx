@@ -543,7 +543,12 @@ export function ConnectionSheet({
           <Button
             type="submit"
             onClick={form.handleSubmit(handleConnect)}
-            disabled={loading || testingConnection}
+            disabled={
+              loading ||
+              testingConnection ||
+              (!!schema.testConnection &&
+                (connectionTestResult === null || !connectionTestResult.success))
+            }
             className="w-full sm:w-auto order-1 sm:order-2"
             size="lg"
           >
