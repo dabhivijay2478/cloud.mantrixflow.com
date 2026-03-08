@@ -5,7 +5,6 @@ import {
   Check,
   MoreVertical,
   Search,
-  Table as TableIcon,
   Trash2,
   Unlink,
 } from "lucide-react";
@@ -97,7 +96,7 @@ export function DataSourceTable({
         status: isConnected(ds.id)
           ? ("connected" as const)
           : ("disconnected" as const),
-      }));
+      })) as DataSource[];
       // If showOnlyConnected is true but no connections, filter by connected status
       if (showOnlyConnected) {
         filtered = filtered.filter((ds) => isConnected(ds.id));
@@ -370,17 +369,6 @@ export function DataSourceTable({
                               <>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    router.push(
-                                      `/workspace/data-sources/${dataSource.id}/query`,
-                                    );
-                                  }}
-                                >
-                                  <TableIcon className="mr-2 h-4 w-4" />
-                                  View table navigation
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
                                     if (onDisconnect) {
                                       onDisconnect(dataSource.id);
                                     }
@@ -390,6 +378,7 @@ export function DataSourceTable({
                                   <Unlink className="mr-2 h-4 w-4" />
                                   Disconnect
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                               </>
                             )}
                             <DropdownMenuItem

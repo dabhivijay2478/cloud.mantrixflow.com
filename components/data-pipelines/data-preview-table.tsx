@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronUp,
   Database,
+  Download,
   Loader2,
 } from "lucide-react";
 import { useState } from "react";
@@ -36,6 +37,8 @@ interface DataPreviewTableProps {
   isRefreshing?: boolean;
   /** Max rows to display (default: 10) */
   maxRows?: number;
+  /** Show "X Records / Showing sample records" label */
+  showRecordCountLabel?: boolean;
 }
 
 /**
@@ -53,6 +56,7 @@ export function DataPreviewTable({
   onRefresh,
   isRefreshing = false,
   maxRows = 10,
+  showRecordCountLabel = true,
 }: DataPreviewTableProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -62,6 +66,18 @@ export function DataPreviewTable({
     displayRows.length > 0
       ? Object.keys(displayRows[0] as Record<string, unknown>)
       : [];
+
+  const handleDownloadJson = () => {
+    const blob = new Blob([JSON.stringify(displayRows, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/\s+/g, "-")}-preview.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const formatCellValue = (value: unknown): string => {
     if (value === null || value === undefined) return "NULL";
@@ -83,7 +99,13 @@ export function DataPreviewTable({
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium text-sm">{title}</span>
-              {displayRows.length > 0 && (
+              {displayRows.length > 0 && showRecordCountLabel && (
+                <Badge variant="secondary" className="text-xs">
+                  {displayRows.length} Record
+                  {displayRows.length !== 1 ? "s" : ""} / Showing sample records
+                </Badge>
+              )}
+              {displayRows.length > 0 && !showRecordCountLabel && (
                 <Badge variant="secondary" className="text-xs">
                   {displayRows.length} row{displayRows.length !== 1 ? "s" : ""}
                 </Badge>
@@ -95,6 +117,23 @@ export function DataPreviewTable({
               )}
             </div>
             <div className="flex items-center gap-2">
+              {displayRows.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadJson();
+                  }}
+                  className="h-7 text-xs"
+                  type="button"
+                  aria-label={`Download ${title} as JSON`}
+                  tabIndex={0}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Download
+                </Button>
+              )}
               {onRefresh && (
                 <Button
                   variant="outline"

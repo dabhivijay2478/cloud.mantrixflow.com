@@ -7,11 +7,26 @@ export type DataSourceType =
   | "postgres"
   | "mysql"
   | "mongodb"
+  | "mssql"
   | "s3"
   | "api"
   | "bigquery"
   | "snowflake"
-  | "redshift";
+  | "redshift"
+  | "github"
+  | "shopify"
+  | "stripe"
+  | "hubspot"
+  | "salesforce"
+  | "google-sheets"
+  | "google-analytics"
+  | "facebook-marketing"
+  | "airtable"
+  | "notion"
+  | "slack"
+  | "faker"
+  | "file"
+  | (string & {}); // Allow other Airbyte connector types
 
 export interface DataSource {
   id: string;
@@ -22,6 +37,8 @@ export interface DataSource {
   description?: string;
   source_type?: DataSourceType;
   sourceType: DataSourceType;
+  connector_role?: "source" | "destination";
+  connectorRole?: "source" | "destination";
   is_active?: boolean;
   isActive: boolean;
   metadata?: Record<string, unknown>;
@@ -156,6 +173,7 @@ export interface CreateDataSourceDto {
   name: string;
   description?: string;
   source_type: DataSourceType;
+  connector_role?: "source" | "destination";
   metadata?: Record<string, unknown>;
 }
 
@@ -168,6 +186,7 @@ export interface UpdateDataSourceDto {
 export interface CreateConnectionDto {
   name: string;
   connection_type: DataSourceType;
+  connector_role?: "source" | "destination";
   config: ConnectionConfig;
 }
 
@@ -269,6 +288,7 @@ export interface Connection {
   type?: string;
   name: string;
   status: "active" | "inactive" | "error" | "connected" | "disconnected";
+  connectorRole?: "source" | "destination";
   port?: number;
   sslEnabled?: boolean;
   sshTunnelEnabled?: boolean;

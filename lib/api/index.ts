@@ -14,6 +14,10 @@ export { ApiClient, ApiClientError } from "./client";
 
 // Config
 export { getApiBaseUrl, getApiUrl, getAuthToken } from "./config";
+// Constants
+export { BASE_PATH, orgPath } from "./constants";
+// Error handling
+export { getApiErrorMessage, handleApiError } from "./error-handler";
 // Hooks - Activity Logs
 export * from "./hooks/use-activity-logs";
 export { activityLogsKeys } from "./hooks/use-activity-logs";

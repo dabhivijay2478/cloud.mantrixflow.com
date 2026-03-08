@@ -26,9 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useConnections } from "@/lib/api";
-import { useConnection } from "@/lib/api/hooks/use-connection";
-import { PythonETLService } from "@/lib/api/services/python-etl.service";
+import { useConnection, useConnections } from "@/lib/api";
+import { ConnectionService } from "@/lib/api/services/connection.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import type { CollectorConfig } from "./collector-step";
@@ -51,45 +50,43 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
-  // Fetch connections from API instead of workspace store
-  // Note: Currently using legacy postgres connections API
-  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
+  // Fetch connections from API (dlt scope: PostgreSQL destination only)
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
 
+  // Filter to only destination connections (emitter = destinations)
+  // dlt scope: PostgreSQL destination only
+  const destinationConnections = (connections ?? []).filter(
+    (conn) => (conn.connectorRole ?? "source") === "destination",
+  );
+
+  // Source connections for collector name lookup
+  const sourceConnections = (connections ?? []).filter(
+    (conn) => (conn.connectorRole ?? "source") === "source",
+  );
+
   // Convert API connections to destination format
-  // All connections from the PostgreSQL endpoint are PostgreSQL connections
-  // Emitters don't need connection config fields - they use existing connections
-  const availableDestinations = (connections || []).map((conn) => ({
+  const availableDestinations = destinationConnections.map((conn) => ({
     id: conn.id,
     name: conn.name,
     type: "database",
     icon: Database,
   }));
 
-  // Convert API connections to DataSource format for compatibility
-  const dataSources =
-    connections?.map((conn) => ({
-      id: conn.id,
-      name: conn.name,
-      type: (conn.type || "postgres") as
-        | "postgres"
-        | "mysql"
-        | "mongodb"
-        | "s3"
-        | "api"
-        | "bigquery"
-        | "snowflake"
-        | "redshift"
-        | "clickhouse",
-      status:
-        conn.status === "active"
-          ? ("connected" as const)
-          : ("disconnected" as const),
-      organizationId: conn.orgId || organizationId,
-      connectedAt: conn.lastConnectedAt || undefined,
-      tables: [],
-    })) || [];
+  // Source data for collector name display
+  const sourceDataSources = sourceConnections.map((conn) => ({
+    id: conn.id,
+    name: conn.name,
+    type: (conn.type || "postgres").toLowerCase(),
+    status:
+      conn.status === "active"
+        ? ("connected" as const)
+        : ("disconnected" as const),
+    organizationId: conn.orgId || organizationId,
+    connectedAt: conn.lastConnectedAt || undefined,
+    tables: [] as { name: string }[],
+  }));
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEmitter, setEditingEmitter] = useState<string | null>(null);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>("");
@@ -103,18 +100,11 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     error?: string;
   } | null>(null);
 
-  // Get connection details for testing destination
-  const { data: destinationConnection } = useConnection(
-    organizationId,
-    selectedDestinationId,
-    true, // includeSensitive to get full config for testing
-  );
-
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
     EmitterConfig & { collectorName: string; collectorId: string }
   > = collectors.flatMap((collector) => {
-    const source = dataSources.find((ds) => ds.id === collector.sourceId);
+    const source = sourceDataSources.find((ds) => ds.id === collector.sourceId);
     const collectorName =
       source?.name || `Data Source ${collector.sourceId.slice(-6)}`;
     // Emitters are stored directly on collectors, not on transformers
@@ -128,6 +118,16 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
   const selectedDestination = availableDestinations.find(
     (d) => d.id === selectedDestinationId,
+  );
+
+  // Fetch connection for selected destination (includes config for "Test Connection" visibility)
+  const { data: destinationConnection, isLoading: destinationConnectionLoading } =
+    useConnection(organizationId, selectedDestinationId || undefined);
+  const hasDestinationConnectionConfig = !!(
+    destinationConnection &&
+    destinationConnection.config &&
+    typeof destinationConnection.config === "object" &&
+    Object.keys(destinationConnection.config).length > 0
   );
 
   const _handleConfigChange = (key: string, value: string) => {
@@ -184,14 +184,10 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
   };
 
   const handleTestConnection = async () => {
-    if (
-      !selectedDestinationId ||
-      !destinationConnection?.config ||
-      !organizationId
-    ) {
+    if (!selectedDestinationId || !organizationId) {
       setConnectionTestResult({
         success: false,
-        error: "Please select a destination with a configured connection",
+        error: "Please select a destination before testing the connection",
       });
       return;
     }
@@ -200,37 +196,14 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
     setConnectionTestResult(null);
 
     try {
-      const selectedDestination = dataSources.find(
-        (ds) => ds.id === selectedDestinationId,
+      const result = await ConnectionService.testConnection(
+        organizationId,
+        selectedDestinationId,
       );
-      const sourceType = selectedDestination?.type || "postgres";
-
-      // Map connection config to test connection format
-      const testConfig = {
-        type: sourceType,
-        ...(destinationConnection.config as unknown as Record<string, unknown>),
-      } as {
-        type: string;
-        [key: string]: unknown;
-      };
-
-      // Normalize field names (safely access union type properties)
-      const config = destinationConnection.config as unknown as Record<
-        string,
-        unknown
-      >;
-      if (config.username && !testConfig.username) {
-        testConfig.username = config.username;
-      }
-      if (config.user && !testConfig.user) {
-        testConfig.user = config.user;
-      }
-
-      const result = await PythonETLService.testConnection(testConfig);
 
       setConnectionTestResult({
         success: result.success,
-        message: result.message || "Connection successful",
+        message: result.message,
         error: result.error,
       });
     } catch (error) {
@@ -453,7 +426,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                   </div>
                 ) : (
                   collectors.map((collector) => {
-                    const source = dataSources.find(
+                    const source = sourceDataSources.find(
                       (ds) => ds.id === collector.sourceId,
                     );
                     const selectedTablesCount =
@@ -483,7 +456,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Destination</Label>
-                {selectedDestinationId && destinationConnection?.config && (
+                {selectedDestinationId && hasDestinationConnectionConfig && (
                   <Button
                     type="button"
                     variant="outline"
@@ -592,7 +565,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                       </AlertDescription>
                     </Alert>
                   )}
-                  {selectedDestinationId && !destinationConnection?.config && (
+                  {selectedDestinationId && !destinationConnectionLoading && !hasDestinationConnectionConfig && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>

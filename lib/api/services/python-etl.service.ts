@@ -1,10 +1,10 @@
 /**
  * Python ETL Service Client
- * Direct client for calling Python FastAPI ETL microservice
- * Used ONLY for ETL operations: discover schema, collect, transform, emit, delta-check, test-connection
+ * Direct client for calling Python FastAPI ETL microservice (apps/new-etl)
+ * Used for: discover schema, preview, test-connection.
  *
- * CRUD operations (data sources, connections, pipelines) go through the NestJS API
- * via ApiClient / DataSourcesService / DataPipelinesService.
+ * Pipeline runs use NestJS runSync → Python POST /sync/run-sync.
+ * CRUD (data sources, connections, pipelines) goes through NestJS API.
  */
 
 import type { ColumnInfo } from "../types/data-pipelines";
@@ -33,56 +33,6 @@ export interface DiscoverSchemaResponse {
       rowCount?: number;
     }>;
   }>;
-}
-
-export interface CollectRequest {
-  source_type: string;
-  connection_config: Record<string, unknown>;
-  source_config?: Record<string, unknown>;
-  table_name?: string;
-  schema_name?: string;
-  query?: string;
-  sync_mode?: "full" | "incremental";
-  checkpoint?: Record<string, unknown>;
-  limit?: number;
-  offset?: number;
-  cursor?: string;
-}
-
-export interface CollectResponse {
-  rows: Record<string, unknown>[];
-  total_rows?: number;
-  next_cursor?: string;
-  has_more?: boolean;
-  metadata?: Record<string, unknown>;
-}
-
-export interface TransformRequest {
-  rows: Record<string, unknown>[];
-  transform_script: string;
-}
-
-export interface TransformResponse {
-  transformed_rows: Record<string, unknown>[];
-  errors: Array<{ message: string; row?: number; error?: string }>;
-}
-
-export interface EmitRequest {
-  destination_type: string;
-  connection_config: Record<string, unknown>;
-  destination_config?: Record<string, unknown>;
-  table_name: string;
-  schema_name?: string;
-  rows: Record<string, unknown>[];
-  write_mode?: "append" | "upsert" | "replace";
-  upsert_key?: string[];
-}
-
-export interface EmitResponse {
-  rows_written: number;
-  rows_skipped: number;
-  rows_failed: number;
-  errors: Array<{ message: string; row?: number; error?: string }>;
 }
 
 export class PythonETLService {
@@ -165,80 +115,62 @@ export class PythonETLService {
 
   /**
    * Discover schema from source
+   * Calls new-etl POST /discover-schema/{sourceType}
    */
   static async discoverSchema(
     sourceType: string,
     request: DiscoverSchemaRequest,
   ): Promise<DiscoverSchemaResponse> {
-    return PythonETLService.request<DiscoverSchemaResponse>(
-      `/discover-schema/${sourceType}`,
-      {
-        method: "POST",
-        body: JSON.stringify(request),
-      },
+    const etlSourceType = PythonETLService.toSourceType(
+      (request.source_type as string) || sourceType,
     );
-  }
-
-  /**
-   * Collect data from source
-   */
-  static async collect(
-    sourceType: string,
-    request: CollectRequest,
-  ): Promise<CollectResponse> {
-    return PythonETLService.request<CollectResponse>(`/collect/${sourceType}`, {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Transform data
-   */
-  static async transform(
-    request: TransformRequest,
-  ): Promise<TransformResponse> {
-    return PythonETLService.request<TransformResponse>("/transform", {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Emit data to destination
-   */
-  static async emit(
-    destinationType: string,
-    request: EmitRequest,
-  ): Promise<EmitResponse> {
-    return PythonETLService.request<EmitResponse>(`/emit/${destinationType}`, {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Delta check for changes
-   */
-  static async deltaCheck(
-    sourceType: string,
-    connectionConfig: Record<string, unknown>,
-    sourceConfig: Record<string, unknown>,
-    tableName?: string,
-    schemaName?: string,
-    checkpoint?: Record<string, unknown>,
-  ): Promise<{ has_changes: boolean; checkpoint?: Record<string, unknown> }> {
-    return PythonETLService.request<{
-      has_changes: boolean;
-      checkpoint?: Record<string, unknown>;
-    }>(`/delta-check/${sourceType}`, {
+    const response = await PythonETLService.request<{
+      columns: ColumnInfo[];
+      primary_keys: string[];
+      estimated_row_count?: number;
+      error?: string;
+    }>(`/discover-schema/${etlSourceType}`, {
       method: "POST",
       body: JSON.stringify({
-        connection_config: connectionConfig,
-        source_config: sourceConfig,
-        table_name: tableName,
-        schema_name: schemaName,
-        checkpoint,
+        source_type: etlSourceType,
+        connection_config: request.connection_config || request.source_config || {},
+        source_config: request.source_config || {},
+        table_name: request.table_name,
+        schema_name: request.schema_name,
+        query: request.query,
+      }),
+    });
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    return {
+      columns: response.columns || [],
+      primary_keys: response.primary_keys || [],
+      estimated_row_count: response.estimated_row_count,
+    };
+  }
+
+  /**
+   * Preview first N rows from source (dlt-based, no write)
+   */
+  static async preview(
+    sourceType: string,
+    request: {
+      source_config: Record<string, unknown>;
+      source_stream: string;
+      limit?: number;
+    },
+  ): Promise<{ records: Record<string, unknown>[]; columns: string[]; total: number; stream: string }> {
+    const etlType = PythonETLService.toSourceType(sourceType);
+    return PythonETLService.request("/preview", {
+      method: "POST",
+      body: JSON.stringify({
+        source_type: etlType,
+        source_config: request.source_config,
+        source_stream: request.source_stream,
+        limit: request.limit ?? 50,
       }),
     });
   }
@@ -252,8 +184,20 @@ export class PythonETLService {
   // =========================================================================
 
   /**
+   * Map frontend type to new-etl source_type (Airbyte connector name)
+   */
+  private static toSourceType(type: string): string {
+    const t = type?.toLowerCase() || "postgres";
+    if (t === "postgres" || t === "postgresql") return "source-postgres";
+    if (t === "mongodb") return "source-mongodb-v2";
+    if (t === "mysql") return "source-mysql";
+    if (t === "mssql" || t === "sqlserver") return "source-mssql";
+    return `source-${t}`;
+  }
+
+  /**
    * Test a data source connection
-   * Calls Python API to test connection configuration
+   * Calls new-etl POST /test-connection with { source_type, source_config }
    */
   static async testConnection(connectionData: {
     type: string;
@@ -278,23 +222,100 @@ export class PythonETLService {
     response_time_ms?: number;
     details?: Record<string, unknown>;
   }> {
-    // Map connection_string to connection_string_mongo for MongoDB
-    const requestData: Record<string, unknown> = { ...connectionData };
-    if (connectionData.type === "mongodb" && connectionData.connection_string) {
-      requestData.connection_string_mongo = connectionData.connection_string;
-      delete requestData.connection_string;
+    const { type, ...rest } = connectionData;
+    const sourceType = PythonETLService.toSourceType(type || "postgres");
+
+    // MongoDB: connection_string OR individual (host, port, username, password) per Airbyte spec
+    if (type?.toLowerCase() === "mongodb") {
+      const connStr = rest.connection_string_mongo ?? rest.connection_string;
+      const sourceConfig: Record<string, unknown> = {
+        extra: {},
+      };
+      if (connStr) {
+        sourceConfig.connection_string = connStr;
+      } else {
+        sourceConfig.host = rest.host ?? "";
+        sourceConfig.port = rest.port ?? 27017;
+        sourceConfig.database = rest.database ?? "admin";
+        sourceConfig.username = rest.username ?? "";
+        sourceConfig.password = rest.password ?? "";
+      }
+      const dbs = rest.databases;
+      if (Array.isArray(dbs) && dbs.length) {
+        sourceConfig.databases = dbs;
+      } else if (typeof dbs === "string" && dbs.trim()) {
+        sourceConfig.databases = dbs.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      const response = await PythonETLService.request<{
+        success: boolean;
+        message?: string;
+      }>("/test-connection", {
+        method: "POST",
+        body: JSON.stringify({ source_type: sourceType, source_config: sourceConfig }),
+      });
+      return {
+        success: response.success,
+        message: response.message,
+        error: response.success ? undefined : response.message,
+      };
     }
 
-    return PythonETLService.request<{
+    // Snowflake: host = account identifier, extra.warehouse, extra.schema
+    if (type?.toLowerCase() === "snowflake") {
+      const sourceConfig: Record<string, unknown> = {
+        host: rest.host ?? rest.account ?? "",
+        database: rest.database ?? "",
+        username: rest.username ?? "",
+        password: rest.password ?? "",
+        extra: {
+          warehouse: rest.warehouse ?? (rest.extra as Record<string, unknown>)?.warehouse ?? "",
+          schema: rest.schema ?? (rest.extra as Record<string, unknown>)?.schema ?? "PUBLIC",
+        },
+      };
+      const response = await PythonETLService.request<{
+        success: boolean;
+        message?: string;
+      }>("/test-connection", {
+        method: "POST",
+        body: JSON.stringify({ source_type: sourceType, source_config: sourceConfig }),
+      });
+      return {
+        success: response.success,
+        message: response.message,
+        error: response.success ? undefined : response.message,
+      };
+    }
+
+    // Build source_config for other connectors
+    const sourceConfig: Record<string, unknown> = {
+      ...rest,
+      host: rest.host,
+      port: rest.port,
+      database: rest.database,
+      username: rest.username,
+      password: rest.password,
+      connection_string: rest.connection_string,
+      extra: {
+        ...(rest.extra as Record<string, unknown>),
+        ssl: rest.ssl,
+        auth_source: rest.auth_source,
+        replica_set: rest.replica_set,
+        tls: rest.tls,
+      },
+    };
+
+    const response = await PythonETLService.request<{
       success: boolean;
       message?: string;
-      error?: string;
-      version?: string;
-      response_time_ms?: number;
-      details?: Record<string, unknown>;
     }>("/test-connection", {
       method: "POST",
-      body: JSON.stringify(requestData),
+      body: JSON.stringify({ source_type: sourceType, source_config: sourceConfig }),
     });
+
+    return {
+      success: response.success,
+      message: response.message,
+      error: response.success ? undefined : response.message,
+    };
   }
 }

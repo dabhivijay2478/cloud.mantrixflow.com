@@ -108,13 +108,7 @@ export default function EditPipelinePage() {
             ? `public.${sourceSchema.sourceTable}`
             : "";
 
-      // Build field mappings from destinationSchema transformScript
-      // Note: Transform script is the authoritative source, field mappings are derived from UI
-      const schemaFieldMappings: Array<{
-        source: string;
-        destination: string;
-        isPrimaryKey: boolean;
-      }> = [];
+      // Script and dbt only - no column mapping. Use transformScript/customSql from destinationSchema.
 
       // Generate stable IDs (or use existing ones from transformations)
       const baseTimestamp = Date.now();
@@ -137,20 +131,30 @@ export default function EditPipelinePage() {
       };
 
       if (collectors.length === 0) {
-        // No existing collectors - fully reconstruct from schemas
-        const transformers =
-          schemaFieldMappings.length > 0
-            ? [
-                {
-                  id: defaultTransformerId,
-                  name: "Default Transformer",
-                  collectorId: defaultCollectorId,
-                  emitterId: defaultEmitterId,
-                  destinationTable: destinationTableName,
-                  fieldMappings: schemaFieldMappings,
-                },
-              ]
-            : [];
+        // No existing collectors - fully reconstruct from schemas (Script/dbt only, no column mapping)
+        const upsertKeyFromSchema = destinationSchema.upsertKey?.[0]
+          ? destinationSchema.upsertKey
+          : undefined;
+        const destTransformType =
+          (destinationSchema.transformType as "script" | "dbt") || "script";
+        const transformers = [
+          {
+            id: defaultTransformerId,
+            name: "Default Transformer",
+            collectorId: defaultCollectorId,
+            emitterId: defaultEmitterId,
+            transformType: destTransformType,
+            transformScript: destinationSchema.transformScript || undefined,
+            customSql: destinationSchema.customSql || undefined,
+            destinationTable: destinationTableName,
+            upsertKey: upsertKeyFromSchema,
+            syncMode: (pipeline.syncMode as "full" | "incremental" | "cdc") || "full",
+            cursorField: pipeline.incrementalColumn || undefined,
+            writeMode:
+              (destinationSchema.writeMode as "append" | "upsert" | "replace") ||
+              "append",
+          },
+        ];
 
         collectors = [
           {
@@ -172,27 +176,45 @@ export default function EditPipelinePage() {
             collectorEmitters = [reconstructedEmitter];
           }
 
-          // Hydrate each transformer with schema data if missing
+          // Hydrate each transformer with schema data (Script/dbt only, no column mapping)
           const hydratedTransformers = (c.transformers || []).map(
             (t, _tIndex) => {
               const transformer = t as typeof t & {
                 destinationTable?: string;
+                transformScript?: string;
               };
-
-              // Use existing values if present, otherwise fall back to schema data
+              const destTransformType =
+                (destinationSchema.transformType as "script" | "dbt") || "script";
               return {
                 ...t,
                 collectorId: t.collectorId || c.id,
                 emitterId:
                   t.emitterId || collectorEmitters[0]?.id || defaultEmitterId,
-                // CRITICAL: Always use schema's destinationTable if transformer doesn't have one
+                transformType: destTransformType,
+                transformScript:
+                  (transformer as { transformScript?: string }).transformScript ??
+                  destinationSchema.transformScript ??
+                  undefined,
+                customSql:
+                  (transformer as { customSql?: string }).customSql ??
+                  destinationSchema.customSql ??
+                  undefined,
                 destinationTable:
                   transformer.destinationTable || destinationTableName,
-                // CRITICAL: Always use schema's fieldMappings if transformer doesn't have any
-                fieldMappings:
-                  t.fieldMappings && t.fieldMappings.length > 0
-                    ? t.fieldMappings
-                    : schemaFieldMappings,
+                upsertKey:
+                  (transformer as { upsertKey?: string[] }).upsertKey ??
+                  destinationSchema.upsertKey,
+                syncMode:
+                  (transformer as { syncMode?: string }).syncMode ||
+                  (pipeline.syncMode as "full" | "incremental" | "cdc") ||
+                  "full",
+                cursorField:
+                  (transformer as { cursorField?: string }).cursorField ||
+                  pipeline.incrementalColumn,
+                writeMode:
+                  (transformer as { writeMode?: string }).writeMode ||
+                  (destinationSchema.writeMode as "append" | "upsert" | "replace") ||
+                  "append",
               };
             },
           );
@@ -201,18 +223,26 @@ export default function EditPipelinePage() {
           const finalTransformers =
             hydratedTransformers.length > 0
               ? hydratedTransformers
-              : schemaFieldMappings.length > 0
-                ? [
-                    {
-                      id: defaultTransformerId,
-                      name: "Default Transformer",
-                      collectorId: c.id,
-                      emitterId: collectorEmitters[0]?.id || defaultEmitterId,
-                      destinationTable: destinationTableName,
-                      fieldMappings: schemaFieldMappings,
-                    },
-                  ]
-                : [];
+              : [
+                  {
+                    id: defaultTransformerId,
+                    name: "Default Transformer",
+                    collectorId: c.id,
+                    emitterId: collectorEmitters[0]?.id || defaultEmitterId,
+                    destinationTable: destinationTableName,
+                    transformType:
+                      (destinationSchema.transformType as "script" | "dbt") || "script",
+                    transformScript: destinationSchema.transformScript || undefined,
+                    customSql: destinationSchema.customSql || undefined,
+                    upsertKey: destinationSchema.upsertKey,
+                    syncMode:
+                      (pipeline.syncMode as "full" | "incremental" | "cdc") || "full",
+                    cursorField: pipeline.incrementalColumn,
+                    writeMode:
+                      (destinationSchema.writeMode as "append" | "upsert" | "replace") ||
+                      "append",
+                  },
+                ];
 
           return {
             ...c,
@@ -235,7 +265,6 @@ export default function EditPipelinePage() {
         existingEmitters,
         destinationTableName,
         sourceTableName,
-        schemaFieldMappingsCount: schemaFieldMappings.length,
         collectorsCount: collectors.length,
         collectorsWithData: collectors.map((c) => ({
           id: c.id,
@@ -250,7 +279,7 @@ export default function EditPipelinePage() {
               name: t.name,
               emitterId: t.emitterId,
               destinationTable: transformer.destinationTable,
-              fieldMappingsCount: t.fieldMappings?.length || 0,
+              transformType: (t as { transformType?: string }).transformType,
             };
           }),
         })),
@@ -372,9 +401,12 @@ export default function EditPipelinePage() {
       // Step 2: Update destination schema if needed
       const firstTransformer = collectors
         .flatMap((c) => c.transformers || [])
-        .find((t) => t.fieldMappings && t.fieldMappings.length > 0);
+        .find(
+          (t) =>
+            (t as { destinationTable?: string }).destinationTable?.trim(),
+        );
 
-      if (firstTransformer?.fieldMappings && destinationSchema) {
+      if (firstTransformer && destinationSchema) {
         // Extract destination table from transformer
         const transformerWithTable = firstTransformer as Transformer & {
           destinationTable?: string;
@@ -392,38 +424,75 @@ export default function EditPipelinePage() {
         const destTableName =
           destTableParts[1] || destTableParts[0] || destinationTable;
 
-        // Extract primary keys from field mappings if available
-        const primaryKeyFields =
-          firstTransformer.fieldMappings
-            ?.filter((fm) => {
-              const mapping = fm as { isPrimaryKey?: boolean };
-              return mapping.isPrimaryKey === true;
-            })
-            .map((fm) => {
-              const mapping = fm as { destination: string };
-              return mapping.destination;
-            }) || [];
+        // Extract primary key from transformer (upsertKey or legacy primaryKeyField) or destination schema
+        const transformerWithPk = firstTransformer as Transformer & {
+          primaryKeyField?: string;
+          upsertKey?: string[];
+        };
+        const primaryKeyFields: string[] =
+          transformerWithPk.upsertKey?.length
+            ? transformerWithPk.upsertKey
+            : transformerWithPk.primaryKeyField
+              ? [transformerWithPk.primaryKeyField]
+              : (destinationSchema.upsertKey as string[] | undefined) || [];
 
         const writeMode: "append" | "upsert" | "replace" =
           primaryKeyFields.length > 0 ? "upsert" : "append";
 
-        // Get transform script from transformer
+        // Get transformType, transformScript, customSql from transformer (Script/dbt only)
+        const transformerWithTransform = firstTransformer as Transformer & {
+          transformType?: "script" | "dbt";
+          transformScript?: string;
+          customSql?: string;
+        };
+        const destTransformType =
+          transformerWithTransform.transformType ||
+          (destinationSchema.transformType as "script" | "dbt") ||
+          "script";
         const transformScript =
-          firstTransformer.transformScript ||
-          destinationSchema.transformScript ||
-          "";
+          (transformerWithTransform.transformScript ??
+            destinationSchema.transformScript ??
+            "")?.trim() || undefined;
+        const customSql =
+          (transformerWithTransform.customSql ??
+            destinationSchema.customSql ??
+            "")?.trim() || undefined;
+
+        if (destTransformType === "dbt" && !customSql) {
+          toast.error(
+            "Validation failed",
+            "Custom SQL is required when using Custom SQL transform mode.",
+          );
+          return;
+        }
+        if (destTransformType === "script" && !transformScript) {
+          toast.error(
+            "Validation failed",
+            "Python transform script is required when using Script transform mode.",
+          );
+          return;
+        }
 
         // Only update if changed
+        const upsertKeyChanged =
+          JSON.stringify(destinationSchema.upsertKey || []) !==
+          JSON.stringify(primaryKeyFields);
         if (
           destinationSchema.destinationSchema !== destSchemaName ||
           destinationSchema.destinationTable !== destTableName ||
+          destinationSchema.transformType !== destTransformType ||
           destinationSchema.transformScript !== transformScript ||
-          destinationSchema.writeMode !== writeMode
+          destinationSchema.customSql !== customSql ||
+          destinationSchema.writeMode !== writeMode ||
+          upsertKeyChanged
         ) {
           await updateDestinationSchemaMutation.mutateAsync({
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            transformScript: transformScript,
+            transformType: destTransformType,
+            transformScript:
+              destTransformType === "script" ? transformScript : undefined,
+            customSql: destTransformType === "dbt" ? customSql : undefined,
             writeMode: writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
@@ -431,12 +500,31 @@ export default function EditPipelinePage() {
         }
       }
 
-      // Step 3: Update pipeline
+      // Step 3: Update pipeline (no transformations/columnMap - Script/dbt only)
+      const firstTransformerWithConfig = collectors
+        .flatMap((c) => c.transformers || [])
+        .find(
+          (t) =>
+            (t as { destinationTable?: string }).destinationTable?.trim(),
+        ) as Transformer | undefined;
+
+      const transformerWithSync = firstTransformerWithConfig as Transformer & {
+        syncMode?: "full" | "incremental" | "cdc" | "log_based";
+        cursorField?: string;
+      };
+      const rawSyncMode = transformerWithSync?.syncMode;
+      const syncMode: "full" | "log_based" | undefined =
+        rawSyncMode === "incremental" || rawSyncMode === "cdc"
+          ? "log_based"
+          : rawSyncMode === "full" || rawSyncMode === "log_based"
+            ? rawSyncMode
+            : undefined;
+
       await updatePipelineMutation.mutateAsync({
         name: pipeline.name,
         description: pipeline.description || undefined,
-        // Note: sourceSchemaId and destinationSchemaId remain the same
-        // unless schemas were recreated (which would require more complex logic)
+        syncMode,
+        incrementalColumn: transformerWithSync?.cursorField,
       });
 
       toast.success(
@@ -468,7 +556,7 @@ export default function EditPipelinePage() {
       {
         id: "transform",
         label: "Transform",
-        description: "Map fields to schema",
+        description: "Script or Custom SQL",
       },
     ];
 

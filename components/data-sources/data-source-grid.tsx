@@ -1,5 +1,4 @@
 import type { DataSource } from "@/lib/stores/workspace-store";
-import { allDataSources } from "./constants";
 import { DataSourceCard } from "./data-source-card";
 
 interface DataSourceGridProps {
@@ -22,14 +21,16 @@ export function DataSourceGrid({
   getConnectedDataSource,
   onDataSourceClick,
 }: DataSourceGridProps) {
-  const sourcesToShow = dataSources || allDataSources;
+  // Use only provided dataSources (from ETL); never fall back to static allDataSources
+  const sourcesToShow = dataSources ?? [];
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {sourcesToShow.map((dataSource) => {
         const connected = isConnected(dataSource.id);
         const connectedData = getConnectedDataSource(dataSource.id);
-        const isDisabled = "disabled" in dataSource && dataSource.disabled;
+        // All ETL connectors are enabled; only disable when explicitly true
+        const isDisabled = dataSource.disabled === true;
 
         return (
           <DataSourceCard

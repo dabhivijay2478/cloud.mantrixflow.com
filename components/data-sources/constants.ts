@@ -86,180 +86,15 @@ export const connectionSchemas: Record<
     connectionString: false,
     testConnection: true,
   },
-  mysql: {
-    fields: [
-      {
-        name: "name",
-        label: "Connection Name",
-        type: "text",
-        placeholder: "My MySQL Connection",
-        required: true,
-        description: "A friendly name to identify this connection",
-      },
-      {
-        name: "host",
-        label: "Host",
-        type: "text",
-        placeholder: "localhost",
-        required: true,
-      },
-      {
-        name: "port",
-        label: "Port",
-        type: "number",
-        placeholder: "3306",
-        required: true,
-      },
-      {
-        name: "database",
-        label: "Database",
-        type: "text",
-        placeholder: "mydb",
-        required: true,
-      },
-      {
-        name: "username",
-        label: "Username",
-        type: "text",
-        placeholder: "root",
-        required: true,
-      },
-      {
-        name: "password",
-        label: "Password",
-        type: "password",
-        placeholder: "••••••••",
-        required: true,
-      },
-      {
-        name: "ssl",
-        label: "Enable SSL",
-        type: "select",
-        placeholder: "Select SSL mode",
-        required: false,
-        description:
-          "Enable SSL/TLS for secure connections (recommended for cloud MySQL)",
-        options: [
-          { value: "false", label: "Disabled" },
-          { value: "true", label: "Enabled" },
-        ],
-      },
-    ],
-    connectionString: true,
-    testConnection: true,
-  },
-  mongodb: {
-    fields: [
-      {
-        name: "name",
-        label: "Connection Name",
-        type: "text",
-        placeholder: "My MongoDB Connection",
-        required: true,
-        description: "A friendly name to identify this connection",
-      },
-      {
-        name: "useConnectionString",
-        label: "Connection Method",
-        type: "select",
-        required: true,
-        description: "Choose how to connect to MongoDB",
-        options: [
-          { value: "true", label: "Connection String (Atlas/SRV)" },
-          { value: "false", label: "Individual Fields" },
-        ],
-      },
-      // Connection string mode - only need connection string
-      {
-        name: "connection_string",
-        label: "Connection String",
-        type: "password",
-        placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/mydb",
-        required: true,
-        description:
-          "Full MongoDB connection string (supports Atlas SRV format). The database name can be included in the connection string.",
-        dependsOn: { field: "useConnectionString", value: "true" },
-      },
-      // Individual fields mode
-      {
-        name: "host",
-        label: "Host",
-        type: "text",
-        placeholder: "localhost or cluster.mongodb.net",
-        required: true,
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "port",
-        label: "Port",
-        type: "number",
-        placeholder: "27017",
-        required: false,
-        description: "Default: 27017",
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "database",
-        label: "Database",
-        type: "text",
-        placeholder: "mydb",
-        required: true,
-        description: "The database name to connect to",
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "username",
-        label: "Username",
-        type: "text",
-        placeholder: "user",
-        required: false,
-        description: "Leave empty for unauthenticated connections",
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "password",
-        label: "Password",
-        type: "password",
-        placeholder: "••••••••",
-        required: false,
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "authSource",
-        label: "Auth Database",
-        type: "text",
-        placeholder: "admin",
-        required: false,
-        description: "The database to authenticate against (default: admin)",
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "replicaSet",
-        label: "Replica Set",
-        type: "text",
-        placeholder: "rs0",
-        required: false,
-        description: "Replica set name (optional)",
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-      {
-        name: "tls",
-        label: "Enable TLS/SSL",
-        type: "select",
-        required: false,
-        description: "Enable TLS for secure connections",
-        options: [
-          { value: "false", label: "Disabled" },
-          { value: "true", label: "Enabled" },
-        ],
-        dependsOn: { field: "useConnectionString", value: "false" },
-      },
-    ],
-    connectionString: true,
-    testConnection: true,
-  },
   mssql: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My MS SQL Connection",
+        required: true,
+      },
       {
         name: "host",
         label: "Server",
@@ -302,6 +137,13 @@ export const connectionSchemas: Record<
   bigquery: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My BigQuery",
+        required: true,
+      },
+      {
         name: "projectId",
         label: "Project ID",
         type: "text",
@@ -329,11 +171,20 @@ export const connectionSchemas: Record<
   snowflake: {
     fields: [
       {
-        name: "account",
-        label: "Account",
+        name: "name",
+        label: "Connection Name",
         type: "text",
-        placeholder: "myaccount",
+        placeholder: "My Snowflake",
         required: true,
+      },
+      {
+        name: "account",
+        label: "Account identifier",
+        type: "text",
+        placeholder: "orgname-accountname or orgname-accountname.snowflakecomputing.com",
+        required: true,
+        description:
+          "Full account identifier from Snowflake URL (format: org-account). Find in Account → Admin → Accounts or in your login URL.",
       },
       {
         name: "warehouse",
@@ -376,6 +227,13 @@ export const connectionSchemas: Record<
   redshift: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Redshift",
+        required: true,
+      },
+      {
         name: "host",
         label: "Host",
         type: "text",
@@ -416,6 +274,13 @@ export const connectionSchemas: Record<
   },
   clickhouse: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My ClickHouse",
+        required: true,
+      },
       {
         name: "host",
         label: "Host",
@@ -458,6 +323,13 @@ export const connectionSchemas: Record<
   s3: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My S3",
+        required: true,
+      },
+      {
         name: "bucket",
         label: "Bucket Name",
         type: "text",
@@ -490,6 +362,13 @@ export const connectionSchemas: Record<
   },
   "s3-datalake": {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My S3 Datalake",
+        required: true,
+      },
       {
         name: "bucket",
         label: "Bucket Name",
@@ -531,6 +410,13 @@ export const connectionSchemas: Record<
   "azure-blob-storage": {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Azure Blob",
+        required: true,
+      },
+      {
         name: "accountName",
         label: "Account Name",
         type: "text",
@@ -556,6 +442,13 @@ export const connectionSchemas: Record<
   },
   databricks: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Databricks",
+        required: true,
+      },
       {
         name: "serverHostname",
         label: "Server Hostname",
@@ -583,6 +476,13 @@ export const connectionSchemas: Record<
   pinecone: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Pinecone",
+        required: true,
+      },
+      {
         name: "apiKey",
         label: "API Key",
         type: "password",
@@ -608,6 +508,13 @@ export const connectionSchemas: Record<
   },
   milvus: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Milvus",
+        required: true,
+      },
       {
         name: "host",
         label: "Host",
@@ -642,6 +549,13 @@ export const connectionSchemas: Record<
   weaviate: {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Weaviate",
+        required: true,
+      },
+      {
         name: "url",
         label: "Weaviate URL",
         type: "text",
@@ -660,6 +574,13 @@ export const connectionSchemas: Record<
   },
   pgvector: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My pgvector",
+        required: true,
+      },
       {
         name: "host",
         label: "Host",
@@ -702,6 +623,13 @@ export const connectionSchemas: Record<
   "snowflake-cortex": {
     fields: [
       {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My Snowflake Cortex",
+        required: true,
+      },
+      {
         name: "account",
         label: "Account",
         type: "text",
@@ -741,6 +669,13 @@ export const connectionSchemas: Record<
   },
   api: {
     fields: [
+      {
+        name: "name",
+        label: "Connection Name",
+        type: "text",
+        placeholder: "My API",
+        required: true,
+      },
       {
         name: "endpoint",
         label: "API Endpoint",
@@ -784,6 +719,128 @@ export const connectionSchemas: Record<
       },
     ],
     testConnection: true,
+  },
+  // ETL registry connectors — generic API key schema
+  shopify: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Shopify", required: true },
+      { name: "shop_name", label: "Shop Name", type: "text", placeholder: "myshop", required: true },
+      { name: "api_key", label: "Admin API Key", type: "password", placeholder: "shpat_...", required: true },
+    ],
+    testConnection: true,
+  },
+  stripe: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Stripe", required: true },
+      { name: "api_key", label: "Secret Key", type: "password", placeholder: "sk_...", required: true },
+    ],
+    testConnection: true,
+  },
+  github: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My GitHub", required: true },
+      { name: "api_key", label: "Personal Access Token", type: "password", placeholder: "ghp_...", required: true },
+      {
+        name: "repositories",
+        label: "Repositories",
+        type: "textarea",
+        placeholder: "username/repo1 username/repo2",
+        required: true,
+        description:
+          "Space or newline-separated. Format: owner/repo. For personal accounts, list each repo (e.g. username/repo1 username/repo2). owner/* only works for GitHub organizations, not personal accounts.",
+      },
+    ],
+    testConnection: true,
+  },
+  "google-analytics": {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My GA", required: true },
+      { name: "credentials_json", label: "Service Account JSON", type: "textarea", placeholder: '{"type":"service_account",...}', required: true },
+      { name: "property_id", label: "Property ID", type: "text", placeholder: "123456789", required: false },
+    ],
+    testConnection: true,
+  },
+  "facebook-marketing": {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My FB Marketing", required: true },
+      { name: "api_key", label: "Access Token", type: "password", placeholder: "EAA...", required: true },
+      { name: "account_id", label: "Ad Account ID", type: "text", placeholder: "act_123", required: false },
+    ],
+    testConnection: true,
+  },
+  airtable: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Airtable", required: true },
+      { name: "api_key", label: "Personal Access Token", type: "password", placeholder: "pat...", required: true },
+    ],
+    testConnection: true,
+  },
+  notion: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Notion", required: true },
+      {
+        name: "api_key",
+        label: "Internal Integration Token",
+        type: "password",
+        placeholder: "ntn_... or secret_...",
+        required: true,
+        description:
+          "From Notion: My integrations → your integration → Secrets tab. Important: Share at least one page with the integration (page ⋯ menu → Add connections → select your integration).",
+      },
+    ],
+    testConnection: true,
+  },
+  hubspot: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My HubSpot", required: true },
+      { name: "api_key", label: "Private App Access Token", type: "password", placeholder: "pat-...", required: true, description: "Create a private app in HubSpot and copy the access token" },
+    ],
+    testConnection: true,
+  },
+  salesforce: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Salesforce", required: true },
+      { name: "client_id", label: "Client ID", type: "text", placeholder: "Consumer key from Connected App", required: true },
+      { name: "client_secret", label: "Client Secret", type: "password", placeholder: "••••••••", required: true },
+      { name: "refresh_token", label: "Refresh Token", type: "password", placeholder: "••••••••", required: true, description: "Obtain via OAuth flow" },
+      { name: "is_sandbox", label: "Sandbox", type: "checkbox", required: false },
+    ],
+    testConnection: true,
+  },
+  "google-sheets": {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Google Sheets", required: true },
+      { name: "credentials_json", label: "Service Account JSON", type: "textarea", placeholder: '{"type":"service_account",...}', required: true, description: "Google Cloud service account with Sheets API access" },
+      { name: "spreadsheet_id", label: "Spreadsheet ID (optional)", type: "text", placeholder: "From URL: docs.google.com/spreadsheets/d/SPREADSHEET_ID/", required: false },
+    ],
+    testConnection: true,
+  },
+  slack: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "My Slack", required: true },
+      { name: "api_key", label: "Bot Token", type: "password", placeholder: "xoxb-...", required: true },
+    ],
+    testConnection: true,
+  },
+  faker: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "Faker Data", required: true },
+      { name: "count", label: "Row Count", type: "number", placeholder: "1000", required: false },
+      { name: "seed", label: "Seed (optional)", type: "number", placeholder: "0", required: false },
+    ],
+    testConnection: true,
+  },
+  file: {
+    fields: [
+      { name: "name", label: "Connection Name", type: "text", placeholder: "File Source", required: true },
+      { name: "url", label: "File URL", type: "text", placeholder: "https://example.com/data.csv", required: true },
+      { name: "format", label: "Format", type: "select", options: [
+        { value: "csv", label: "CSV" },
+        { value: "json", label: "JSON" },
+        { value: "parquet", label: "Parquet" },
+      ], required: false },
+    ],
+    testConnection: false,
   },
 };
 
@@ -833,12 +890,7 @@ export const allDataSources = [
     type: "mssql" as const,
     iconType: "mssql",
   },
-  {
-    id: "postgres",
-    name: "Postgres",
-    type: "postgres" as const,
-    iconType: "postgres",
-  },
+  // postgres comes from ETL connectors (source-postgres)
   {
     id: "s3-data-lake",
     name: "S3 Data Lake",
@@ -888,13 +940,6 @@ export const allDataSources = [
     type: "weaviate" as const,
     iconType: "weaviate",
   },
-  { id: "mysql", name: "MySQL", type: "mysql" as const, iconType: "mysql" },
-  {
-    id: "mongodb",
-    name: "MongoDB",
-    type: "mongodb" as const,
-    iconType: "mongodb",
-  },
   {
     id: "google-sheets",
     name: "Google Sheets",
@@ -908,6 +953,27 @@ export const allDataSources = [
     iconType: "excel",
   },
   { id: "api", name: "REST API", type: "api" as const, iconType: "api" },
+  // ETL registry connectors (for data source page)
+  { id: "shopify", name: "Shopify", type: "shopify" as const, iconType: "api" },
+  { id: "stripe", name: "Stripe", type: "stripe" as const, iconType: "api" },
+  { id: "github", name: "GitHub", type: "github" as const, iconType: "api" },
+  {
+    id: "google-analytics",
+    name: "Google Analytics",
+    type: "google-analytics" as const,
+    iconType: "api",
+  },
+  {
+    id: "facebook-marketing",
+    name: "Facebook Marketing",
+    type: "facebook-marketing" as const,
+    iconType: "api",
+  },
+  { id: "airtable", name: "Airtable", type: "airtable" as const, iconType: "api" },
+  { id: "notion", name: "Notion", type: "notion" as const, iconType: "api" },
+  { id: "slack", name: "Slack", type: "slack" as const, iconType: "api" },
+  { id: "faker", name: "Faker", type: "faker" as const, iconType: "api" },
+  { id: "file", name: "File", type: "file" as const, iconType: "api" },
 ];
 
 // Note: Tables are now fetched from the API using useTables hook

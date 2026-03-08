@@ -113,56 +113,40 @@ export class ConnectionService {
   }
 
   /**
-   * Test connection for a data source - calls Python API directly
-   * NOTE: This method is deprecated. Use PythonETLService.testConnection directly instead.
-   * Kept for backward compatibility.
+   * Test a saved connection via NestJS.
    */
   static async testConnection(
     organizationId: string,
     dataSourceId: string,
   ): Promise<TestConnectionResult> {
-    // Get connection config first
-    const connection = await ConnectionService.getConnection(
-      organizationId,
-      dataSourceId,
-      true,
+    const result = await ApiClient.post<{
+      success: boolean;
+      message?: string;
+      error?: string;
+      details?: {
+        version?: string;
+        response_time_ms?: number;
+        database_name?: string;
+      };
+    }>(
+      `${ConnectionService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/test-connection`,
+      {},
     );
-
-    if (!connection || !connection.config) {
-      throw new Error("Connection not configured for this data source");
-    }
-
-    // Get data source to determine source type
-    const { DataSourceService } = await import("./data-source.service");
-    const dataSource = await DataSourceService.getDataSource(
-      organizationId,
-      dataSourceId,
-    );
-    const sourceType = dataSource.sourceType?.toLowerCase() || "postgresql";
-
-    // Call Python service directly
-    const { PythonETLService } = await import("./python-etl.service");
-
-    const result = await PythonETLService.testConnection({
-      type: sourceType,
-      ...(connection.config as unknown as Record<string, unknown>),
-    });
 
     return {
       success: result.success,
-      message: result.message || "",
+      message:
+        result.message ||
+        (result.success
+          ? "Connection successful"
+          : result.error || "Connection failed"),
       error: result.error,
-      details: {
-        version: result.version,
-        response_time_ms: result.response_time_ms,
-        ...result.details,
-      },
+      details: result.details,
     };
   }
 
   /**
-   * Discover schema for a data source connection - calls Python API directly
-   * Python handles schema discovery for all data source types
+   * Discover schema for a saved connection via NestJS.
    */
   static async discoverSchema(
     organizationId: string,
@@ -173,48 +157,32 @@ export class ConnectionService {
       query?: string;
     },
   ): Promise<Record<string, unknown>> {
-    // Get connection config first
-    const connection = await ConnectionService.getConnection(
-      organizationId,
-      dataSourceId,
-      true,
+    const discovered = await ApiClient.post<{
+      columns?: Array<{
+        name: string;
+        type?: string;
+        table?: string;
+        nullable?: boolean;
+      }>;
+      primary_keys?: string[];
+      primaryKeys?: string[];
+      estimated_row_count?: number;
+      estimatedRowCount?: number;
+    }>(
+      `${ConnectionService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/discover-schema`,
+      {
+        table_name: options?.tableName,
+        schema_name: options?.schemaName,
+        query: options?.query,
+      },
     );
-
-    if (!connection || !connection.config) {
-      throw new Error("Connection not configured for this data source");
-    }
-
-    // Get data source to determine source type
-    const { DataSourceService } = await import("./data-source.service");
-    const dataSource = await DataSourceService.getDataSource(
-      organizationId,
-      dataSourceId,
-    );
-    const sourceType =
-      dataSource.sourceType?.toLowerCase() === "postgres"
-        ? "postgresql"
-        : dataSource.sourceType?.toLowerCase() || "postgresql";
-
-    // Call Python service directly for schema discovery
-    const { PythonETLService } = await import("./python-etl.service");
-
-    const discovered = await PythonETLService.discoverSchema(sourceType, {
-      source_type: sourceType,
-      connection_config: connection.config as unknown as Record<
-        string,
-        unknown
-      >,
-      source_config: {},
-      table_name: options?.tableName,
-      schema_name: options?.schemaName,
-      query: options?.query,
-    });
 
     // Return discovered schema
     return {
-      columns: discovered.columns,
-      primaryKeys: discovered.primary_keys,
-      estimatedRowCount: discovered.estimated_row_count,
+      columns: discovered.columns ?? [],
+      primaryKeys: discovered.primary_keys ?? discovered.primaryKeys ?? [],
+      estimatedRowCount:
+        discovered.estimated_row_count ?? discovered.estimatedRowCount,
     };
   }
 }

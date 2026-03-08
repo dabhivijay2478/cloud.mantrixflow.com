@@ -5,14 +5,13 @@
  */
 
 import { ApiClient, type PaginatedListResult } from "../client";
+import { orgPath } from "../constants";
 import type {
   CreatePipelineDto,
   DryRunPipelineDto,
   DryRunResult,
   Pipeline,
-  PipelineDestinationSchema,
   PipelineRun,
-  PipelineSourceSchema,
   PipelineStats,
   PipelineWithSchemas,
   RunPipelineDto,
@@ -21,8 +20,6 @@ import type {
 } from "../types/data-pipelines";
 
 export class DataPipelinesService {
-  private static readonly BASE_PATH = "api/organizations";
-
   // ============================================================================
   // PIPELINE CRUD
   // ============================================================================
@@ -35,7 +32,7 @@ export class DataPipelinesService {
     data: CreatePipelineDto,
   ): Promise<Pipeline> {
     return ApiClient.post<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines`,
+      `${orgPath(organizationId)}/pipelines`,
       data,
     );
   }
@@ -45,24 +42,29 @@ export class DataPipelinesService {
    */
   static async listPipelines(organizationId: string): Promise<Pipeline[]> {
     return ApiClient.get<Pipeline[]>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines`,
+      `${orgPath(organizationId)}/pipelines`,
     );
   }
 
   /**
-   * List pipelines with server-side pagination
+   * List pipelines with server-side pagination.
+   * Use cursor for large orgs (1M+ pipelines) to avoid offset degradation.
    */
   static async listPipelinesPaginated(
     organizationId: string,
     limit: number = 20,
     offset: number = 0,
+    cursor?: string,
   ): Promise<PaginatedListResult<Pipeline>> {
     const params = new URLSearchParams({
       limit: String(limit),
       offset: String(offset),
     });
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
     return ApiClient.getList<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines?${params}`,
+      `${orgPath(organizationId)}/pipelines?${params}`,
     );
   }
 
@@ -74,7 +76,7 @@ export class DataPipelinesService {
     pipelineId: string,
   ): Promise<Pipeline> {
     return ApiClient.get<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}`,
     );
   }
 
@@ -86,7 +88,7 @@ export class DataPipelinesService {
     pipelineId: string,
   ): Promise<PipelineWithSchemas> {
     return ApiClient.get<PipelineWithSchemas>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/full`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/full`,
     );
   }
 
@@ -99,7 +101,7 @@ export class DataPipelinesService {
     data: UpdatePipelineDto,
   ): Promise<Pipeline> {
     return ApiClient.patch<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}`,
       data,
     );
   }
@@ -112,7 +114,7 @@ export class DataPipelinesService {
     pipelineId: string,
   ): Promise<{ deletedId: string }> {
     return ApiClient.delete<{ deletedId: string }>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}`,
     );
   }
 
@@ -129,7 +131,7 @@ export class DataPipelinesService {
     options?: RunPipelineDto,
   ): Promise<PipelineRun> {
     return ApiClient.post<PipelineRun>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/run`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/run`,
       options || {},
     );
   }
@@ -142,7 +144,7 @@ export class DataPipelinesService {
     pipelineId: string,
   ): Promise<Pipeline> {
     return ApiClient.post<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/pause`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/pause`,
       {},
     );
   }
@@ -155,7 +157,7 @@ export class DataPipelinesService {
     pipelineId: string,
   ): Promise<Pipeline> {
     return ApiClient.post<Pipeline>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/resume`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/resume`,
     );
   }
 
@@ -168,7 +170,7 @@ export class DataPipelinesService {
     runId: string,
   ): Promise<PipelineRun> {
     return ApiClient.post<PipelineRun>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/runs/${runId}/cancel`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/runs/${runId}/cancel`,
     );
   }
 
@@ -184,7 +186,7 @@ export class DataPipelinesService {
     pipelineId: string,
   ): Promise<ValidationResult> {
     return ApiClient.post<ValidationResult>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/validate`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/validate`,
     );
   }
 
@@ -197,7 +199,7 @@ export class DataPipelinesService {
     options?: DryRunPipelineDto,
   ): Promise<DryRunResult> {
     return ApiClient.post<DryRunResult>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/dry-run`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/dry-run`,
       options || {},
     );
   }
@@ -220,7 +222,7 @@ export class DataPipelinesService {
     if (offset) params.append("offset", offset.toString());
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return ApiClient.get<PipelineRun[]>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/runs${queryString}`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/runs${queryString}`,
     );
   }
 
@@ -233,13 +235,38 @@ export class DataPipelinesService {
     runId: string,
   ): Promise<PipelineRun> {
     return ApiClient.get<PipelineRun>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/runs/${runId}`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/runs/${runId}`,
     );
   }
 
   // ============================================================================
   // PIPELINE STATISTICS
   // ============================================================================
+
+  /**
+   * Get sync state (cursor/LSN) for incremental/CDC pipelines.
+   * NestJS owns state — stored in pipeline.checkpoint.
+   */
+  static async getSyncState(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<{ pipeline_id: string; state: Record<string, unknown> | null; message: string }> {
+    return ApiClient.get(
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/sync-state`,
+    );
+  }
+
+  /**
+   * Reset sync state — next run will do a full sync.
+   */
+  static async resetSyncState(
+    organizationId: string,
+    pipelineId: string,
+  ): Promise<{ pipeline_id: string; deleted: boolean; message: string }> {
+    return ApiClient.delete(
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/sync-state`,
+    );
+  }
 
   /**
    * Get pipeline statistics
@@ -249,61 +276,8 @@ export class DataPipelinesService {
     pipelineId: string,
   ): Promise<PipelineStats> {
     return ApiClient.get<PipelineStats>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/pipelines/${pipelineId}/stats`,
+      `${orgPath(organizationId)}/pipelines/${pipelineId}/stats`,
     );
   }
 
-  // ============================================================================
-  // SOURCE SCHEMA
-  // ============================================================================
-
-  /**
-   * Get source schema by ID
-   */
-  static async getSourceSchema(
-    organizationId: string,
-    schemaId: string,
-  ): Promise<PipelineSourceSchema> {
-    return ApiClient.get<PipelineSourceSchema>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/source-schemas/${schemaId}`,
-    );
-  }
-
-  /**
-   * List source schemas for organization
-   */
-  static async listSourceSchemas(
-    organizationId: string,
-  ): Promise<PipelineSourceSchema[]> {
-    return ApiClient.get<PipelineSourceSchema[]>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/source-schemas`,
-    );
-  }
-
-  // ============================================================================
-  // DESTINATION SCHEMA
-  // ============================================================================
-
-  /**
-   * Get destination schema by ID
-   */
-  static async getDestinationSchema(
-    organizationId: string,
-    schemaId: string,
-  ): Promise<PipelineDestinationSchema> {
-    return ApiClient.get<PipelineDestinationSchema>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/destination-schemas/${schemaId}`,
-    );
-  }
-
-  /**
-   * List destination schemas for organization
-   */
-  static async listDestinationSchemas(
-    organizationId: string,
-  ): Promise<PipelineDestinationSchema[]> {
-    return ApiClient.get<PipelineDestinationSchema[]>(
-      `${DataPipelinesService.BASE_PATH}/${organizationId}/destination-schemas`,
-    );
-  }
 }

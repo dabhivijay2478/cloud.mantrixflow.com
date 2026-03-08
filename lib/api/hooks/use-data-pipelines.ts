@@ -5,6 +5,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { handleApiError } from "../error-handler";
 import { DataPipelinesService } from "../services/data-pipelines.service";
 import type {
   CreatePipelineDto,
@@ -74,6 +75,8 @@ export const dataPipelinesKeys = {
       organizationId,
       pipelineId,
     ] as const,
+  syncState: (organizationId: string, pipelineId: string) =>
+    [...dataPipelinesKeys.all, "sync-state", organizationId, pipelineId] as const,
 };
 
 // ============================================================================
@@ -93,6 +96,7 @@ export function useCreatePipeline(organizationId: string | undefined) {
       }
       return DataPipelinesService.createPipeline(organizationId, data);
     },
+    onError: (error) => handleApiError(error),
     onSuccess: () => {
       if (organizationId) {
         // Invalidate all pipeline list queries (including paginated)
@@ -775,13 +779,62 @@ export function usePipelineRun(
       );
     },
     enabled: !!organizationId && !!pipelineId && !!runId,
-    refetchInterval: (data) => {
-      // Poll every 5 seconds if run is still in progress
-      const status = data?.state?.data?.status;
+    refetchInterval: (query) => {
+      const status = query?.state?.data?.status;
       if (status === "running" || status === "pending") {
         return 5000;
       }
       return false;
+    },
+  });
+}
+
+/**
+ * Get sync state (cursor/LSN) for incremental/CDC pipelines
+ */
+export function useGetSyncState(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
+  return useQuery({
+    queryKey: dataPipelinesKeys.syncState(organizationId || "", pipelineId || ""),
+    queryFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.getSyncState(organizationId, pipelineId);
+    },
+    enabled: !!organizationId && !!pipelineId,
+  });
+}
+
+/**
+ * Reset sync state — next run will do full sync
+ */
+export function useResetSyncState(
+  organizationId: string | undefined,
+  pipelineId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      if (!organizationId || !pipelineId) {
+        throw new Error("Organization ID and Pipeline ID are required");
+      }
+      return DataPipelinesService.resetSyncState(organizationId, pipelineId);
+    },
+    onSuccess: () => {
+      if (organizationId && pipelineId) {
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.syncState(organizationId, pipelineId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.full(organizationId, pipelineId),
+        });
+      }
     },
   });
 }

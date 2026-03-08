@@ -29,12 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useConnection } from "@/lib/api/hooks/use-connection";
 import {
+  useConnection,
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
-import { PythonETLService } from "@/lib/api/services/python-etl.service";
+import { ConnectionService } from "@/lib/api/services/connection.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export interface CollectorConfig {
@@ -54,10 +54,14 @@ export interface CollectorConfig {
     name: string;
     collectorId?: string;
     emitterId?: string;
-    fieldMappings?: Array<{ source: string; destination: string }>; // JSON array format
-    transformScript?: string; // Custom Python transform script (preferred over field mappings)
+    customSql?: string; // dbt SQL - runs against raw_input
     destinationTable?: string; // Selected destination table (schema.table format)
-    primaryKeyField?: string; // Explicitly defined primary key field name
+    primaryKeyField?: string; // Primary key for upsert
+    fieldMappings?: Array<
+      | { from_col: string; to_col: string }
+      | { source: string; destination: string; isPrimaryKey?: boolean }
+    >;
+    transformScript?: string;
   }>;
 }
 
@@ -74,35 +78,40 @@ export function CollectorStep({
   const { currentOrganization, datasets } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
 
-  // Fetch connections from API
-  // Note: Currently using legacy postgres connections API
-  // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
+  // Fetch connections from API (dlt scope: PostgreSQL + MongoDB sources)
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
 
+  // Filter to only source connections (collector = data sources)
+  // dlt scope: PostgreSQL + MongoDB only
+  const sourceConnections =
+    connections?.filter(
+      (conn) => (conn.connectorRole ?? "source") === "source",
+    ) ?? [];
+
   // Convert API connections to DataSource format for compatibility
-  const dataSources =
-    connections?.map((conn) => ({
-      id: conn.id,
-      name: conn.name,
-      type: (conn.type || "postgres") as
-        | "postgres"
-        | "mysql"
-        | "mongodb"
-        | "s3"
-        | "api"
-        | "bigquery"
-        | "snowflake"
-        | "redshift"
-        | "clickhouse",
-      status:
-        conn.status === "active"
-          ? ("connected" as const)
-          : ("disconnected" as const),
-      organizationId: conn.orgId || organizationId,
-      connectedAt: conn.lastConnectedAt || undefined,
-      tables: [], // Will be populated when needed
-    })) || [];
+  const dataSources = sourceConnections.map((c) => {
+    const rec = c as {
+      status?: string;
+      orgId?: string;
+      lastConnectedAt?: string;
+    };
+    const statusVal: "connected" | "disconnected" =
+      rec.status === "active" ? "connected" : "disconnected";
+    const orgId = rec.orgId ?? organizationId ?? "";
+    const connectedAt = rec.lastConnectedAt;
+    const tables: string[] = [];
+    const connectionType = (c.type || "postgres").toLowerCase();
+    return {
+      id: c.id,
+      name: c.name,
+      type: connectionType,
+      status: statusVal,
+      organizationId: orgId,
+      connectedAt,
+      tables,
+    };
+  });
 
   const [collectors, setCollectors] =
     useState<CollectorConfig[]>(initialCollectors);
@@ -117,13 +126,6 @@ export function CollectorStep({
     error?: string;
   } | null>(null);
 
-  // Get connection details for testing
-  const { data: connection } = useConnection(
-    organizationId,
-    selectedSourceId,
-    true, // includeSensitive to get full config for testing
-  );
-
   // Update collectors when initialCollectors prop changes (for edit mode)
   useEffect(() => {
     if (initialCollectors && initialCollectors.length > 0) {
@@ -134,6 +136,19 @@ export function CollectorStep({
   const selectedSource = dataSources.find((ds) => ds.id === selectedSourceId);
   const _sourceDatasets = datasets.filter(
     (ds) => ds.dataSourceId === selectedSourceId,
+  );
+
+  // Fetch connection for selected source (includes config for "Test Connection" visibility)
+  const { data: connection, isLoading: connectionLoading } = useConnection(
+    organizationId,
+    selectedSourceId || undefined,
+  );
+  const hasConnectionConfig = !!(
+    connection &&
+    "config" in connection &&
+    connection.config &&
+    typeof connection.config === "object" &&
+    Object.keys(connection.config as Record<string, unknown>).length > 0
   );
 
   // Fetch schemas with tables for the selected source
@@ -208,10 +223,10 @@ export function CollectorStep({
   };
 
   const handleTestConnection = async () => {
-    if (!selectedSourceId || !connection?.config || !organizationId) {
+    if (!selectedSourceId || !organizationId) {
       setConnectionTestResult({
         success: false,
-        error: "Please select a data source with a configured connection",
+        error: "Please select a data source before testing the connection",
       });
       return;
     }
@@ -220,34 +235,14 @@ export function CollectorStep({
     setConnectionTestResult(null);
 
     try {
-      const selectedSource = dataSources.find(
-        (ds) => ds.id === selectedSourceId,
+      const result = await ConnectionService.testConnection(
+        organizationId,
+        selectedSourceId,
       );
-      const sourceType = selectedSource?.type || "postgres";
-
-      // Map connection config to test connection format
-      const testConfig = {
-        type: sourceType,
-        ...(connection.config as unknown as Record<string, unknown>),
-      } as {
-        type: string;
-        [key: string]: unknown;
-      };
-
-      // Normalize field names (safely access union type properties)
-      const config = connection.config as unknown as Record<string, unknown>;
-      if (config.username && !testConfig.username) {
-        testConfig.username = config.username;
-      }
-      if (config.user && !testConfig.user) {
-        testConfig.user = config.user;
-      }
-
-      const result = await PythonETLService.testConnection(testConfig);
 
       setConnectionTestResult({
         success: result.success,
-        message: result.message || "Connection successful",
+        message: result.message,
         error: result.error,
       });
     } catch (error) {
@@ -431,7 +426,7 @@ export function CollectorStep({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="data-source-select">Data Source</Label>
-              {selectedSourceId && connection?.config && (
+              {selectedSourceId && hasConnectionConfig && (
                 <Button
                   type="button"
                   variant="outline"
@@ -523,7 +518,7 @@ export function CollectorStep({
                 </AlertDescription>
               </Alert>
             )}
-            {selectedSourceId && !connection?.config && (
+            {selectedSourceId && !connectionLoading && !hasConnectionConfig && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -556,7 +551,7 @@ export function CollectorStep({
                       }}
                       selectedTables={new Set(selectedTables)}
                       searchable={true}
-                      isLoading={false}
+                      isLoading={schemasLoading}
                     />
                   </div>
                   {selectedTables.length > 0 && (

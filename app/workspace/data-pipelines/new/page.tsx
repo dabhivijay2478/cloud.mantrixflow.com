@@ -1,11 +1,14 @@
 "use client";
 
+import { XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/api/error-handler";
 import { useConnections } from "@/lib/api/hooks/use-data-sources";
 import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
@@ -25,20 +28,9 @@ interface PipelineConfig {
 }
 
 type Transformer = CollectorConfig["transformers"][number];
-type SourceType = "postgres" | "mysql" | "mongodb";
 
-function normalizeSourceType(sourceType: string | undefined): SourceType {
-  const normalized = sourceType?.toLowerCase() || "postgres";
-  if (normalized === "postgresql") {
-    return "postgres";
-  }
-  if (normalized === "mysql") {
-    return "mysql";
-  }
-  if (normalized === "mongodb") {
-    return "mongodb";
-  }
-  return "postgres";
+function normalizeSourceType(sourceType: string | undefined): string {
+  return sourceType?.trim().toLowerCase() || "postgres";
 }
 
 export default function NewPipelinePage() {
@@ -77,6 +69,7 @@ export default function NewPipelinePage() {
   };
 
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleCreatePipeline = async (
     collectorsOverride?: CollectorConfig[],
@@ -85,23 +78,20 @@ export default function NewPipelinePage() {
     // This fixes the issue where newly created transformers aren't detected on first save
     const collectorsToUse = collectorsOverride || config.collectors;
 
-    // Validate that at least one transformer with transform script exists
-    // Only script-based transformations are allowed for now (field mappings are commented out)
-    const hasValidTransformers = collectorsToUse.some((collector) => {
+    // dlt: require at least one config (destination table + sync settings)
+    const hasValidConfig = collectorsToUse.some((collector) => {
       if (!collector.transformers || collector.transformers.length === 0) {
         return false;
       }
-
-      return collector.transformers.some((t) => {
-        // Check if transformScript exists and is not empty
-        return t.transformScript && t.transformScript.trim().length > 0;
-      });
+      return collector.transformers.some((t) =>
+        (t as { destinationTable?: string }).destinationTable?.trim(),
+      );
     });
 
-    if (!hasValidTransformers) {
+    if (!hasValidConfig) {
       toast.error(
-        "Missing transform script",
-        "Please configure at least one transformer with a Python transform script before creating the pipeline.",
+        "Missing config",
+        "Please configure at least one mapping (collector → emitter → destination table) in the Config step.",
       );
       return;
     }
@@ -133,6 +123,7 @@ export default function NewPipelinePage() {
     }
 
     setIsCreating(true);
+    setCreateError(null);
 
     // Get all unique source IDs and destination IDs
     const _allSourceIds = [...new Set(collectorsToUse.map((c) => c.sourceId))];
@@ -148,6 +139,9 @@ export default function NewPipelinePage() {
     const allDestinationIds = [
       ...new Set(allEmitters.map((e) => e.destinationId)),
     ];
+    const allTransformers = collectorsToUse.flatMap(
+      (collector) => collector.transformers || [],
+    );
 
     // Validate that we have emitters
     if (allEmitters.length === 0) {
@@ -179,6 +173,30 @@ export default function NewPipelinePage() {
       return;
     }
 
+    if (collectorsToUse.length !== 1) {
+      toast.error(
+        "Unsupported pipeline shape",
+        "This Singer pipeline flow currently supports exactly one source connection per pipeline.",
+      );
+      return;
+    }
+
+    if (allEmitters.length !== 1 || allDestinationIds.length !== 1) {
+      toast.error(
+        "Unsupported pipeline shape",
+        "This Singer pipeline flow currently supports exactly one destination per pipeline.",
+      );
+      return;
+    }
+
+    if (allTransformers.length !== 1) {
+      toast.error(
+        "Unsupported pipeline shape",
+        "This Singer pipeline flow currently supports exactly one transform per pipeline.",
+      );
+      return;
+    }
+
     // Note: emitters mapping is no longer needed for schema-based API
     // The destination schema is created directly from transformer field mappings
 
@@ -187,6 +205,15 @@ export default function NewPipelinePage() {
       const firstCollector = collectorsToUse[0];
       const primarySourceId = firstCollector.sourceId;
       const firstTable = firstCollector.selectedTables[0];
+
+      if (firstCollector.selectedTables.length !== 1) {
+        toast.error(
+          "Unsupported pipeline shape",
+          "This Singer pipeline flow currently supports exactly one source table per pipeline.",
+        );
+        setIsCreating(false);
+        return;
+      }
 
       if (!firstTable) {
         toast.error(
@@ -198,7 +225,7 @@ export default function NewPipelinePage() {
       }
 
       // Get data source to determine source type.
-      let sourceType: SourceType = "postgres";
+      let sourceType = "postgres";
       try {
         if (!organizationId) {
           throw new Error("Organization ID is required");
@@ -217,7 +244,6 @@ export default function NewPipelinePage() {
           "Failed to fetch data source, using default type:",
           error,
         );
-        // Try to get from connections cache if available
         const cachedConnection = connections?.find(
           (c) => c.id === primarySourceId,
         );
@@ -234,53 +260,33 @@ export default function NewPipelinePage() {
         }
       }
 
-      // Parse table name based on source type
-      // For MongoDB: format is "database.collection" or just "collection"
-      // For SQL: format is "schema.table" or just "table"
-      const isMongoDB = sourceType === "mongodb";
+      // Parse table name (PostgreSQL: schema.table or just table)
       let sourceSchemaName: string | undefined;
       let sourceTableName: string;
 
       if (firstTable.includes(".")) {
         const parts = firstTable.split(".");
-        if (isMongoDB) {
-          // MongoDB: "database.collection"
-          sourceSchemaName = parts[0]; // database name
-          sourceTableName = parts[1]; // collection name
-        } else {
-          // SQL: "schema.table"
-          sourceSchemaName = parts[0] || "public";
-          sourceTableName = parts[1] || parts[0] || firstTable;
-        }
+        sourceSchemaName = parts[0] || "public";
+        sourceTableName = parts[1] || parts[0] || firstTable;
       } else {
-        // No prefix - handle based on source type
-        if (isMongoDB) {
-          // MongoDB: just collection name, no database specified
-          sourceSchemaName = undefined; // Will search all databases
-          sourceTableName = firstTable;
-        } else {
-          // SQL: just table name, default to public schema
-          sourceSchemaName = "public";
-          sourceTableName = firstTable;
-        }
+        sourceSchemaName = "public";
+        sourceTableName = firstTable;
       }
 
       // Get destination connection ID from emitters
       const destinationConnectionId = allDestinationIds[0];
 
-      // Extract destination information from transformers
-      // Only script-based transformations are allowed for now
+      // Extract destination information from first configured transformer
       const firstTransformer = collectorsToUse
         .flatMap((c) => c.transformers || [])
-        .find((t) => t.transformScript?.trim());
+        .find((t) =>
+          (t as { destinationTable?: string }).destinationTable?.trim(),
+        );
 
-      // Check if transformer has transformScript
-      const hasTransformScript = firstTransformer?.transformScript?.trim();
-
-      if (!firstTransformer || !hasTransformScript) {
+      if (!firstTransformer) {
         toast.error(
-          "No transformation configured",
-          "Please configure a Python transform script in the transform step.",
+          "No config",
+          "Please configure destination table in the Config step.",
         );
         setIsCreating(false);
         return;
@@ -304,14 +310,47 @@ export default function NewPipelinePage() {
       const destTableName =
         destTableParts[1] || destTableParts[0] || destinationTable;
 
-      // Transform script is already in firstTransformer.transformScript
+      const transformerWithConfig = firstTransformer as {
+        transformType?: "script" | "dbt";
+        transformScript?: string;
+        customSql?: string;
+        primaryKeyField?: string;
+        upsertKey?: string[];
+      };
 
-      // Extract primary keys from field mappings (commented out - field mappings not used for now)
-      const primaryKeyFields: string[] = []; // Empty for now - can be extracted from script if needed
+      const destTransformType =
+        transformerWithConfig.transformType === "dbt" ? "dbt" : "script";
+      const customSql = transformerWithConfig.customSql?.trim();
+      const transformScript = transformerWithConfig.transformScript?.trim();
 
-      // Determine write mode (default to append, could be enhanced)
-      const writeMode: "append" | "upsert" | "replace" =
-        primaryKeyFields.length > 0 ? "upsert" : "append";
+      if (destTransformType !== "script") {
+        toast.error(
+          "Unsupported transform mode",
+          "Singer pipelines currently support Python script transforms only.",
+        );
+        setIsCreating(false);
+        return;
+      }
+
+      if (!transformScript) {
+        toast.error(
+          "Validation failed",
+          "Python transform script is required when using Script transform mode.",
+        );
+        setIsCreating(false);
+        return;
+      }
+
+      // Primary key from transformer (for upsert) — support upsertKey (multi) or legacy primaryKeyField
+      const primaryKeyFields: string[] = transformerWithConfig.upsertKey?.length
+        ? transformerWithConfig.upsertKey
+        : transformerWithConfig.primaryKeyField
+          ? [transformerWithConfig.primaryKeyField]
+          : [];
+
+      // Fixed defaults: first run = full sync, write mode = upsert (best practice for incremental)
+      const writeMode: "append" | "upsert" | "replace" = "upsert";
+      const syncMode: "full" | "log_based" = "full";
 
       if (!organizationId) {
         toast.error("Error", "Organization ID is required");
@@ -330,7 +369,8 @@ export default function NewPipelinePage() {
         },
       );
 
-      // Create destination schema in NestJS.
+      // Create destination schema in NestJS
+      // User selects from existing tables only, so destinationTableExists is always true
       const destinationSchema =
         await DestinationSchemasService.createDestinationSchema(
           organizationId,
@@ -338,26 +378,28 @@ export default function NewPipelinePage() {
             dataSourceId: destinationConnectionId,
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
-            transformScript: firstTransformer.transformScript || "",
+            transformType: destTransformType,
+            transformScript,
+            customSql: undefined,
             writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
             name: `Destination: ${destTableName}`,
+            destinationTableExists: true,
           },
         );
 
-      // Create pipeline referencing created schemas.
+      // Create pipeline referencing created schemas (no transformations - use script/dbt only)
       await DataPipelinesService.createPipeline(organizationId, {
         name: pipelineName.trim(),
-        description: `Pipeline with ${collectorsToUse.length} collector(s)`,
+        description: `Pipeline from ${sourceSchemaName}.${sourceTableName} to ${destSchemaName}.${destTableName}`,
         sourceSchemaId: sourceSchema.id,
         destinationSchemaId: destinationSchema.id,
-        syncMode: "incremental",
-        scheduleType: "minutes",
-        scheduleValue: "2",
+        syncMode,
+        scheduleType: "none",
+        scheduleValue: "",
         scheduleTimezone:
           Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-        transformations: [],
       });
 
       toast.success(
@@ -366,10 +408,9 @@ export default function NewPipelinePage() {
       );
       router.push("/workspace/data-pipelines");
     } catch (error) {
-      toast.error(
-        "Failed to create pipeline",
-        error instanceof Error ? error.message : "Unknown error occurred",
-      );
+      const message = getApiErrorMessage(error);
+      setCreateError(message);
+      toast.error("Failed to create pipeline", message);
     } finally {
       setIsCreating(false);
     }
@@ -389,8 +430,8 @@ export default function NewPipelinePage() {
       },
       {
         id: "transform",
-        label: "Transform",
-        description: "Map fields to schema",
+        label: "Config",
+        description: "Sync mode, write mode, primary key",
       },
       {
         id: "configure",
@@ -462,7 +503,10 @@ export default function NewPipelinePage() {
                     type="text"
                     placeholder="e.g. Company Roles Sync, Daily Users Import..."
                     value={pipelineName}
-                    onChange={(e) => setPipelineName(e.target.value)}
+                    onChange={(e) => {
+                      setPipelineName(e.target.value);
+                      if (createError) setCreateError(null);
+                    }}
                     className="mt-1.5"
                     autoFocus
                   />
@@ -472,6 +516,21 @@ export default function NewPipelinePage() {
                     </p>
                   )}
                 </div>
+                {createError && (
+                  <Card className="mt-6 border-destructive/50 bg-destructive/5">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
+                        <XCircle className="h-4 w-4" />
+                        Validation Error
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <pre className="text-sm text-muted-foreground whitespace-pre-wrap break-words font-sans max-h-48 overflow-y-auto">
+                        {createError}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                )}
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Button
                     variant="outline"

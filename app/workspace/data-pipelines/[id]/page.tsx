@@ -19,7 +19,13 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import { DataPreviewTable, ScheduleEditor } from "@/components/data-pipelines";
+import {
+  CdcSetupModal,
+  DataPreviewTable,
+  ScheduleEditor,
+  SchemaView,
+  TransformCodeView,
+} from "@/components/data-pipelines";
 import { LoadingState } from "@/components/shared";
 import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +40,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  useCancelPipelineRun,
   useDeletePipeline,
   usePausePipeline,
   usePipelineRuns,
@@ -44,6 +51,7 @@ import {
   useUpdatePipeline,
   useValidatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import { useCdcStatus } from "@/lib/api/hooks/use-data-source";
 import { usePreviewDestinationData } from "@/lib/api/hooks/use-destination-schemas";
 import { usePreviewSourceData } from "@/lib/api/hooks/use-source-schemas";
 import type { PipelineRun, ScheduleType } from "@/lib/api/types/data-pipelines";
@@ -59,6 +67,12 @@ export default function PipelineDetailPage() {
 
   // Delete confirmation modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // CDC setup modal (when LOG_BASED and CDC not verified)
+  const [showCdcSetup, setShowCdcSetup] = useState(false);
+  // Expanded error for run history (runId -> expanded)
+  const [expandedRunErrors, setExpandedRunErrors] = useState<
+    Record<string, boolean>
+  >({});
 
   // Schedule editing state
   const [scheduleConfig, setScheduleConfig] = useState<{
@@ -88,13 +102,30 @@ export default function PipelineDetailPage() {
   );
   const { data: stats } = usePipelineStats(organizationId, pipelineId);
 
+  // CDC status for LOG_BASED pipelines (source data source)
+  const sourceDataSourceId = pipeline?.sourceSchema?.dataSourceId;
+  const { data: cdcStatus } = useCdcStatus(
+    organizationId,
+    sourceDataSourceId ?? undefined,
+    !!(
+      organizationId &&
+      sourceDataSourceId &&
+      (pipeline?.syncMode === "cdc" || pipeline?.syncMode === "log_based")
+    ),
+  );
+  const cdcVerified =
+    cdcStatus?.cdc_prerequisites_status?.overall === "verified";
+
   // Mutations
   const runPipeline = useRunPipeline(organizationId, pipelineId);
   const pausePipeline = usePausePipeline(organizationId, pipelineId);
   const resumePipeline = useResumePipeline(organizationId, pipelineId);
   const validatePipeline = useValidatePipeline(organizationId, pipelineId);
+  const cancelPipelineRun = useCancelPipelineRun(organizationId, pipelineId);
   const deletePipeline = useDeletePipeline(organizationId);
   const updatePipeline = useUpdatePipeline(organizationId, pipelineId);
+
+  const activeRun = runs?.find((r) => r.status === "running");
 
   // Source & destination data previews (top 10 rows, lazy-loaded)
   const sourceSchemaId = pipelineData?.pipeline?.sourceSchemaId;
@@ -185,10 +216,11 @@ export default function PipelineDetailPage() {
   useEffect(() => {
     if (!pipelineId || !organizationId) return;
 
-    // API URL from environment only (NEXT_PUBLIC_API_URL in apps/app .env)
+    // WebSocket base URL: NEXT_PUBLIC_WS_URL when set, else derive from NEXT_PUBLIC_API_URL
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) return;
-    const socketUrl = apiUrl.replace("/api", ""); // Remove /api prefix if present
+    const socketUrl = wsUrl || (apiUrl ? apiUrl.replace(/\/api\/?$/, "") : "");
+    if (!socketUrl) return;
 
     // Connect to Socket.io
     const socket = io(`${socketUrl}/pipelines`, {
@@ -340,6 +372,12 @@ export default function PipelineDetailPage() {
   }
 
   const handleRun = async () => {
+    const isCdcOrLogBased =
+      pipeline.syncMode === "cdc" || pipeline.syncMode === "log_based";
+    if (isCdcOrLogBased && !cdcVerified) {
+      setShowCdcSetup(true);
+      return;
+    }
     try {
       await runPipeline.mutateAsync(undefined);
       toast.success("Pipeline started", `${pipeline.name} is now running.`);
@@ -370,6 +408,19 @@ export default function PipelineDetailPage() {
     } catch (error) {
       toast.error(
         "Failed to resume",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    }
+  };
+
+  const handleCancelRun = async () => {
+    if (!activeRun?.id) return;
+    try {
+      await cancelPipelineRun.mutateAsync(activeRun.id);
+      toast.success("Run cancelled", "The pipeline run has been cancelled.");
+    } catch (error) {
+      toast.error(
+        "Failed to cancel",
         error instanceof Error ? error.message : "Unknown error",
       );
     }
@@ -508,7 +559,20 @@ export default function PipelineDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {pipeline.status === "running" ? (
+          {pipeline.status === "running" && activeRun ? (
+            <Button
+              variant="outline"
+              onClick={handleCancelRun}
+              disabled={cancelPipelineRun.isPending}
+            >
+              {cancelPipelineRun.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              {cancelPipelineRun.isPending ? "Cancelling…" : "Cancel Run"}
+            </Button>
+          ) : pipeline.status === "running" ? (
             <Button disabled variant="outline">
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Running...
@@ -528,18 +592,49 @@ export default function PipelineDetailPage() {
                 <Pause className="h-4 w-4 mr-2" />
                 Pause Auto-Sync
               </Button>
+              {(pipeline.syncMode === "cdc" ||
+                pipeline.syncMode === "log_based") &&
+                !cdcVerified && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCdcSetup(true)}
+                  >
+                    Set Up CDC
+                  </Button>
+                )}
               <Button
                 onClick={handleRun}
                 disabled={runPipeline.isPending}
                 variant="secondary"
               >
                 <Zap className="h-4 w-4 mr-2" />
-                Sync Now
+                {(pipeline.syncMode === "cdc" ||
+                  pipeline.syncMode === "log_based") &&
+                !pipeline.fullRefreshCompletedAt
+                  ? "Run Initial Sync"
+                  : "Sync Now"}
               </Button>
             </>
           )}
         </div>
       </div>
+
+      {/* Pipeline-level error when status is failed */}
+      {pipeline.status === "failed" && pipeline.lastError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
+              <XCircle className="h-4 w-4" />
+              Last Error
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-sm text-muted-foreground whitespace-pre-wrap break-words font-sans max-h-48 overflow-y-auto">
+              {pipeline.lastError}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -621,8 +716,12 @@ export default function PipelineDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="runs" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex flex-wrap">
           <TabsTrigger value="runs">Run History</TabsTrigger>
+          <TabsTrigger value="code">Code</TabsTrigger>
+          <TabsTrigger value="explore">Explore</TabsTrigger>
+          <TabsTrigger value="incoming">Incoming Data</TabsTrigger>
+          <TabsTrigger value="outgoing">Outgoing Data</TabsTrigger>
           <TabsTrigger value="config">Configuration</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -644,49 +743,94 @@ export default function PipelineDetailPage() {
                   {runs.map((run) => (
                     <div
                       key={run.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="border rounded-lg overflow-hidden"
                     >
-                      <div className="flex items-center gap-4">
-                        {getRunStatusBadge(run)}
-                        <div>
-                          <div className="text-sm font-medium">
-                            {run.startedAt
-                              ? new Date(run.startedAt).toLocaleString()
-                              : "-"}
+                      <div className="flex items-center justify-between p-3">
+                        <div className="flex items-center gap-4">
+                          {getRunStatusBadge(run)}
+                          <div>
+                            <div className="text-sm font-medium">
+                              {run.startedAt
+                                ? new Date(run.startedAt).toLocaleString()
+                                : "-"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Triggered: {run.triggerType}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Triggered: {run.triggerType}
+                        </div>
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <div className="font-medium">
+                              {run.rowsWritten?.toLocaleString() || 0}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Written
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium">
+                              {run.rowsFailed?.toLocaleString() || 0}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Failed
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium">
+                              {run.durationSeconds
+                                ? `${run.durationSeconds}s`
+                                : "-"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Duration
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-6 text-sm">
-                        <div className="text-center">
-                          <div className="font-medium">
-                            {run.rowsWritten?.toLocaleString() || 0}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Written
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-medium">
-                            {run.rowsFailed?.toLocaleString() || 0}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Failed
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-medium">
-                            {run.durationSeconds
-                              ? `${run.durationSeconds}s`
-                              : "-"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Duration
-                          </div>
-                        </div>
-                      </div>
+                      {run.status === "failed" &&
+                        (() => {
+                          const errMsg =
+                            run.errorMessage ??
+                            (run as { error_message?: string }).error_message ??
+                            "Unknown error";
+                          return (
+                            <div className="border-t bg-destructive/5 px-3 py-2">
+                              <div className="flex items-start gap-2">
+                                <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium text-destructive mb-1">
+                                    Error
+                                  </p>
+                                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words font-sans">
+                                    {expandedRunErrors[run.id]
+                                      ? errMsg
+                                      : errMsg.length > 500
+                                        ? `${errMsg.slice(0, 500)}...`
+                                        : errMsg}
+                                  </pre>
+                                  {errMsg.length > 500 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="mt-2 h-7 text-xs"
+                                      onClick={() =>
+                                        setExpandedRunErrors((prev) => ({
+                                          ...prev,
+                                          [run.id]: !prev[run.id],
+                                        }))
+                                      }
+                                    >
+                                      {expandedRunErrors[run.id]
+                                        ? "Show less"
+                                        : "Show more"}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                     </div>
                   ))}
                 </div>
@@ -695,6 +839,165 @@ export default function PipelineDetailPage() {
                   No runs yet. Click "Run Now" to execute the pipeline.
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Code Tab */}
+        <TabsContent value="code" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Transform Code</CardTitle>
+              <CardDescription>
+                Python function applied to each record before writing to
+                destination
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pipeline.destinationSchema?.transformScript ? (
+                <TransformCodeView
+                  script={pipeline.destinationSchema.transformScript}
+                  onEditClick={() =>
+                    router.push(`/workspace/data-pipelines/${pipelineId}/edit`)
+                  }
+                />
+              ) : (
+                <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg bg-muted/30">
+                  No transform script. Add one in the{" "}
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 text-sm"
+                    onClick={() =>
+                      router.push(
+                        `/workspace/data-pipelines/${pipelineId}/edit`,
+                      )
+                    }
+                    type="button"
+                  >
+                    pipeline editor
+                  </Button>
+                  .
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Explore Tab */}
+        <TabsContent value="explore" className="space-y-4">
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">Sample Records</h3>
+            <p className="text-sm text-muted-foreground">
+              Preview transformed data (top 10 rows)
+            </p>
+            <DataPreviewTable
+              title="Incoming Data Preview"
+              description={
+                pipeline.sourceSchema?.sourceTable
+                  ? `${pipeline.sourceSchema.sourceSchema || "public"}.${pipeline.sourceSchema.sourceTable}`
+                  : undefined
+              }
+              rows={sourcePreview?.rows || []}
+              isLoading={sourcePreviewLoading}
+              error={sourcePreviewError?.message ?? null}
+              onRefresh={() => refetchSourcePreview()}
+              isRefreshing={sourcePreviewRefreshing}
+              showRecordCountLabel
+            />
+            <DataPreviewTable
+              title="Transformed Output Preview"
+              description={
+                pipeline.destinationSchema
+                  ? `${pipeline.destinationSchema.destinationSchema}.${pipeline.destinationSchema.destinationTable}`
+                  : undefined
+              }
+              rows={destinationPreview?.rows || []}
+              isLoading={destPreviewLoading}
+              error={destPreviewError?.message ?? null}
+              onRefresh={() => refetchDestPreview()}
+              isRefreshing={destPreviewRefreshing}
+              showRecordCountLabel
+            />
+          </div>
+        </TabsContent>
+
+        {/* Incoming Data Tab */}
+        <TabsContent value="incoming" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Incoming Data Schema</CardTitle>
+              <CardDescription>
+                Read-only schema from source (discovered automatically)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SchemaView
+                title="Incoming"
+                streamName={
+                  pipeline.sourceSchema?.sourceTable
+                    ? `${pipeline.sourceSchema.sourceSchema || "public"}.${pipeline.sourceSchema.sourceTable}`
+                    : undefined
+                }
+                fields={
+                  pipeline.sourceSchema?.discoveredColumns?.length
+                    ? pipeline.sourceSchema.discoveredColumns.map((c) => ({
+                        name: c.name,
+                        type: c.type ?? "string",
+                        nullable: c.nullable,
+                        isPrimaryKey: c.primaryKey ?? false,
+                      }))
+                    : (sourcePreview?.columns ?? []).map((column) => ({
+                        name: column.name,
+                        type: column.type ?? "string",
+                        nullable: column.nullable ?? true,
+                        isPrimaryKey: column.primaryKey ?? false,
+                      }))
+                }
+                lastRefreshedAt={pipeline.sourceSchema?.lastDiscoveredAt}
+                emptyMessage="Run schema discovery in the pipeline editor to populate."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Outgoing Data Tab */}
+        <TabsContent value="outgoing" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Outgoing Data Schema</CardTitle>
+              <CardDescription>
+                Schema derived from transform output (what lands in destination)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SchemaView
+                title="Outgoing"
+                streamName={
+                  pipeline.destinationSchema
+                    ? `${pipeline.destinationSchema.destinationSchema}.${pipeline.destinationSchema.destinationTable}`
+                    : undefined
+                }
+                fields={
+                  destinationPreview?.columns?.length
+                    ? destinationPreview.columns.map((c) => ({
+                        name: c.name,
+                        type: c.type ?? "String",
+                        nullable: c.nullable ?? true,
+                        isPrimaryKey: c.primaryKey ?? false,
+                      }))
+                    : destinationPreview?.rows?.[0]
+                      ? Object.keys(
+                          destinationPreview.rows[0] as Record<string, unknown>,
+                        ).map((k) => ({
+                          name: k,
+                          type: "String",
+                          nullable: true,
+                        }))
+                      : []
+                }
+                lastRefreshedAt={pipeline.destinationSchema?.updatedAt}
+                emptyMessage="Run preview or sync to populate outgoing schema."
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -979,6 +1282,59 @@ export default function PipelineDetailPage() {
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
+          {/* Pipeline Metadata */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pipeline Settings</CardTitle>
+              <CardDescription>
+                Name and description for this pipeline
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="pipeline-name-input"
+                  className="text-sm font-medium"
+                >
+                  Name *
+                </label>
+                <input
+                  id="pipeline-name-input"
+                  type="text"
+                  defaultValue={pipeline.name}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="Pipeline name"
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== pipeline.name) {
+                      updatePipeline.mutate({ name: v });
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="pipeline-description-input"
+                  className="text-sm font-medium"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="pipeline-description-input"
+                  defaultValue={pipeline.description ?? ""}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="Optional description"
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v !== (pipeline.description ?? "")) {
+                      updatePipeline.mutate({ description: v || undefined });
+                    }
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Schedule Configuration */}
           <Card>
             <CardHeader>
@@ -1088,6 +1444,16 @@ export default function PipelineDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* CDC Setup Modal */}
+      <CdcSetupModal
+        open={showCdcSetup}
+        onOpenChange={setShowCdcSetup}
+        organizationId={organizationId ?? undefined}
+        dataSourceId={sourceDataSourceId ?? undefined}
+        dataSourceName={pipeline?.sourceSchema?.name ?? pipeline?.name}
+        onVerified={() => refetch()}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

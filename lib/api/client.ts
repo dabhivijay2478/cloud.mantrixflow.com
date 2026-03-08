@@ -87,6 +87,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
           message:
             errorData.error?.message ||
             errorData.meta?.message ||
+            errorData.message ||
             `HTTP ${response.status}: ${response.statusText}`,
           details: errorData.error?.details || errorData,
           suggestion: errorData.error?.suggestion,
@@ -171,6 +172,7 @@ export interface PaginatedListResult<T> {
   limit: number;
   offset: number;
   hasMore: boolean;
+  nextCursor?: string | null;
 }
 
 /**
@@ -200,6 +202,7 @@ async function handleListResponse<T>(
       limit: pagination?.limit ?? data.length,
       offset: pagination?.offset ?? 0,
       hasMore: pagination?.hasMore ?? false,
+      nextCursor: pagination?.nextCursor ?? undefined,
     };
   }
 

@@ -7,22 +7,10 @@
 // ENUMS (matching backend)
 // ============================================================================
 
-export type PipelineDataSourceType =
-  | "postgres"
-  | "mysql"
-  | "mongodb"
-  | "s3"
-  | "api"
-  | "bigquery"
-  | "snowflake";
+export type PipelineDataSourceType = string;
 
-export type SyncMode = "full" | "incremental";
-export type SyncFrequency =
-  | "manual"
-  | "minutes"
-  | "hourly"
-  | "daily"
-  | "weekly";
+export type SyncMode = "full" | "log_based" | "cdc" | "incremental";
+export type SyncFrequency = "manual" | "hourly" | "daily" | "weekly";
 export type WriteMode = "append" | "upsert" | "replace";
 export type PipelineStatus =
   | "idle"
@@ -139,6 +127,7 @@ export interface UpdatePipelineDto {
 export interface RunPipelineDto {
   triggerType?: TriggerType;
   batchSize?: number;
+  forceFullSync?: boolean;
 }
 
 export interface DryRunPipelineDto {
@@ -150,15 +139,11 @@ export interface DryRunPipelineDto {
 // ============================================================================
 
 export interface SourceConfig {
-  // Database (Postgres, MySQL)
+  // PostgreSQL
   host?: string;
   port?: number;
   database?: string;
   schema?: string;
-
-  // MongoDB
-  connectionString?: string;
-  collection?: string;
 
   // S3
   bucket?: string;
@@ -236,7 +221,10 @@ export interface PipelineDestinationSchema {
   destinationSchema: string;
   destinationTable: string;
   destinationTableExists: boolean;
+  transformType?: string | null;
   transformScript?: string | null;
+  dbtModel?: string | null;
+  customSql?: string | null;
   writeMode: WriteMode;
   upsertKey?: string[] | null;
   name?: string | null;
@@ -254,7 +242,10 @@ export interface CreateDestinationSchemaDto {
   destinationSchema?: string;
   destinationTable: string;
   destinationTableExists?: boolean;
-  transformScript?: string; // Custom Python transform script
+  transformType?: string; // 'script' or 'dbt'
+  dbtModel?: string; // only when transformType is dbt
+  customSql?: string; // only when transformType is dbt
+  transformScript?: string; // only when transformType is script
   writeMode?: WriteMode;
   upsertKey?: string[];
   name?: string;
@@ -264,7 +255,10 @@ export interface UpdateDestinationSchemaDto {
   name?: string;
   destinationSchema?: string;
   destinationTable?: string;
+  transformType?: string;
   transformScript?: string;
+  dbtModel?: string;
+  customSql?: string;
   writeMode?: WriteMode;
   upsertKey?: string[];
   isActive?: boolean;
@@ -305,6 +299,12 @@ export interface Pipeline {
   lastScheduledRunAt?: string | null;
   nextScheduledRunAt?: string | null;
   checkpoint?: Record<string, unknown> | null;
+  // Singer ETL fields
+  singerState?: Record<string, unknown> | null;
+  fullRefreshCompletedAt?: string | null;
+  replicationSlotName?: string | null;
+  emitMethod?: string | null;
+  transformType?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -337,6 +337,14 @@ export interface PipelineRun {
   errorStack?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  // Singer ETL fields
+  rowsDeleted?: number | null;
+  lsnStart?: number | null;
+  lsnEnd?: number | null;
+  collectionMethodUsed?: string | null;
+  emitMethodUsed?: string | null;
+  sourceTool?: string | null;
+  destTool?: string | null;
   createdAt: string;
   updatedAt: string;
 }

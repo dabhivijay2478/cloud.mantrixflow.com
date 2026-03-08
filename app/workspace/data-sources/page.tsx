@@ -3,19 +3,17 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   Check,
+  Eye,
   MoreVertical,
   Plus,
-  Table as TableIcon,
   Trash2,
   Unlink,
-  X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
-  allDataSources,
-  ConnectionSheet,
-  DataSourceGrid,
+  DataSourcePreviewDialog,
   getIconComponent,
 } from "@/components/data-sources";
 import {
@@ -34,20 +32,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useConfirmation } from "@/hooks/use-confirmation";
-import {
-  type CreateConnectionDto,
-  type TestConnectionDto,
-  useConnections,
-  useCreateConnection,
-  useUsers,
-} from "@/lib/api";
+import { useConnections, useUsers } from "@/lib/api";
 import { useDeleteDataSource } from "@/lib/api/hooks/use-data-source";
-import { useTestConnection as useTestConnectionLegacy } from "@/lib/api/hooks/use-data-sources";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
-
-type ConnectionFormValues = Record<string, string>;
 
 export default function DataSourcesPage() {
   // Get current organization from workspace store (set by sidebar selector)
@@ -61,28 +50,10 @@ export default function DataSourcesPage() {
   // TODO: Migrate to useDataSources(organizationId) for new dynamic data sources API
   const { data: connections, isLoading: connectionsLoading } =
     useConnections(organizationId);
-  const createConnection = useCreateConnection(organizationId);
   // Use NestJS API for data source deletion
   const deleteDataSource = useDeleteDataSource(organizationId);
-  // Use legacy testConnection hook (now updated to use org-scoped endpoint)
-  const testConnection = useTestConnectionLegacy(organizationId);
 
   const isLoading = connectionsLoading;
-
-  // Data source types that are implemented in the backend collector service
-  // Only PostgreSQL, MySQL, and MongoDB are supported
-  const SUPPORTED_SOURCE_TYPES = ["postgres", "mysql", "mongodb"] as const;
-  type SupportedSourceType = (typeof SUPPORTED_SOURCE_TYPES)[number];
-
-  // Filter to only show supported data sources (hide all others)
-  const enabledDataSources = allDataSources
-    .filter((ds) =>
-      SUPPORTED_SOURCE_TYPES.includes(ds.type as SupportedSourceType),
-    )
-    .map((ds) => ({
-      ...ds,
-      disabled: false, // All shown sources are enabled
-    })) as Array<(typeof allDataSources)[number] & { disabled: boolean }>;
 
   // Get all unique user IDs from connections for fetching user names
   const userIds = useMemo(
@@ -104,7 +75,8 @@ export default function DataSourcesPage() {
     return {
       id: conn.id,
       name: conn.name,
-      type: "postgres" as const,
+      type: (conn.type || "postgres") as "postgres",
+      connectorRole: conn.connectorRole ?? "source",
       status: (conn.status === "active"
         ? "connected"
         : conn.status === "error"
@@ -120,437 +92,32 @@ export default function DataSourcesPage() {
   const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
     null,
   );
-  const [showConnectionSheet, setShowConnectionSheet] = useState(false);
-  const [connectingDataSourceId, setConnectingDataSourceId] = useState<
-    string | null
-  >(null);
-  // Check if there are any connections (regardless of status)
-  const hasConnections = filteredDataSources.length > 0;
+  const [previewDataSourceId, setPreviewDataSourceId] = useState<string | null>(
+    null,
+  );
 
-  // View state: show grid when no connections, table when connections exist
-  const [showGridView, setShowGridView] = useState<boolean>(true);
-  const previousHasConnections = useRef<boolean | null>(null);
-
-  // Initialize view mode when connections are loaded for the first time
-  useEffect(() => {
-    if (!connectionsLoading && previousHasConnections.current === null) {
-      // Initial load: show grid if no connections, table if connections exist
-      setShowGridView(!hasConnections);
-      previousHasConnections.current = hasConnections;
-    }
-  }, [connectionsLoading, hasConnections]);
-
-  // Auto-switch views when connection state transitions (after initial load)
-  useEffect(() => {
-    if (previousHasConnections.current === null) {
-      return; // Not initialized yet
-    }
-
-    const hadConnections = previousHasConnections.current;
-    const nowHasConnections = hasConnections;
-
-    // Connection was just created (transition from no connections to has connections)
-    if (!hadConnections && nowHasConnections && showGridView) {
-      setShowGridView(false);
-    }
-    // All connections were deleted (transition from has connections to no connections)
-    else if (hadConnections && !nowHasConnections && !showGridView) {
-      setShowGridView(true);
-    }
-
-    previousHasConnections.current = nowHasConnections;
-  }, [hasConnections, showGridView]);
-
+  // Match by connector type (e.g. "postgres") — connections have type from sourceType
   const isConnected = useCallback(
-    (dataSourceId: string) => {
+    (connectorId: string) => {
       return filteredDataSources.some(
-        (ds) => ds.id === dataSourceId && ds.status === "connected",
+        (ds) =>
+          (ds.type === connectorId || ds.id === connectorId) &&
+          ds.status === "connected",
       );
     },
     [filteredDataSources],
   );
 
   const getConnectedDataSource = useCallback(
-    (dataSourceId: string): DataSource | undefined => {
-      return filteredDataSources.find((ds) => ds.id === dataSourceId);
+    (connectorId: string): DataSource | undefined => {
+      return filteredDataSources.find(
+        (ds) => ds.type === connectorId || ds.id === connectorId,
+      );
     },
     [filteredDataSources],
   );
 
-  const handleDataSourceClick = (dataSourceId: string) => {
-    setSelectedDataSource(dataSourceId);
-
-    // If we're in table view showing connections, check if this is a connection ID
-    const isConnectionId = filteredDataSources.some(
-      (conn) => conn.id === dataSourceId,
-    );
-
-    if (isConnectionId) {
-      // This is a connection - navigate to connection detail or keep in table view
-      setShowGridView(false);
-      // TODO: Navigate to connection detail page when implemented
-      // router.push(`/workspace/data-sources/${dataSourceId}/query`);
-    } else if (isConnected(dataSourceId)) {
-      // If clicking on a connected data source type, hide grid view
-      setShowGridView(false);
-    } else {
-      // If clicking on a non-connected data source, open connection sheet
-      handleConnectClick(dataSourceId);
-    }
-  };
-
-  const handleConnectClick = (dataSourceId: string) => {
-    setConnectingDataSourceId(dataSourceId);
-    setShowConnectionSheet(true);
-  };
-
-  const handleConnect = async (data: ConnectionFormValues) => {
-    if (!connectingDataSourceId) return;
-
-    const dataSource = enabledDataSources.find(
-      (ds) => ds.id === connectingDataSourceId,
-    ) as ((typeof allDataSources)[number] & { disabled: boolean }) | undefined;
-    if (!dataSource) return;
-
-    try {
-      // Convert form data to API format
-      const host = data.host || "";
-      const _isLocalhost =
-        host === "localhost" || host === "127.0.0.1" || host.startsWith("127.");
-
-      // Build config based on data source type
-      const config: Record<string, unknown> = {};
-
-      // Add all form data to config
-      Object.entries(data).forEach(([key, value]) => {
-        // Skip metadata fields or fields handled specially
-        if (key === "name") return;
-
-        // Skip empty values
-        if (!value) return;
-
-        // Convert numeric strings to numbers for known numeric fields
-        if (key === "port") {
-          config[key] = parseInt(value, 10);
-        } else {
-          config[key] = value;
-        }
-      });
-
-      // Special handling for MongoDB
-      if (dataSource.type === "mongodb") {
-        if (data.useConnectionString === "false") {
-          // Individual fields mode - ensure connection_string is removed
-          delete config.connection_string;
-        } else if (data.useConnectionString === "true") {
-          // Connection string mode - we can optionally clean up individual fields but backend prioritizes string
-          // Just to be clean:
-          delete config.host;
-          delete config.port;
-          delete config.username;
-          delete config.password;
-          delete config.database; // Check if connection string includes db? Backend string parser might need it or not.
-          // Usually connection string has it, but sometimes it receives override.
-          // Let's keep database/authSource if provided, or safer just keep what we have since backend prefers string.
-        }
-      }
-
-      // Add SSL config for database types that support it
-      if (
-        [
-          "postgres",
-          "mysql",
-          "mssql",
-          "redshift",
-          "clickhouse",
-          "mongodb",
-        ].includes(dataSource.type)
-      ) {
-        // logic for MongoDB TLS is usually part of connection string or options,
-        // but if we used the generic SSL select:
-        if (data.ssl === "true" || data.tls === "true") {
-          // For Postgres/common libs
-          if (dataSource.type !== "mongodb") {
-            config.ssl = { enabled: true };
-          }
-        } else if (data.ssl === "false" || data.tls === "false") {
-          // Explicitly disabled
-          if (dataSource.type !== "mongodb") {
-            config.ssl = undefined; // defaults to false/undefined usually
-          }
-        }
-      }
-
-      const connectionData: CreateConnectionDto = {
-        name: data.name,
-        connection_type:
-          dataSource.type as CreateConnectionDto["connection_type"],
-        config: config as unknown as CreateConnectionDto["config"],
-      };
-
-      if (!organizationId) {
-        showErrorToast(
-          "notFound",
-          "Organization",
-          "Please select an organization from the sidebar before creating a connection.",
-        );
-        return;
-      }
-
-      await createConnection.mutateAsync(connectionData);
-
-      // Close the connection sheet
-      setShowConnectionSheet(false);
-      setConnectingDataSourceId(null);
-
-      showSuccessToast("connected", dataSource.name);
-
-      // The useEffect will automatically switch to table view when connections update
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Unable to connect the data source. Please try again.";
-      showErrorToast("connectFailed", "Data Source", errorMessage);
-    }
-  };
-
-  const handleTestConnection = async (
-    data: ConnectionFormValues,
-  ): Promise<{ success: boolean; message: string }> => {
-    try {
-      // Find the data source to get its type
-      const foundDataSource = enabledDataSources.find(
-        (ds) => ds.id === connectingDataSourceId,
-      );
-
-      // Get the source type from the data source definition
-      // Use type first (from allDataSources), then id as fallback
-      let sourceType: string = "postgres";
-      if (foundDataSource) {
-        // Type assertion to help TypeScript understand the structure
-        const ds = foundDataSource as { type: string; id: string };
-        sourceType = ds.type || ds.id;
-      }
-
-      // Build test data based on source type
-      let testData: TestConnectionDto;
-
-      switch (sourceType) {
-        // MongoDB - supports connection string OR individual fields (not both)
-        case "mongodb": {
-          const useConnectionString =
-            data.useConnectionString === "true" || !!data.connection_string;
-
-          if (useConnectionString && data.connection_string) {
-            // Connection string mode - only send the connection string
-            testData = {
-              type: "mongodb",
-              connection_string: data.connection_string,
-            };
-          } else {
-            // Individual fields mode
-            testData = {
-              type: "mongodb",
-              host: data.host || "",
-              port: data.port ? parseInt(data.port, 10) : 27017,
-              database: data.database || "",
-              username: data.username || "",
-              password: data.password || "",
-              auth_source: data.authSource || "",
-              replica_set: data.replicaSet || "",
-              tls: data.tls === "true",
-            };
-          }
-          break;
-        }
-
-        // S3 and S3 Data Lake
-        case "s3":
-        case "s3-datalake": {
-          testData = {
-            type: "s3",
-            bucket: data.bucket || "",
-            region: data.region || "",
-            access_key_id: data.accessKeyId || "",
-            secret_access_key: data.secretAccessKey || "",
-            path_prefix: data.prefix || "",
-          };
-          break;
-        }
-
-        // Azure Blob Storage
-        case "azure-blob-storage": {
-          testData = {
-            type: "azure-blob-storage",
-            account: data.accountName || "",
-            bucket: data.containerName || "", // container = bucket equivalent
-            access_key_id: data.accountKey || "",
-          };
-          break;
-        }
-
-        // BigQuery
-        case "bigquery": {
-          let credentials = {};
-          try {
-            credentials = data.credentials ? JSON.parse(data.credentials) : {};
-          } catch {
-            // Invalid JSON, pass as string
-            credentials = { raw: data.credentials };
-          }
-          testData = {
-            type: "bigquery",
-            project_id: data.projectId || "",
-            dataset: data.datasetId || "",
-            credentials,
-          };
-          break;
-        }
-
-        // Snowflake and Snowflake Cortex
-        case "snowflake":
-        case "snowflake-cortex": {
-          testData = {
-            type: "snowflake",
-            account: data.account || "",
-            warehouse: data.warehouse || "",
-            database: data.database || "",
-            schema: data.schema || "",
-            username: data.username || "",
-            password: data.password || "",
-            role: data.role || "",
-          };
-          break;
-        }
-
-        // Databricks
-        case "databricks": {
-          testData = {
-            type: "databricks",
-            host: data.serverHostname || "",
-            api_key: data.personalAccessToken || "",
-            headers: { http_path: data.httpPath || "" },
-          };
-          break;
-        }
-
-        // REST API
-        case "api": {
-          let headers = {};
-          try {
-            headers = data.headers ? JSON.parse(data.headers) : {};
-          } catch {
-            headers = {};
-          }
-          testData = {
-            type: "api",
-            base_url: data.endpoint || "",
-            api_key: data.apiKey || "",
-            headers,
-          };
-          break;
-        }
-
-        // Customer.io
-        case "customer-io": {
-          testData = {
-            type: "customer-io",
-            api_key: data.appApiKey || "",
-            project_id: data.siteId || "",
-          };
-          break;
-        }
-
-        // Pinecone
-        case "pinecone": {
-          testData = {
-            type: "pinecone",
-            api_key: data.apiKey || "",
-            region: data.environment || "",
-            dataset: data.indexName || "", // index = dataset equivalent
-          };
-          break;
-        }
-
-        // Milvus
-        case "milvus": {
-          testData = {
-            type: "milvus",
-            host: data.host || "",
-            port: data.port ? parseInt(data.port, 10) : 19530,
-            username: data.username || "",
-            password: data.password || "",
-          };
-          break;
-        }
-
-        // Weaviate
-        case "weaviate": {
-          testData = {
-            type: "weaviate",
-            base_url: data.url || "",
-            api_key: data.apiKey || "",
-          };
-          break;
-        }
-
-        // SQL Databases: PostgreSQL, MySQL, MSSQL, Redshift, ClickHouse, PGVector
-        default: {
-          const databaseType = data.databaseType || "other";
-          const isNeon = databaseType === "neon";
-          const isSupabase = databaseType === "supabase";
-          const host = data.host || "";
-          const isLocalhost =
-            host === "localhost" ||
-            host === "127.0.0.1" ||
-            host.startsWith("127.");
-
-          // Default ports based on database type
-          const defaultPorts: Record<string, number> = {
-            postgres: 5432,
-            mysql: 3306,
-            mssql: 1433,
-            redshift: 5439,
-            clickhouse: 9000,
-            pgvector: 5432,
-          };
-
-          testData = {
-            type: sourceType,
-            host: host,
-            port: data.port
-              ? parseInt(data.port, 10)
-              : defaultPorts[sourceType] || 5432,
-            database: data.database || "",
-            username: data.username || "",
-            password: data.password || "",
-            ssl:
-              !isLocalhost && (isNeon || isSupabase || data.ssl === "true")
-                ? { enabled: true }
-                : undefined,
-            databaseType: databaseType,
-          };
-          break;
-        }
-      }
-
-      const result = await testConnection.mutateAsync(testData);
-      return {
-        success: result.success,
-        message: result.success
-          ? "Connection test successful!"
-          : result.error || "Connection test failed",
-      };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Connection test failed";
-      return {
-        success: false,
-        message: errorMessage,
-      };
-    }
-  };
+  // Connect flow moved to /workspace/data-sources/new page
 
   // State to track which data source is being deleted
   const [dataSourceToDelete, setDataSourceToDelete] = useState<{
@@ -565,7 +132,6 @@ export default function DataSourcesPage() {
     onConfirm: async () => {
       if (!dataSourceToDelete) return;
       try {
-        // Use NestJS API for data source deletion
         await deleteDataSource.mutateAsync(dataSourceToDelete.id);
         showSuccessToast("deleted", "Data Source");
         setDataSourceToDelete(null);
@@ -575,7 +141,7 @@ export default function DataSourcesPage() {
             ? error.message
             : "Unable to delete the data source.";
         showErrorToast("deleteFailed", "Data Source", errorMessage);
-        throw error; // Re-throw to prevent modal from closing on error
+        throw error;
       }
     },
   });
@@ -589,11 +155,7 @@ export default function DataSourcesPage() {
         showErrorToast("notFound", "Data Source");
         return;
       }
-
       try {
-        // Update connection status to inactive
-        // Note: You may need to add an updateConnection hook call here
-        // For now, we'll just show a message
         showSuccessToast("disconnected", dataSource.name);
       } catch (error) {
         const errorMessage =
@@ -615,7 +177,6 @@ export default function DataSourcesPage() {
         showErrorToast("notFound", "Data Source");
         return;
       }
-      // Store the data source to delete and show confirmation modal
       setDataSourceToDelete({ id: dataSourceId, name: dataSource.name });
       deleteConfirm.showConfirm(dataSource.name);
     },
@@ -654,6 +215,22 @@ export default function DataSourcesPage() {
             {row.original.type}
           </span>
         ),
+      },
+      {
+        accessorKey: "connectorRole",
+        header: "Role",
+        cell: ({ row }) => {
+          const role = row.original.connectorRole ?? "source";
+          return role === "destination" ? (
+            <Badge variant="secondary" className="font-medium">
+              Destination
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="font-medium">
+              Source
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: "connections",
@@ -755,13 +332,11 @@ export default function DataSourcesPage() {
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(
-                            `/workspace/data-sources/${dataSource.id}/query`,
-                          );
+                          setPreviewDataSourceId(dataSource.id);
                         }}
                       >
-                        <TableIcon className="mr-2 h-4 w-4" />
-                        View table navigation
+                        <Eye className="mr-2 h-4 w-4" />
+                        Preview data
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -811,103 +386,91 @@ export default function DataSourcesPage() {
         title="Data Sources"
         description="Connect and manage your data sources to power your dashboards"
         action={
-          hasConnections && !showGridView ? (
-            <Button
-              onClick={() => setShowGridView(true)}
-              className="cursor-pointer"
+          <Button asChild className="cursor-pointer">
+            <Link
+              href={organizationId ? "/workspace/data-sources/new" : "#"}
+              onClick={(e) => {
+                if (!organizationId) {
+                  e.preventDefault();
+                  showErrorToast(
+                    "notFound",
+                    "Organization",
+                    "Please select an organization from the sidebar before connecting.",
+                  );
+                }
+              }}
             >
               <Plus className="mr-2 h-4 w-4" />
               New Source
-            </Button>
-          ) : showGridView ? (
-            <Button
-              variant="outline"
-              onClick={() => setShowGridView(false)}
-              className="cursor-pointer"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Back to List
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setShowGridView(true)}
-              className="cursor-pointer"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Source
-            </Button>
-          )
+            </Link>
+          </Button>
         }
       />
 
       {!organizationId ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              No organization selected
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Please select an organization from the sidebar to view connections
-            </p>
-          </div>
+        <div className="rounded-lg border border-dashed p-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            Select an organization from the sidebar to connect data sources
+          </p>
         </div>
       ) : isLoading ? (
         <div className="space-y-6">
           <PageHeaderSkeleton showAction={true} />
           <div className="flex items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading connections...</div>
+            <div className="text-muted-foreground">Loading...</div>
           </div>
         </div>
-      ) : showGridView ? (
-        // Show grid view when no connections or when "New source" is clicked
-        <DataSourceGrid
-          dataSources={enabledDataSources}
-          isConnected={isConnected}
-          getConnectedDataSource={getConnectedDataSource}
-          onDataSourceClick={handleDataSourceClick}
-        />
       ) : (
-        <DataTable
-          tableId={
-            organizationId
-              ? `data-sources-table-${organizationId}`
-              : "data-sources-table"
-          }
-          columns={columns}
-          data={filteredDataSources}
-          isLoading={false}
-          enableSorting
-          enableFiltering
-          externalFilter={urlSearch}
-          externalFilterColumnKey="name"
-          filterPlaceholder="Filter data sources..."
-          defaultVisibleColumns={[
-            "name",
-            "type",
-            "connections",
-            "connectedAt",
-            "status",
-            "actions",
-          ]}
-          fixedColumns={["name", "actions"]}
-          onRowClick={(row) => handleDataSourceClick(row.id)}
-          emptyMessage="No data sources found"
-          emptyDescription="Get started by connecting a data source"
-        />
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+              Your connections
+            </h3>
+            <DataTable
+                tableId={
+                  organizationId
+                    ? `data-sources-table-${organizationId}`
+                    : "data-sources-table"
+                }
+                columns={columns}
+                data={filteredDataSources}
+                isLoading={false}
+                enableSorting
+                enableFiltering
+                externalFilter={urlSearch}
+                externalFilterColumnKey="name"
+                filterPlaceholder="Filter data sources..."
+                defaultVisibleColumns={[
+                  "name",
+                  "type",
+                  "connectorRole",
+                  "connections",
+                  "connectedAt",
+                  "status",
+                  "actions",
+                ]}
+                fixedColumns={["name", "actions"]}
+                onRowClick={(row) =>
+                  router.push(`/workspace/data-sources/${row.id}/query`)
+                }
+                emptyMessage="No data sources found"
+                emptyDescription="Get started by clicking New Source to add a connector"
+            />
+          </div>
+        </div>
       )}
 
-      {/* Connection Sheet */}
-      <ConnectionSheet
-        open={showConnectionSheet}
-        onOpenChange={(open) => {
-          setShowConnectionSheet(open);
-          if (!open) {
-            setConnectingDataSourceId(null);
-          }
-        }}
-        dataSourceId={connectingDataSourceId}
-        onConnect={handleConnect}
-        onTestConnection={handleTestConnection}
+      {/* Data Preview Dialog (ETL/Airbyte) */}
+      <DataSourcePreviewDialog
+        organizationId={organizationId}
+        dataSourceId={previewDataSourceId}
+        dataSourceName={
+          previewDataSourceId
+            ? filteredDataSources.find((ds) => ds.id === previewDataSourceId)
+                ?.name
+            : undefined
+        }
+        onClose={() => setPreviewDataSourceId(null)}
       />
 
       {/* Delete Confirmation Modal */}

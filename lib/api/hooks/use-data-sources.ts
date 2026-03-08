@@ -4,6 +4,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { handleApiError } from "../error-handler";
 import { DataSourcesService } from "../services/data-sources.service";
 import type {
   CreateConnectionDto,
@@ -65,14 +66,21 @@ export function useTestConnection(orgId?: string) {
       if (!orgId) throw new Error("Organization ID is required");
       return DataSourcesService.testConnectionLegacy(orgId, data);
     },
+    onError: (error) => handleApiError(error),
   });
 }
 
-export function useCreateConnection(orgId?: string) {
+export function useCreateConnection(
+  orgId?: string,
+  options?: { showToastOnError?: boolean },
+) {
   const queryClient = useQueryClient();
+  const showToastOnError = options?.showToastOnError ?? true;
   return useMutation({
     mutationFn: (data: CreateConnectionDto) =>
       DataSourcesService.createConnection(data, orgId),
+    onError: (error) =>
+      showToastOnError ? handleApiError(error) : undefined,
     onSuccess: () => {
       // Invalidate all connection list queries
       queryClient.invalidateQueries({
@@ -118,6 +126,7 @@ export function useUpdateConnection() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateConnectionDto }) =>
       DataSourcesService.updateConnection(id, data),
+    onError: (error) => handleApiError(error),
     onSuccess: (_, variables) => {
       // Invalidate the specific connection detail
       queryClient.invalidateQueries({
@@ -143,6 +152,7 @@ export function useDeleteConnection(orgId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => DataSourcesService.deleteConnection(id, orgId),
+    onError: (error) => handleApiError(error),
     onSuccess: (_, deletedId) => {
       // Remove the specific connection detail cache
       queryClient.removeQueries({
@@ -236,7 +246,11 @@ export function useSchemasWithTables(
   orgId?: string,
 ) {
   return useQuery({
-    queryKey: [...dataSourcesKeys.schemas(connectionId || ""), "with-tables"],
+    queryKey: [
+      ...dataSourcesKeys.schemas(connectionId || ""),
+      "with-tables",
+      orgId,
+    ],
     queryFn: () => {
       if (!connectionId || !orgId) {
         throw new Error("Connection ID and Organization ID are required");
