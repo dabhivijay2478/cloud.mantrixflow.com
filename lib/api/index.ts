@@ -27,6 +27,9 @@ export { connectionKeys } from "./hooks/use-connection";
 // Hooks - Dashboard
 export * from "./hooks/use-dashboard";
 export { dashboardKeys } from "./hooks/use-dashboard";
+// Hooks - Email Preferences
+export * from "./hooks/use-email-preferences";
+export { emailPreferencesKeys } from "./hooks/use-email-preferences";
 // Hooks - Data Pipelines
 export * from "./hooks/use-data-pipelines";
 export { dataPipelinesKeys } from "./hooks/use-data-pipelines";
@@ -82,6 +85,7 @@ export { usersKeys } from "./hooks/use-users";
 export { ActivityLogsService } from "./services/activity-logs.service";
 export { ConnectionService } from "./services/connection.service";
 export { DashboardService } from "./services/dashboard.service";
+export { EmailPreferencesService } from "./services/email-preferences.service";
 export { DataPipelinesService } from "./services/data-pipelines.service";
 export { DataSourceService } from "./services/data-source.service";
 export { DataSourcesService } from "./services/data-sources.service";

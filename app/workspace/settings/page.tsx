@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bell,
   Building2,
   Check,
   Loader2,
@@ -25,9 +26,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useCurrentUser, useUpdateUser } from "@/lib/api";
+import {
+  useCurrentUser,
+  useEmailPreferences,
+  useUpdateEmailPreferences,
+  useUpdateUser,
+} from "@/lib/api";
 import { useCurrentOrganization } from "@/lib/api/hooks/use-organizations";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -39,6 +46,9 @@ export default function SettingsPage() {
   const { user: authUser } = useAuthStore();
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const { data: currentOrg } = useCurrentOrganization();
+  const { data: emailPreferences, isLoading: emailPrefsLoading } =
+    useEmailPreferences();
+  const updateEmailPreferences = useUpdateEmailPreferences();
   const updateUser = useUpdateUser();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
@@ -205,6 +215,13 @@ export default function SettingsPage() {
             >
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Organization</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="notifications"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-t-lg  border-transparent"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Notifications</span>
             </TabsTrigger>
             {/* <TabsTrigger
               value="appearance"
@@ -562,6 +579,139 @@ export default function SettingsPage() {
                       </>
                     )}
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notifications Settings */}
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+              <CardDescription>
+                Choose which emails you want to receive from MantrixFlow
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {emailPrefsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between gap-4 p-4 border-2 rounded-xl hover:border-primary/50 transition-colors">
+                    <div className="space-y-0.5 flex-1">
+                      <Label
+                        htmlFor="weekly-digest"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        Weekly digest
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Receive a weekly summary of pipeline health and activity
+                      </p>
+                    </div>
+                    <Switch
+                      id="weekly-digest"
+                      checked={emailPreferences?.weeklyDigestEnabled ?? true}
+                      onCheckedChange={(checked) => {
+                        updateEmailPreferences.mutate(
+                          { weeklyDigestEnabled: checked },
+                          {
+                            onSuccess: () => {
+                              toast.success(
+                                "Preferences updated",
+                                "Your notification preferences have been saved.",
+                              );
+                            },
+                            onError: () => {
+                              toast.error(
+                                "Failed to update",
+                                "Unable to save preferences. Please try again.",
+                              );
+                            },
+                          },
+                        );
+                      }}
+                      disabled={updateEmailPreferences.isPending}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 p-4 border-2 rounded-xl hover:border-primary/50 transition-colors">
+                    <div className="space-y-0.5 flex-1">
+                      <Label
+                        htmlFor="pipeline-failures"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        Pipeline failure alerts
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Get notified when a pipeline run fails
+                      </p>
+                    </div>
+                    <Switch
+                      id="pipeline-failures"
+                      checked={emailPreferences?.pipelineFailureEmails ?? true}
+                      onCheckedChange={(checked) => {
+                        updateEmailPreferences.mutate(
+                          { pipelineFailureEmails: checked },
+                          {
+                            onSuccess: () => {
+                              toast.success(
+                                "Preferences updated",
+                                "Your notification preferences have been saved.",
+                              );
+                            },
+                            onError: () => {
+                              toast.error(
+                                "Failed to update",
+                                "Unable to save preferences. Please try again.",
+                              );
+                            },
+                          },
+                        );
+                      }}
+                      disabled={updateEmailPreferences.isPending}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 p-4 border-2 rounded-xl hover:border-primary/50 transition-colors">
+                    <div className="space-y-0.5 flex-1">
+                      <Label
+                        htmlFor="marketing-emails"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        Marketing emails
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Product updates, tips, and promotional content
+                      </p>
+                    </div>
+                    <Switch
+                      id="marketing-emails"
+                      checked={emailPreferences?.marketingEmails ?? true}
+                      onCheckedChange={(checked) => {
+                        updateEmailPreferences.mutate(
+                          { marketingEmails: checked },
+                          {
+                            onSuccess: () => {
+                              toast.success(
+                                "Preferences updated",
+                                "Your notification preferences have been saved.",
+                              );
+                            },
+                            onError: () => {
+                              toast.error(
+                                "Failed to update",
+                                "Unable to save preferences. Please try again.",
+                              );
+                            },
+                          },
+                        );
+                      }}
+                      disabled={updateEmailPreferences.isPending}
+                    />
+                  </div>
                 </div>
               )}
             </CardContent>
