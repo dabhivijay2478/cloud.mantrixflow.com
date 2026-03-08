@@ -316,9 +316,6 @@ export default function NewPipelinePage() {
         customSql?: string;
         primaryKeyField?: string;
         upsertKey?: string[];
-        syncMode?: "full" | "incremental" | "cdc" | "log_based";
-        cursorField?: string;
-        writeMode?: "append" | "upsert" | "replace";
       };
 
       const destTransformType =
@@ -351,20 +348,9 @@ export default function NewPipelinePage() {
           ? [transformerWithConfig.primaryKeyField]
           : [];
 
-      // Write mode: from config or derive from primary key
-      const writeMode: "append" | "upsert" | "replace" =
-        transformerWithConfig.writeMode ||
-        (primaryKeyFields.length > 0 ? "upsert" : "append");
-
-      // Sync mode and cursor for incremental/CDC — map to API SyncMode
-      const rawSyncMode = transformerWithConfig.syncMode || "full";
-      const syncMode: "full" | "log_based" =
-        rawSyncMode === "incremental" ||
-        rawSyncMode === "cdc" ||
-        rawSyncMode === "log_based"
-          ? "log_based"
-          : "full";
-      const incrementalColumn = transformerWithConfig.cursorField;
+      // Fixed defaults: first run = full sync, write mode = upsert (best practice for incremental)
+      const writeMode: "append" | "upsert" | "replace" = "upsert";
+      const syncMode: "full" | "log_based" = "full";
 
       if (!organizationId) {
         toast.error("Error", "Organization ID is required");
@@ -410,9 +396,8 @@ export default function NewPipelinePage() {
         sourceSchemaId: sourceSchema.id,
         destinationSchemaId: destinationSchema.id,
         syncMode,
-        incrementalColumn: incrementalColumn || undefined,
-        scheduleType: syncMode === "full" ? "none" : "minutes",
-        scheduleValue: syncMode === "full" ? "" : "2",
+        scheduleType: "none",
+        scheduleValue: "",
         scheduleTimezone:
           Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
       });

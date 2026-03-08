@@ -6,12 +6,14 @@ import {
   ArrowRight,
   Database,
   Edit,
+  Loader2,
   Map as MapIcon,
   Pause,
   Plus,
+  RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { DataTable, FormSheet } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,61 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
 import type { EmitterConfig } from "./emitter-step";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Statically parse the output keys of a Python transform script.
+ *
+ * Handles the common pattern:
+ *   def transform(record):
+ *       row_id = record.get("id")
+ *       return { "id": row_id, "name": record.get("name") }
+ *
+ * Returns the list of string keys present in the return dict.
+ * Falls back to [] when the script can't be parsed.
+ */
+function parseScriptOutputKeys(script: string): string[] {
+  if (!script.trim()) return [];
+
+  // Find the last `return {` block – handles both single-line and multi-line dicts.
+  // We look for `return` followed by an opening brace and capture everything up to
+  // the matching closing brace (simple single-level match, no nested dicts).
+  const returnIdx = script.lastIndexOf("return");
+  if (returnIdx === -1) return [];
+
+  const afterReturn = script.slice(returnIdx + "return".length).trimStart();
+  if (!afterReturn.startsWith("{")) return [];
+
+  // Find matching closing brace
+  let depth = 0;
+  let end = -1;
+  for (let i = 0; i < afterReturn.length; i++) {
+    if (afterReturn[i] === "{") depth++;
+    else if (afterReturn[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+
+  const dictBody =
+    end !== -1 ? afterReturn.slice(1, end) : afterReturn.slice(1);
+
+  // Extract string keys: "key": or 'key':
+  const keys: string[] = [];
+  const keyRegex = /["']([^"']+)["']\s*:/g;
+  let match: RegExpExecArray | null;
+  while ((match = keyRegex.exec(dictBody)) !== null) {
+    keys.push(match[1]);
+  }
+
+  return [...new Set(keys)];
+}
 
 interface TransformStepProps {
   collectors: CollectorConfig[];
@@ -88,12 +145,25 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     useState<string>("");
   const [transformName, setTransformName] = useState("");
   const [upsertKey, setUpsertKey] = useState<string[]>([]);
-  const [syncMode, setSyncMode] = useState<"full" | "log_based">("full");
-  const [cursorField, setCursorField] = useState<string>("");
-  const [writeMode, setWriteMode] = useState<"append" | "upsert">("append");
-  const [transformMode, setTransformMode] = useState<"script" | "customSql">("script");
+  // transformMode is kept in state for future Custom SQL support, but the
+  // Custom SQL tab button is hidden from the UI for now.
+  const [transformMode, setTransformMode] = useState<"script" | "customSql">(
+    "script",
+  );
   const [transformScript, setTransformScript] = useState("");
   const [customSql, setCustomSql] = useState("");
+
+  // Inner tab within the transformer form: "script" editor | "schema" (PK config)
+  const [activeConfigTab, setActiveConfigTab] = useState<"script" | "schema">(
+    "script",
+  );
+
+  // Transform preview state (5-row JSON preview)
+  const [previewData, setPreviewData] = useState<
+    Record<string, unknown>[] | null
+  >(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   // Get all emitters from all collectors (emitters are now stored at collector level)
   const allEmitters: Array<
@@ -356,6 +426,57 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     return [];
   }, [destinationSchemaQuery, destinationTableQuery]);
 
+  // Keys derived from static parsing of the transform script.
+  // Used to populate the primary-key selector in the Schema tab.
+  const scriptOutputKeys = useMemo(
+    () => parseScriptOutputKeys(transformScript),
+    [transformScript],
+  );
+
+  // The pool of columns available for primary-key selection:
+  // • If a script is present and parseable → use script output keys
+  // • Otherwise fall back to destination table columns
+  const primaryKeyPool = useMemo<string[]>(() => {
+    if (transformScript.trim() && scriptOutputKeys.length > 0) {
+      return scriptOutputKeys;
+    }
+    return destinationFields.map((f) => f.name);
+  }, [transformScript, scriptOutputKeys, destinationFields]);
+
+  // Fetch a 5-row JSON preview of the transform output.
+  // Calls NestJS /data-sources/:id/preview with the transform_script so the
+  // backend can decrypt the connection config and proxy to the Python ETL.
+  const fetchTransformPreview = useCallback(async () => {
+    if (!orgId || !selectedCollector || !transformScript.trim()) return;
+    const firstTable = selectedCollector.selectedTables?.[0];
+    if (!firstTable) return;
+
+    // Convert "schema.table" → "schema-table" (Singer tap_stream_id format)
+    const sourceStream = firstTable.includes(".")
+      ? firstTable.replace(".", "-")
+      : firstTable;
+
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const result = await DataSourcesService.previewTransform(
+        orgId,
+        selectedCollector.sourceId,
+        sourceStream,
+        transformScript.trim(),
+        5,
+      );
+      setPreviewData(result.records.slice(0, 5));
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to fetch preview";
+      setPreviewError(msg);
+      setPreviewData(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [orgId, selectedCollector, transformScript]);
+
   const handleAddTransform = () => {
     if (
       !selectedCollectorId ||
@@ -370,10 +491,10 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     if (transformMode === "script") {
       if (!transformScript?.trim()) return;
     }
-    if (writeMode === "upsert" && upsertKey.length === 0) {
+    if (upsertKey.length === 0) {
       toast.error(
         "Primary key required",
-        "Select at least one column as primary key for upsert mode.",
+        "Select at least one column as primary key for upsert.",
       );
       return;
     }
@@ -386,11 +507,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       transformType: transformMode === "customSql" ? "dbt" : "script",
       destinationTable: selectedDestinationTable,
       upsertKey: upsertKey.length > 0 ? upsertKey : undefined,
-      syncMode,
-      cursorField: cursorField || undefined,
-      writeMode,
-      transformScript: transformMode === "script" && transformScript.trim() ? transformScript.trim() : undefined,
-      customSql: transformMode === "customSql" && customSql.trim() ? customSql.trim() : undefined,
+      transformScript:
+        transformMode === "script" && transformScript.trim()
+          ? transformScript.trim()
+          : undefined,
+      customSql:
+        transformMode === "customSql" && customSql.trim()
+          ? customSql.trim()
+          : undefined,
     };
 
     const updatedCollectors = collectors.map((collector) => {
@@ -413,12 +537,12 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedDestinationTable("");
     setTransformName("");
     setUpsertKey([]);
-    setSyncMode("full");
-    setCursorField("");
-    setWriteMode("append");
     setTransformMode("script");
     setTransformScript("");
     setCustomSql("");
+    setActiveConfigTab("script");
+    setPreviewData(null);
+    setPreviewError(null);
   };
 
   const handleDeleteTransform = (collectorId: string, transformId: string) => {
@@ -464,12 +588,14 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           ? [transform.primaryKeyField]
           : [],
     );
-    setSyncMode(transform.syncMode || "full");
-    setCursorField(transform.cursorField || "");
-    setWriteMode(transform.writeMode || "append");
-    setTransformMode(transform.transformType === "dbt" ? "customSql" : "script");
+    setTransformMode(
+      transform.transformType === "dbt" ? "customSql" : "script",
+    );
     setTransformScript(transform.transformScript || "");
     setCustomSql(transform.customSql || "");
+    setActiveConfigTab("script");
+    setPreviewData(null);
+    setPreviewError(null);
     setShowAddDialog(true);
   };
 
@@ -512,11 +638,7 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       cell: ({ row }) => {
         const cfg = row.original as TransformConfig;
         const modeLabel = cfg.transformType === "dbt" ? "Custom SQL" : "Script";
-        return (
-          <Badge variant="secondary">
-            {modeLabel} / {cfg.syncMode || "full"} / {cfg.writeMode || "append"}
-          </Badge>
-        );
+        return <Badge variant="secondary">{modeLabel}</Badge>;
       },
     },
     {
@@ -605,7 +727,24 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       {/* Add/Edit Transform Sheet */}
       <FormSheet
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={(open) => {
+          setShowAddDialog(open);
+          if (!open) {
+            // Reset all form state when dialog is dismissed
+            setEditingTransform(null);
+            setSelectedCollectorId("");
+            setSelectedEmitterId("");
+            setSelectedDestinationTable("");
+            setTransformName("");
+            setUpsertKey([]);
+            setTransformMode("script");
+            setTransformScript("");
+            setCustomSql("");
+            setActiveConfigTab("script");
+            setPreviewData(null);
+            setPreviewError(null);
+          }
+        }}
         title={editingTransform ? "Edit Transformer" : "Add Transformer"}
         description="Map fields from collector to emitter destination"
         maxWidth="7xl"
@@ -790,97 +929,274 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             selectedEmitterId &&
             selectedDestinationTable && (
               <div className="space-y-4">
-                {/* Transform mode: Script (Python) or Custom SQL (dbt) */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Transform mode</Label>
-                  <div className="flex gap-2 rounded-lg border p-1">
-                    <button
-                      type="button"
-                      onClick={() => setTransformMode("script")}
-                      className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        transformMode === "script"
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted"
-                      }`}
-                    >
-                      Script
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTransformMode("customSql")}
-                      className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        transformMode === "customSql"
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted"
-                      }`}
-                    >
-                      Custom SQL
-                    </button>
-                  </div>
-                  {transformMode === "customSql" &&
-                    syncMode === "log_based" && (
-                      <p className="text-xs text-muted-foreground">
-                        Postgres uses log-based CDC (WAL); no cursor required.
-                      </p>
-                    )}
+                {/* ── Inner config tabs: Script | Schema ──────────────────────
+                    Custom SQL is intentionally hidden here. It is preserved in
+                    state so that future incremental-sync SQL can be shown
+                    automatically when a user provides a transform script.       */}
+                <div className="flex gap-0 rounded-lg border overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setActiveConfigTab("script")}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors border-r ${
+                      activeConfigTab === "script"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    Script
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveConfigTab("schema")}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                      activeConfigTab === "schema"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    Schema
+                  </button>
+                  {/* Custom SQL tab – hidden for now, kept for future use:
+                  <button type="button" onClick={() => { setTransformMode("customSql"); setActiveConfigTab("script"); }}>
+                    Custom SQL
+                  </button> */}
                 </div>
 
-                {/* Script (when transformMode is script) */}
-                {transformMode === "script" && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Python transform script
-                    </Label>
-                    <textarea
-                      value={transformScript}
-                      onChange={(e) => setTransformScript(e.target.value)}
-                      placeholder={`def transform(record):
+                {/* ── Script tab ───────────────────────────────────────────── */}
+                {activeConfigTab === "script" && (
+                  <div className="space-y-4">
+                    {/* Python transform script editor */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Python transform script
+                      </Label>
+                      <textarea
+                        value={transformScript}
+                        onChange={(e) => {
+                          setTransformScript(e.target.value);
+                          // Reset preview whenever script changes
+                          setPreviewData(null);
+                          setPreviewError(null);
+                        }}
+                        placeholder={`def transform(record):
     """Transform incoming record. Return dict for output, None to skip."""
     # Skip record if required field missing
     key = record.get("id")
     if not key:
         return None
-    # Field derivation: create display_name from store_name or location_name
-    display_name = record.get("store_name") or record.get("location_name") or ""
+    # Map fields from source to destination
     return {
         "id": key,
-        "displayName": display_name,
+        "name": record.get("company_name"),
         # Add more field mappings as needed
     }`}
-                      className="min-h-[160px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      rows={8}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Define <code className="rounded bg-muted px-1">def transform(record)</code> that receives each row as a dict. Return a dict for output, or <code className="rounded bg-muted px-1">None</code> to skip the record.
-                    </p>
+                        className="min-h-[180px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        rows={9}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Define{" "}
+                        <code className="rounded bg-muted px-1">
+                          def transform(record)
+                        </code>{" "}
+                        that receives each row as a dict. Return a dict for
+                        output, or{" "}
+                        <code className="rounded bg-muted px-1">None</code> to
+                        skip the record.
+                      </p>
+                    </div>
+
+                    {/* ── JSON Preview (5 rows) ──────────────────────────── */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">
+                          Preview output{" "}
+                          <span className="text-muted-foreground font-normal">
+                            (up to 5 rows)
+                          </span>
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchTransformPreview}
+                          disabled={previewLoading || !transformScript.trim()}
+                          className="h-7 px-2 text-xs cursor-pointer"
+                        >
+                          {previewLoading ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Loading…
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Run Preview
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {previewError && (
+                        <div className="text-xs text-destructive bg-destructive/10 rounded p-2 border border-destructive/20">
+                          {previewError}
+                        </div>
+                      )}
+
+                      {previewData !== null && previewData.length === 0 && (
+                        <div className="text-xs text-muted-foreground p-3 bg-muted rounded border">
+                          No records returned. Check that the source table has
+                          data and the script does not filter all rows.
+                        </div>
+                      )}
+
+                      {previewData !== null && previewData.length > 0 && (
+                        <pre className="text-xs bg-muted rounded-md border p-3 overflow-x-auto max-h-64 leading-relaxed">
+                          {JSON.stringify(previewData, null, 2)}
+                        </pre>
+                      )}
+
+                      {previewData === null && !previewError && (
+                        <p className="text-xs text-muted-foreground">
+                          {transformScript.trim()
+                            ? "Click Run Preview to see transformed output as JSON."
+                            : "Write a transform script above to enable the preview."}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Custom SQL editor – only shown when mode is customSql
+                        (hidden from UI tabs, but functional for future use) */}
+                    {transformMode === "customSql" && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          Custom SQL
+                        </Label>
+                        <textarea
+                          value={customSql}
+                          onChange={(e) => setCustomSql(e.target.value)}
+                          placeholder="SELECT id, UPPER(name) as name FROM {{source_table}}"
+                          className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          rows={5}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Use {"{{source_table}}"} as placeholder for the source
+                          table (e.g. public.my_table).
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Custom SQL (when transformMode is customSql) */}
-                {transformMode === "customSql" && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Custom SQL
-                    </Label>
-                    <textarea
-                      value={customSql}
-                      onChange={(e) => setCustomSql(e.target.value)}
-                      placeholder="SELECT id, UPPER(name) as name FROM {{source_table}}"
-                      className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      rows={5}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Use {"{{source_table}}"} as placeholder for the source
-                      table (e.g. public.my_table).
-                    </p>
+                {/* ── Schema tab ───────────────────────────────────────────── */}
+                {activeConfigTab === "schema" && (
+                  <div className="space-y-4">
+                    {/* Output fields derived from script (read-only info) */}
+                    {scriptOutputKeys.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          Output fields{" "}
+                          <span className="text-muted-foreground font-normal">
+                            (derived from script)
+                          </span>
+                        </Label>
+                        <div className="flex flex-wrap gap-1.5 p-3 rounded-md border bg-muted/40">
+                          {scriptOutputKeys.map((key) => (
+                            <span
+                              key={key}
+                              className="inline-flex items-center rounded px-2 py-0.5 text-xs font-mono bg-background border"
+                            >
+                              {key}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          These are the fields your script will write to the
+                          destination. Go to the{" "}
+                          <button
+                            type="button"
+                            className="underline hover:text-foreground"
+                            onClick={() => setActiveConfigTab("script")}
+                          >
+                            Script tab
+                          </button>{" "}
+                          to edit the transform.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Primary key (for upsert) */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        Primary key{" "}
+                        <span className="text-muted-foreground font-normal">
+                          (for upsert)
+                        </span>
+                      </Label>
+                      <div className="rounded-md border border-input p-3 space-y-1 max-h-52 overflow-y-auto">
+                        {primaryKeyPool.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            {transformScript.trim()
+                              ? "Could not parse output fields from the script. Make sure your transform function has a return { … } statement with string keys."
+                              : "Write a transform script on the Script tab — the output fields will appear here for primary key selection."}
+                          </p>
+                        ) : (
+                          primaryKeyPool.map((col) => {
+                            const fieldInfo = destinationFields.find(
+                              (f) => f.name === col,
+                            );
+                            return (
+                              <label
+                                key={col}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={upsertKey.includes(col)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setUpsertKey((prev) => [...prev, col]);
+                                    } else {
+                                      setUpsertKey((prev) =>
+                                        prev.filter((k) => k !== col),
+                                      );
+                                    }
+                                  }}
+                                  className="h-4 w-4 rounded border-input"
+                                />
+                                <span className="text-sm font-mono">{col}</span>
+                                {fieldInfo && fieldInfo.type !== "unknown" && (
+                                  <span className="text-xs text-muted-foreground">
+                                    ({fieldInfo.type})
+                                  </span>
+                                )}
+                                {upsertKey.includes(col) && (
+                                  <span className="ml-auto text-xs text-primary font-medium">
+                                    PK
+                                  </span>
+                                )}
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Select one or more columns as the upsert key. Records
+                        with the same key value will be overwritten on each
+                        sync.
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {/* Debug info */}
+                {/* Debug info (dev only) */}
                 {process.env.NODE_ENV === "development" && (
                   <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
                     <div>Source Fields: {sourceFields.length}</div>
                     <div>Destination Fields: {destinationFields.length}</div>
+                    <div>
+                      Script Output Keys:{" "}
+                      {scriptOutputKeys.join(", ") || "none"}
+                    </div>
                     <div>
                       Source Queries: {sourceSchemaQueries.length} (loading:{" "}
                       {sourceSchemaQueries.filter((q) => q.isLoading).length},
@@ -897,92 +1213,6 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
                     </div>
                   </div>
                 )}
-
-                {/* dlt config: sync mode, write mode, primary key */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Sync mode</Label>
-                      <Select
-                        value={syncMode}
-                        onValueChange={(v) =>
-                          setSyncMode(v as "full" | "log_based")
-                        }
-                      >
-                        <SelectTrigger className="h-10 w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="full">Full</SelectItem>
-                          <SelectItem value="log_based">CDC / Log-based replication</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Write mode</Label>
-                      <Select
-                        value={writeMode}
-                        onValueChange={(v) =>
-                          setWriteMode(v as "append" | "upsert")
-                        }
-                      >
-                        <SelectTrigger className="h-10 w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="append">Append</SelectItem>
-                          <SelectItem value="upsert">Upsert</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Primary key (for upsert)
-                    </Label>
-                    <div className="rounded-md border border-input p-3 space-y-2 max-h-40 overflow-y-auto">
-                      {destinationFields.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          Select a destination table to choose primary key columns.
-                        </p>
-                      ) : (
-                        destinationFields.map((f) => (
-                          <label
-                            key={f.name}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={upsertKey.includes(f.name)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setUpsertKey((prev) => [...prev, f.name]);
-                                } else {
-                                  setUpsertKey((prev) =>
-                                    prev.filter((k) => k !== f.name),
-                                  );
-                                }
-                              }}
-                              className="h-4 w-4 rounded border-input"
-                            />
-                            <span className="text-sm font-mono">{f.name}</span>
-                            {f.type !== "unknown" && (
-                              <span className="text-xs text-muted-foreground">
-                                ({f.type})
-                              </span>
-                            )}
-                          </label>
-                        ))
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {writeMode === "upsert"
-                        ? "Select one or more columns for upsert. Records with the same key will be overwritten."
-                        : "Optional. When set with upsert write mode, records with the same key will be overwritten."}
-                    </p>
-                  </div>
-
-                </div>
               </div>
             )}
         </div>

@@ -1038,4 +1038,44 @@ export class DataSourcesService {
       `${DataSourcesService.LEGACY_BASE_PATH}/connections/${connectionId}/metrics`,
     );
   }
+
+  // ==========================================================================
+  // Transform Preview
+  // ==========================================================================
+
+  /**
+   * Preview transformed output for a source stream with an optional Python
+   * transform script applied. Returns up to `limit` records as JSON.
+   *
+   * Calls POST /organizations/{orgId}/data-sources/{connectionId}/preview
+   * with transform_script in the body so NestJS can decrypt the connection
+   * config and proxy the request to the Python ETL service.
+   */
+  static async previewTransform(
+    orgId: string,
+    connectionId: string,
+    sourceStream: string,
+    transformScript: string,
+    limit = 5,
+  ): Promise<{
+    records: Record<string, unknown>[];
+    columns: string[];
+    total: number;
+    stream?: string;
+  }> {
+    if (!orgId) throw new Error("Organization ID is required");
+    if (!connectionId) throw new Error("Connection ID is required");
+    if (!sourceStream) throw new Error("Source stream is required");
+
+    return ApiClient.post<{
+      records: Record<string, unknown>[];
+      columns: string[];
+      total: number;
+      stream?: string;
+    }>(`${DataSourcesService.basePath(orgId)}/${connectionId}/preview`, {
+      source_stream: sourceStream,
+      limit: Math.min(Math.max(limit, 1), 20),
+      transform_script: transformScript,
+    });
+  }
 }
