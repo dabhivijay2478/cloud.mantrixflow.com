@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useConnections } from "@/lib/api";
+import { useConnection, useConnections } from "@/lib/api";
 import { ConnectionService } from "@/lib/api/services/connection.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
@@ -118,6 +118,16 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
 
   const selectedDestination = availableDestinations.find(
     (d) => d.id === selectedDestinationId,
+  );
+
+  // Fetch connection for selected destination (includes config for "Test Connection" visibility)
+  const { data: destinationConnection, isLoading: destinationConnectionLoading } =
+    useConnection(organizationId, selectedDestinationId || undefined);
+  const hasDestinationConnectionConfig = !!(
+    destinationConnection &&
+    destinationConnection.config &&
+    typeof destinationConnection.config === "object" &&
+    Object.keys(destinationConnection.config).length > 0
   );
 
   const _handleConfigChange = (key: string, value: string) => {
@@ -446,7 +456,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Destination</Label>
-                {selectedDestinationId && destinationConnection?.config && (
+                {selectedDestinationId && hasDestinationConnectionConfig && (
                   <Button
                     type="button"
                     variant="outline"
@@ -555,7 +565,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                       </AlertDescription>
                     </Alert>
                   )}
-                  {selectedDestinationId && !destinationConnection?.config && (
+                  {selectedDestinationId && !destinationConnectionLoading && !hasDestinationConnectionConfig && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>

@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  useConnection,
   useConnections,
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
@@ -135,6 +136,19 @@ export function CollectorStep({
   const selectedSource = dataSources.find((ds) => ds.id === selectedSourceId);
   const _sourceDatasets = datasets.filter(
     (ds) => ds.dataSourceId === selectedSourceId,
+  );
+
+  // Fetch connection for selected source (includes config for "Test Connection" visibility)
+  const { data: connection, isLoading: connectionLoading } = useConnection(
+    organizationId,
+    selectedSourceId || undefined,
+  );
+  const hasConnectionConfig = !!(
+    connection &&
+    "config" in connection &&
+    connection.config &&
+    typeof connection.config === "object" &&
+    Object.keys(connection.config as Record<string, unknown>).length > 0
   );
 
   // Fetch schemas with tables for the selected source
@@ -412,7 +426,7 @@ export function CollectorStep({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="data-source-select">Data Source</Label>
-              {selectedSourceId && connection?.config && (
+              {selectedSourceId && hasConnectionConfig && (
                 <Button
                   type="button"
                   variant="outline"
@@ -504,7 +518,7 @@ export function CollectorStep({
                 </AlertDescription>
               </Alert>
             )}
-            {selectedSourceId && !connection?.config && (
+            {selectedSourceId && !connectionLoading && !hasConnectionConfig && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>

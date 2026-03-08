@@ -335,15 +335,7 @@ export default function NewPipelinePage() {
         return;
       }
 
-      if (destTransformType === "dbt" && !customSql) {
-        toast.error(
-          "Validation failed",
-          "Custom SQL is required when using Custom SQL transform mode.",
-        );
-        setIsCreating(false);
-        return;
-      }
-      if (destTransformType === "script" && !transformScript) {
+      if (!transformScript) {
         toast.error(
           "Validation failed",
           "Python transform script is required when using Script transform mode.",
@@ -401,9 +393,8 @@ export default function NewPipelinePage() {
             destinationSchema: destSchemaName,
             destinationTable: destTableName,
             transformType: destTransformType,
-            transformScript:
-              destTransformType === "script" ? transformScript : undefined,
-            customSql: destTransformType === "dbt" ? customSql : undefined,
+            transformScript,
+            customSql: undefined,
             writeMode,
             upsertKey:
               primaryKeyFields.length > 0 ? primaryKeyFields : undefined,
