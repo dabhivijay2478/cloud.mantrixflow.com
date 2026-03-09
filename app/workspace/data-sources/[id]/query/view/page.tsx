@@ -119,7 +119,7 @@ export default function QueryResultsViewPage() {
       ? {
           id: dataSourceData.id,
           name: dataSourceData.name,
-          type: dataSourceData.source_type as "postgres",
+          type: (dataSourceData.sourceType ?? dataSourceData.source_type) as "postgres",
           status: (isConnectionActive || isDataSourceActive)
             ? ("connected" as const)
             : ("disconnected" as const),
