@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { SqlRoomsExplorerPanel } from "@/components/explorer/sqlrooms-explorer-panel";
 import { ExplorerProvider } from "@/lib/explorer/explorer-context";
-import { getExplorerRunInterceptor } from "@/lib/explorer/explorer-run-interceptor";
 import {
   useConnection,
   useDataSource,
@@ -72,7 +71,8 @@ export default function DataSourceQueryPage() {
   );
 
   const isConnectionActive =
-    connection?.status === "active" || connection?.status === "connected";
+    connection?.status === "active" ||
+    (connection?.status as string) === "connected";
   const isDataSourceActive = dataSourceData?.isActive ?? false;
   const dataSource =
     dataSourceData && connection
@@ -88,11 +88,13 @@ export default function DataSourceQueryPage() {
 
   const [selectedSchema, setSelectedSchema] = useState<string | undefined>();
   const [selectedTable, setSelectedTable] = useState<string | undefined>();
+  const [selectedSchemaOnly, setSelectedSchemaOnly] = useState<
+    string | undefined
+  >();
   const [explorerData, setExplorerData] = useState<{
     rows: Record<string, unknown>[];
     columns: string[];
   } | null>(null);
-  const [explorerLoading, setExplorerLoading] = useState(false);
   const [explorerError, setExplorerError] = useState<string | null>(null);
   const [explorerDataAsOf, setExplorerDataAsOf] = useState<Date | undefined>();
   const [explorerRowLimit, setExplorerRowLimit] = useState(5000);
@@ -100,30 +102,13 @@ export default function DataSourceQueryPage() {
   const handleTableSelect = (tableName: string, schemaName: string) => {
     setSelectedTable(tableName);
     setSelectedSchema(schemaName);
+    setSelectedSchemaOnly(undefined);
   };
 
-  const handleRefreshExplorerData = async () => {
-    const interceptor = getExplorerRunInterceptor();
-    if (!interceptor) return;
-    if (!selectedSchema || !selectedTable) {
-      toast.error(
-        "Select a table",
-        "Please select a schema and table from the sidebar.",
-      );
-      return;
-    }
-    setExplorerLoading(true);
-    setExplorerError(null);
-    try {
-      await interceptor();
-      toast.success("Data refreshed", "Loaded latest data.");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setExplorerError(msg);
-      toast.error("Failed to refresh", msg);
-    } finally {
-      setExplorerLoading(false);
-    }
+  const handleSchemaSelect = (schemaName: string) => {
+    setSelectedSchemaOnly(schemaName);
+    setSelectedTable(undefined);
+    setSelectedSchema(schemaName);
   };
 
   const isConnected = dataSource?.status === "connected";
@@ -211,11 +196,15 @@ export default function DataSourceQueryPage() {
     schemasLoading,
     selectedSchema,
     selectedTable,
+    selectedSchemaOnly,
     onTableSelect: handleTableSelect,
-    loadExplorerData: handleRefreshExplorerData,
+    onSchemaSelect: handleSchemaSelect,
+    loadExplorerData: async () => {
+      toast.info("Run query", "Click Run to execute your SQL against the database.");
+    },
     explorerRowLimit,
     setExplorerRowLimit,
-    explorerLoading,
+    explorerLoading: false,
     setExplorerData,
     setExplorerError,
     setExplorerDataAsOf,
@@ -265,17 +254,7 @@ export default function DataSourceQueryPage() {
       <ExplorerProvider value={explorerContextValue}>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <SqlRoomsExplorerPanel
-            tableName={
-              selectedSchema && selectedTable
-                ? selectedSchema === "public"
-                  ? selectedTable
-                  : `${selectedSchema}_${selectedTable}`
-                : "data"
-            }
-            data={explorerData}
-            onRefresh={handleRefreshExplorerData}
             dataAsOf={explorerDataAsOf}
-            isLoading={explorerLoading}
             error={explorerError}
           />
         </div>

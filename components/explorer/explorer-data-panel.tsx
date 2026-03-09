@@ -1,12 +1,13 @@
 "use client";
 
 import { RoomPanel } from "@sqlrooms/room-shell";
-import { Input } from "@sqlrooms/ui";
+import { Button, Input } from "@sqlrooms/ui";
 import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Folder,
+  PlusSquare,
   Search,
   Table as TableIcon,
 } from "lucide-react";
@@ -21,7 +22,9 @@ export function ExplorerDataPanel() {
     schemasLoading,
     selectedSchema,
     selectedTable,
+    selectedSchemaOnly,
     onTableSelect,
+    onSchemaSelect,
     explorerRowLimit,
     setExplorerRowLimit,
   } = useExplorerContext();
@@ -67,10 +70,39 @@ export function ExplorerDataPanel() {
       .filter((s): s is NonNullable<typeof s> => s !== null);
   }, [schemas, searchQuery]);
 
+  const handleNewQuery = () => {
+    createQueryTab?.(
+      `SELECT table_schema, table_name 
+FROM information_schema.tables 
+WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+ORDER BY table_schema, table_name;`,
+    );
+  };
+
+  const handleSchemaSelect = (schemaName: string) => {
+    onSchemaSelect?.(schemaName);
+    const escaped = schemaName.replace(/'/g, "''");
+    createQueryTab?.(
+      `SELECT table_schema, table_name, table_type 
+FROM information_schema.tables 
+WHERE table_schema = '${escaped}'
+ORDER BY table_name;`,
+    );
+  };
+
   return (
     <RoomPanel type="data" showHeader={true}>
       {/* Single schema tree - Redshift-style, no duplicate mapping */}
       <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full justify-start gap-2"
+          onClick={handleNewQuery}
+        >
+          <PlusSquare className="h-4 w-4" />
+          New query
+        </Button>
         <div className="relative shrink-0">
           <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
@@ -96,22 +128,45 @@ export function ExplorerDataPanel() {
                 const tables = schema.tables || [];
                 return (
                   <div key={schema.name} className="space-y-0.5">
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs hover:bg-muted/50"
-                      onClick={() => toggleSchema(schema.name)}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-3 w-3 shrink-0" />
-                      ) : (
-                        <ChevronRight className="h-3 w-3 shrink-0" />
-                      )}
-                      <Folder className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{schema.name}</span>
-                      <span className="ml-auto text-muted-foreground">
-                        {tables.length}
-                      </span>
-                    </button>
+                    <div className="flex w-full items-center gap-0.5 rounded px-1.5 py-1 text-left text-xs hover:bg-muted/50">
+                      <button
+                        type="button"
+                        className="flex shrink-0 items-center justify-center p-0.5 hover:bg-muted"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSchema(schema.name);
+                        }}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-1.5"
+                        onClick={() => handleSchemaSelect(schema.name)}
+                      >
+                        <Folder
+                          className={cn(
+                            "h-3 w-3 shrink-0 text-muted-foreground",
+                            selectedSchemaOnly === schema.name && "text-primary",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "truncate",
+                            selectedSchemaOnly === schema.name && "font-medium",
+                          )}
+                        >
+                          {schema.name}
+                        </span>
+                        <span className="ml-auto shrink-0 text-muted-foreground">
+                          {tables.length}
+                        </span>
+                      </button>
+                    </div>
                     {isExpanded &&
                       tables.map((table) => {
                         const isSelected =
@@ -127,11 +182,10 @@ export function ExplorerDataPanel() {
                             )}
                             onClick={() => {
                             onTableSelect(table.name, schema.name);
-                            const tableName =
-                              schema.name === "public"
-                                ? table.name
-                                : `${schema.name}_${table.name}`;
-                            createQueryTab?.(`SELECT * FROM ${tableName} LIMIT 100`);
+                            const schemaPart = `"${schema.name.replace(/"/g, '""')}"`;
+                            const tablePart = `"${table.name.replace(/"/g, '""')}"`;
+                            const qualified = `${schemaPart}.${tablePart}`;
+                            createQueryTab?.(`SELECT * FROM ${qualified} LIMIT 100`);
                           }}
                           >
                             <TableIcon className="h-3 w-3 shrink-0 text-muted-foreground" />

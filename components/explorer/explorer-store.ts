@@ -60,7 +60,10 @@ export const { roomStore, useRoomStore } = createRoomStore<ExplorerRoomState>(
         ...sqlSlice.sqlEditor,
         parseAndRunCurrentQuery: async () => {
           const interceptor = getExplorerRunInterceptor();
-          if (interceptor) await interceptor();
+          if (interceptor) {
+            const handled = await interceptor();
+            if (handled) return;
+          }
           return originalParseAndRun();
         },
       },

@@ -112,7 +112,8 @@ export default function QueryResultsViewPage() {
   // Convert API data to component format
   // Treat as connected when: connection.status is active/connected, OR data source isActive (matches list display)
   const isConnectionActive =
-    connection?.status === "active" || connection?.status === "connected";
+    connection?.status === "active" ||
+    (connection?.status as string) === "connected";
   const isDataSourceActive = dataSourceData?.isActive ?? false;
   const dataSource =
     dataSourceData && connection

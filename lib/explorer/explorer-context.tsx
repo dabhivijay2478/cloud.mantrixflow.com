@@ -15,7 +15,9 @@ export interface ExplorerContextValue {
   schemasLoading: boolean;
   selectedSchema: string | undefined;
   selectedTable: string | undefined;
+  selectedSchemaOnly?: string;
   onTableSelect: (tableName: string, schemaName: string) => void;
+  onSchemaSelect?: (schemaName: string) => void;
   loadExplorerData: () => Promise<void>;
   explorerRowLimit: number;
   setExplorerRowLimit: (value: number) => void;

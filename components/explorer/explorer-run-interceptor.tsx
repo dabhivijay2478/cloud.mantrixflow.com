@@ -1,72 +1,112 @@
 "use client";
 
+import { tableFromJSON } from "apache-arrow";
 import { useCallback, useEffect } from "react";
-import { loadFromExplorerData } from "@/lib/explorer/load-explorer-data";
+import { executeRemoteQuery } from "@/lib/explorer/execute-remote-query";
 import { setExplorerRunInterceptor } from "@/lib/explorer/explorer-run-interceptor";
 import { useExplorerContext } from "@/lib/explorer/explorer-context";
-import { useRoomStore } from "./explorer-store";
+import { roomStore, useRoomStore } from "./explorer-store";
 
 /**
- * Sets up the run interceptor: when user clicks Run, we fetch data from the server
- * and load into DuckDB before executing the query. No pre-fetch on table select.
+ * Sets up the run interceptor: when user clicks Run, we execute SQL against the
+ * remote database (like Snowflake/Redshift). Supports JOINs, subqueries, etc.
  */
 export function ExplorerRunInterceptor() {
   const {
     orgId,
     dataSourceId,
-    selectedSchema,
-    selectedTable,
     explorerRowLimit,
-    setExplorerData,
     setExplorerError,
     setExplorerDataAsOf,
   } = useExplorerContext();
 
-  const addTable = useRoomStore((s) => s.db?.addTable);
-  const dropTable = useRoomStore((s) => s.db?.dropTable);
-  const refreshTableSchemas = useRoomStore(
-    (s) => s.db?.refreshTableSchemas,
-  );
+  const queryResultLimit = useRoomStore((s) => s.sqlEditor?.queryResultLimit);
 
-  const interceptor = useCallback(async () => {
-    if (!orgId || !dataSourceId || !selectedSchema || !selectedTable) return;
-    if (!addTable || !dropTable) return;
+  const interceptor = useCallback(async (): Promise<boolean> => {
+    if (!orgId || !dataSourceId) return false;
 
-    const tableName =
-      selectedSchema === "public"
-        ? selectedTable
-        : `${selectedSchema}_${selectedTable}`;
+    const query = roomStore.getState().sqlEditor?.getCurrentQuery?.();
+    if (!query?.trim()) return false;
+
+    const selectedQueryId =
+      roomStore.getState().sqlEditor?.config?.selectedQueryId;
+    if (!selectedQueryId) return false;
+
+    const maxRows = Math.min(
+      queryResultLimit ?? 10000,
+      explorerRowLimit ?? 10000,
+      100000,
+    );
 
     try {
-      const result = await loadFromExplorerData(
+      roomStore.setState((state) => ({
+        ...state,
+        sqlEditor: {
+          ...state.sqlEditor,
+          queryResultsById: {
+            ...state.sqlEditor.queryResultsById,
+            [selectedQueryId]: {
+              status: "loading",
+              isBeingAborted: false,
+              controller: new AbortController(),
+            },
+          },
+        },
+      }));
+
+      const result = await executeRemoteQuery(
         orgId,
         dataSourceId,
-        selectedSchema,
-        selectedTable,
-        explorerRowLimit,
+        query,
+        maxRows,
+        60000,
       );
 
-      await dropTable(tableName).catch(() => {});
-      await addTable(tableName, result.rows);
-      await refreshTableSchemas?.();
+      const arrowTable = tableFromJSON(result.rows as Record<string, unknown>[]);
 
-      setExplorerData?.(result);
-      setExplorerDataAsOf?.(new Date());
+      roomStore.setState((state) => ({
+        ...state,
+        sqlEditor: {
+          ...state.sqlEditor,
+          queryResultsById: {
+            ...state.sqlEditor.queryResultsById,
+            [selectedQueryId]: {
+              status: "success",
+              type: "select",
+              result: arrowTable,
+              query,
+              lastQueryStatement: query,
+            },
+          },
+        },
+      }));
+
       setExplorerError?.(null);
+      setExplorerDataAsOf?.(new Date());
+      return true;
     } catch (err) {
-      setExplorerError?.(err instanceof Error ? err.message : String(err));
-      throw err;
+      const msg = err instanceof Error ? err.message : String(err);
+      setExplorerError?.(msg);
+      roomStore.setState((state) => ({
+        ...state,
+        sqlEditor: {
+          ...state.sqlEditor,
+          queryResultsById: {
+            ...state.sqlEditor.queryResultsById,
+            [selectedQueryId]: {
+              status: "error",
+              error: msg,
+            },
+          },
+        },
+      }));
+      return true;
     }
   }, [
     orgId,
     dataSourceId,
-    selectedSchema,
-    selectedTable,
     explorerRowLimit,
-    addTable,
-    dropTable,
-    refreshTableSchemas,
-    setExplorerData,
+    queryResultLimit,
     setExplorerError,
     setExplorerDataAsOf,
   ]);

@@ -2,7 +2,7 @@
 
 import { RoomShell } from "@sqlrooms/room-shell";
 import { ExplorerRunInterceptor } from "./explorer-run-interceptor";
-import { roomStore } from "./explorer-store";
+import { roomStore, useRoomStore } from "./explorer-store";
 
 export interface SqlRoomsExplorerPanelProps {
   tableName?: string;
@@ -14,30 +14,33 @@ export interface SqlRoomsExplorerPanelProps {
 }
 
 /**
- * SQLRooms explorer panel. Data is NOT pre-fetched on table select.
- * Data is loaded only when the user runs a SQL query (Run button).
+ * SQLRooms explorer panel. Executes SQL against the remote database
+ * (like Snowflake/Redshift). Supports JOINs, subqueries, full SQL.
  */
 export function SqlRoomsExplorerPanel({
-  onRefresh,
   dataAsOf,
   error,
 }: SqlRoomsExplorerPanelProps) {
+  const parseAndRunCurrentQuery = useRoomStore(
+    (s) => s.sqlEditor?.parseAndRunCurrentQuery,
+  );
+
+  const handleRefresh = () => void parseAndRunCurrentQuery?.();
+
   return (
     <RoomShell roomStore={roomStore} className="h-full w-full">
       <ExplorerRunInterceptor />
       <div className="flex h-full w-full flex-col overflow-hidden">
         {dataAsOf && (
           <div className="flex shrink-0 items-center justify-between border-b bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
-            <span>Data as of {dataAsOf.toLocaleString()}</span>
-            {onRefresh && (
-              <button
-                type="button"
-                onClick={onRefresh}
-                className="text-primary hover:underline"
-              >
-                Refresh
-              </button>
-            )}
+            <span>Last run: {dataAsOf.toLocaleString()}</span>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="text-primary hover:underline"
+            >
+              Run again
+            </button>
           </div>
         )}
         {error && (
