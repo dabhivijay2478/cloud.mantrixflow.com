@@ -116,6 +116,10 @@ export const toastMessages = {
       message: `Disconnected from ${itemName}`,
       description: `Successfully disconnected from your ${itemName.toLowerCase()}.`,
     }),
+    reconnected: (itemName: string) => ({
+      message: `Reconnected to ${itemName}`,
+      description: `Successfully reconnected to your ${itemName.toLowerCase()}.`,
+    }),
     switched: (itemName: string) => ({
       message: `${itemName} switched successfully`,
       description: `You are now using the selected ${itemName.toLowerCase()}.`,
@@ -194,6 +198,12 @@ export const toastMessages = {
       description:
         error ||
         `Unable to disconnect from ${itemName.toLowerCase()}. Please try again.`,
+    }),
+    reconnectFailed: (itemName: string, error?: string) => ({
+      message: `Failed to reconnect to ${itemName.toLowerCase()}`,
+      description:
+        error ||
+        `Unable to reconnect to ${itemName.toLowerCase()}. Please check your connection and try again.`,
     }),
     switchFailed: (itemName: string, error?: string) => ({
       message: `Failed to switch ${itemName.toLowerCase()}`,
@@ -291,6 +301,7 @@ export function showSuccessToast(
     | "saved"
     | "connected"
     | "disconnected"
+    | "reconnected"
     | "switched"
     | "invited"
     | "accepted"
@@ -317,6 +328,7 @@ export function showErrorToast(
     | "saveFailed"
     | "connectFailed"
     | "disconnectFailed"
+    | "reconnectFailed"
     | "switchFailed"
     | "inviteFailed"
     | "acceptFailed"

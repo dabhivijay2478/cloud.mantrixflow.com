@@ -113,6 +113,43 @@ export class ConnectionService {
   }
 
   /**
+   * Update connection status (disconnect/reconnect)
+   * POST .../connection/status (PATCH .../connection returns 404 in some environments)
+   */
+  static async patchConnectionStatus(
+    organizationId: string,
+    dataSourceId: string,
+    status: "active" | "inactive",
+  ): Promise<DataSourceConnection> {
+    const result = await ApiClient.post<Record<string, unknown>>(
+      `${ConnectionService.BASE_PATH}/${organizationId}/data-sources/${dataSourceId}/connection/status`,
+      { status },
+    );
+
+    const connectionType =
+      (result.connectionType as DataSourceType) ||
+      (result.connection_type as DataSourceType) ||
+      "postgres";
+
+    const dataSourceIdValue =
+      (result.dataSourceId as string) ||
+      (result.data_source_id as string) ||
+      dataSourceId;
+
+    return {
+      id: (result.id as string) || dataSourceId,
+      data_source_id: dataSourceIdValue,
+      connection_type: connectionType,
+      config: (result.config as ConnectionConfig) || {},
+      status:
+        (result.status as "active" | "inactive" | "error" | "testing") || status,
+      last_connected_at:
+        (result.lastConnectedAt as string) ||
+        (result.last_connected_at as string),
+    } as DataSourceConnection;
+  }
+
+  /**
    * Test a saved connection via NestJS.
    */
   static async testConnection(

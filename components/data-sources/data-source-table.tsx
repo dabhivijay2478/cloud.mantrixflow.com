@@ -3,6 +3,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Check,
+  Link2,
   MoreVertical,
   Search,
   Trash2,
@@ -53,6 +54,7 @@ interface DataSourceTableProps {
   showOnlyConnected?: boolean;
   connections?: DataSource[]; // Actual connections from API
   onDisconnect?: (id: string) => void;
+  onReconnect?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -70,6 +72,7 @@ export function DataSourceTable({
   showOnlyConnected = false,
   connections = [],
   onDisconnect,
+  onReconnect,
   onDelete,
 }: DataSourceTableProps) {
   const router = useRouter();
@@ -365,7 +368,7 @@ export function DataSourceTable({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {connected && (
+                            {connected ? (
                               <>
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -380,6 +383,21 @@ export function DataSourceTable({
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                               </>
+                            ) : (
+                              onReconnect && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      onReconnect(dataSource.id);
+                                    }}
+                                    className="text-green-600 focus:text-green-600"
+                                  >
+                                    <Link2 className="mr-2 h-4 w-4" />
+                                    Reconnect
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )
                             )}
                             <DropdownMenuItem
                               onClick={() => {
