@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Code2,
@@ -16,6 +17,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
@@ -37,6 +39,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -51,6 +54,7 @@ import {
   useUpdatePipeline,
   useValidatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import { useConnection } from "@/lib/api/hooks/use-connection";
 import { useCdcStatus } from "@/lib/api/hooks/use-data-source";
 import { usePreviewDestinationData } from "@/lib/api/hooks/use-destination-schemas";
 import { usePreviewSourceData } from "@/lib/api/hooks/use-source-schemas";
@@ -115,6 +119,32 @@ export default function PipelineDetailPage() {
   );
   const cdcVerified =
     cdcStatus?.cdc_prerequisites_status?.overall === "verified";
+
+  // Connection status for source and destination (banner when disconnected)
+  const destDataSourceId = pipeline?.destinationSchema?.dataSourceId;
+  const {
+    data: sourceConnection,
+    isFetched: sourceConnectionFetched,
+  } = useConnection(
+    organizationId,
+    sourceDataSourceId ?? undefined,
+    false,
+  );
+  const {
+    data: destConnection,
+    isFetched: destConnectionFetched,
+  } = useConnection(
+    organizationId,
+    destDataSourceId ?? undefined,
+    false,
+  );
+  const isSourceOrDestDisconnected =
+    (sourceDataSourceId &&
+      sourceConnectionFetched &&
+      (sourceConnection === null || sourceConnection?.status !== "active")) ||
+    (destDataSourceId &&
+      destConnectionFetched &&
+      (destConnection === null || destConnection?.status !== "active"));
 
   // Mutations
   const runPipeline = useRunPipeline(organizationId, pipelineId);
@@ -522,6 +552,28 @@ export default function PipelineDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Disconnected source/destination banner */}
+      {isSourceOrDestDisconnected && (
+        <Alert
+          variant="default"
+          className="border-amber-500/50 bg-amber-500/5 text-amber-800 dark:text-amber-200"
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Source or destination disconnected</AlertTitle>
+          <AlertDescription>
+            This pipeline cannot run because its source or destination data
+            source is disconnected.{" "}
+            <Link
+              href="/workspace/data-sources"
+              className="font-medium underline underline-offset-4 hover:no-underline"
+            >
+              Go to Data Sources
+            </Link>{" "}
+            to reconnect, then run this pipeline again.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

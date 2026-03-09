@@ -9,6 +9,7 @@ import type {
   CreateConnectionDto,
   UpdateConnectionDto,
 } from "../types/data-sources";
+import { dataSourcesKeys } from "./use-data-sources";
 import { dataSourceKeys } from "./use-data-source";
 
 // Query Keys
@@ -129,6 +130,89 @@ export function useUpdateConnection(
         // Invalidate activity logs
         queryClient.invalidateQueries({
           queryKey: ["activity-logs"],
+        });
+      }
+    },
+  });
+}
+
+/**
+ * Hook to disconnect connection (set status to inactive)
+ * Invalidates: connection detail, data source detail + lists, dashboard, activity logs
+ */
+export function useDisconnectConnection(
+  organizationId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dataSourceId: string) => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return ConnectionService.patchConnectionStatus(
+        organizationId,
+        dataSourceId,
+        "inactive",
+      );
+    },
+    onSuccess: (_, dataSourceId) => {
+      if (organizationId && dataSourceId) {
+        queryClient.invalidateQueries({
+          queryKey: connectionKeys.detail(organizationId, dataSourceId),
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: dataSourcesKeys.connections.lists(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["activity-logs"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["data-pipelines"],
+      });
+    },
+  });
+}
+
+/**
+ * Hook to reconnect (test saved connection and set status to active on success)
+ * Accepts dataSourceId when calling mutate. Use for Reconnect action on disconnected sources.
+ */
+export function useReconnectConnection(
+  organizationId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dataSourceId: string) => {
+      if (!organizationId || !dataSourceId) {
+        throw new Error("Organization ID and Data Source ID are required");
+      }
+      return ConnectionService.testConnection(organizationId, dataSourceId);
+    },
+    onSuccess: (result, dataSourceId) => {
+      if (organizationId && dataSourceId) {
+        queryClient.invalidateQueries({
+          queryKey: connectionKeys.detail(organizationId, dataSourceId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataSourceKeys.detail(organizationId, dataSourceId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dataSourcesKeys.connections.lists(),
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["activity-logs"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["data-pipelines"],
         });
       }
     },

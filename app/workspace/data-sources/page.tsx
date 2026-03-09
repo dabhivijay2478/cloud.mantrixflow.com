@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   Check,
   Eye,
+  Link2,
   MoreVertical,
   Plus,
   Trash2,
@@ -32,7 +33,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useConfirmation } from "@/hooks/use-confirmation";
-import { useConnections, useUsers } from "@/lib/api";
+import {
+  useConnections,
+  useDisconnectConnection,
+  useReconnectConnection,
+  useUsers,
+} from "@/lib/api";
 import { useDeleteDataSource } from "@/lib/api/hooks/use-data-source";
 import type { DataSource } from "@/lib/stores/workspace-store";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -52,6 +58,8 @@ export default function DataSourcesPage() {
     useConnections(organizationId);
   // Use NestJS API for data source deletion
   const deleteDataSource = useDeleteDataSource(organizationId);
+  const disconnectConnection = useDisconnectConnection(organizationId);
+  const reconnectConnection = useReconnectConnection(organizationId);
 
   const isLoading = connectionsLoading;
 
@@ -156,6 +164,7 @@ export default function DataSourcesPage() {
         return;
       }
       try {
+        await disconnectConnection.mutateAsync(dataSourceId);
         showSuccessToast("disconnected", dataSource.name);
       } catch (error) {
         const errorMessage =
@@ -165,7 +174,38 @@ export default function DataSourcesPage() {
         showErrorToast("disconnectFailed", "Data Source", errorMessage);
       }
     },
-    [filteredDataSources],
+    [filteredDataSources, disconnectConnection],
+  );
+
+  const handleReconnect = useCallback(
+    async (dataSourceId: string) => {
+      const dataSource = filteredDataSources.find(
+        (ds) => ds.id === dataSourceId,
+      );
+      if (!dataSource) {
+        showErrorToast("notFound", "Data Source");
+        return;
+      }
+      try {
+        const result = await reconnectConnection.mutateAsync(dataSourceId);
+        if (result.success) {
+          showSuccessToast("reconnected", dataSource.name);
+        } else {
+          showErrorToast(
+            "reconnectFailed",
+            "Data Source",
+            result.error || result.message,
+          );
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Unable to reconnect the data source.";
+        showErrorToast("reconnectFailed", "Data Source", errorMessage);
+      }
+    },
+    [filteredDataSources, reconnectConnection],
   );
 
   const handleDelete = useCallback(
@@ -327,7 +367,7 @@ export default function DataSourcesPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {connected && (
+                  {connected ? (
                     <>
                       <DropdownMenuItem
                         onClick={(e) => {
@@ -349,6 +389,20 @@ export default function DataSourcesPage() {
                         <Unlink className="mr-2 h-4 w-4" />
                         Disconnect
                       </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReconnect(dataSource.id);
+                        }}
+                        className="text-green-600 focus:text-green-600"
+                      >
+                        <Link2 className="mr-2 h-4 w-4" />
+                        Reconnect
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                     </>
                   )}
                   <DropdownMenuItem
@@ -374,6 +428,7 @@ export default function DataSourcesPage() {
       getConnectedDataSource,
       router,
       handleDisconnect,
+      handleReconnect,
       handleDelete,
       connections,
       usersMap,
