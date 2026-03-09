@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { SQLEditor } from "@/components/data-sources/sql-editor";
 import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -141,16 +142,19 @@ export default function DataSourceQueryPage() {
   // Removed dataset tab functionality
 
   // Convert API data to component format
+  // Treat as connected when: connection.status is active/connected, OR data source isActive (matches list display)
+  const isConnectionActive =
+    connection?.status === "active" || connection?.status === "connected";
+  const isDataSourceActive = dataSourceData?.isActive ?? false;
   const dataSource =
     dataSourceData && connection
       ? {
           id: dataSourceData.id,
           name: dataSourceData.name,
           type: dataSourceData.source_type as "postgres",
-          status:
-            connection.status === "active"
-              ? ("connected" as const)
-              : ("disconnected" as const),
+          status: (isConnectionActive || isDataSourceActive)
+            ? ("connected" as const)
+            : ("disconnected" as const),
           tables: [], // Not used when using schema-based navigation
         }
       : null;
@@ -253,36 +257,16 @@ export default function DataSourceQueryPage() {
     );
   }
 
-  // Check if data source is connected
-  if (dataSource.status !== "connected") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-2">
-                Data source is not connected
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Please connect the data source first to view tables and run
-                queries.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/workspace/data-sources")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Data Sources
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isConnected = dataSource.status === "connected";
 
   const handleExecuteQuery = async () => {
+    if (!isConnected) {
+      toast.error(
+        "Data source not connected",
+        "Please connect the data source first to run queries.",
+      );
+      return;
+    }
     if (!query.trim()) {
       toast.error("Query is empty", "Please enter a query to execute.");
       return;
@@ -446,7 +430,7 @@ export default function DataSourceQueryPage() {
   };
 
   const fetchTableData = async (tableName: string) => {
-    if (!dataSourceId) return;
+    if (!dataSourceId || !isConnected) return;
 
     setTableDataLoading(true);
     try {
@@ -626,6 +610,29 @@ export default function DataSourceQueryPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {!isConnected && (
+        <Alert variant="destructive" className="rounded-none border-0">
+          <Database className="h-4 w-4" />
+          <div className="col-start-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <AlertTitle>Data source is not connected</AlertTitle>
+              <AlertDescription>
+                Please connect the data source first to view tables and run
+                queries.
+              </AlertDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/workspace/data-sources")}
+              className="shrink-0 w-fit"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Data Sources
+            </Button>
+          </div>
+        </Alert>
+      )}
       {/* Top Header Bar - Responsive */}
       <div className="border-b shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 px-3 sm:px-4 lg:px-6 py-2 sm:py-1">
@@ -668,7 +675,7 @@ export default function DataSourceQueryPage() {
                 </DropdownMenu>
                 <Button
                   onClick={handleExecuteQuery}
-                  disabled={loading || !query.trim()}
+                  disabled={loading || !query.trim() || !isConnected}
                   size="sm"
                   className="h-8 flex-1 sm:flex-none"
                 >

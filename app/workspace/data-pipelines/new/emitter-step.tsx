@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { useConnection, useConnections } from "@/lib/api";
 import { ConnectionService } from "@/lib/api/services/connection.service";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { toast } from "@/lib/utils/toast";
 import { cn } from "@/lib/utils";
 import type { CollectorConfig } from "./collector-step";
 
@@ -206,6 +207,11 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         message: result.message,
         error: result.error,
       });
+      if (result.success) {
+        toast.success("Connection successful", result.message);
+      } else {
+        toast.error("Connection failed", result.error);
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -213,6 +219,7 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
         success: false,
         error: errorMessage || "Failed to test connection",
       });
+      toast.error("Connection test failed", errorMessage || "Failed to test connection");
     } finally {
       setTestingConnection(false);
     }

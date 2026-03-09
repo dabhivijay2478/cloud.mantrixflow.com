@@ -7,6 +7,7 @@ import {
   Loader2,
   MoreVertical,
   Plus,
+  RefreshCw,
   Table,
   Trash2,
   XCircle,
@@ -43,6 +44,7 @@ import {
   useCreateDestinationTable,
   useDeleteDestinationSchema,
   useDestinationSchemasPaginated,
+  usePreviewDestinationData,
   useValidateDestinationSchema,
 } from "@/lib/api/hooks/use-destination-schemas";
 import type { PipelineDestinationSchema } from "@/lib/api/types/data-pipelines";
@@ -310,7 +312,7 @@ export default function DestinationSchemasPage() {
         totalCount={paginatedResult?.total ?? 0}
       />
 
-      {/* Details Dialog */}
+      {/* Details Modal */}
       <DestinationSchemaDetailsDialog
         organizationId={organizationId}
         schema={detailSchema}
@@ -320,7 +322,7 @@ export default function DestinationSchemasPage() {
   );
 }
 
-// Details Dialog Component
+// Details Modal Component
 function DestinationSchemaDetailsDialog({
   organizationId,
   schema,
@@ -339,6 +341,8 @@ function DestinationSchemaDetailsDialog({
     organizationId,
     schema?.id,
   );
+  const { data: previewData, isLoading: previewLoading } =
+    usePreviewDestinationData(organizationId, schema?.id, 10);
 
   const handleValidate = async () => {
     try {
@@ -376,7 +380,7 @@ function DestinationSchemaDetailsDialog({
 
   return (
     <Dialog open={!!schema} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-7xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Table className="h-5 w-5" />
@@ -468,6 +472,79 @@ function DestinationSchemaDetailsDialog({
                   No transform script configured
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Destination Data Preview */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Destination Data Preview</CardTitle>
+              <CardDescription>
+                Sample data from the destination table
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[300px] overflow-auto">
+                {previewLoading ? (
+                  <div className="flex items-center justify-center py-12 border rounded-lg">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : previewData?.rows && previewData.rows.length > 0 ? (
+                  <div className="border rounded-lg overflow-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          {previewData.columns?.map((col) => (
+                            <th
+                              key={col.name}
+                              className="px-3 py-2 text-left font-medium border-b"
+                            >
+                              <div className="flex flex-col">
+                                <span>{col.name}</span>
+                                <span className="text-xs text-muted-foreground font-normal">
+                                  {col.type}
+                                </span>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.rows.map((row, i) => {
+                          const rowKey = previewData.columns?.[0]
+                            ? `${String((row as Record<string, unknown>)[previewData.columns[0].name] ?? "")}-${i}`
+                            : `row-${i}`;
+                          return (
+                            <tr
+                              key={rowKey}
+                              className="border-b last:border-0 hover:bg-muted/30"
+                            >
+                              {previewData.columns?.map((col) => (
+                                <td
+                                  key={col.name}
+                                  className="px-3 py-2 truncate max-w-[200px]"
+                                >
+                                  {String(
+                                    (row as Record<string, unknown>)[col.name] ?? "-",
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground border rounded-lg">
+                    <Table className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p>No preview data available</p>
+                    <p className="text-sm mt-1">
+                      Table may not exist yet or no data has been synced
+                    </p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

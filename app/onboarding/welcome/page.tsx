@@ -2,13 +2,14 @@
 
 import { ArrowRight, Building2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   CenteredCardLayout,
   LoadingState,
   StepIndicator,
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/utils/toast";
 import {
   Card,
   CardContent,
@@ -31,6 +32,7 @@ export default function WelcomePage() {
   const { data: onboardingStatus } = useOnboardingStatus();
   const { data: currentOrganization } = useCurrentOrganization();
   const updateOnboardingStep = useUpdateOnboardingStep();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if user is invited (has currentOrgId)
   const isInvitedUser =
@@ -48,22 +50,53 @@ export default function WelcomePage() {
   }, [user, loading, onboardingStatus?.completed, router]);
 
   const handleGetStarted = async () => {
-    await updateOnboardingStep.mutateAsync("organization");
-    setOnboardingStep("organization");
-    router.push("/onboarding/organization");
+    setIsSubmitting(true);
+    try {
+      await updateOnboardingStep.mutateAsync("organization");
+      setOnboardingStep("organization");
+      router.push("/onboarding/organization");
+    } catch (error) {
+      toast.error(
+        "Failed to continue",
+        error instanceof Error ? error.message : "Please try again",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSkip = async () => {
-    await updateOnboardingStep.mutateAsync("complete");
-    completeOnboarding();
-    router.push("/workspace");
+    setIsSubmitting(true);
+    try {
+      await updateOnboardingStep.mutateAsync("complete");
+      completeOnboarding();
+      toast.success("Welcome!", "You can set up your workspace anytime.");
+      router.push("/workspace");
+    } catch (error) {
+      toast.error(
+        "Failed to skip",
+        error instanceof Error ? error.message : "Please try again",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleContinueToDashboard = async () => {
-    // Mark onboarding as completed for invited users
-    await updateOnboardingStep.mutateAsync("complete");
-    completeOnboarding();
-    router.push("/workspace");
+    setIsSubmitting(true);
+    try {
+      await updateOnboardingStep.mutateAsync("complete");
+      completeOnboarding();
+      toast.success("Welcome!", "You're all set. Start exploring your workspace.");
+      router.push("/workspace");
+    } catch (error) {
+      toast.error(
+        "Failed to continue",
+        error instanceof Error ? error.message : "Please try again",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -108,6 +141,7 @@ export default function WelcomePage() {
                 onClick={handleContinueToDashboard}
                 className="w-full"
                 size="lg"
+                isLoading={isSubmitting}
               >
                 Continue to Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -128,11 +162,6 @@ export default function WelcomePage() {
     },
     {
       number: 2,
-      title: "Connect Your Data Source",
-      description: "Link your database, spreadsheet, or API",
-    },
-    {
-      number: 3,
       title: "Create Your First Dashboard",
       description: "Use AI to generate insights from your data",
     },
@@ -153,11 +182,21 @@ export default function WelcomePage() {
         <CardContent className="space-y-6">
           <StepIndicator steps={steps} currentStep={1} />
           <div className="space-y-2">
-            <Button onClick={handleGetStarted} className="w-full" size="lg">
+            <Button
+              onClick={handleGetStarted}
+              className="w-full"
+              size="lg"
+              isLoading={isSubmitting}
+            >
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button onClick={handleSkip} variant="ghost" className="w-full">
+            <Button
+              onClick={handleSkip}
+              variant="ghost"
+              className="w-full"
+              isLoading={isSubmitting}
+            >
               Skip for now
             </Button>
           </div>

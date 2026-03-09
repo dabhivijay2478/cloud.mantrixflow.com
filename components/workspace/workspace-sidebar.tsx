@@ -1,17 +1,19 @@
 "use client";
 
 import {
+  DatabaseIcon,
+  FileTextIcon,
+  GaugeIcon,
+  GitBranchIcon,
+  SettingsIcon,
+  UsersIcon,
+} from "lucide-animated";
+import {
   Building2,
   ChevronsUpDown,
-  Database,
-  FileText,
-  GitBranch,
-  LayoutDashboard,
   List,
   Plus,
-  Settings,
   Table,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -348,7 +350,7 @@ export function WorkspaceSidebar() {
                   className="cursor-pointer"
                 >
                   <Link href="/workspace">
-                    <LayoutDashboard className="h-4 w-4" />
+                    <GaugeIcon size={16} className="shrink-0" />
                     <span>Dashboard</span>
                   </Link>
                 </SidebarMenuButton>
@@ -366,7 +368,7 @@ export function WorkspaceSidebar() {
                     className="cursor-pointer"
                   >
                     <Link href="/workspace/data-sources">
-                      <Database className="h-4 w-4" />
+                      <DatabaseIcon size={16} className="shrink-0" />
                       <span>Data Sources</span>
                       {filteredDataSources.length > 0 && (
                         <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -390,7 +392,7 @@ export function WorkspaceSidebar() {
                     className="cursor-pointer"
                   >
                     <Link href="/workspace/data-pipelines">
-                      <GitBranch className="h-4 w-4" />
+                      <GitBranchIcon size={16} className="shrink-0" />
                       <span>Data Pipelines</span>
                     </Link>
                   </SidebarMenuButton>
@@ -408,7 +410,7 @@ export function WorkspaceSidebar() {
                     className="cursor-pointer"
                   >
                     <Link href="/workspace/source-schemas">
-                      <Database className="h-4 w-4" />
+                      <DatabaseIcon size={16} className="shrink-0" />
                       <span>Source Schemas</span>
                     </Link>
                   </SidebarMenuButton>
@@ -442,7 +444,7 @@ export function WorkspaceSidebar() {
                   className="cursor-pointer"
                 >
                   <Link href="/workspace/activity">
-                    <FileText className="h-4 w-4" />
+                    <FileTextIcon size={16} className="shrink-0" />
                     <span>Activity Log</span>
                   </Link>
                 </SidebarMenuButton>
@@ -464,7 +466,7 @@ export function WorkspaceSidebar() {
                   className="cursor-pointer"
                 >
                   <Link href="/workspace/settings">
-                    <Settings className="h-4 w-4" />
+                    <SettingsIcon size={16} className="shrink-0" />
                     <span>Settings</span>
                   </Link>
                 </SidebarMenuButton>
@@ -479,7 +481,7 @@ export function WorkspaceSidebar() {
                     className="cursor-pointer"
                   >
                     <Link href="/workspace/team">
-                      <Users className="h-4 w-4" />
+                      <UsersIcon size={16} className="shrink-0" />
                       <span>Team</span>
                     </Link>
                   </SidebarMenuButton>

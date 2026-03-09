@@ -39,6 +39,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -247,6 +254,11 @@ export interface DataTableProps<TData, TValue> {
    * Default page size
    */
   defaultPageSize?: number;
+  /**
+   * Hide the top controls (filter input and column visibility toggle).
+   * Use when custom filters are provided above the table.
+   */
+  hideTopControls?: boolean;
 }
 
 /**
@@ -301,6 +313,7 @@ export function DataTable<TData, TValue>({
   className,
   pageSizeOptions: _pageSizeOptions = [10, 20, 50, 100],
   defaultPageSize = 10,
+  hideTopControls = false,
 }: DataTableProps<TData, TValue>) {
   // Helper function to get column ID from column definition
   const getColumnId = React.useCallback(
@@ -610,20 +623,21 @@ export function DataTable<TData, TValue>({
   return (
     <div className={cn("w-full space-y-4", className)}>
       {/* Top Controls: Filter Input and Column Visibility */}
-      <div className="flex items-center justify-between">
-        {/* Filter Input - Top Left */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={filterPlaceholder}
-            value={currentGlobalFilter || ""}
-            onChange={(e) => setCurrentGlobalFilter(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {!hideTopControls && (
+        <div className="flex items-center justify-between">
+          {/* Filter Input - Top Left */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={filterPlaceholder}
+              value={currentGlobalFilter || ""}
+              onChange={(e) => setCurrentGlobalFilter(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
-        {/* Column Visibility Button - Top Right */}
-        <DropdownMenu>
+          {/* Column Visibility Button - Top Right */}
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-8">
               <Columns className="mr-2 h-4 w-4" />
@@ -660,7 +674,8 @@ export function DataTable<TData, TValue>({
               })}
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-md border bg-muted/30">
@@ -798,23 +813,31 @@ export function DataTable<TData, TValue>({
               <span className="text-sm text-muted-foreground">
                 Rows per page
               </span>
-              <select
-                className="h-8 w-[70px] rounded-md border border-input bg-background px-2 text-sm"
-                value={paginationState.pageSize}
-                onChange={(e) => {
-                  const newSize = Number(e.target.value);
+              <Select
+                value={String(paginationState.pageSize)}
+                onValueChange={(value) => {
+                  const newSize = Number(value);
                   setPaginationState({
                     pageIndex: 0,
                     pageSize: newSize,
                   });
                 }}
               >
-                {_pageSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-8 w-[70px] cursor-pointer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {_pageSizeOptions.map((size) => (
+                    <SelectItem
+                      key={size}
+                      value={String(size)}
+                      className="cursor-pointer"
+                    >
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>

@@ -288,7 +288,7 @@ export default function SourceSchemasPage() {
         totalCount={paginatedResult?.total ?? 0}
       />
 
-      {/* Preview Dialog */}
+      {/* Preview Modal */}
       <SourceSchemaPreviewDialog
         organizationId={organizationId}
         schemaId={previewSchemaId}
@@ -298,7 +298,7 @@ export default function SourceSchemasPage() {
   );
 }
 
-// Preview Dialog Component
+// Preview Modal Component
 function SourceSchemaPreviewDialog({
   organizationId,
   schemaId,
@@ -337,7 +337,7 @@ function SourceSchemaPreviewDialog({
 
   return (
     <Dialog open={!!schemaId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-7xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
@@ -387,7 +387,6 @@ function SourceSchemaPreviewDialog({
                 </thead>
                 <tbody>
                   {previewData.rows.map((row, i) => {
-                    // Create a unique key from row data and index
                     const rowKey = previewData.columns?.[0]
                       ? `${String((row as Record<string, unknown>)[previewData.columns[0].name] ?? "")}-${i}`
                       : `row-${i}`;

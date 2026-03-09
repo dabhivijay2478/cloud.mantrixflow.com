@@ -12,6 +12,7 @@ export { ConfirmationModal } from "./confirmation-modal";
 export type { DataTableProps } from "./data-table";
 // Data Table Components
 export { DataTable } from "./data-table";
+export { ActionStatusBadge } from "./action-status-badge";
 export { EmptyState } from "./feedback/empty-state";
 export { ErrorState } from "./feedback/error-state";
 // Feedback Components

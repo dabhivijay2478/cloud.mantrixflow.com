@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { toast } from "@/lib/utils/toast";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,8 +50,7 @@ type OrganizationFormValues = z.infer<typeof organizationSchema>;
 
 export default function OrganizationPage() {
   const router = useRouter();
-  const { setOnboardingStep, completeOnboarding, addOrganization } =
-    useWorkspaceStore();
+  const { completeOnboarding, addOrganization } = useWorkspaceStore();
   const createOrganization = useCreateOrganization();
   const setCurrentOrganization = useSetCurrentOrganization();
   const updateOnboardingStep = useUpdateOnboardingStep();
@@ -127,29 +126,27 @@ export default function OrganizationPage() {
           new Date().toISOString(),
       });
 
-      // Update onboarding step
-      await updateOnboardingStep.mutateAsync("data-source");
+      // Complete onboarding (skip data-source step)
+      await updateOnboardingStep.mutateAsync("complete");
+      completeOnboarding();
 
-      setOnboardingStep("data-source");
       toast.success("Organization created successfully");
-      router.push("/onboarding/data-source");
+      router.push("/workspace");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Please try again";
 
       // Check if it's a 403 Forbidden error (invited user trying to create)
       if (error instanceof Error && errorMessage.includes("Invited users")) {
-        toast.error("Authorization Error", {
-          description:
-            "Invited users are not allowed to create organizations. Redirecting...",
-        });
+        toast.error(
+          "Authorization Error",
+          "Invited users are not allowed to create organizations. Redirecting...",
+        );
         router.push("/workspace");
         return;
       }
 
-      toast.error("Failed to create organization", {
-        description: errorMessage,
-      });
+      toast.error("Failed to create organization", errorMessage);
       console.error(error);
     } finally {
       setLoading(false);
@@ -183,7 +180,7 @@ export default function OrganizationPage() {
               </div>
               <div>
                 <CardTitle>Create Your Organization</CardTitle>
-                <CardDescription>Step 1 of 3</CardDescription>
+                <CardDescription>Step 1 of 2</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -248,11 +245,11 @@ export default function OrganizationPage() {
                       type="button"
                       variant="ghost"
                       onClick={handleSkip}
-                      disabled={loading}
+                      isLoading={loading}
                     >
                       Skip for now
                     </Button>
-                    <Button type="submit" disabled={loading}>
+                    <Button type="submit" isLoading={loading}>
                       Continue
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
