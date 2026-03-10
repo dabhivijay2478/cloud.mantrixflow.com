@@ -26,19 +26,23 @@ export function ExplorerMainView() {
 
   return (
     <>
-      <ResizablePanelGroup direction="vertical" className="h-full">
+      <ResizablePanelGroup
+        direction="vertical"
+        className="h-full border-l border-border/50"
+      >
         <ResizablePanel defaultSize={50} minSize={20}>
-          <div className="h-full overflow-hidden p-2">
+          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border/40 bg-background/50">
             <QueryEditorPanel />
           </div>
         </ResizablePanel>
-        <ResizableHandle withHandle />
+        <ResizableHandle withHandle className="bg-border/30" />
         <ResizablePanel defaultSize={50} minSize={20}>
-          <div className="h-full overflow-hidden p-2">
+          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border/40 bg-background/50">
             <QueryResultPanel
               renderActions={() => (
                 <Button
                   size="xs"
+                  variant="outline"
                   onClick={createTableModal.onOpen}
                   className="gap-1"
                 >

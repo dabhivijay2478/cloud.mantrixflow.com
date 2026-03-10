@@ -14,6 +14,7 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 
 const supportsSQLQueries = (type: string): boolean => {
@@ -236,8 +237,15 @@ export default function DataSourceQueryPage() {
         </Alert>
       )}
 
-      {/* Minimal header */}
-      <div className="flex shrink-0 items-center gap-2 border-b bg-background/95 px-3 py-2">
+      {/* Supabase-style header: back + name + status in one row */}
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-3 border-b px-4 py-2.5",
+          explorerError
+            ? "border-destructive/50 bg-destructive/5"
+            : "border-border bg-background",
+        )}
+      >
         <Button
           variant="ghost"
           size="sm"
@@ -246,9 +254,18 @@ export default function DataSourceQueryPage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <span className="text-sm text-muted-foreground truncate">
-          {dataSource?.name}
-        </span>
+        <span className="text-sm font-medium truncate">{dataSource?.name}</span>
+        <div className="flex min-w-0 flex-1 justify-end">
+          {explorerError ? (
+            <span className="truncate text-xs font-medium text-destructive">
+              {explorerError}
+            </span>
+          ) : explorerDataAsOf ? (
+            <span className="text-xs text-muted-foreground">
+              Last run: {explorerDataAsOf.toLocaleString()}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {/* SQLRooms layout - no custom sidebar */}

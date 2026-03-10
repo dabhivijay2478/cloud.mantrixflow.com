@@ -1,7 +1,8 @@
 "use client";
 
 import { RoomPanel } from "@sqlrooms/room-shell";
-import { Button, Input } from "@sqlrooms/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   CheckCircle2,
   ChevronDown,
@@ -113,34 +114,41 @@ ORDER BY table_name;`;
 
   return (
     <RoomPanel type="data" showHeader={false}>
-      {/* Schema panel: always visible, no close button - pinned by layout config */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-border/50 pb-2 mb-2">
-        <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <h2 className="text-xs font-semibold uppercase text-muted-foreground">
-          Schemas
-        </h2>
-      </div>
-      {/* Single schema tree - Redshift-style, no duplicate mapping */}
-      <div className="flex flex-1 flex-col gap-3 overflow-hidden">
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full justify-start gap-2"
-          onClick={handleNewQuery}
-        >
-          <PlusSquare className="h-4 w-4" />
-          New query
-        </Button>
-        <div className="relative shrink-0">
-          <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search schemas or tables..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 pl-7 text-xs"
-          />
+      {/* Supabase-style sidebar */}
+      <div className="flex h-full flex-col overflow-hidden bg-muted/20">
+        <div className="shrink-0 space-y-3 px-2 pb-3">
+          <h2 className="px-2 pt-2 text-sm font-semibold text-foreground">
+            SQL Editor
+          </h2>
+          <div className="flex gap-1.5">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search schemas or tables..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 gap-1.5 px-2.5"
+              onClick={handleNewQuery}
+              title="New query"
+            >
+              <PlusSquare className="h-4 w-4" />
+              New
+            </Button>
+          </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border/50 p-2">
+        <div className="flex shrink-0 items-center gap-2 px-2 py-1.5">
+          <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Schemas
+          </span>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border/40 bg-muted/20 px-2 py-1.5">
           {schemasLoading ? (
             <div className="py-4 text-center text-xs text-muted-foreground">
               Loading schemas...
@@ -235,7 +243,7 @@ ORDER BY table_name;`;
             </div>
           )}
         </div>
-        <div className="space-y-1.5 shrink-0">
+        <div className="mt-auto shrink-0 space-y-1.5 border-t border-border/50 px-2 pt-3 pb-2">
           <label className="text-xs text-muted-foreground">Row limit</label>
           <Input
             type="number"

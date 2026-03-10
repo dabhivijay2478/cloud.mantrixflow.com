@@ -41,7 +41,7 @@ export const { roomStore, useRoomStore } = createRoomStore<ExplorerRoomState>(
             first: ROOM_PANEL_DATA,
             second: ROOM_PANEL_MAIN,
             direction: "row",
-            splitPercentage: 30,
+            splitPercentage: 24,
           },
           pinned: [ROOM_PANEL_DATA],
           fixed: [ROOM_PANEL_DATA],
