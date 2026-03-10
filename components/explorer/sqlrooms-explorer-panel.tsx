@@ -19,9 +19,9 @@ export interface SqlRoomsExplorerPanelProps {
  */
 export function SqlRoomsExplorerPanel(_props: SqlRoomsExplorerPanelProps) {
   return (
-    <RoomShell roomStore={roomStore} className="h-full w-full">
+    <RoomShell roomStore={roomStore} className="h-full min-h-0 w-full overflow-hidden">
       <ExplorerRunInterceptor />
-      <div className="flex h-full w-full flex-col overflow-hidden">
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <div className="min-h-0 flex-1 overflow-hidden">
           <RoomShell.LayoutComposer />
         </div>

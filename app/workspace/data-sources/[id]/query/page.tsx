@@ -213,7 +213,7 @@ export default function DataSourceQueryPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       {!isConnected && (
         <Alert variant="destructive" className="rounded-none border-0">
           <Database className="h-4 w-4" />
