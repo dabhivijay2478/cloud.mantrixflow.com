@@ -192,6 +192,7 @@ export default function DataSourceQueryPage() {
   const explorerContextValue = {
     orgId,
     dataSourceId,
+    dataSourceType: dataSource?.type,
     schemas: schemas || [],
     schemasLoading,
     selectedSchema,

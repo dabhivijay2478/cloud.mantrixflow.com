@@ -11,6 +11,8 @@ export interface ExplorerDataResult {
 export interface ExplorerContextValue {
   orgId: string | undefined;
   dataSourceId: string;
+  /** Database type for SQL dialect (postgres, mysql, clickhouse, etc.) */
+  dataSourceType?: string;
   schemas: Schema[];
   schemasLoading: boolean;
   selectedSchema: string | undefined;

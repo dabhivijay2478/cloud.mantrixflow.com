@@ -22,7 +22,10 @@ export type ExplorerRoomState = RoomShellSliceState & SqlEditorSliceState;
 
 export const { roomStore, useRoomStore } = createRoomStore<ExplorerRoomState>(
   (set, get, store) => {
-    const sqlSlice = createSqlEditorSlice()(set, get, store);
+    const sqlSlice = createSqlEditorSlice({
+      queryResultLimit: 10000,
+      queryResultLimitOptions: [100, 500, 1000, 5000, 10000, 50000, 100000],
+    })(set, get, store);
     const originalParseAndRun = sqlSlice.sqlEditor.parseAndRunCurrentQuery;
 
     return {
@@ -40,6 +43,8 @@ export const { roomStore, useRoomStore } = createRoomStore<ExplorerRoomState>(
             direction: "row",
             splitPercentage: 30,
           },
+          pinned: [ROOM_PANEL_DATA],
+          fixed: [ROOM_PANEL_DATA],
         },
         panels: {
           [ROOM_PANEL_DATA]: {

@@ -16,6 +16,19 @@ import { useExplorerContext } from "@/lib/explorer/explorer-context";
 import { useRoomStore } from "./explorer-store";
 import { cn } from "@/lib/utils";
 
+/** Quote identifier for SQL based on database type (PostgreSQL uses ", MySQL/ClickHouse use `) */
+function quoteIdentifier(name: string, dbType?: string): string {
+  const escaped = name.replace(/"/g, '""').replace(/`/g, "``").replace(/\]/g, "]]");
+  const t = (dbType ?? "postgres").toLowerCase();
+  if (t.includes("mysql") || t.includes("clickhouse") || t.includes("bigquery")) {
+    return `\`${escaped}\``;
+  }
+  if (t.includes("mssql") || t.includes("sqlserver")) {
+    return `[${escaped}]`;
+  }
+  return `"${escaped}"`;
+}
+
 export function ExplorerDataPanel() {
   const {
     schemas,
@@ -27,9 +40,14 @@ export function ExplorerDataPanel() {
     onSchemaSelect,
     explorerRowLimit,
     setExplorerRowLimit,
+    dataSourceType,
   } = useExplorerContext();
 
   const createQueryTab = useRoomStore((s) => s.sqlEditor?.createQueryTab);
+  const updateQueryText = useRoomStore((s) => s.sqlEditor?.updateQueryText);
+  const selectedQueryId = useRoomStore(
+    (s) => s.sqlEditor?.config?.selectedQueryId,
+  );
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [expandedSchemas, setExpandedSchemas] = React.useState<Set<string>>(
@@ -82,16 +100,26 @@ ORDER BY table_schema, table_name;`,
   const handleSchemaSelect = (schemaName: string) => {
     onSchemaSelect?.(schemaName);
     const escaped = schemaName.replace(/'/g, "''");
-    createQueryTab?.(
-      `SELECT table_schema, table_name, table_type 
+    const query = `SELECT table_schema, table_name, table_type 
 FROM information_schema.tables 
 WHERE table_schema = '${escaped}'
-ORDER BY table_name;`,
-    );
+ORDER BY table_name;`;
+    if (selectedQueryId && updateQueryText) {
+      updateQueryText(selectedQueryId, query);
+    } else {
+      createQueryTab?.(query);
+    }
   };
 
   return (
-    <RoomPanel type="data" showHeader={true}>
+    <RoomPanel type="data" showHeader={false}>
+      {/* Schema panel: always visible, no close button - pinned by layout config */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-border/50 pb-2 mb-2">
+        <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <h2 className="text-xs font-semibold uppercase text-muted-foreground">
+          Schemas
+        </h2>
+      </div>
       {/* Single schema tree - Redshift-style, no duplicate mapping */}
       <div className="flex flex-1 flex-col gap-3 overflow-hidden">
         <Button
@@ -182,10 +210,15 @@ ORDER BY table_name;`,
                             )}
                             onClick={() => {
                             onTableSelect(table.name, schema.name);
-                            const schemaPart = `"${schema.name.replace(/"/g, '""')}"`;
-                            const tablePart = `"${table.name.replace(/"/g, '""')}"`;
+                            const schemaPart = quoteIdentifier(schema.name, dataSourceType);
+                            const tablePart = quoteIdentifier(table.name, dataSourceType);
                             const qualified = `${schemaPart}.${tablePart}`;
-                            createQueryTab?.(`SELECT * FROM ${qualified} LIMIT 100`);
+                            const query = `SELECT * FROM ${qualified} LIMIT 100`;
+                            if (selectedQueryId && updateQueryText) {
+                              updateQueryText(selectedQueryId, query);
+                            } else {
+                              createQueryTab?.(query);
+                            }
                           }}
                           >
                             <TableIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
