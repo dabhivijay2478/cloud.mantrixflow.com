@@ -252,6 +252,7 @@ export function useDeleteSourceSchema(organizationId: string | undefined) {
 
 /**
  * Discover schema from source (columns, primary keys, row count)
+ * Persists discovered data to the backend and invalidates list queries
  */
 export function useDiscoverSourceSchema(
   organizationId: string | undefined,
@@ -259,18 +260,34 @@ export function useDiscoverSourceSchema(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!organizationId || !schemaId) {
         throw new Error("Organization ID and Schema ID are required");
       }
-      return SourceSchemasService.discoverSourceSchema(
+      const result = await SourceSchemasService.discoverSourceSchema(
         organizationId,
         schemaId,
       );
+      // Persist discovered data to backend (sets lastDiscoveredAt)
+      const updatePayload = {
+        discoveredColumns: result.discovered.columns.map((c) => ({
+          name: c.name,
+          type: c.type,
+          nullable: c.nullable,
+        })),
+        primaryKeys: result.discovered.primaryKeys,
+        estimatedRowCount: result.discovered.estimatedRowCount,
+      };
+      const updatedSchema = await SourceSchemasService.updateSourceSchema(
+        organizationId,
+        schemaId,
+        updatePayload,
+      );
+      return { ...result, schema: updatedSchema };
     },
     onSuccess: (result) => {
       if (organizationId && schemaId) {
-        // Update schema cache with discovered data
+        // Update schema cache with persisted data
         queryClient.setQueryData(
           sourceSchemasKeys.detail(organizationId, schemaId),
           result.schema,
@@ -280,6 +297,10 @@ export function useDiscoverSourceSchema(
           sourceSchemasKeys.discovery(organizationId, schemaId),
           result.discovered,
         );
+        // Invalidate list queries so lastDiscoveredAt shows in table
+        queryClient.invalidateQueries({
+          queryKey: sourceSchemasKeys.lists(),
+        });
       }
     },
   });

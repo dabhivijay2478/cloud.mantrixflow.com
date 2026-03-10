@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Table,
   Trash2,
+  X,
   XCircle,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -25,13 +26,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -285,8 +286,8 @@ export default function DestinationSchemasPage() {
       <DataTable
         tableId={
           organizationId
-            ? `destination-schemas-v2-${organizationId}`
-            : "destination-schemas-v2"
+            ? `destination-schemas-v3-${organizationId}`
+            : "destination-schemas-v3"
         }
         columns={columns}
         data={schemas || []}
@@ -312,8 +313,8 @@ export default function DestinationSchemasPage() {
         totalCount={paginatedResult?.total ?? 0}
       />
 
-      {/* Details Modal */}
-      <DestinationSchemaDetailsDialog
+      {/* Details Sheet */}
+      <DestinationSchemaDetailsSheet
         organizationId={organizationId}
         schema={detailSchema}
         onClose={handleCloseDetails}
@@ -322,8 +323,8 @@ export default function DestinationSchemasPage() {
   );
 }
 
-// Details Modal Component
-function DestinationSchemaDetailsDialog({
+// Details Sheet Component (Drawer)
+function DestinationSchemaDetailsSheet({
   organizationId,
   schema,
   onClose,
@@ -379,19 +380,31 @@ function DestinationSchemaDetailsDialog({
   if (!schema) return null;
 
   return (
-    <Dialog open={!!schema} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-7xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Table className="h-5 w-5" />
-            {schema.name || schema.destinationTable}
-          </DialogTitle>
-          <DialogDescription>
-            {schema.destinationSchema}.{schema.destinationTable}
-          </DialogDescription>
-        </DialogHeader>
+    <Drawer open={!!schema} onOpenChange={(open) => !open && onClose()} direction="right">
+      <DrawerContent
+        className="h-full max-h-none w-full max-w-3xl sm:max-w-3xl border-l rounded-l-lg data-[vaul-drawer-direction=right]:rounded-l-lg data-[vaul-drawer-direction=right]:rounded-r-none overflow-hidden flex flex-col"
+        aria-describedby={undefined}
+      >
+        <DrawerHeader className="border-b border-border/60 px-6 py-4 shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <DrawerTitle className="text-xl font-semibold flex items-center gap-2">
+                <Table className="h-5 w-5" />
+                {schema.name || schema.destinationTable}
+              </DrawerTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {schema.destinationSchema}.{schema.destinationTable}
+              </p>
+            </div>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close">
+                <X className="h-4 w-4" />
+              </Button>
+            </DrawerClose>
+          </div>
+        </DrawerHeader>
 
-        <div className="flex-1 overflow-auto space-y-6 py-4">
+        <div className="flex-1 overflow-auto space-y-6 py-4 px-6">
           {/* Table Status Card */}
           <Card>
             <CardHeader className="pb-3">
@@ -585,20 +598,22 @@ function DestinationSchemaDetailsDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          <Button onClick={handleValidate} disabled={validateSchema.isPending}>
-            {validateSchema.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-            )}
-            Validate Schema
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <DrawerFooter className="border-t border-border/60 px-6 py-4 shrink-0">
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            <Button onClick={handleValidate} disabled={validateSchema.isPending}>
+              {validateSchema.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Validate Schema
+            </Button>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
