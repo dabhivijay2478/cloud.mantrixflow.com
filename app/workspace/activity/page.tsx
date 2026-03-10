@@ -17,6 +17,7 @@ import {
   PageHeader,
 } from "@/components/shared";
 import { MetricCard } from "@/components/shared/metric-card";
+import { ActivityLogDetailSheet } from "@/components/workspace/activity-log-detail-sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -109,8 +110,15 @@ export default function ActivityLogPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
 
   const organizationId = currentOrganization?.id;
+
+  const handleLogClick = (log: ActivityLog) => {
+    setSelectedLog(log);
+    setDetailSheetOpen(true);
+  };
 
   const startDate = useMemo(() => {
     if (selectedTimeRange === "all") return undefined;
@@ -340,7 +348,7 @@ export default function ActivityLogPage() {
           description="Track all activity across your data pipelines, data sources, and organization"
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <MetricCard
             label="Total"
             value={metrics.total}
@@ -378,108 +386,114 @@ export default function ActivityLogPage() {
           />
         </div>
 
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold">Activity Logs</h2>
-              <p className="text-sm text-muted-foreground">
-                All activity across your data pipelines, data sources, and
-                organization
-              </p>
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Activity Logs</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Click a row or card to view full details
+                  </p>
+                </div>
+
+                <Tabs
+                  value={viewMode}
+                  onValueChange={(v) => setViewMode(v as "table" | "cards")}
+                >
+                  <TabsList>
+                    <TabsTrigger value="table" className="gap-2">
+                      <LayoutList className="h-4 w-4" />
+                      Table
+                    </TabsTrigger>
+                    <TabsTrigger value="cards" className="gap-2">
+                      <LayoutGrid className="h-4 w-4" />
+                      Cards
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="relative sm:col-span-2 lg:col-span-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Filter by message, entity, or action..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                    aria-label="Search activity logs"
+                  />
+                </div>
+
+                <Select value={selectedEntityType} onValueChange={handleEntityTypeChange}>
+                  <SelectTrigger className="w-full cursor-pointer">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ENTITY_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedActionType} onValueChange={handleActionTypeChange}>
+                  <SelectTrigger className="w-full cursor-pointer">
+                    <SelectValue placeholder="All Actions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTION_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-full cursor-pointer">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedTimeRange} onValueChange={handleTimeRangeChange}>
+                  <SelectTrigger className="w-full cursor-pointer">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_RANGE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCursor(undefined);
+                    refetch();
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
+              </div>
             </div>
-
-            <Tabs
-              value={viewMode}
-              onValueChange={(v) => setViewMode(v as "table" | "cards")}
-            >
-              <TabsList>
-                <TabsTrigger value="table" className="gap-2">
-                  <LayoutList className="h-4 w-4" />
-                  Table
-                </TabsTrigger>
-                <TabsTrigger value="cards" className="gap-2">
-                  <LayoutGrid className="h-4 w-4" />
-                  Cards
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Filter by message, entity, or action..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            <Select value={selectedEntityType} onValueChange={handleEntityTypeChange}>
-              <SelectTrigger className="w-[160px] cursor-pointer">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                {ENTITY_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedActionType} onValueChange={handleActionTypeChange}>
-              <SelectTrigger className="w-[160px] cursor-pointer">
-                <SelectValue placeholder="All Actions" />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTION_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedStatus} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[140px] cursor-pointer">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedTimeRange} onValueChange={handleTimeRangeChange}>
-              <SelectTrigger className="w-[140px] cursor-pointer">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIME_RANGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setCursor(undefined);
-                refetch();
-              }}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-          </div>
+          </CardContent>
+        </Card>
 
           {error ? (
             <Card>
@@ -506,13 +520,16 @@ export default function ActivityLogPage() {
               </CardContent>
             </Card>
           ) : viewMode === "table" ? (
-            <DataTable
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <DataTable
               tableId="activity-logs-table"
               columns={columns}
               data={filteredLogs}
               enableSorting
               enableFiltering={false}
               hideTopControls
+              onRowClick={handleLogClick}
               defaultVisibleColumns={[
                 "no",
                 "createdAt",
@@ -525,6 +542,8 @@ export default function ActivityLogPage() {
               emptyMessage="No logs found"
               emptyDescription="Activity logs will appear here as you create pipelines, connect data sources, and perform other actions."
             />
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredLogs.length === 0 ? (
@@ -539,7 +558,20 @@ export default function ActivityLogPage() {
                 </Card>
               ) : (
                 filteredLogs.map((log) => (
-                  <Card key={log.id} className="overflow-hidden">
+                  <Card
+                    key={log.id}
+                    className="overflow-hidden cursor-pointer transition-colors hover:bg-muted/50"
+                    onClick={() => handleLogClick(log)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleLogClick(log);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View details for ${log.entityType} ${log.actionType}`}
+                  >
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <ActionStatusBadge actionType={log.actionType} />
@@ -566,7 +598,12 @@ export default function ActivityLogPage() {
               )}
             </div>
           )}
-        </div>
+
+        <ActivityLogDetailSheet
+          log={selectedLog}
+          open={detailSheetOpen}
+          onOpenChange={setDetailSheetOpen}
+        />
       </div>
     </div>
   );
