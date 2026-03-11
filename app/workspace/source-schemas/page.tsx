@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,12 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,30 +146,6 @@ export default function SourceSchemasPage() {
         },
       },
       {
-        accessorKey: "discoveredColumns",
-        header: "Columns",
-        cell: ({ row }) => {
-          const count = row.original.discoveredColumns?.length || 0;
-          return (
-            <span className="text-sm text-muted-foreground">
-              {count > 0 ? `${count} columns` : "-"}
-            </span>
-          );
-        },
-      },
-      {
-        accessorKey: "estimatedRowCount",
-        header: "Est. Rows",
-        cell: ({ row }) => {
-          const count = row.original.estimatedRowCount;
-          return (
-            <span className="text-sm text-muted-foreground">
-              {count ? count.toLocaleString() : "-"}
-            </span>
-          );
-        },
-      },
-      {
         accessorKey: "isActive",
         header: "Status",
         cell: ({ row }) =>
@@ -261,8 +238,8 @@ export default function SourceSchemasPage() {
       <DataTable
         tableId={
           organizationId
-            ? `source-schemas-v2-${organizationId}`
-            : "source-schemas-v2"
+            ? `source-schemas-v3-${organizationId}`
+            : "source-schemas-v3"
         }
         columns={columns}
         data={schemas || []}
@@ -273,8 +250,6 @@ export default function SourceSchemasPage() {
         defaultVisibleColumns={[
           "name",
           "sourceTable",
-          "discoveredColumns",
-          "estimatedRowCount",
           "isActive",
           "lastDiscoveredAt",
           "actions",
@@ -288,8 +263,8 @@ export default function SourceSchemasPage() {
         totalCount={paginatedResult?.total ?? 0}
       />
 
-      {/* Preview Dialog */}
-      <SourceSchemaPreviewDialog
+      {/* Preview Sheet */}
+      <SourceSchemaPreviewSheet
         organizationId={organizationId}
         schemaId={previewSchemaId}
         onClose={handleClosePreview}
@@ -298,8 +273,8 @@ export default function SourceSchemasPage() {
   );
 }
 
-// Preview Dialog Component
-function SourceSchemaPreviewDialog({
+// Preview Sheet Component (Drawer)
+function SourceSchemaPreviewSheet({
   organizationId,
   schemaId,
   onClose,
@@ -336,31 +311,43 @@ function SourceSchemaPreviewDialog({
   if (!schemaId) return null;
 
   return (
-    <Dialog open={!!schemaId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Source Data Preview
-          </DialogTitle>
-          <DialogDescription>
-            Preview sample data from this source schema
-          </DialogDescription>
-        </DialogHeader>
+    <Drawer open={!!schemaId} onOpenChange={(open) => !open && onClose()} direction="right">
+      <DrawerContent
+        className="h-full max-h-none w-full max-w-3xl sm:max-w-3xl border-l rounded-l-lg data-[vaul-drawer-direction=right]:rounded-l-lg data-[vaul-drawer-direction=right]:rounded-r-none"
+        aria-describedby={undefined}
+      >
+        <DrawerHeader className="border-b border-border/60 px-6 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <DrawerTitle className="text-xl font-semibold flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Source Data Preview
+              </DrawerTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Preview sample data from this source schema
+              </p>
+            </div>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close">
+                <X className="h-4 w-4" />
+              </Button>
+            </DrawerClose>
+          </div>
+        </DrawerHeader>
 
-        <div className="flex items-center gap-2 pb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDiscover}
-            disabled={discoverSchema.isPending}
-          >
-            <Search className="h-4 w-4 mr-2" />
-            Discover Schema
-          </Button>
-        </div>
+        <div className="flex-1 overflow-auto px-6 py-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDiscover}
+              disabled={discoverSchema.isPending}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Discover Schema
+            </Button>
+          </div>
 
-        <div className="flex-1 overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -387,7 +374,6 @@ function SourceSchemaPreviewDialog({
                 </thead>
                 <tbody>
                   {previewData.rows.map((row, i) => {
-                    // Create a unique key from row data and index
                     const rowKey = previewData.columns?.[0]
                       ? `${String((row as Record<string, unknown>)[previewData.columns[0].name] ?? "")}-${i}`
                       : `row-${i}`;
@@ -426,7 +412,7 @@ function SourceSchemaPreviewDialog({
             </Card>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

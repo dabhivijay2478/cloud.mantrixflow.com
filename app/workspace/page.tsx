@@ -6,14 +6,18 @@ import {
   Calendar,
   CalendarClock,
   Database,
+  GitBranch,
+  Plus,
   RefreshCw,
   TrendingUp,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 import { DashboardSkeleton, DataTable, PageHeader } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardOverview } from "@/lib/api";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
@@ -195,7 +199,8 @@ export default function Dashboard() {
     );
   }
 
-  const { organization, pipelines, recentMigrations } = dashboard;
+  const { organization, pipelines, recentMigrations, recentActivity } =
+    dashboard;
 
   // Calculate pipeline success rate
   const totalRuns = pipelines.byStatus.completed + pipelines.byStatus.failed;
@@ -250,48 +255,122 @@ export default function Dashboard() {
           }
         />
 
-        {/* Weekly Update */}
+        {/* Widget Grid */}
         <section className="mb-12">
           <h2 className="text-lg font-medium mb-6 text-foreground">Overview</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="border border-border rounded-lg p-6 bg-card hover:border-border/80 transition-colors">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <Database className="w-4 h-4 text-blue-500" />
-                <span>Active Pipelines</span>
-              </div>
-              <div className="text-4xl font-semibold mb-2 text-foreground">
-                {pipelines.active}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {pipelines.total} total pipelines
-              </div>
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="shadow-sm transition-shadow hover:shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <Database className="w-4 h-4 text-blue-500" />
+                  <span>Active Pipelines</span>
+                </div>
+                <div className="text-4xl font-semibold mb-2 text-foreground">
+                  {pipelines.active}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {pipelines.total} total pipelines
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="border border-border rounded-lg p-6 bg-card hover:border-border/80 transition-colors">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <Activity className="w-4 h-4 text-purple-500" />
-                <span>Migrations This Week</span>
-              </div>
-              <div className="text-4xl font-semibold mb-2 text-foreground">
-                {migrationsThisWeek.length}
-              </div>
-              <div className="text-sm text-muted-foreground">Last 7 days</div>
-            </div>
+            <Card className="shadow-sm transition-shadow hover:shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <Activity className="w-4 h-4 text-purple-500" />
+                  <span>Migrations This Week</span>
+                </div>
+                <div className="text-4xl font-semibold mb-2 text-foreground">
+                  {migrationsThisWeek.length}
+                </div>
+                <div className="text-sm text-muted-foreground">Last 7 days</div>
+              </CardContent>
+            </Card>
 
-            <div className="border border-border rounded-lg p-6 bg-card hover:border-border/80 transition-colors">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <Users className="w-4 h-4 text-amber-500" />
-                <span>Team Members</span>
-              </div>
-              <div className="text-4xl font-semibold mb-2 text-foreground">
-                {organization.memberCount}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Active members
-              </div>
-            </div>
+            <Card className="shadow-sm transition-shadow hover:shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <Users className="w-4 h-4 text-amber-500" />
+                  <span>Team Members</span>
+                </div>
+                <div className="text-4xl font-semibold mb-2 text-foreground">
+                  {organization.memberCount}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Active members
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm transition-shadow hover:shadow-md">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-2">
+                <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+                  <Link href="/workspace/data-pipelines/new">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Pipeline
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+                  <Link href="/workspace/data-sources">
+                    <Database className="w-4 h-4 mr-2" />
+                    Data Sources
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start" asChild>
+                  <Link href="/workspace/activity">
+                    <GitBranch className="w-4 h-4 mr-2" />
+                    Activity Log
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </section>
+
+        {/* Recent Activity Snippet */}
+        {recentActivity && recentActivity.length > 0 && (
+          <section className="mb-12">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Recent Activity</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Latest actions across your organization
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {recentActivity.slice(0, 5).map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {activity.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {activity.entityType} ·{" "}
+                          {new Date(activity.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0">
+                        {activity.actionType}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="ghost" size="sm" className="mt-4 w-full" asChild>
+                  <Link href="/workspace/activity">View all activity</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Pipeline Statistics */}
         <section className="mb-12">
@@ -299,38 +378,43 @@ export default function Dashboard() {
             Pipeline Statistics
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="border border-border rounded-lg p-6 bg-card">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <TrendingUp className="w-4 h-4 text-purple-500" />
-                <span>Total Pipelines</span>
-              </div>
-              <div className="text-4xl font-semibold mb-2 text-foreground">
-                {pipelines.total}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {pipelines.active} active, {pipelines.paused} paused
-              </div>
-            </div>
+            <Card className="shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <TrendingUp className="w-4 h-4 text-purple-500" />
+                  <span>Total Pipelines</span>
+                </div>
+                <div className="text-4xl font-semibold mb-2 text-foreground">
+                  {pipelines.total}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {pipelines.active} active, {pipelines.paused} paused
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="border border-border rounded-lg p-6 bg-card">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <Calendar className="w-4 h-4 text-emerald-500" />
-                <span>Success Rate</span>
-              </div>
-              <div className="text-4xl font-semibold mb-2 text-foreground">
-                {successRate}%
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {pipelines.byStatus.completed} completed,{" "}
-                {pipelines.byStatus.failed} failed
-              </div>
-            </div>
+            <Card className="shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <Calendar className="w-4 h-4 text-emerald-500" />
+                  <span>Success Rate</span>
+                </div>
+                <div className="text-4xl font-semibold mb-2 text-foreground">
+                  {successRate}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {pipelines.byStatus.completed} completed,{" "}
+                  {pipelines.byStatus.failed} failed
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
         {/* Performance Metrics */}
         <section className="mb-12">
-          <div className="border border-border rounded-lg p-8 bg-card">
+          <Card className="shadow-sm">
+          <CardContent className="p-8">
             <div className="border-l-4 border-primary pl-6 mb-8">
               <h2 className="text-2xl font-semibold mb-2 text-foreground">
                 Performance Overview
@@ -342,7 +426,8 @@ export default function Dashboard() {
 
             {/* Metrics Grid */}
             <div className="grid gap-6 md:grid-cols-3 mb-12">
-              <div className="border border-border rounded-lg p-6 bg-muted/30">
+              <Card>
+              <CardContent className="p-6 bg-muted/30">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
                   <Database className="w-3.5 h-3.5" />
                   Rows Processed
@@ -365,9 +450,11 @@ export default function Dashboard() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+              </Card>
 
-              <div className="border border-border rounded-lg p-6 bg-muted/30">
+              <Card>
+              <CardContent className="p-6 bg-muted/30">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
                   <TrendingUp className="w-3.5 h-3.5" />
                   Running Pipelines
@@ -399,9 +486,11 @@ export default function Dashboard() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+              </Card>
 
-              <div className="border border-border rounded-lg p-6 bg-muted/30">
+              <Card>
+              <CardContent className="p-6 bg-muted/30">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">
                   <Calendar className="w-3.5 h-3.5" />
                   Completed Runs
@@ -414,7 +503,8 @@ export default function Dashboard() {
                     Successful executions
                   </p>
                 </div>
-              </div>
+              </CardContent>
+              </Card>
             </div>
 
             {/* Success Rate with Gauge */}
@@ -439,12 +529,14 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-          </div>
+          </CardContent>
+          </Card>
         </section>
 
         {/* Recent Migrations */}
         <section>
-          <div className="border border-border rounded-lg p-8 bg-card">
+          <Card className="shadow-sm">
+          <CardContent className="p-8">
             <div className="mb-6">
               <h2 className="text-lg font-medium mb-1 text-foreground">
                 Recent Migrations
@@ -455,7 +547,8 @@ export default function Dashboard() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3 mb-8">
-              <div className="border border-border rounded-lg p-5 bg-muted/30">
+              <Card>
+              <CardContent className="p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-500/10">
                     <Database className="w-4 h-4 text-blue-500" />
@@ -469,9 +562,11 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+              </Card>
 
-              <div className="border border-border rounded-lg p-5 bg-muted/30">
+              <Card>
+              <CardContent className="p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-purple-500/10">
                     <CalendarClock className="w-4 h-4 text-purple-500" />
@@ -485,9 +580,11 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+              </Card>
 
-              <div className="border border-border rounded-lg p-5 bg-muted/30">
+              <Card>
+              <CardContent className="p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-500/10">
                     <TrendingUp className="w-4 h-4 text-amber-500" />
@@ -501,7 +598,8 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+              </Card>
             </div>
 
             {/* Recent Migrations Table */}
@@ -528,7 +626,8 @@ export default function Dashboard() {
                 emptyDescription="Pipeline execution runs will appear here"
               />
             </div>
-          </div>
+          </CardContent>
+          </Card>
         </section>
       </div>
     </div>

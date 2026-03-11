@@ -208,6 +208,9 @@ export interface UpdateSourceSchemaDto {
   sourceQuery?: string;
   sourceConfig?: SourceConfig;
   isActive?: boolean;
+  discoveredColumns?: Array<{ name: string; type?: string; nullable?: boolean }>;
+  primaryKeys?: string[];
+  estimatedRowCount?: number;
 }
 
 // ============================================================================

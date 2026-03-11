@@ -1,7 +1,8 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Database, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,80 @@ import {
   useDiscoverStreams,
   usePreviewData,
 } from "@/lib/api/hooks/use-data-source";
+
+const ROW_HEIGHT = 40;
+
+function VirtualizedPreviewTable({
+  records,
+  colNames,
+}: {
+  records: Record<string, unknown>[];
+  colNames: string[];
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: records.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div ref={parentRef} className="overflow-auto max-h-[400px]">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-muted/50 sticky top-0 z-10">
+            <tr>
+              {colNames.map((col) => (
+                <th
+                  key={col}
+                  className="px-3 py-2 text-left font-medium border-b"
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              position: "relative",
+            }}
+          >
+            {virtualRows.map((virtualRow) => {
+              const row = records[virtualRow.index];
+              return (
+                <tr
+                  key={virtualRow.key}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="border-b hover:bg-muted/30"
+                >
+                  {colNames.map((col) => (
+                    <td
+                      key={col}
+                      className="px-3 py-2 truncate max-w-[200px]"
+                    >
+                      {String(row[col] ?? "-")}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 interface DataSourcePreviewDialogProps {
   organizationId: string | undefined;
@@ -132,39 +207,10 @@ export function DataSourcePreviewDialog({
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : records.length > 0 ? (
-            <div className="border rounded-lg overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    {colNames.map((col) => (
-                      <th
-                        key={col}
-                        className="px-3 py-2 text-left font-medium border-b"
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map((row, i) => (
-                    <tr
-                      key={i}
-                      className="border-b last:border-0 hover:bg-muted/30"
-                    >
-                      {colNames.map((col) => (
-                        <td
-                          key={col}
-                          className="px-3 py-2 truncate max-w-[200px]"
-                        >
-                          {String(row[col] ?? "-")}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <VirtualizedPreviewTable
+              records={records}
+              colNames={colNames}
+            />
           ) : (
             <div className="py-12 text-center">
               <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

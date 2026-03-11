@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Database,
   Folder,
   Search,
   Table as TableIcon,
@@ -26,6 +27,8 @@ interface SchemaTableNavigationProps {
   onCollapsedChange?: (collapsed: boolean) => void;
   searchable?: boolean;
   isLoading?: boolean;
+  /** "data-panel" matches SQLRooms DATA panel styling (header, icons) */
+  variant?: "default" | "data-panel";
 }
 
 export function SchemaTableNavigation({
@@ -38,6 +41,7 @@ export function SchemaTableNavigation({
   onCollapsedChange,
   searchable = false,
   isLoading = false,
+  variant = "default",
 }: SchemaTableNavigationProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -95,9 +99,20 @@ export function SchemaTableNavigation({
       .filter((schema): schema is Schema => schema !== null);
   }, [schemas, searchQuery]);
 
+  const totalTables = schemas.reduce(
+    (sum, schema) => sum + (schema.tables?.length || 0),
+    0,
+  );
+  const isDataPanel = variant === "data-panel";
+
   if (collapsed) {
     return (
-      <div className="h-full border-r bg-muted/30 flex flex-col items-center p-2">
+      <div
+        className={cn(
+          "h-full border-r flex flex-col items-center p-2",
+          isDataPanel ? "bg-muted/70" : "bg-muted/30",
+        )}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -110,19 +125,24 @@ export function SchemaTableNavigation({
     );
   }
 
-  const totalTables = schemas.reduce(
-    (sum, schema) => sum + (schema.tables?.length || 0),
-    0,
-  );
-
   return (
-    <div className="h-full border-r bg-muted/30 flex flex-col overflow-hidden">
+    <div
+      className={cn(
+        "h-full border-r flex flex-col overflow-hidden",
+        isDataPanel ? "bg-muted/70" : "bg-muted/30",
+      )}
+    >
       <div className="p-3 sm:p-4 border-b flex items-center justify-between gap-2 shrink-0">
         <div className="flex flex-col min-w-0 flex-1">
-          <h3 className="font-semibold text-xs sm:text-sm truncate">
-            Schemas & Tables
-          </h3>
-          <p className="text-xs text-muted-foreground truncate">
+          <div className="flex items-center gap-2">
+            {isDataPanel && (
+              <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <h3 className="font-semibold text-xs sm:text-sm truncate">
+              {isDataPanel ? "DATA" : "Schemas & Tables"}
+            </h3>
+          </div>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
             {schemas.length} schema{schemas.length !== 1 ? "s" : ""} •{" "}
             {totalTables} table{totalTables !== 1 ? "s" : ""}
           </p>

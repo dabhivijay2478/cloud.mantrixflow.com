@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SchemaTableNavigation } from "@/components/data-sources/schema-table-navigation";
 import { SQLResultViewer } from "@/components/data-sources/sql-result-viewer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -109,16 +110,20 @@ export default function QueryResultsViewPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Convert API data to component format
+  // Treat as connected when: connection.status is active/connected, OR data source isActive (matches list display)
+  const isConnectionActive =
+    connection?.status === "active" ||
+    (connection?.status as string) === "connected";
+  const isDataSourceActive = dataSourceData?.isActive ?? false;
   const dataSource =
     dataSourceData && connection
       ? {
           id: dataSourceData.id,
           name: dataSourceData.name,
-          type: dataSourceData.source_type as "postgres",
-          status:
-            connection.status === "active"
-              ? ("connected" as const)
-              : ("disconnected" as const),
+          type: (dataSourceData.sourceType ?? dataSourceData.source_type) as "postgres",
+          status: (isConnectionActive || isDataSourceActive)
+            ? ("connected" as const)
+            : ("disconnected" as const),
           tables: [],
         }
       : null;
@@ -412,32 +417,33 @@ export default function QueryResultsViewPage() {
     );
   }
 
-  if (dataSource.status !== "connected") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-2">
-                Data source is not connected
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/workspace/data-sources")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Data Sources
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isConnected = dataSource.status === "connected";
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden fixed inset-0">
+      {!isConnected && (
+        <Alert variant="destructive" className="rounded-none border-0 shrink-0">
+          <Database className="h-4 w-4" />
+          <div className="col-start-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <AlertTitle>Data source is not connected</AlertTitle>
+              <AlertDescription>
+                Please connect the data source first to view tables and run
+                queries.
+              </AlertDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/workspace/data-sources")}
+              className="shrink-0 w-fit"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Data Sources
+            </Button>
+          </div>
+        </Alert>
+      )}
       {/* Header - Responsive */}
       <div className="border-b shrink-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4">
@@ -469,7 +475,7 @@ export default function QueryResultsViewPage() {
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              disabled={loading}
+              disabled={loading || !isConnected}
               className="h-8 flex-1 sm:flex-none"
             >
               <RefreshCw

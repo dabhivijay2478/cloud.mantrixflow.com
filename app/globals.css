@@ -419,6 +419,13 @@ body {
     transition-duration: 200ms;
   }
 
+  /* Cursor pointer for interactive elements */
+  button:not(:disabled),
+  a,
+  [role="button"] {
+    cursor: pointer;
+  }
+
   /* Respect user's motion preferences */
   @media (prefers-reduced-motion: reduce) {
     *,

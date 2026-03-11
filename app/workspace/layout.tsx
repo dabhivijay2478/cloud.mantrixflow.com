@@ -57,8 +57,13 @@ export default function WorkspaceLayout({
       return;
     }
 
-    // Use API status as source of truth, fallback to store
-    const isCompleted = onboardingStatus?.completed ?? onboarding.completed;
+    // Use API status as source of truth when available.
+    // When API returns undefined (e.g. network error), trust persisted store to avoid
+    // briefly showing onboarding dialog after re-login.
+    const isCompleted =
+      onboardingStatus === undefined
+        ? (onboarding.completed ?? true)
+        : onboardingStatus.completed;
 
     if (!isCompleted) {
       router.push("/onboarding/welcome");
@@ -67,7 +72,7 @@ export default function WorkspaceLayout({
     user,
     authLoading,
     onboardingLoading,
-    onboardingStatus?.completed,
+    onboardingStatus,
     onboarding.completed,
     router,
   ]);
@@ -82,7 +87,10 @@ export default function WorkspaceLayout({
   }
 
   // Don't render workspace if onboarding is not completed
-  const isCompleted = onboardingStatus?.completed ?? onboarding.completed;
+  const isCompleted =
+    onboardingStatus === undefined
+      ? (onboarding.completed ?? true)
+      : onboardingStatus.completed;
   if (!isCompleted) {
     return <LoadingState fullScreen message="Redirecting to onboarding..." />;
   }
@@ -95,7 +103,7 @@ export default function WorkspaceLayout({
           <WorkspaceTopbar />
           <main
             id="main-content"
-            className="h-full overflow-auto p-3 md:p-6"
+            className="flex min-h-0 flex-1 flex-col overflow-auto p-3 md:p-6"
             tabIndex={-1}
           >
             {children}

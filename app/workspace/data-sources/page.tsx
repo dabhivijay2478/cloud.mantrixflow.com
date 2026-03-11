@@ -13,10 +13,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  DataSourcePreviewDialog,
-  getIconComponent,
-} from "@/components/data-sources";
+import { getIconComponent } from "@/components/data-sources";
 import {
   ConfirmationModal,
   DataTable,
@@ -98,9 +95,6 @@ export default function DataSourcesPage() {
 
   const router = useRouter();
   const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
-    null,
-  );
-  const [previewDataSourceId, setPreviewDataSourceId] = useState<string | null>(
     null,
   );
 
@@ -372,7 +366,9 @@ export default function DataSourcesPage() {
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          setPreviewDataSourceId(dataSource.id);
+                          router.push(
+                            `/workspace/data-sources/${dataSource.id}/query`,
+                          );
                         }}
                       >
                         <Eye className="mr-2 h-4 w-4" />
@@ -514,19 +510,6 @@ export default function DataSourcesPage() {
           </div>
         </div>
       )}
-
-      {/* Data Preview Dialog (ETL/Airbyte) */}
-      <DataSourcePreviewDialog
-        organizationId={organizationId}
-        dataSourceId={previewDataSourceId}
-        dataSourceName={
-          previewDataSourceId
-            ? filteredDataSources.find((ds) => ds.id === previewDataSourceId)
-                ?.name
-            : undefined
-        }
-        onClose={() => setPreviewDataSourceId(null)}
-      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
