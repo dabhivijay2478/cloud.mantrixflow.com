@@ -17,7 +17,7 @@ import {
   useTestConnection as useTestConnectionLegacy,
 } from "@/lib/api/hooks/use-data-sources";
 import { getApiErrorMessage } from "@/lib/api/error-handler";
-import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
+import { showErrorToast, showSuccessToast, toast } from "@/lib/utils/toast";
 
 type ConnectionFormValues = Record<string, string>;
 
@@ -49,7 +49,7 @@ export function AddConnectorContent({
   const testConnection = useTestConnectionLegacy(organizationId);
 
   const sourceConnectors = useMemo(() => {
-    return connectorsConfig.sources.map((s) => {
+    const fromConfig = connectorsConfig.sources.map((s) => {
       const displayId = getDisplayId(s.id);
       return {
         id: displayId,
@@ -60,6 +60,17 @@ export function AddConnectorContent({
         connectionSchema: s.connectionSchema,
       };
     });
+    return [
+      ...fromConfig,
+      {
+        id: "more-coming-soon",
+        name: "More (coming soon)",
+        type: "more",
+        iconType: "lock",
+        disabled: false as const,
+        connectionSchema: { fields: [], testConnection: false },
+      },
+    ];
   }, []);
 
   const destinationConnectors = useMemo(() => {
@@ -83,10 +94,20 @@ export function AddConnectorContent({
 
   const connectors = connectorFilter === "sources" ? sourceConnectors : destinationConnectors;
 
-  const handleConnectorClick = useCallback((id: string) => {
-    setConnectingDataSourceId(id);
-    setShowConnectionSheet(true);
-  }, []);
+  const handleConnectorClick = useCallback(
+    (id: string) => {
+      if (id === "more-coming-soon") {
+        toast.info(
+          "Coming soon",
+          "More sources including MongoDB, Shopify, Stripe, HubSpot, and others are coming soon.",
+        );
+        return;
+      }
+      setConnectingDataSourceId(id);
+      setShowConnectionSheet(true);
+    },
+    [],
+  );
 
   const handleConnect = useCallback(
     async (data: ConnectionFormValues) => {
@@ -122,37 +143,11 @@ export function AddConnectorContent({
           config[key] = key === "port" ? parseInt(value, 10) : value;
         });
 
-        if (dataSource.type === "postgres" && (data.ssl === "true" || data.tls === "true")) {
+        if (
+          ["postgres", "mysql", "mariadb", "mssql"].includes(dataSource.type) &&
+          (data.ssl === "true" || data.tls === "true")
+        ) {
           config.ssl = { enabled: true };
-        }
-        if (dataSource.type === "mongodb") {
-          if (data.connectionType === "atlas_srv") {
-            config.srv = true;
-          }
-          if (data.database) {
-            config.database_includes = [data.database];
-          }
-          if (data.authSource) {
-            config.authSource = data.authSource;
-          }
-          if (data.tls === "true") {
-            config.tls = true;
-          }
-          if (data.mongo_strategy) {
-            config.mongo_strategy = data.mongo_strategy;
-          }
-          if (data.mongo_infer_sample_size) {
-            config.mongo_infer_sample_size = parseInt(data.mongo_infer_sample_size, 10) || 2000;
-          }
-          if (data.connection_string) {
-            config.connection_string = data.connection_string;
-          }
-          if (data.collection_suffix) {
-            config.collection_suffix = data.collection_suffix;
-          }
-          if (data.add_record_metadata === "true" || data.add_record_metadata === true) {
-            config.add_record_metadata = true;
-          }
         }
 
         await createConnection.mutateAsync({
@@ -189,40 +184,28 @@ export function AddConnectorContent({
       const foundDataSource = enabledDataSources.find((ds) => ds.id === connectingDataSourceId);
       const sourceType = (foundDataSource as { type?: string })?.type || "postgres";
 
-      const buildTestData = (): Record<string, unknown> => {
-        if (sourceType === "mongodb") {
-          const base: Record<string, unknown> = {
-            type: sourceType,
-            host: data.host || "",
-            username: data.username || "",
-            password: data.password || "",
-            authSource: data.authSource || "admin",
-            tls: data.tls === "true",
-          };
-          if (data.connection_string) {
-            base.connection_string = data.connection_string;
-          } else {
-            base.port = data.port ? parseInt(data.port, 10) : 27017;
-            base.srv = data.connectionType === "atlas_srv";
-          }
-          return base;
-        }
-        const sslEnabled =
-          sourceType === "postgres" &&
-          (data.ssl === "true" || data.ssl === "enabled" || data.tls === "true");
-        const base: Record<string, unknown> = {
-          type: sourceType,
-          host: data.host || "",
-          port: data.port ? parseInt(data.port, 10) : 5432,
-          database: data.database || "",
-          username: data.username || "",
-          password: data.password || "",
-        };
-        if (sslEnabled) {
-          base.ssl = { enabled: true };
-        }
-        return base;
+      const defaultPorts: Record<string, number> = {
+        postgres: 5432,
+        mysql: 3306,
+        mariadb: 3306,
+        mssql: 1433,
+        oracle: 1521,
       };
+      const sslEnabled =
+        ["postgres", "mysql", "mariadb", "mssql"].includes(sourceType) &&
+        (data.ssl === "true" || data.ssl === "enabled" || data.tls === "true");
+      const base: Record<string, unknown> = {
+        type: sourceType,
+        host: data.host || "",
+        port: data.port ? parseInt(data.port, 10) : defaultPorts[sourceType] ?? 5432,
+        database: data.database || "",
+        username: data.username || "",
+        password: data.password || "",
+      };
+      if (sslEnabled) {
+        base.ssl = { enabled: true };
+      }
+      const buildTestData = (): Record<string, unknown> => base;
 
       try {
         const result = await testConnection.mutateAsync(buildTestData() as never);

@@ -6,8 +6,10 @@
 export type DataSourceType =
   | "postgres"
   | "mysql"
-  | "mongodb"
+  | "mariadb"
   | "mssql"
+  | "oracle"
+  | "mongodb" // Kept for backward compatibility with existing connections; UI no longer allows creating new
   | "s3"
   | "api"
   | "bigquery"

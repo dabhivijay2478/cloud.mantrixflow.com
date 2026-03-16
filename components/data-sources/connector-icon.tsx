@@ -1,6 +1,6 @@
 "use client";
 
-import { Cloud, Database, Globe, Server } from "lucide-react";
+import { Cloud, Database, Globe, Lock, Server } from "lucide-react";
 import type React from "react";
 import {
   siAirtable,
@@ -102,6 +102,7 @@ export function getIconComponent(iconType: string, size: number = 24): React.Rea
     "facebook-marketing": <Globe size={size} className="shrink-0 text-blue-600" />,
     faker: <Database size={size} className="shrink-0 text-muted-foreground" />,
     file: <Database size={size} className="shrink-0 text-muted-foreground" />,
+    lock: <Lock size={size} className="shrink-0 text-muted-foreground" />,
   };
 
   return (

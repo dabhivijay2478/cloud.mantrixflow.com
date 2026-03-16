@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Database,
   Edit,
+  Info,
   Loader2,
   Map as MapIcon,
   Pause,
@@ -31,7 +32,9 @@ import {
   useSchemasWithTables,
 } from "@/lib/api/hooks/use-data-sources";
 import { DataSourcesService } from "@/lib/api/services/data-sources.service";
+import { SYNC_MODES } from "@/lib/constants/data-pipelines";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 import type { CollectorConfig } from "./collector-step";
 import type { EmitterConfig } from "./emitter-step";
@@ -107,7 +110,7 @@ export interface TransformConfig {
   upsertKey?: string[];
   /** @deprecated Use upsertKey. Kept for migration from single primaryKeyField. */
   primaryKeyField?: string;
-  syncMode?: "full" | "log_based";
+  syncMode?: "full" | "incremental" | "log_based";
   cursorField?: string;
   writeMode?: "append" | "upsert";
   transformScript?: string; // When transformType is script (Python)
@@ -152,6 +155,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
   );
   const [transformScript, setTransformScript] = useState("");
   const [customSql, setCustomSql] = useState("");
+  const [syncMode, setSyncMode] = useState<"full" | "incremental" | "log_based">("full");
+  const [cursorField, setCursorField] = useState("");
 
   // Inner tab within the transformer form: "script" editor | "schema" (PK config)
   const [activeConfigTab, setActiveConfigTab] = useState<"script" | "schema">(
@@ -426,6 +431,32 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     return [];
   }, [destinationSchemaQuery, destinationTableQuery]);
 
+  // Replication key candidates: timestamp/date columns or PK integer columns (matches ETL _replication_key_candidates)
+  const replicationKeyCandidates = useMemo(() => {
+    const candidates: string[] = [];
+    const pkSet = new Set<string>();
+    sourceSchemaQueries.forEach((query) => {
+      if (query.data?.primaryKeys) {
+        (query.data.primaryKeys as string[]).forEach((pk) => pkSet.add(pk));
+      }
+    });
+    for (const f of sourceFields) {
+      const name = f.name.split(".").pop() ?? f.name;
+      const type = (f.type || "").toLowerCase();
+      const nameLower = name.toLowerCase();
+      const isTimestampLike =
+        nameLower.endsWith("_at") ||
+        ["timestamp", "date", "datetime", "timestamptz"].some((t) => type.includes(t));
+      const isPkInteger =
+        pkSet.has(name) &&
+        ["int", "numeric", "decimal", "serial", "bigint"].some((t) => type.includes(t));
+      if (isTimestampLike || isPkInteger) {
+        candidates.push(name);
+      }
+    }
+    return [...new Set(candidates)];
+  }, [sourceFields, sourceSchemaQueries]);
+
   // Keys derived from static parsing of the transform script.
   // Used to populate the primary-key selector in the Schema tab.
   const scriptOutputKeys = useMemo(
@@ -507,6 +538,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
       transformType: transformMode === "customSql" ? "dbt" : "script",
       destinationTable: selectedDestinationTable,
       upsertKey: upsertKey.length > 0 ? upsertKey : undefined,
+      syncMode,
+      cursorField: syncMode === "incremental" && cursorField ? cursorField : undefined,
       transformScript:
         transformMode === "script" && transformScript.trim()
           ? transformScript.trim()
@@ -537,6 +570,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
     setSelectedDestinationTable("");
     setTransformName("");
     setUpsertKey([]);
+    setSyncMode("full");
+    setCursorField("");
     setTransformMode("script");
     setTransformScript("");
     setCustomSql("");
@@ -588,6 +623,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
           ? [transform.primaryKeyField]
           : [],
     );
+    setSyncMode((transform.syncMode as "full" | "incremental" | "log_based") || "full");
+    setCursorField(transform.cursorField || "");
     setTransformMode(
       transform.transformType === "dbt" ? "customSql" : "script",
     );
@@ -740,6 +777,8 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
             setTransformMode("script");
             setTransformScript("");
             setCustomSql("");
+            setSyncMode("full");
+            setCursorField("");
             setActiveConfigTab("script");
             setPreviewData(null);
             setPreviewError(null);
@@ -924,6 +963,88 @@ export function TransformStep({ collectors, onComplete }: TransformStepProps) {
               />
             </div>
           </div>
+
+          {/* Sync Mode - shown when collector selected */}
+          {selectedCollectorId && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground">
+                Sync Mode
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {SYNC_MODES.map((mode) => {
+                  const isCdc = mode.value === "log_based";
+                  const sourceConn = connections?.find(
+                    (c) => c.id === selectedCollector?.sourceId,
+                  );
+                  const sourceType = (sourceConn?.type || "").toLowerCase();
+                  const supportsCdc =
+                    sourceType === "postgres" || sourceType === "postgresql";
+                  const isDisabled = isCdc && !supportsCdc;
+                  return (
+                    <div key={mode.value} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => !isDisabled && setSyncMode(mode.value as "full" | "incremental" | "log_based")}
+                        disabled={isDisabled}
+                        title={
+                          isDisabled
+                            ? "Change Data Capture is only available for PostgreSQL sources. Use Incremental sync instead."
+                            : mode.description
+                        }
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                          syncMode === mode.value
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-input hover:bg-muted/50",
+                          isDisabled &&
+                            "cursor-not-allowed opacity-50 grayscale",
+                        )}
+                      >
+                        {mode.label}
+                        {isDisabled && (
+                          <Info
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                            aria-hidden
+                          />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              {syncMode === "incremental" && (
+                <div className="mt-2 space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Replication key (cursor column)
+                  </Label>
+                  {replicationKeyCandidates.length > 0 ? (
+                    <Select
+                      value={cursorField || ""}
+                      onValueChange={setCursorField}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Select replication key" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {replicationKeyCandidates.map((col) => (
+                          <SelectItem key={col} value={col}>
+                            {col}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={cursorField}
+                      onChange={(e) => setCursorField(e.target.value)}
+                      placeholder="e.g. updated_at, id"
+                      className="h-9 text-sm"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {selectedCollectorId &&
             selectedEmitterId &&

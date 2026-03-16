@@ -68,30 +68,17 @@ const postgresConnectionSchema: ConnectionSchema = {
   testConnection: true,
 };
 
-const mongodbSourceConnectionSchema: ConnectionSchema = {
+const mysqlConnectionSchema: ConnectionSchema = {
   fields: [
-    { name: "name", label: "Connection Name", type: "text", placeholder: "My MongoDB Connection", required: true },
-    {
-      name: "connectionType",
-      label: "Connection Type",
-      type: "select",
-      placeholder: "Select connection type",
-      required: true,
-      options: [
-        { value: "direct", label: "Direct" },
-        { value: "atlas_srv", label: "Atlas SRV" },
-        { value: "replica_set", label: "Replica Set" },
-      ],
-    },
-    { name: "host", label: "Host", type: "text", placeholder: "localhost or cluster.mongodb.net", required: true },
-    { name: "port", label: "Port", type: "number", placeholder: "27017", required: false, default: 27017, dependsOn: { field: "connectionType", value: "direct" } },
-    { name: "username", label: "Username", type: "text", placeholder: "readonly_user", required: true },
+    { name: "name", label: "Connection Name", type: "text", placeholder: "My MySQL Connection", required: true },
+    { name: "host", label: "Host", type: "text", placeholder: "localhost or db.example.com", required: true },
+    { name: "port", label: "Port", type: "number", placeholder: "3306", required: true, default: 3306 },
+    { name: "database", label: "Database", type: "text", placeholder: "mydb", required: true },
+    { name: "username", label: "Username", type: "text", placeholder: "user", required: true },
     { name: "password", label: "Password", type: "password", placeholder: "••••••••", required: true },
-    { name: "authSource", label: "Auth Database", type: "text", placeholder: "admin", required: false },
-    { name: "database", label: "Database to sync", type: "text", placeholder: "production_db", required: true, description: "Populates database_includes" },
     {
-      name: "tls",
-      label: "Enable TLS",
+      name: "ssl",
+      label: "Enable SSL",
       type: "select",
       required: false,
       options: [
@@ -99,43 +86,51 @@ const mongodbSourceConnectionSchema: ConnectionSchema = {
         { value: "true", label: "Enabled" },
       ],
     },
-    {
-      name: "mongo_strategy",
-      label: "Strategy",
-      type: "select",
-      required: false,
-      description: "Infer (recommended) for typed columns; Envelope or Raw for JSONB",
-      options: [
-        { value: "infer", label: "Infer (recommended)" },
-        { value: "envelope", label: "Envelope" },
-        { value: "raw", label: "Raw" },
-      ],
-    },
-    { name: "mongo_infer_sample_size", label: "Sample size for schema inference", type: "number", placeholder: "2000", required: false, default: 2000, dependsOn: { field: "mongo_strategy", value: "infer" } },
   ],
   connectionString: false,
   testConnection: true,
 };
 
-const mongodbDestConnectionSchema: ConnectionSchema = {
+const mssqlConnectionSchema: ConnectionSchema = {
   fields: [
-    { name: "name", label: "Connection Name", type: "text", placeholder: "My MongoDB Destination", required: true },
-    { name: "connection_string", label: "Connection String", type: "textarea", placeholder: "mongodb+srv://user:pass@cluster.mongodb.net/?authSource=admin", required: false, description: "Paste MongoDB URI from Atlas dashboard" },
-    { name: "host", label: "Host", type: "text", placeholder: "cluster.mongodb.net", required: false },
-    { name: "port", label: "Port", type: "number", placeholder: "27017", required: false },
-    { name: "username", label: "Username", type: "text", placeholder: "user", required: false },
-    { name: "password", label: "Password", type: "password", placeholder: "••••••••", required: false },
-    { name: "authSource", label: "Auth Database", type: "text", placeholder: "admin", required: false },
-    { name: "database", label: "Target Database", type: "text", placeholder: "mantrixflow_dest", required: true },
-    { name: "collection_suffix", label: "Collection Suffix", type: "text", placeholder: "_mxf", required: false },
+    { name: "name", label: "Connection Name", type: "text", placeholder: "My SQL Server Connection", required: true },
     {
-      name: "add_record_metadata",
-      label: "Add Singer metadata fields",
-      type: "checkbox",
+      name: "host",
+      label: "Server",
+      type: "text",
+      placeholder: "localhost or server.database.windows.net",
+      required: true,
+      description: "SQL Server connection requires ODBC Driver 17 or 18 installed on the ETL server.",
+    },
+    { name: "port", label: "Port", type: "number", placeholder: "1433", required: true, default: 1433 },
+    { name: "database", label: "Database", type: "text", placeholder: "mydb", required: true },
+    { name: "username", label: "Username", type: "text", placeholder: "user", required: true },
+    { name: "password", label: "Password", type: "password", placeholder: "••••••••", required: true },
+    {
+      name: "ssl",
+      label: "Enable SSL",
+      type: "select",
       required: false,
+      options: [
+        { value: "false", label: "Disabled" },
+        { value: "true", label: "Enabled" },
+      ],
     },
   ],
-  connectionString: true,
+  connectionString: false,
+  testConnection: true,
+};
+
+const oracleConnectionSchema: ConnectionSchema = {
+  fields: [
+    { name: "name", label: "Connection Name", type: "text", placeholder: "My Oracle Connection", required: true },
+    { name: "host", label: "Host", type: "text", placeholder: "localhost", required: true },
+    { name: "port", label: "Port", type: "number", placeholder: "1521", required: true, default: 1521 },
+    { name: "database", label: "Service Name / SID", type: "text", placeholder: "ORCL", required: true },
+    { name: "username", label: "Username", type: "text", placeholder: "user", required: true },
+    { name: "password", label: "Password", type: "password", placeholder: "••••••••", required: true },
+  ],
+  connectionString: false,
   testConnection: true,
 };
 
@@ -149,11 +144,32 @@ export const connectorsConfig = {
       connectionSchema: postgresConnectionSchema,
     },
     {
-      id: "source-mongodb",
-      label: "MongoDB",
+      id: "source-mysql",
+      label: "MySQL",
       category: "Database",
       cdc: false,
-      connectionSchema: mongodbSourceConnectionSchema,
+      connectionSchema: mysqlConnectionSchema,
+    },
+    {
+      id: "source-mariadb",
+      label: "MariaDB",
+      category: "Database",
+      cdc: false,
+      connectionSchema: mysqlConnectionSchema,
+    },
+    {
+      id: "source-mssql",
+      label: "SQL Server",
+      category: "Database",
+      cdc: false,
+      connectionSchema: mssqlConnectionSchema,
+    },
+    {
+      id: "source-oracle",
+      label: "Oracle",
+      category: "Database",
+      cdc: false,
+      connectionSchema: oracleConnectionSchema,
     },
   ] as ConnectorSource[],
   destinations: [
@@ -161,11 +177,6 @@ export const connectorsConfig = {
       id: "postgres",
       label: "PostgreSQL",
       connectionSchema: postgresConnectionSchema,
-    },
-    {
-      id: "destination-mongodb",
-      label: "MongoDB",
-      connectionSchema: mongodbDestConnectionSchema,
     },
   ] as ConnectorDestination[],
 } as const;

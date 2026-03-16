@@ -1,6 +1,6 @@
 "use client";
 
-import { Columns3, Loader2, RefreshCw } from "lucide-react";
+import { Columns3, Key, Loader2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +21,11 @@ interface SchemaViewProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   emptyMessage?: string;
+  /** Column names that can be used as replication keys (show badge) */
+  replicationKeyCandidates?: string[];
+  /** When set, show include/exclude toggles per column */
+  includeExclude?: Record<string, boolean>;
+  onIncludeExcludeChange?: (name: string, included: boolean) => void;
 }
 
 export function SchemaView({
@@ -33,7 +38,11 @@ export function SchemaView({
   onRefresh,
   isRefreshing = false,
   emptyMessage = "No schema available. Run discovery or preview to populate.",
+  replicationKeyCandidates,
+  includeExclude,
+  onIncludeExcludeChange,
 }: SchemaViewProps) {
+  const showIncludeExclude = !!onIncludeExcludeChange;
   const count = fieldCount ?? fields.length;
 
   return (
@@ -89,6 +98,11 @@ export function SchemaView({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
+                {showIncludeExclude && (
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-10">
+                    Include
+                  </th>
+                )}
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
                   FIELD NAME
                 </th>
@@ -101,37 +115,74 @@ export function SchemaView({
               </tr>
             </thead>
             <tbody>
-              {fields.map((f) => (
-                <tr
-                  key={f.name}
-                  className="border-b last:border-b-0 hover:bg-muted/30"
-                >
-                  <td className="px-3 py-2 font-mono text-xs">{f.name}</td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {f.type ?? "String"}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
-                      {f.isPrimaryKey && (
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] bg-blue-500/10 text-blue-700"
-                        >
-                          PRIMARY KEY
-                        </Badge>
-                      )}
-                      {!f.nullable && f.name !== "_sdc_" && (
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] bg-muted"
-                        >
-                          REQUIRED
-                        </Badge>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {fields.map((f) => {
+                const colName = f.name.includes(".") ? f.name.split(".").pop()! : f.name;
+                const canBeReplicationKey =
+                  replicationKeyCandidates?.includes(colName) ?? false;
+                const included = includeExclude?.[f.name] ?? true;
+                return (
+                  <tr
+                    key={f.name}
+                    className={`border-b last:border-b-0 hover:bg-muted/30 ${!included ? "opacity-50" : ""}`}
+                  >
+                    {showIncludeExclude && (
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={included}
+                          onChange={(e) =>
+                            onIncludeExcludeChange?.(f.name, e.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-input"
+                          aria-label={`Include ${f.name}`}
+                        />
+                      </td>
+                    )}
+                    <td className="px-3 py-2 font-mono text-xs">
+                      <span className="inline-flex items-center gap-1.5">
+                        {f.isPrimaryKey && (
+                          <Key
+                            className="h-3 w-3 text-blue-600 shrink-0"
+                            aria-hidden
+                          />
+                        )}
+                        {f.name}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {f.type ?? "String"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-1">
+                        {f.isPrimaryKey && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] bg-blue-500/10 text-blue-700"
+                          >
+                            PRIMARY KEY
+                          </Badge>
+                        )}
+                        {canBeReplicationKey && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] bg-emerald-500/10 text-emerald-700"
+                          >
+                            Can be replication key
+                          </Badge>
+                        )}
+                        {!f.nullable && f.name !== "_sdc_" && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] bg-muted"
+                          >
+                            REQUIRED
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

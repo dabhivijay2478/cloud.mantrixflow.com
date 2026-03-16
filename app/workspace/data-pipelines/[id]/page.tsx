@@ -24,6 +24,7 @@ import { io, type Socket } from "socket.io-client";
 import {
   CdcSetupModal,
   DataPreviewTable,
+  IncomingDataTreeView,
   ScheduleEditor,
   SchemaView,
   TransformCodeView,
@@ -975,6 +976,26 @@ export default function PipelineDetailPage() {
 
         {/* Incoming Data Tab */}
         <TabsContent value="incoming" className="space-y-4">
+          {/* Three-level tree: database → schema → table with sync mode, column count, row estimate */}
+          {pipeline.sourceSchema?.sourceTable && (
+            <IncomingDataTreeView
+              items={[
+                {
+                  database:
+                    (sourceConnection as { config?: { database?: string } })?.config?.database ?? "default",
+                  schema: pipeline.sourceSchema.sourceSchema ?? "public",
+                  table: pipeline.sourceSchema.sourceTable,
+                  syncMode: pipeline.syncMode ?? "full",
+                  columnCount:
+                    pipeline.sourceSchema.discoveredColumns?.length ??
+                    sourcePreview?.columns?.length ??
+                    0,
+                  rowEstimate: pipeline.sourceSchema.estimatedRowCount,
+                },
+              ]}
+              className="mb-4"
+            />
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Incoming Data Schema</CardTitle>
@@ -1005,6 +1026,25 @@ export default function PipelineDetailPage() {
                         isPrimaryKey: column.primaryKey ?? false,
                       }))
                 }
+                replicationKeyCandidates={(
+                  pipeline.sourceSchema?.discoveredColumns ?? sourcePreview?.columns ?? []
+                )
+                  .filter((c) => {
+                    const type = (c.type ?? "").toLowerCase();
+                    const name = (c.name ?? "").toLowerCase();
+                    const isTimestampLike =
+                      name.endsWith("_at") ||
+                      ["timestamp", "date", "datetime", "timestamptz"].some((t) =>
+                        type.includes(t),
+                      );
+                    const isPkInteger =
+                      (c.primaryKey ?? false) &&
+                      ["int", "numeric", "decimal", "serial", "bigint"].some((t) =>
+                        type.includes(t),
+                      );
+                    return isTimestampLike || isPkInteger;
+                  })
+                  .map((c) => c.name)}
                 lastRefreshedAt={pipeline.sourceSchema?.lastDiscoveredAt}
                 emptyMessage="Run schema discovery in the pipeline editor to populate."
               />
