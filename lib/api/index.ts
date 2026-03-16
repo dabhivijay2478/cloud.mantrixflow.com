@@ -33,6 +33,7 @@ export { emailPreferencesKeys } from "./hooks/use-email-preferences";
 // Hooks - Data Pipelines
 export * from "./hooks/use-data-pipelines";
 export { dataPipelinesKeys } from "./hooks/use-data-pipelines";
+export { usePipelineRunsRealtime } from "./hooks/use-pipeline-runs-realtime";
 // Hooks - Data Source (new dynamic data sources)
 export * from "./hooks/use-data-source";
 export { dataSourceKeys } from "./hooks/use-data-source";

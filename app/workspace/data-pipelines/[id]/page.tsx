@@ -55,6 +55,7 @@ import {
   useUpdatePipeline,
   useValidatePipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
+import { usePipelineRunsRealtime } from "@/lib/api/hooks/use-pipeline-runs-realtime";
 import { useConnection } from "@/lib/api/hooks/use-connection";
 import { useCdcStatus } from "@/lib/api/hooks/use-data-source";
 import { usePreviewDestinationData } from "@/lib/api/hooks/use-destination-schemas";
@@ -106,6 +107,9 @@ export default function PipelineDetailPage() {
     10,
   );
   const { data: stats } = usePipelineStats(organizationId, pipelineId);
+
+  // Supabase Realtime: invalidate runs when pipeline_runs table changes
+  usePipelineRunsRealtime(organizationId, pipelineId);
 
   // CDC status for LOG_BASED pipelines (source data source)
   const sourceDataSourceId = pipeline?.sourceSchema?.dataSourceId;
