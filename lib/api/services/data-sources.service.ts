@@ -39,10 +39,16 @@ export class DataSourcesService {
   // Data Sources CRUD
   // ==========================================================================
 
-  static async listDataSources(organizationId: string): Promise<DataSource[]> {
-    return ApiClient.get<DataSource[]>(
-      DataSourcesService.basePath(organizationId),
-    );
+  static async listDataSources(
+    organizationId: string,
+    params?: { role?: "source" | "destination"; limit?: number },
+  ): Promise<DataSource[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.role) searchParams.set("role", params.role);
+    if (params?.limit) searchParams.set("limit", String(params.limit));
+    const query = searchParams.toString();
+    const url = `${DataSourcesService.basePath(organizationId)}${query ? `?${query}` : ""}`;
+    return ApiClient.get<DataSource[]>(url);
   }
 
   static async getDataSource(
@@ -482,59 +488,48 @@ export class DataSourcesService {
 
   private static readonly LEGACY_BASE_PATH = "api/data-sources/postgres";
 
-  /** @deprecated Use organization-scoped endpoints */
   /**
    * Test connection config (pre-save) - calls NestJS API
-   * Uses api/connectors/test-connection (no org scope, no Python ETL required)
+   * Uses POST organizations/:orgId/data-sources/test-connection
    */
   static async testConnectionLegacy(
-    _organizationId: string,
-    data: TestConnectionDto,
+    organizationId: string,
+    data: TestConnectionDto & { config?: Record<string, unknown> },
   ): Promise<TestConnectionResponse> {
     const connectionType = (data.type || "postgres").toLowerCase();
     const effectiveType =
       connectionType === "postgresql" ? "postgres" : connectionType;
 
-    const port =
-      typeof data.port === "number"
-        ? data.port
-        : data.port
-          ? parseInt(String(data.port), 10)
-          : effectiveType === "mongodb"
-            ? 27017
-            : 5432;
-
-    const config: Record<string, unknown> = {
-      host: data.host,
-      port,
-      database: data.database,
-      username: data.username,
-      password: data.password,
-      ssl: data.ssl,
-    };
-
-    if (effectiveType === "mongodb") {
-      const connStr =
-        (data as Record<string, unknown>).connection_string ??
-        (data as Record<string, unknown>).connection_string_mongo;
-      if (connStr) {
-        config.connection_string = connStr;
-      } else {
-        config.authSource = (data as Record<string, unknown>).authSource ?? "admin";
-        config.srv = (data as Record<string, unknown>).connectionType === "atlas_srv";
-        config.tls = (data as Record<string, unknown>).tls ?? true;
+    let config: Record<string, unknown>;
+    if (data.config && typeof data.config === "object") {
+      config = { ...data.config };
+      if (config.port && typeof config.port === "string") {
+        config.port = parseInt(String(config.port), 10) || 5432;
       }
-      const databases = (data as Record<string, unknown>).databases;
-      if (databases) {
-        config.databases = databases;
-      }
+    } else {
+      const port =
+        typeof data.port === "number"
+          ? data.port
+          : data.port
+            ? parseInt(String(data.port), 10)
+            : effectiveType === "mongodb"
+              ? 27017
+              : 5432;
+      config = {
+        host: data.host,
+        port,
+        database: data.database,
+        username: data.username,
+        password: data.password,
+        ssl: data.ssl,
+      };
     }
 
     const result = await ApiClient.post<{
       success: boolean;
       message?: string;
       details?: Record<string, unknown>;
-    }>("api/connectors/test-connection", {
+    }>(`${DataSourcesService.basePath(organizationId)}/test-connection`, {
       connectionType: effectiveType,
       config,
     });
@@ -597,11 +592,17 @@ export class DataSourcesService {
   }
 
   /** @deprecated Use listDataSources instead */
-  static async listConnections(orgId?: string): Promise<Connection[]> {
+  static async listConnections(
+    orgId?: string,
+    params?: { role?: "source" | "destination" },
+  ): Promise<Connection[]> {
     // Use the new organization-scoped endpoint if orgId is provided
     if (orgId) {
       try {
-        const dataSources = await DataSourcesService.listDataSources(orgId);
+        const dataSources = await DataSourcesService.listDataSources(orgId, {
+          ...params,
+          limit: 100,
+        });
         // Map data sources to connection format for backward compatibility
         return dataSources.map(
           (ds) =>
@@ -624,9 +625,9 @@ export class DataSourcesService {
       }
     }
     // Legacy path
-    const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+    const legacyParams = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     return ApiClient.get<Connection[]>(
-      `${DataSourcesService.LEGACY_BASE_PATH}/connections${params}`,
+      `${DataSourcesService.LEGACY_BASE_PATH}/connections${legacyParams}`,
     );
   }
 

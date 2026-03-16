@@ -98,11 +98,14 @@ export function useCreateConnection(
   });
 }
 
-export function useConnections(orgId?: string) {
+export function useConnections(
+  orgId?: string,
+  params?: { role?: "source" | "destination" },
+) {
   return useQuery({
-    queryKey: dataSourcesKeys.connections.list({ orgId }),
-    queryFn: () => DataSourcesService.listConnections(orgId),
-    enabled: !!orgId, // Only fetch if orgId is provided
+    queryKey: dataSourcesKeys.connections.list({ orgId, ...params }),
+    queryFn: () => DataSourcesService.listConnections(orgId, params),
+    enabled: !!orgId,
   });
 }
 

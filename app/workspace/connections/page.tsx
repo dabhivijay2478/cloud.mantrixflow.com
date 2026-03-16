@@ -26,7 +26,11 @@ export default function ConnectionsPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>(roleParam || "all");
 
   const queryClient = useQueryClient();
-  const { data: connections, isLoading } = useConnections(organizationId);
+  const apiRoleFilter =
+    roleFilter !== "all" ? (roleFilter as "source" | "destination") : undefined;
+  const { data: connections, isLoading } = useConnections(organizationId, {
+    role: apiRoleFilter,
+  });
   const testConnection = useMutation({
     mutationFn: (dataSourceId: string) =>
       ConnectionService.testConnection(organizationId!, dataSourceId),
@@ -39,11 +43,8 @@ export default function ConnectionsPage() {
 
   const filteredConnections = useMemo(() => {
     if (!connections) return [];
-    if (roleFilter === "all") return connections;
-    return connections.filter(
-      (c) => (c.connectorRole ?? "source") === roleFilter,
-    );
-  }, [connections, roleFilter]);
+    return connections;
+  }, [connections]);
 
   const mappedConnections = useMemo(
     () =>

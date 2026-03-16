@@ -46,18 +46,10 @@ export default function NewConnectionPage() {
     type: string;
     config: Record<string, unknown>;
   }) => {
-    const testData = {
+    const result = await testConnection.mutateAsync({
       type: data.type,
-      host: data.config.host,
-      port: data.config.port,
-      database: data.config.database,
-      username: data.config.username,
-      password: data.config.password,
-      ssl: data.config.ssl,
-      schema: data.config.schema,
-      path: data.config.path,
-    };
-    const result = await testConnection.mutateAsync(testData as never);
+      config: data.config,
+    } as never);
     return {
       success: result.success ?? !result.error,
       error: result.error,
