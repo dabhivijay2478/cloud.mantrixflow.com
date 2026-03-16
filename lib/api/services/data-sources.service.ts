@@ -519,6 +519,10 @@ export class DataSourcesService {
         (data as Record<string, unknown>).connection_string_mongo;
       if (connStr) {
         config.connection_string = connStr;
+      } else {
+        config.authSource = (data as Record<string, unknown>).authSource ?? "admin";
+        config.srv = (data as Record<string, unknown>).connectionType === "atlas_srv";
+        config.tls = (data as Record<string, unknown>).tls ?? true;
       }
       const databases = (data as Record<string, unknown>).databases;
       if (databases) {

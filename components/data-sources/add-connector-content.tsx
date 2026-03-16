@@ -125,6 +125,35 @@ export function AddConnectorContent({
         if (dataSource.type === "postgres" && (data.ssl === "true" || data.tls === "true")) {
           config.ssl = { enabled: true };
         }
+        if (dataSource.type === "mongodb") {
+          if (data.connectionType === "atlas_srv") {
+            config.srv = true;
+          }
+          if (data.database) {
+            config.database_includes = [data.database];
+          }
+          if (data.authSource) {
+            config.authSource = data.authSource;
+          }
+          if (data.tls === "true") {
+            config.tls = true;
+          }
+          if (data.mongo_strategy) {
+            config.mongo_strategy = data.mongo_strategy;
+          }
+          if (data.mongo_infer_sample_size) {
+            config.mongo_infer_sample_size = parseInt(data.mongo_infer_sample_size, 10) || 2000;
+          }
+          if (data.connection_string) {
+            config.connection_string = data.connection_string;
+          }
+          if (data.collection_suffix) {
+            config.collection_suffix = data.collection_suffix;
+          }
+          if (data.add_record_metadata === "true" || data.add_record_metadata === true) {
+            config.add_record_metadata = true;
+          }
+        }
 
         await createConnection.mutateAsync({
           name,
@@ -161,6 +190,23 @@ export function AddConnectorContent({
       const sourceType = (foundDataSource as { type?: string })?.type || "postgres";
 
       const buildTestData = (): Record<string, unknown> => {
+        if (sourceType === "mongodb") {
+          const base: Record<string, unknown> = {
+            type: sourceType,
+            host: data.host || "",
+            username: data.username || "",
+            password: data.password || "",
+            authSource: data.authSource || "admin",
+            tls: data.tls === "true",
+          };
+          if (data.connection_string) {
+            base.connection_string = data.connection_string;
+          } else {
+            base.port = data.port ? parseInt(data.port, 10) : 27017;
+            base.srv = data.connectionType === "atlas_srv";
+          }
+          return base;
+        }
         const sslEnabled =
           sourceType === "postgres" &&
           (data.ssl === "true" || data.ssl === "enabled" || data.tls === "true");

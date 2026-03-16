@@ -513,12 +513,14 @@ export default function EditPipelinePage() {
         cursorField?: string;
       };
       const rawSyncMode = transformerWithSync?.syncMode;
-      const syncMode: "full" | "log_based" | undefined =
-        rawSyncMode === "incremental" || rawSyncMode === "cdc"
+      const syncMode: "full" | "log_based" | "incremental" | undefined =
+        rawSyncMode === "cdc"
           ? "log_based"
-          : rawSyncMode === "full" || rawSyncMode === "log_based"
-            ? rawSyncMode
-            : undefined;
+          : rawSyncMode === "incremental"
+            ? "incremental"
+            : rawSyncMode === "full" || rawSyncMode === "log_based"
+              ? rawSyncMode
+              : undefined;
 
       await updatePipelineMutation.mutateAsync({
         name: pipeline.name,

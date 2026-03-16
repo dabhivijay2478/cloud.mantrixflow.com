@@ -308,16 +308,26 @@ export const SYNC_MODES: {
   value: SyncMode;
   label: string;
   description: string;
+  /** When false, option is disabled for MongoDB sources (no CDC support) */
+  supportsCdc?: boolean;
 }[] = [
   {
     value: "full",
     label: "Full Sync",
     description: "Sync all data from source on each run",
+    supportsCdc: true,
+  },
+  {
+    value: "incremental",
+    label: "Incremental",
+    description: "Sync only new/updated records using a replication key (e.g. updated_at, _id)",
+    supportsCdc: true,
   },
   {
     value: "log_based",
     label: "CDC / Log-based replication",
-    description: "Incremental sync via PostgreSQL WAL (change data capture)",
+    description: "Incremental sync via PostgreSQL WAL (change data capture). Not supported for MongoDB.",
+    supportsCdc: false,
   },
 ];
 
