@@ -14,7 +14,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDeleteDataSource } from "@/lib/api/hooks/use-data-source";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
-import { useConfirmation } from "@/hooks/use-confirmation";
 
 type RoleFilter = "all" | "source" | "destination";
 
@@ -23,6 +22,7 @@ export default function ConnectionsPage() {
   const organizationId = currentOrganization?.id;
   const searchParams = useSearchParams();
   const roleParam = searchParams.get("role") as RoleFilter | null;
+  const searchQuery = searchParams.get("search") || "";
   const [roleFilter, setRoleFilter] = useState<RoleFilter>(roleParam || "all");
 
   const queryClient = useQueryClient();
@@ -38,13 +38,30 @@ export default function ConnectionsPage() {
       queryClient.invalidateQueries({ queryKey: ["data-sources", "connections"] });
     },
   });
+  const discoverSchema = useMutation({
+    mutationFn: (dataSourceId: string) =>
+      ConnectionService.discoverSchema(organizationId!, dataSourceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["data-sources", "connections"] });
+    },
+  });
   const deleteDataSource = useDeleteDataSource(organizationId);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredConnections = useMemo(() => {
     if (!connections) return [];
-    return connections;
-  }, [connections]);
+    let list = connections;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          (c.name || "").toLowerCase().includes(q) ||
+          (c.type || "").toLowerCase().includes(q) ||
+          ((c as { sourceType?: string }).sourceType || "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [connections, searchQuery]);
 
   const mappedConnections = useMemo(
     () =>
@@ -66,27 +83,30 @@ export default function ConnectionsPage() {
           conn.createdAt instanceof Date
             ? conn.createdAt.toISOString()
             : String(conn.createdAt ?? ""),
-        pipelineCount: undefined,
+        pipelineCount: (conn as { pipelineCount?: number }).pipelineCount,
         config: (conn as { config?: { host?: string; port?: number; database?: string } }).config,
       })),
     [filteredConnections],
   );
 
-  const deleteConfirm = useConfirmation({
-    action: "delete",
-    itemName: "Connection",
-    onConfirm: async () => {
-      if (!deletingId) return;
-      try {
-        await deleteDataSource.mutateAsync(deletingId);
-        toast.success("Connection deleted");
-        setDeletingId(null);
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to delete");
-        throw e;
-      }
-    },
-  });
+  const [deleteModal, setDeleteModal] = useState<{
+    open: boolean;
+    name?: string;
+    pipelineCount?: number;
+  }>({ open: false });
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingId) return;
+    try {
+      await deleteDataSource.mutateAsync(deletingId);
+      toast.success("Connection deleted");
+      setDeletingId(null);
+      setDeleteModal({ open: false });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete");
+      throw e;
+    }
+  };
 
   const handleTest = async (id: string) => {
     try {
@@ -102,7 +122,12 @@ export default function ConnectionsPage() {
   };
 
   const handleDiscover = async (id: string) => {
-    toast.success("Discover triggered");
+    try {
+      await discoverSchema.mutateAsync(id);
+      toast.success("Schema discovery completed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Discover failed");
+    }
   };
 
   const handleEdit = (id: string) => {
@@ -112,7 +137,11 @@ export default function ConnectionsPage() {
   const handleDelete = (id: string) => {
     const conn = mappedConnections.find((c) => c.id === id);
     setDeletingId(id);
-    deleteConfirm.showConfirm(conn?.name);
+    setDeleteModal({
+      open: true,
+      name: conn?.name,
+      pipelineCount: conn?.pipelineCount,
+    });
   };
 
   const handleTabChange = (v: string) => {
@@ -154,6 +183,12 @@ export default function ConnectionsPage() {
         </TabsList>
       </Tabs>
 
+      {searchQuery.trim() && (
+        <p className="text-sm text-muted-foreground">
+          Filtering by &quot;{searchQuery}&quot; — {mappedConnections.length} result{mappedConnections.length !== 1 ? "s" : ""}
+        </p>
+      )}
+
       {isLoading ? (
         <div className="text-muted-foreground">Loading connections...</div>
       ) : mappedConnections.length === 0 ? (
@@ -180,17 +215,22 @@ export default function ConnectionsPage() {
       )}
 
       <ConfirmationModal
-        open={deleteConfirm.confirmProps.open}
+        open={deleteModal.open}
         onOpenChange={(open) => {
           if (!open) {
-            deleteConfirm.hideConfirm();
+            setDeleteModal({ open: false });
             setDeletingId(null);
           }
         }}
-        action={deleteConfirm.confirmProps.action}
-        itemName={deleteConfirm.confirmProps.itemName}
-        itemValue={deleteConfirm.confirmProps.itemValue}
-        onConfirm={deleteConfirm.confirmProps.onConfirm}
+        action="delete"
+        itemName="Connection"
+        itemValue={deleteModal.name}
+        description={
+          deleteModal.pipelineCount && deleteModal.pipelineCount > 0
+            ? `"${deleteModal.name}" is used in ${deleteModal.pipelineCount} pipeline${deleteModal.pipelineCount !== 1 ? "s" : ""}. Deleting will break those pipelines. Are you sure you want to delete?`
+            : undefined
+        }
+        onConfirm={handleDeleteConfirm}
         isLoading={deleteDataSource.isPending}
       />
     </div>

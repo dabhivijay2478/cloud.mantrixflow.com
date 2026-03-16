@@ -33,7 +33,7 @@ export interface ConnectionCardData {
   lastConnectedAt?: string;
   createdAt?: string;
   pipelineCount?: number;
-  config?: { host?: string; port?: number; database?: string };
+  config?: { host?: string; port?: number; database?: string; path?: string };
 }
 
 interface ConnectionCardProps {
@@ -74,8 +74,9 @@ export function ConnectionCard({
     : { label: "Source & Dest", variant: "default" as const };
   const displayName = registry?.displayName ?? connection.type;
   const icon = registry?.icon ?? "postgres";
-  const hostSummary =
-    connection.config?.host && connection.config?.database
+  const hostSummary = connection.config?.path
+    ? connection.config.path
+    : connection.config?.host && connection.config?.database
       ? `${connection.config.host}${connection.config.port ? `:${connection.config.port}` : ""}/${connection.config.database}`
       : "—";
 

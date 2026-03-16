@@ -277,17 +277,38 @@ export function ConnectionWizard({
               Test Connection
             </Button>
             {testResult && (
-              <div
-                className={cn(
-                  "flex items-center rounded-md px-3 py-2 text-sm",
-                  testResult.success ? "bg-green-500/10 text-green-700" : "bg-destructive/10 text-destructive",
+              <div className="space-y-3">
+                <div
+                  className={cn(
+                    "flex items-center rounded-md px-3 py-2 text-sm",
+                    testResult.success ? "bg-green-500/10 text-green-700" : "bg-destructive/10 text-destructive",
+                  )}
+                >
+                  {testResult.success ? "✓" : "✗"} {testResult.message}
+                </div>
+                {testResult.success && selectedDb?.id === "postgres" && role === "source" && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    <p className="font-medium">CDC prerequisites (optional)</p>
+                    <p className="mt-1 text-muted-foreground">
+                      For log-based replication (CDC), ensure PostgreSQL has <code className="rounded bg-muted px-1">wal_level=logical</code>, replication role, and a logical decoding plugin (pgoutput or wal2json).
+                    </p>
+                  </div>
                 )}
-              >
-                {testResult.success ? "✓" : "✗"} {testResult.message}
               </div>
             )}
             <Button
-              onClick={() => setStep(3)}
+              onClick={() => {
+                if (testResult?.success) {
+                  const values = form.getValues();
+                  const name = (values.name || "").trim();
+                  if (!name && selectedDb) {
+                    const host = values.host || "";
+                    const env = host.includes("prod") ? "Production" : host.includes("staging") ? "Staging" : host.includes("dev") ? "Dev" : "My";
+                    form.setValue("name", `${env} ${selectedDb.displayName}`);
+                  }
+                  setStep(3);
+                }
+              }}
               disabled={!testResult?.success}
             >
               Next
@@ -308,7 +329,7 @@ export function ConnectionWizard({
               <Label htmlFor="name">Connection Name *</Label>
               <Input
                 id="name"
-                placeholder={`${selectedDb.displayName} Connection`}
+                placeholder={`e.g. Production ${selectedDb?.displayName ?? ""}`}
                 {...form.register("name", { required: true })}
               />
             </div>

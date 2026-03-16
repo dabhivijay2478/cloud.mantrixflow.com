@@ -617,6 +617,8 @@ export class DataSourcesService {
               status: ds.isActive ? "active" : "inactive",
               lastConnectedAt: ds.updatedAt,
               createdAt: ds.createdAt,
+              config: (ds as { config?: { host?: string; port?: number; database?: string; path?: string } }).config,
+              pipelineCount: (ds as { pipelineCount?: number }).pipelineCount,
             }) as Connection,
         );
       } catch {

@@ -327,6 +327,10 @@ export function useUpdateDataSource(
         queryClient.invalidateQueries({
           queryKey: dataSourceKeys.lists(),
         });
+        // Invalidate connections list (used by connections page)
+        queryClient.invalidateQueries({
+          queryKey: dataSourcesKeys.connections.lists(),
+        });
         // Invalidate connection queries for this data source
         queryClient.invalidateQueries({
           queryKey: ["connections", "detail", organizationId, dataSourceId],
