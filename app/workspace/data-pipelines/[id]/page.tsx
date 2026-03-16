@@ -569,10 +569,10 @@ export default function PipelineDetailPage() {
             This pipeline cannot run because its source or destination data
             source is disconnected.{" "}
             <Link
-              href="/workspace/data-sources"
+              href="/workspace/connections"
               className="font-medium underline underline-offset-4 hover:no-underline"
             >
-              Go to Data Sources
+              Go to Connections
             </Link>{" "}
             to reconnect, then run this pipeline again.
           </AlertDescription>

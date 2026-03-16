@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
     if (error) {
       set({ error: error.message, loading: false });
-      return { error };
+      return { error: error as unknown as AuthError };
     }
 
     set({ user: data.user, loading: false });
@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
     if (error) {
       set({ error: error.message, loading: false });
-      return { error };
+      return { error: error as unknown as AuthError };
     }
 
     set({ user: data.user, loading: false });
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
     if (error) {
       set({ error: error.message, loading: false });
-      return { error };
+      return { error: error as unknown as AuthError };
     }
 
     set({ user: null, loading: false });
@@ -114,7 +114,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
     if (error) {
       set({ error: error.message, loading: false });
-      return { error };
+      return { error: error as unknown as AuthError };
     }
 
     return { error: null };
@@ -132,7 +132,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
     if (error) {
       set({ error: error.message, loading: false });
-      return { error };
+      return { error: error as unknown as AuthError };
     }
 
     return { error: null };
@@ -147,7 +147,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
     if (error) {
       set({ error: error.message, loading: false });
-      return { error };
+      return { error: error as unknown as AuthError };
     }
 
     set({ loading: false });
@@ -163,7 +163,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
     if (error) {
       set({ error: error.message, loading: false });
-      return { error };
+      return { error: error as unknown as AuthError };
     }
 
     set({ loading: false });

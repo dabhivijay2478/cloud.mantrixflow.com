@@ -51,7 +51,7 @@ function Button({
     asChild?: boolean;
     isLoading?: boolean;
   }) {
-  const Comp = asChild ? Slot : "button";
+  const Comp = (asChild ? Slot : "button") as React.ElementType;
   const isDisabled = isLoading || disabled;
 
   return (

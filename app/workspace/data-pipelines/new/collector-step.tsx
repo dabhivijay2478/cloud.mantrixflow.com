@@ -469,21 +469,29 @@ export function CollectorStep({
               </SelectTrigger>
               <SelectContent>
                 {dataSources.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
+                  <div className="p-4 text-center text-sm text-muted-foreground space-y-2">
                     {connectionsLoading ? (
                       "Loading data sources..."
                     ) : (
                       <>
-                        No data sources available.
-                        <br />
-                        <span className="text-xs">
-                          Create a connection in Data Sources first.
-                        </span>
+                        <p>No data sources available.</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="mt-2"
+                        >
+                          <a href="/workspace/connections/new?role=source">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add new source connection
+                          </a>
+                        </Button>
                       </>
                     )}
                   </div>
                 ) : (
-                  dataSources.map((source) => (
+                  <>
+                  {dataSources.map((source) => (
                     <SelectItem key={source.id} value={source.id}>
                       <div className="flex items-center gap-2">
                         <Database className="h-4 w-4 shrink-0" />
@@ -496,7 +504,16 @@ export function CollectorStep({
                         </Badge>
                       </div>
                     </SelectItem>
-                  ))
+                  ))}
+                  <div className="border-t p-2">
+                    <Button variant="ghost" size="sm" className="w-full justify-start" asChild>
+                      <a href="/workspace/connections/new?role=source">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add new source connection
+                      </a>
+                    </Button>
+                  </div>
+                  </>
                 )}
               </SelectContent>
             </Select>

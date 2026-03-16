@@ -316,9 +316,9 @@ export default function Dashboard() {
                   </Link>
                 </Button>
                 <Button variant="outline" size="sm" className="w-full justify-start" asChild>
-                  <Link href="/workspace/data-sources">
+                  <Link href="/workspace/connections">
                     <Database className="w-4 h-4 mr-2" />
-                    Data Sources
+                    Connections
                   </Link>
                 </Button>
                 <Button variant="outline" size="sm" className="w-full justify-start" asChild>

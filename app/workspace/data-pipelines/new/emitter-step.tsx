@@ -496,9 +496,14 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                   Loading data sources...
                 </div>
               ) : availableDestinations.length === 0 ? (
-                <div className="py-8 text-center text-sm text-muted-foreground">
-                  No PostgreSQL data sources available. Please connect a
-                  PostgreSQL data source first.
+                <div className="py-8 text-center text-sm text-muted-foreground space-y-4">
+                  <p>No destination connections available.</p>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href="/workspace/connections/new?role=destination">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add new destination connection
+                    </a>
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -553,6 +558,15 @@ export function EmitterStep({ collectors, onComplete }: EmitterStepProps) {
                         </Card>
                       );
                     })}
+                    <Card
+                      className="cursor-pointer border-dashed transition-all hover:border-primary hover:bg-muted/50"
+                      onClick={() => window.location.href = "/workspace/connections/new?role=destination"}
+                    >
+                      <CardContent className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+                        <Plus className="h-5 w-5" />
+                        <span className="text-sm font-medium">Add new destination connection</span>
+                      </CardContent>
+                    </Card>
                   </div>
                   {connectionTestResult && (
                     <Alert

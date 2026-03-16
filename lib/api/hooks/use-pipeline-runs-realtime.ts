@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Supabase Realtime subscription for pipeline runs.
  * Updates TanStack Query cache when run status changes.

@@ -363,13 +363,16 @@ export function WorkspaceSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname?.startsWith("/workspace/data-sources")}
-                    tooltip="Data Sources"
+                    isActive={
+                      pathname?.startsWith("/workspace/connections") ||
+                      pathname?.startsWith("/workspace/data-sources")
+                    }
+                    tooltip="Connections"
                     className="cursor-pointer"
                   >
-                    <Link href="/workspace/data-sources">
+                    <Link href="/workspace/connections">
                       <DatabaseIcon size={16} className="shrink-0" />
-                      <span>Data Sources</span>
+                      <span>Connections</span>
                       {filteredDataSources.length > 0 && (
                         <span className="ml-auto text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
                           {filteredDataSources.length}

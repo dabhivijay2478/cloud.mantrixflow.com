@@ -42,6 +42,13 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 
 export default function DataSourcesPage() {
+  const router = useRouter();
+
+  // Redirect to unified connections page
+  useEffect(() => {
+    router.replace("/workspace/connections");
+  }, [router]);
+
   // Get current organization from workspace store (set by sidebar selector)
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
@@ -93,7 +100,6 @@ export default function DataSourcesPage() {
     };
   }) || []) as DataSource[];
 
-  const router = useRouter();
   const [_selectedDataSource, setSelectedDataSource] = useState<string | null>(
     null,
   );
