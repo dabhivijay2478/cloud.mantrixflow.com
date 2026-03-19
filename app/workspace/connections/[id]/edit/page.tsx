@@ -5,17 +5,23 @@ import { useParams, useSearchParams } from "next/navigation";
 import { CredentialForm } from "../../components/CredentialForm";
 import { RoleToggle } from "../../components/RoleToggle";
 import { getConnectorById } from "../../data/connectors";
-import { MOCK_CONNECTIONS } from "../../data/mockConnections";
+import { useConnections } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function EditConnectionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const { currentOrganization } = useWorkspaceStore();
+  const organizationId = currentOrganization?.id;
   const id = params?.id as string;
   const role =
     (searchParams.get("role") as "source" | "destination") ?? "source";
 
-  const connection = MOCK_CONNECTIONS.find((c) => c.id === id);
-  const connector = connection ? getConnectorById(connection.type) : null;
+  const { data: apiConnections } = useConnections(organizationId);
+  const connection = apiConnections?.find((c) => c.id === id);
+  const connector = connection
+    ? getConnectorById((connection.type as string) ?? "postgres")
+    : null;
 
   if (!connection || !connector) {
     return (
@@ -56,6 +62,7 @@ export default function EditConnectionPage() {
         role={role}
         connectionId={connection.id}
         isEdit
+        organizationId={organizationId}
       />
     </div>
   );

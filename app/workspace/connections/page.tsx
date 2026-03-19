@@ -5,12 +5,18 @@ import { useEffect, useMemo, useState } from "react";
 import { ConnectorCatalog } from "./components/ConnectorCatalog";
 import { ConnectionDrawer } from "./components/ConnectionDrawer";
 import { ConnectionList } from "./components/ConnectionList";
-import { MOCK_CONNECTIONS } from "./data/mockConnections";
+import { mapConnectionToDisplay } from "./utils/mapConnection";
+import { LoadingState } from "@/components/shared";
+import { useConnections } from "@/lib/api";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function ConnectionsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { currentOrganization } = useWorkspaceStore();
+  const organizationId = currentOrganization?.id;
+
   const roleParam = searchParams.get("role") as "source" | "destination" | null;
   const listRole =
     roleParam === "source"
@@ -26,7 +32,17 @@ export default function ConnectionsPage() {
     "all" | "source" | "destination"
   >(listRole === "all" ? "all" : listRole);
 
-  const connections = MOCK_CONNECTIONS;
+  const { data: apiConnections, isLoading } = useConnections(organizationId, {
+    role:
+      listRoleFilter === "all"
+        ? undefined
+        : (listRoleFilter as "source" | "destination"),
+  });
+
+  const connections = useMemo(
+    () => (apiConnections ?? []).map(mapConnectionToDisplay),
+    [apiConnections],
+  );
   const hasConnections = connections.length > 0;
 
   useEffect(() => {
@@ -50,6 +66,10 @@ export default function ConnectionsPage() {
     router.push(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
   };
 
+  if (isLoading) {
+    return <LoadingState message="Loading connections..." />;
+  }
+
   if (!hasConnections) {
     const role =
       (searchParams.get("role") as "source" | "destination") ?? "source";
@@ -71,11 +91,13 @@ export default function ConnectionsPage() {
         onSelect={setSelectedConnectionId}
         roleFilter={listRoleFilter}
         onRoleFilterChange={handleRoleFilterChange}
+        organizationId={organizationId}
       />
       <ConnectionDrawer
         connection={selectedConnection}
         open={selectedConnectionId !== null}
         onOpenChange={(open) => !open && setSelectedConnectionId(null)}
+        organizationId={organizationId}
       />
     </>
   );

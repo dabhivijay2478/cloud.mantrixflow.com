@@ -7,8 +7,9 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { MockConnection } from "../data/mockConnections";
+import type { ConnectionDisplay } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -33,24 +33,39 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  useDeleteDataSource,
+  useDisconnectConnection,
+  useReconnectConnection,
+  useTestConnectionForDataSource,
+} from "@/lib/api";
+import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
 import { cn } from "@/lib/utils";
 
 interface ConnectionDrawerProps {
-  connection: MockConnection | null;
+  connection: ConnectionDisplay | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  organizationId?: string;
 }
 
 export function ConnectionDrawer({
   connection,
   open,
   onOpenChange,
+  organizationId,
 }: ConnectionDrawerProps) {
+  const router = useRouter();
   const [cdcExpanded, setCdcExpanded] = useState(false);
-  const [testLoading, setTestLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [name, setName] = useState(connection?.name ?? "");
   const [description, setDescription] = useState("");
+
+  const testConnection = useTestConnectionForDataSource(organizationId);
+  const deleteDataSource = useDeleteDataSource(organizationId);
+  const disconnectConnection = useDisconnectConnection(organizationId);
+  const reconnectConnection = useReconnectConnection(organizationId);
 
   useEffect(() => {
     if (connection) {
@@ -64,20 +79,91 @@ export function ConnectionDrawer({
     connection.type === "postgres" && connection.role === "source";
 
   const handleTest = async () => {
-    setTestLoading(true);
     setTestResult(null);
-    await new Promise((r) => setTimeout(r, 1500));
-    setTestLoading(false);
-    setTestResult("success");
+    if (!organizationId) return;
+    try {
+      const result = await testConnection.mutateAsync(connection.id);
+      setTestResult(result.success ? "success" : "error");
+      if (result.success) {
+        showSuccessToast("connected", "Connection");
+      } else {
+        showErrorToast("connectFailed", "Connection", result.error);
+      }
+    } catch (err) {
+      setTestResult("error");
+      showErrorToast(
+        "connectFailed",
+        "Connection",
+        err instanceof Error ? err.message : undefined,
+      );
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!organizationId) return;
+    try {
+      await disconnectConnection.mutateAsync(connection.id);
+      showSuccessToast("disconnected", "Connection");
+      onOpenChange(false);
+      router.refresh();
+    } catch (err) {
+      showErrorToast(
+        "disconnectFailed",
+        "Connection",
+        err instanceof Error ? err.message : undefined,
+      );
+    }
+  };
+
+  const handleReconnect = async () => {
+    if (!organizationId) return;
+    try {
+      const result = await reconnectConnection.mutateAsync(connection.id);
+      const success = result && typeof result === "object" && "success" in result && (result as { success?: boolean }).success;
+      if (success) {
+        showSuccessToast("reconnected", "Connection");
+        onOpenChange(false);
+        router.refresh();
+      } else {
+        showErrorToast(
+          "reconnectFailed",
+          "Connection",
+          (result as { error?: string })?.error,
+        );
+      }
+    } catch (err) {
+      showErrorToast(
+        "reconnectFailed",
+        "Connection",
+        err instanceof Error ? err.message : undefined,
+      );
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!organizationId) return;
+    try {
+      await deleteDataSource.mutateAsync(connection.id);
+      showSuccessToast("deleted", "Connection");
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+      router.refresh();
+    } catch (err) {
+      showErrorToast(
+        "deleteFailed",
+        "Data Source",
+        err instanceof Error ? err.message : undefined,
+      );
+    }
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[400px] max-w-[400px] sm:max-w-[400px]"
+        className="flex w-[520px] max-w-[90vw] flex-col gap-0 p-0 sm:max-w-[520px]"
       >
-        <SheetHeader>
+        <SheetHeader className="px-6 pt-6 pb-4">
           <div className="flex items-center gap-2">
             <div className="flex size-6 items-center justify-center rounded bg-muted">
               <Database className="size-3.5 text-muted-foreground" />
@@ -112,8 +198,8 @@ export function ConnectionDrawer({
           </SheetDescription>
         </SheetHeader>
 
-        <Tabs defaultValue="overview" className="mt-4 flex-1">
-          <TabsList className="w-full">
+        <Tabs defaultValue="overview" className="flex flex-1 flex-col overflow-auto px-6 pb-6">
+          <TabsList className="mt-4 w-full shrink-0">
             <TabsTrigger value="overview" className="flex-1">
               Overview
             </TabsTrigger>
@@ -125,22 +211,22 @@ export function ConnectionDrawer({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-4 space-y-4">
-            <div className="text-muted-foreground space-y-2 text-sm">
-              <p>
+          <TabsContent value="overview" className="mt-6 space-y-6">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-muted-foreground break-all text-sm">
                 <span className="font-medium text-foreground">Host:</span>{" "}
                 {connection.hostSummary}
               </p>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleTest}
-                disabled={testLoading}
+                disabled={testConnection.isPending}
               >
-                {testLoading ? (
+                {testConnection.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   "Test Connection"
@@ -160,13 +246,51 @@ export function ConnectionDrawer({
             </div>
 
             {connection.role === "source" && (
-              <Button variant="outline" size="sm">
-                Discover Tables
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="w-fit"
+              >
+                <Link href={`/workspace/data-sources/${connection.id}/query`}>
+                  Discover Tables →
+                </Link>
               </Button>
             )}
 
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDisconnect()}
+                disabled={
+                  connection.status !== "active" || disconnectConnection.isPending
+                }
+              >
+                {disconnectConnection.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "Disconnect"
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleReconnect()}
+                disabled={
+                  connection.status !== "inactive" || reconnectConnection.isPending
+                }
+              >
+                {reconnectConnection.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "Reconnect"
+                )}
+              </Button>
+            </div>
+
             {isPostgresSource && (
-              <div className="rounded-lg border p-3">
+              <div className="rounded-lg border p-4">
                 <button
                   type="button"
                   onClick={() => setCdcExpanded(!cdcExpanded)}
@@ -208,7 +332,7 @@ export function ConnectionDrawer({
             )}
           </TabsContent>
 
-          <TabsContent value="pipelines" className="mt-4">
+          <TabsContent value="pipelines" className="mt-6">
             {connection.pipelineCount === 0 ? (
               <p className="text-muted-foreground mt-4 text-sm">
                 Not used in any pipelines yet.
@@ -241,7 +365,7 @@ export function ConnectionDrawer({
             )}
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-4 space-y-4">
+          <TabsContent value="settings" className="mt-6 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="drawer-name">Name</Label>
               <Input
@@ -265,7 +389,39 @@ export function ConnectionDrawer({
                 Edit Credentials
               </Link>
             </Button>
-            <AlertDialog>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnect}
+                disabled={
+                  connection.status !== "active" || disconnectConnection.isPending
+                }
+              >
+                {disconnectConnection.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "Disconnect"
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReconnect}
+                disabled={
+                  connection.status !== "inactive" || reconnectConnection.isPending
+                }
+              >
+                {reconnectConnection.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "Reconnect"
+                )}
+              </Button>
+            </div>
+
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">
                   Delete Connection
@@ -281,9 +437,13 @@ export function ConnectionDrawer({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Delete
-                  </AlertDialogAction>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={deleteDataSource.isPending}
+                  >
+                    {deleteDataSource.isPending ? "Deleting..." : "Delete"}
+                  </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

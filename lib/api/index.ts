@@ -49,6 +49,7 @@ export {
   useCreateSyncJob,
   useDatabases,
   useDeleteConnection,
+  useDiscoverSchemaForDataSource,
   useExecuteQuery,
   useExplainQuery,
   useQueryLogs,
@@ -59,6 +60,7 @@ export {
   useTableSchema,
   useTables,
   useTestConnection as useTestConnectionLegacy,
+  useTestConnectionForDataSource,
   useUpdateConnection,
   useUpdateSyncJobSchedule,
 } from "./hooks/use-data-sources";

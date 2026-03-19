@@ -7,7 +7,7 @@ import {
   AlertTriangle,
   XCircle,
 } from "lucide-react";
-import type { MockConnection } from "../data/mockConnections";
+import type { ConnectionDisplay } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,16 +19,22 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ConnectionListRowProps {
-  connection: MockConnection;
+  connection: ConnectionDisplay;
   onClick: () => void;
   isSelected?: boolean;
+  onTest?: () => void;
+  onDiscover?: () => void;
+  onDisconnect?: () => void;
+  onReconnect?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 function StatusIcon({
   result,
   lastTestTime,
 }: {
-  result: MockConnection["lastTestResult"];
+  result: ConnectionDisplay["lastTestResult"];
   lastTestTime?: string;
 }) {
   if (result === "success") {
@@ -59,6 +65,12 @@ export function ConnectionListRow({
   connection,
   onClick,
   isSelected,
+  onTest,
+  onDiscover,
+  onDisconnect,
+  onReconnect,
+  onEdit,
+  onDelete,
 }: ConnectionListRowProps) {
   return (
     <div
@@ -129,12 +141,39 @@ export function ConnectionListRow({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenuItem>Test Connection</DropdownMenuItem>
-          {connection.role === "source" && (
-            <DropdownMenuItem>Discover Tables</DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTest?.(); }}>
+            Test Connection
+          </DropdownMenuItem>
+          {connection.role === "source" && onDiscover && (
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDiscover(); }}>
+              Discover Tables
+            </DropdownMenuItem>
           )}
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+          {onDisconnect && (
+            <DropdownMenuItem
+              onClick={(e) => { e.stopPropagation(); onDisconnect(); }}
+              disabled={connection.status !== "active"}
+            >
+              Disconnect
+            </DropdownMenuItem>
+          )}
+          {onReconnect && (
+            <DropdownMenuItem
+              onClick={(e) => { e.stopPropagation(); onReconnect(); }}
+              disabled={connection.status !== "inactive"}
+            >
+              Reconnect
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit?.(); }}>
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive"
+            onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+          >
+            Delete
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

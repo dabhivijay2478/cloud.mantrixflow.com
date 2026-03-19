@@ -5,10 +5,12 @@ import { useParams, useSearchParams } from "next/navigation";
 import { CredentialForm } from "../../components/CredentialForm";
 import { RoleToggle } from "../../components/RoleToggle";
 import { getConnectorById } from "../../data/connectors";
+import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 export default function NewConnectionFormPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const { currentOrganization } = useWorkspaceStore();
   const type = params?.type as string;
   const role =
     (searchParams.get("role") as "source" | "destination") ?? "source";
@@ -49,7 +51,11 @@ export default function NewConnectionFormPage() {
         <RoleToggle value={role} />
       </div>
 
-      <CredentialForm connector={connector} role={role} />
+      <CredentialForm
+        connector={connector}
+        role={role}
+        organizationId={currentOrganization?.id}
+      />
     </div>
   );
 }

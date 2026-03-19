@@ -70,6 +70,48 @@ export function useTestConnection(orgId?: string) {
   });
 }
 
+/** Test an existing data source connection (POST /data-sources/:id/test-connection) */
+export function useTestConnectionForDataSource(
+  organizationId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dataSourceId: string) => {
+      if (!organizationId)
+        throw new Error("Organization ID is required");
+      return DataSourcesService.testConnection(organizationId, dataSourceId);
+    },
+    onError: (error) => handleApiError(error),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: dataSourcesKeys.connections.lists(),
+      });
+    },
+  });
+}
+
+/** Discover schema/tables for an existing data source */
+export function useDiscoverSchemaForDataSource(
+  organizationId: string | undefined,
+) {
+  return useMutation({
+    mutationFn: ({
+      dataSourceId,
+      schemaName,
+    }: {
+      dataSourceId: string;
+      schemaName?: string;
+    }) => {
+      if (!organizationId)
+        throw new Error("Organization ID is required");
+      return DataSourcesService.discoverSchema(organizationId, dataSourceId, {
+        schemaName: schemaName ?? "public",
+      });
+    },
+    onError: (error) => handleApiError(error),
+  });
+}
+
 export function useCreateConnection(
   orgId?: string,
   options?: { showToastOnError?: boolean },
