@@ -94,6 +94,9 @@ interface PipelineBuilderState {
   activeRun: ActiveRun;
   runHistory: MockRun[];
   runSimulationInterval: ReturnType<typeof setInterval> | null;
+  aiAssist: { isOpen: boolean };
+  openAIAssist: () => void;
+  closeAIAssist: () => void;
   // Actions
   loadPipeline: (data: PipelineWithSchemas) => void;
   loadMockPipeline: () => void;
@@ -236,6 +239,10 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
   activeRun: initialActiveRun,
   runHistory: MOCK_RUNS,
   runSimulationInterval: null,
+  aiAssist: { isOpen: false },
+
+  openAIAssist: () => set({ aiAssist: { isOpen: true } }),
+  closeAIAssist: () => set({ aiAssist: { isOpen: false } }),
 
   loadMockPipeline: () => {
     const mock = MOCK_PIPELINE;
@@ -768,6 +775,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
       useMockData: false,
       activeRun: initialActiveRun,
       runSimulationInterval: null,
+      aiAssist: { isOpen: false },
     });
   },
 }));

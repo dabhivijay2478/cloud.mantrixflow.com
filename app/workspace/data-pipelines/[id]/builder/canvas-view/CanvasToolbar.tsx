@@ -1,7 +1,8 @@
 "use client";
 
-import { History, Loader2, Play, Save, Settings } from "lucide-react";
+import { History, Loader2, Play, Save, Settings, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   useRunPipeline,
   dataPipelinesKeys,
@@ -16,6 +17,9 @@ export type NodeStateFilter = "all" | "running" | "listening";
 export function CanvasToolbar() {
   const pipeline = usePipelineBuilderStore((s) => s.pipeline);
   const openDrawer = usePipelineBuilderStore((s) => s.openDrawer);
+  const aiAssist = usePipelineBuilderStore((s) => s.aiAssist);
+  const openAIAssist = usePipelineBuilderStore((s) => s.openAIAssist);
+  const closeAIAssist = usePipelineBuilderStore((s) => s.closeAIAssist);
   const useMockData = usePipelineBuilderStore((s) => s.useMockData);
   const activeRunStore = usePipelineBuilderStore((s) => s.activeRun);
   const triggerRun = usePipelineBuilderStore((s) => s.triggerRun);
@@ -128,6 +132,25 @@ export function CanvasToolbar() {
       >
         <History className="h-3.5 w-3.5" />
         History
+      </Button>
+
+      <div className="h-4 w-px bg-zinc-700" />
+
+      {/* AI Assistant */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "h-7 gap-1.5 text-xs px-2 transition-colors",
+          aiAssist.isOpen
+            ? "bg-teal-600/20 text-teal-400 hover:bg-teal-600/30 hover:text-teal-300"
+            : "text-zinc-300 hover:bg-zinc-800 hover:text-white",
+        )}
+        onClick={() => aiAssist.isOpen ? closeAIAssist() : openAIAssist()}
+        title="AI Assistant (⌘K)"
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Ask AI
       </Button>
 
     </div>
