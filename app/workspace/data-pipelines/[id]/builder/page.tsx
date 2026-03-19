@@ -68,7 +68,7 @@ export default function PipelineBuilderPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)]">
+    <div className="h-[calc(100vh-4rem)] overflow-hidden">
       <PipelineBuilder />
     </div>
   );
