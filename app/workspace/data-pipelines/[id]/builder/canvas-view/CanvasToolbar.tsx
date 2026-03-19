@@ -20,9 +20,7 @@ export function CanvasToolbar() {
   const aiAssist = usePipelineBuilderStore((s) => s.aiAssist);
   const openAIAssist = usePipelineBuilderStore((s) => s.openAIAssist);
   const closeAIAssist = usePipelineBuilderStore((s) => s.closeAIAssist);
-  const useMockData = usePipelineBuilderStore((s) => s.useMockData);
-  const activeRunStore = usePipelineBuilderStore((s) => s.activeRun);
-  const triggerRun = usePipelineBuilderStore((s) => s.triggerRun);
+  const setActiveRun = usePipelineBuilderStore((s) => s.setActiveRun);
   const hasUnsavedChanges = usePipelineBuilderStore((s) => s.hasUnsavedChanges);
   const savePipeline = usePipelineBuilderStore((s) => s.savePipeline);
 
@@ -31,17 +29,11 @@ export function CanvasToolbar() {
   const runPipeline = useRunPipeline(organizationId, pipelineId);
   const queryClient = useQueryClient();
 
-  const isRunning =
-    useMockData ? activeRunStore.status === "running" : runPipeline.isPending;
-  const isRunPending = runPipeline.isPending;
-
   const handleRun = async () => {
-    if (useMockData) {
-      triggerRun();
-      return;
-    }
     try {
-      await runPipeline.mutateAsync(undefined);
+      const run = await runPipeline.mutateAsync(undefined);
+      setActiveRun(run.id, "pending");
+      openDrawer("run_status");
       toast.success("Pipeline started", "Run in progress.");
     } catch (error) {
       toast.error(
@@ -53,21 +45,16 @@ export function CanvasToolbar() {
 
   const handleSave = async () => {
     try {
-      if (useMockData) {
-        usePipelineBuilderStore.getState().setHasUnsavedChanges(false);
-        toast.success("Saved", "Pipeline changes saved (mock).");
-      } else {
-        await savePipeline();
-        if (organizationId && pipelineId) {
-          await queryClient.invalidateQueries({
-            queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
-          });
-          await queryClient.invalidateQueries({
-            queryKey: dataPipelinesKeys.pipelines.full(organizationId, pipelineId),
-          });
-        }
-        toast.success("Saved", "Pipeline changes saved successfully.");
+      await savePipeline();
+      if (organizationId && pipelineId) {
+        await queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: dataPipelinesKeys.pipelines.full(organizationId, pipelineId),
+        });
       }
+      toast.success("Saved", "Pipeline changes saved successfully.");
     } catch (error) {
       toast.error(
         "Save failed",
@@ -84,10 +71,10 @@ export function CanvasToolbar() {
         size="sm"
         className="h-7 gap-1 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white px-2"
         onClick={handleRun}
-        disabled={isRunPending || isRunning}
-        aria-busy={isRunPending || isRunning}
+        disabled={runPipeline.isPending}
+        aria-busy={runPipeline.isPending}
       >
-        {(isRunPending || isRunning) ? (
+        {runPipeline.isPending ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : (
           <Play className="h-3.5 w-3.5" />
@@ -152,7 +139,6 @@ export function CanvasToolbar() {
         <Sparkles className="h-3.5 w-3.5" />
         Ask AI
       </Button>
-
     </div>
   );
 }

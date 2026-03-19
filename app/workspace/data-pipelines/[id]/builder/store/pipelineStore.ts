@@ -10,7 +10,6 @@ import type {
   PipelineGraphBranch,
   ScheduleType,
 } from "@/lib/api/types/data-pipelines";
-import { MOCK_PIPELINE, MOCK_RUNS } from "../mock/mockData";
 import { getBranchColour as getBranchColourEntry } from "../shared/BranchColour";
 
 const BRANCH_COLORS = [
@@ -57,28 +56,6 @@ export interface BranchProgress {
 export interface ActiveRun {
   runId: string | null;
   status: "idle" | "pending" | "running" | "success" | "failed";
-  branchProgress: BranchProgress[];
-  elapsedSeconds: number;
-}
-
-export interface MockRun {
-  id: string;
-  status: string;
-  triggered_by: string;
-  created_at: string;
-  duration_seconds: number;
-  rows_written: number;
-  rows_dropped: number;
-  branch_results: Array<{
-    branch_id: string;
-    label: string;
-    status: string;
-    rows_written: number;
-    rows_dropped: number;
-    duration_seconds: number;
-    error?: string;
-  }>;
-  schema_evolutions: number;
 }
 
 interface PipelineBuilderState {
@@ -90,23 +67,19 @@ interface PipelineBuilderState {
   viewMode: "table" | "canvas";
   hasUnsavedChanges: boolean;
   drawerState: DrawerState;
-  useMockData: boolean;
   activeRun: ActiveRun;
-  runHistory: MockRun[];
-  runSimulationInterval: ReturnType<typeof setInterval> | null;
   aiAssist: { isOpen: boolean };
   openAIAssist: () => void;
   closeAIAssist: () => void;
   // Actions
   loadPipeline: (data: PipelineWithSchemas) => void;
-  loadMockPipeline: () => void;
   updateNode: (nodeId: string, changes: Partial<PipelineGraphNode>) => void;
   addBranch: () => void;
   deleteBranch: (branchId: string) => void;
   updateBranchLabel: (branchId: string, label: string) => void;
   addFilterNode: (branchId: string, position: { x: number; y: number }) => void;
   addJoinNode: (position: { x: number; y: number }) => void;
-  triggerRun: () => void;
+  setActiveRun: (runId: string, status: ActiveRun["status"]) => void;
   openDrawer: (
     type: DrawerType,
     nodeId?: string | null,
@@ -116,10 +89,6 @@ interface PipelineBuilderState {
   closeDrawer: () => void;
   setDrawerUnsavedChanges: (hasChanges: boolean) => void;
   savePipeline: () => Promise<void>;
-  updatePipelineForMock: (updates: {
-    name?: string;
-    description?: string;
-  }) => void;
   updatePipelineMetadata: (updates: {
     scheduleType?: ScheduleType;
     scheduleValue?: string;
@@ -131,9 +100,7 @@ interface PipelineBuilderState {
   setHasUnsavedChanges: (value: boolean) => void;
   applyFanOutLayout: (canvasHeight: number) => void;
   getBranchColor: (branchIndex: number) => string;
-  getBranchColourEntry: (branchIndex: number) => ReturnType<
-    typeof getBranchColourEntry
-  >;
+  getBranchColourEntry: (branchIndex: number) => ReturnType<typeof getBranchColourEntry>;
   reset: () => void;
 }
 
@@ -150,7 +117,6 @@ function buildGraphFromLegacyPipeline(
   pipeline: PipelineWithSchemas,
 ): { nodes: PipelineGraphNode[]; edges: PipelineGraphEdge[]; branches: PipelineGraphBranch[] } {
   const { pipeline: p, sourceSchema, destinationSchema } = pipeline;
-  const baseId = `legacy_${Date.now()}`;
   const sourceId = "source-1";
   const transformId = "transform-1";
   const destinationId = "destination-1";
@@ -222,8 +188,6 @@ function buildGraphFromLegacyPipeline(
 const initialActiveRun: ActiveRun = {
   runId: null,
   status: "idle",
-  branchProgress: [],
-  elapsedSeconds: 0,
 };
 
 export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) => ({
@@ -235,77 +199,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
   viewMode: "canvas",
   hasUnsavedChanges: false,
   drawerState: initialDrawerState,
-  useMockData: false,
   activeRun: initialActiveRun,
-  runHistory: MOCK_RUNS,
-  runSimulationInterval: null,
   aiAssist: { isOpen: false },
 
   openAIAssist: () => set({ aiAssist: { isOpen: true } }),
   closeAIAssist: () => set({ aiAssist: { isOpen: false } }),
-
-  loadMockPipeline: () => {
-    const mock = MOCK_PIPELINE;
-    const graph = mock.pipeline_graph;
-    const pipelineWithSchemas: PipelineWithSchemas = {
-      pipeline: {
-        id: mock.id,
-        organizationId: mock.organizationId,
-        createdBy: "mock",
-        name: mock.name,
-        description: mock.description,
-        sourceSchemaId: "mock-src",
-        destinationSchemaId: "mock-dest",
-        syncMode: "full",
-        syncFrequency: "manual",
-        status: "idle",
-        pipelineGraph: graph,
-        builderViewMode: mock.builder_view_mode,
-        scheduleType: mock.scheduleType,
-        scheduleValue: mock.scheduleValue,
-        scheduleTimezone: mock.scheduleTimezone,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      sourceSchema: {
-        id: "mock-src",
-        organizationId: mock.organizationId,
-        dataSourceId: "conn-src-001",
-        sourceType: "postgres",
-        sourceSchema: "public",
-        sourceTable: "users",
-        name: "Production Postgres",
-        discoveredColumns: [],
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      destinationSchema: {
-        id: "mock-dest",
-        organizationId: mock.organizationId,
-        dataSourceId: "conn-dest-001",
-        destinationSchema: "public",
-        destinationTable: "orders",
-        destinationTableExists: true,
-        writeMode: "upsert",
-        name: "Analytics Postgres",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    };
-    set({
-      pipelineId: mock.id,
-      pipeline: pipelineWithSchemas,
-      nodes: graph.nodes as PipelineGraphNode[],
-      edges: graph.edges,
-      branches: graph.branches.map((b, i) => ({ ...b, colour_index: i })),
-      viewMode: mock.builder_view_mode,
-      hasUnsavedChanges: false,
-      useMockData: true,
-      drawerState: initialDrawerState,
-    });
-  },
 
   loadPipeline: (data: PipelineWithSchemas) => {
     const graph = data.pipeline.pipelineGraph;
@@ -354,7 +252,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
   },
 
   addBranch: () => {
-    const { nodes, edges, branches, pipelineId } = get();
+    const { nodes, edges, branches } = get();
     const sourceNode = nodes.find((n) => n.type === "source");
     if (!sourceNode) return;
 
@@ -540,99 +438,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
     });
   },
 
-  triggerRun: () => {
-    const { branches, runSimulationInterval } = get();
-    if (runSimulationInterval) return;
-
-    const runId = `run-live-${Date.now()}`;
-    const totalEstimated = 45000;
-    const branchProgress: BranchProgress[] = branches.map((b) => ({
-      branch_id: b.id,
-      label: b.label,
-      rows_synced: 0,
-      total_estimated: totalEstimated,
-      status: "running" as const,
-    }));
-
-    set({
-      activeRun: {
-        runId,
-        status: "running",
-        branchProgress,
-        elapsedSeconds: 0,
-      },
-    });
-
-    let elapsed = 0;
-    const interval = setInterval(() => {
-      const { activeRun } = get();
-      if (activeRun.status !== "running") return;
-
-      elapsed += 0.5;
-      const newProgress = activeRun.branchProgress.map((p) => ({
-        ...p,
-        rows_synced: Math.min(
-          p.total_estimated,
-          p.rows_synced + 2800,
-        ),
-      }));
-
-      if (elapsed >= 8) {
-        clearInterval(interval);
-        set((state) => ({
-          runSimulationInterval: null,
-          activeRun: {
-            runId: state.activeRun.runId,
-            status: "success",
-            branchProgress: state.activeRun.branchProgress.map((p) => ({
-              ...p,
-              rows_synced: p.total_estimated,
-              status: "success" as const,
-            })),
-            elapsedSeconds: 8,
-          },
-          runHistory: [
-            {
-              id: runId,
-              status: "success",
-              triggered_by: "manual",
-              created_at: new Date().toISOString(),
-              duration_seconds: 8,
-              rows_written: 45000,
-              rows_dropped: 0,
-              branch_results: state.activeRun.branchProgress.map((p) => ({
-                branch_id: p.branch_id,
-                label: p.label,
-                status: "success",
-                rows_written: 45000,
-                rows_dropped: 0,
-                duration_seconds: 8,
-              })),
-              schema_evolutions: 0,
-            },
-            ...state.runHistory,
-          ],
-        }));
-      } else {
-        set({
-          activeRun: {
-            ...activeRun,
-            branchProgress: newProgress,
-            elapsedSeconds: elapsed,
-          },
-        });
-      }
-    }, 500);
-
-    set({ runSimulationInterval: interval });
+  setActiveRun: (runId, status) => {
+    set({ activeRun: { runId, status } });
   },
 
   openDrawer: (type, nodeId, branchId, runId) => {
-    const { drawerState } = get();
-    if (drawerState.hasUnsavedChanges) {
-      // Caller should show confirmation before opening new drawer
-      // For now we allow opening - UI can intercept
-    }
     set({
       drawerState: {
         isOpen: true,
@@ -646,9 +456,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
   },
 
   closeDrawer: () => {
-    set({
-      drawerState: initialDrawerState,
-    });
+    set({ drawerState: initialDrawerState });
   },
 
   setDrawerUnsavedChanges: (hasChanges: boolean) => {
@@ -676,20 +484,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
           ...pipeline.pipeline,
           pipelineGraph,
           builderViewMode: viewMode,
-        },
-      },
-    });
-  },
-
-  updatePipelineForMock: (updates) => {
-    const { pipeline } = get();
-    if (!pipeline) return;
-    set({
-      pipeline: {
-        ...pipeline,
-        pipeline: {
-          ...pipeline.pipeline,
-          ...updates,
         },
       },
     });
@@ -761,8 +555,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
   },
 
   reset: () => {
-    const { runSimulationInterval } = get();
-    if (runSimulationInterval) clearInterval(runSimulationInterval);
     set({
       pipelineId: null,
       pipeline: null,
@@ -772,9 +564,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
       viewMode: "canvas",
       hasUnsavedChanges: false,
       drawerState: initialDrawerState,
-      useMockData: false,
       activeRun: initialActiveRun,
-      runSimulationInterval: null,
       aiAssist: { isOpen: false },
     });
   },

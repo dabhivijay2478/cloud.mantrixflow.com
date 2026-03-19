@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Clock,
@@ -33,20 +33,26 @@ import {
   dataPipelinesKeys,
   useDeletePipeline,
   usePipelinesPaginated,
+  useRunPipeline,
 } from "@/lib/api/hooks/use-data-pipelines";
-import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { usePipelineRealtime } from "@/lib/hooks/use-pipeline-realtime";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
-import { MOCK_LIST_PIPELINES } from "./mockListData";
-import type { MockListPipeline } from "./mockListData";
-
-/** Use mock data for list when true; use API when false */
-const USE_MOCK_LIST = true;
 
 type FilterTab = "all" | "running" | "failed" | "scheduled";
+
+type PipelineRow = {
+  id: string;
+  name: string;
+  status: "running" | "success" | "failed" | "idle";
+  source: { connector_type: string; connection_name: string };
+  branches: Array<{ label: string; destination: { connector_type: string; connection_name: string } }>;
+  last_run_at: string | null;
+  last_run_duration: number | null;
+  cron_schedule: string | null;
+};
 
 function formatRelativeTime(dateStr: string | null): string {
   if (!dateStr) return "Never";
@@ -70,7 +76,7 @@ function formatCron(cron: string | null): string {
   return "Scheduled";
 }
 
-function pipelineToListRow(p: Pipeline): MockListPipeline {
+function pipelineToRow(p: Pipeline): PipelineRow {
   const src = p.sourceSchema;
   const dest = p.destinationSchema;
   const graphBranches = p.pipelineGraph?.branches;
@@ -99,7 +105,7 @@ function pipelineToListRow(p: Pipeline): MockListPipeline {
     branches,
     status,
     last_run_at: p.lastRunAt ?? null,
-    last_run_duration: null,
+    last_run_duration: p.totalRowsProcessed ? null : null,
     cron_schedule:
       p.scheduleType && p.scheduleType !== "none"
         ? p.scheduleType === "minutes" ? `*/${p.scheduleValue ?? "30"} * * * *` : "0 * * * *"
@@ -107,7 +113,7 @@ function pipelineToListRow(p: Pipeline): MockListPipeline {
   };
 }
 
-function StatusBadge({ status }: { status: MockListPipeline["status"] }) {
+function StatusBadge({ status }: { status: PipelineRow["status"] }) {
   if (status === "running") {
     return (
       <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 gap-1.5">
@@ -134,7 +140,7 @@ function StatusBadge({ status }: { status: MockListPipeline["status"] }) {
 }
 
 interface PipelineCardRowProps {
-  row: MockListPipeline;
+  row: PipelineRow;
   onOpen: () => void;
   onRun: () => void;
   onDelete: () => void;
@@ -150,14 +156,11 @@ function PipelineCardRow({ row, onOpen, onRun, onDelete, isRunning }: PipelineCa
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
       className="flex cursor-pointer items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {/* Icon */}
       <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
         <Zap className="size-5 text-muted-foreground" />
       </div>
 
-      {/* Main info */}
       <div className="min-w-0 flex-1 space-y-1.5">
-        {/* Name + status */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold leading-tight">{row.name}</span>
           <StatusBadge status={row.status} />
@@ -169,7 +172,6 @@ function PipelineCardRow({ row, onOpen, onRun, onDelete, isRunning }: PipelineCa
           )}
         </div>
 
-        {/* Source → destinations */}
         <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
           <Database className="size-3.5 shrink-0" />
           <span className="font-medium text-foreground/80">{row.source.connection_name}</span>
@@ -189,14 +191,12 @@ function PipelineCardRow({ row, onOpen, onRun, onDelete, isRunning }: PipelineCa
           </div>
         </div>
 
-        {/* Last run */}
         <p className="text-xs text-muted-foreground">
           Last run: {formatRelativeTime(row.last_run_at)}
           {row.last_run_duration ? ` · ${row.last_run_duration}s` : ""}
         </p>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
         <Button
           variant="ghost"
@@ -244,23 +244,22 @@ export default function DataPipelinesPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
-  const [mockPipelines, setMockPipelines] = useState(MOCK_LIST_PIPELINES);
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
 
-  const { data: paginatedResult, isLoading: pipelinesLoading } = usePipelinesPaginated(
-    USE_MOCK_LIST ? undefined : organizationId,
+  const { data: paginatedResult, isLoading } = usePipelinesPaginated(
+    organizationId,
     { pageIndex: 0, pageSize: 50 },
   );
   const apiPipelines = paginatedResult?.data ?? [];
   const deletePipeline = useDeletePipeline(organizationId);
+  const runPipeline = useRunPipeline(organizationId, undefined);
 
-  usePipelineRealtime(USE_MOCK_LIST ? undefined : organizationId ?? undefined, () => {
+  usePipelineRealtime(organizationId, () => {
     queryClient.invalidateQueries({ queryKey: dataPipelinesKeys.pipelines.lists() });
   });
 
   const listRows = useMemo(() => {
-    const raw = USE_MOCK_LIST ? mockPipelines : apiPipelines.map(pipelineToListRow);
-    let filtered = raw;
+    let filtered = apiPipelines.map(pipelineToRow);
     if (filterTab === "running") filtered = filtered.filter((r) => r.status === "running");
     else if (filterTab === "failed") filtered = filtered.filter((r) => r.status === "failed");
     else if (filterTab === "scheduled") filtered = filtered.filter((r) => r.cron_schedule != null);
@@ -274,44 +273,32 @@ export default function DataPipelinesPage() {
       );
     }
     return filtered;
-  }, [mockPipelines, apiPipelines, filterTab, search]);
+  }, [apiPipelines, filterTab, search]);
 
   const handleRun = async (id: string, name: string) => {
-    if (USE_MOCK_LIST) {
-      setRunningIds((s) => new Set([...s, id]));
-      setMockPipelines((prev) => prev.map((p) => p.id === id ? { ...p, status: "running" as const } : p));
-      setTimeout(() => {
-        setMockPipelines((prev) => prev.map((p) => p.id === id ? { ...p, status: "success" as const, last_run_at: new Date().toISOString() } : p));
-        setRunningIds((s) => { const n = new Set(s); n.delete(id); return n; });
-      }, 3000);
-    } else {
-      try {
-        await DataPipelinesService.runPipeline(organizationId ?? "mock", id, {});
-        queryClient.invalidateQueries({ queryKey: dataPipelinesKeys.pipelines.lists() });
-        toast.success("Pipeline started", `${name} is now running.`);
-      } catch (error) {
-        toast.error("Failed to run", error instanceof Error ? error.message : "Unknown error");
-      }
+    setRunningIds((s) => new Set([...s, id]));
+    try {
+      await runPipeline.mutateAsync(undefined, {
+        onSettled: () => setRunningIds((s) => { const n = new Set(s); n.delete(id); return n; }),
+      } as Parameters<typeof runPipeline.mutateAsync>[1]);
+      queryClient.invalidateQueries({ queryKey: dataPipelinesKeys.pipelines.lists() });
+      toast.success("Pipeline started", `${name} is now running.`);
+    } catch (error) {
+      setRunningIds((s) => { const n = new Set(s); n.delete(id); return n; });
+      toast.error("Failed to run", error instanceof Error ? error.message : "Unknown error");
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      if (USE_MOCK_LIST) {
-        setMockPipelines((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-        setDeleteTarget(null);
-      } else {
-        await deletePipeline.mutateAsync(deleteTarget.id);
-        setDeleteTarget(null);
-        toast.success("Pipeline deleted", `${deleteTarget.name} has been deleted.`);
-      }
+      await deletePipeline.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+      toast.success("Pipeline deleted", `${deleteTarget.name} has been deleted.`);
     } catch (error) {
       toast.error("Failed to delete", error instanceof Error ? error.message : "Unknown error");
     }
   };
-
-  const isLoading = pipelinesLoading && !USE_MOCK_LIST;
 
   return (
     <div className="flex flex-col gap-6">
@@ -328,7 +315,6 @@ export default function DataPipelinesPage() {
         }
       />
 
-      {/* Filters + search */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2">
           {(["all", "running", "failed", "scheduled"] as const).map((tab) => (
@@ -358,7 +344,6 @@ export default function DataPipelinesPage() {
         </div>
       </div>
 
-      {/* List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

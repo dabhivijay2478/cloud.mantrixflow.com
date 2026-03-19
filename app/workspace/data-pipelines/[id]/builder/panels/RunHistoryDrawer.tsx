@@ -13,7 +13,6 @@ import {
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { usePipelineRuns } from "@/lib/api/hooks/use-data-pipelines";
 import type { PipelineRun } from "@/lib/api/types/data-pipelines";
-import type { MockRun } from "../store/pipelineStore";
 import { usePipelineBuilderStore } from "../store/pipelineStore";
 
 function formatRelativeTime(dateStr: string) {
@@ -28,8 +27,8 @@ function formatRelativeTime(dateStr: string) {
   return date.toLocaleDateString();
 }
 
-function RunStatusIcon({ run }: { run: { status: string } }) {
-  switch (run.status) {
+function RunStatusIcon({ status }: { status: string }) {
+  switch (status) {
     case "success":
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case "failed":
@@ -46,38 +45,13 @@ export function RunHistoryDrawer() {
   const pipelineId = usePipelineBuilderStore((s) => s.pipelineId);
   const pipeline = usePipelineBuilderStore((s) => s.pipeline);
   const openDrawer = usePipelineBuilderStore((s) => s.openDrawer);
-  const useMockData = usePipelineBuilderStore((s) => s.useMockData);
-  const runHistory = usePipelineBuilderStore((s) => s.runHistory);
   const organizationId = pipeline?.pipeline.organizationId;
 
-  const { data: apiRuns } = usePipelineRuns(
-    useMockData ? undefined : organizationId ?? undefined,
-    useMockData ? undefined : pipelineId ?? undefined,
+  const { data: runs, isLoading } = usePipelineRuns(
+    organizationId ?? undefined,
+    pipelineId ?? undefined,
     20,
   );
-
-  const runs = useMockData ? runHistory : apiRuns;
-
-  const getRunDisplay = (run: PipelineRun | MockRun) => {
-    if ("created_at" in run) {
-      return {
-        id: run.id,
-        status: run.status,
-        startedAt: run.created_at,
-        durationSeconds: run.duration_seconds,
-        rowsWritten: run.rows_written,
-        triggerType: run.triggered_by,
-      };
-    }
-    return {
-      id: run.id,
-      status: run.status,
-      startedAt: run.startedAt ?? "",
-      durationSeconds: run.durationSeconds,
-      rowsWritten: run.rowsWritten,
-      triggerType: run.triggerType ?? "manual",
-    };
-  };
 
   return (
     <div className="flex flex-col h-full gap-6">
@@ -85,7 +59,11 @@ export function RunHistoryDrawer() {
         <SheetTitle>Run History</SheetTitle>
       </SheetHeader>
 
-      {!runs || runs.length === 0 ? (
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+          Loading runs…
+        </div>
+      ) : !runs || runs.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
           No runs yet. Click "Run" to execute the pipeline.
         </div>
@@ -104,43 +82,40 @@ export function RunHistoryDrawer() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {runs.map((run) => {
-                const d = getRunDisplay(run);
-                return (
-                  <TableRow
-                    key={run.id}
-                    className="cursor-pointer border-zinc-800 hover:bg-zinc-800/50"
-                    onClick={() => openDrawer("run_details", null, null, run.id)}
-                  >
-                    <TableCell className="font-mono text-xs text-zinc-400 py-3">
-                      {run.id.slice(0, 8)}
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-2">
-                        <RunStatusIcon run={run} />
-                        <span className="capitalize text-sm font-medium">{d.status}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-zinc-300 py-3">
-                      {formatRelativeTime(d.startedAt)}
-                    </TableCell>
-                    <TableCell className="text-sm text-zinc-300 py-3">
-                      {d.durationSeconds != null ? `${d.durationSeconds}s` : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-zinc-300 py-3 tabular-nums">
-                      {d.rowsWritten?.toLocaleString() ?? "—"}
-                    </TableCell>
-                    <TableCell className="capitalize text-sm text-zinc-300 py-3">
-                      {d.triggerType}
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-zinc-400 hover:text-zinc-100">
-                        Details →
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {(runs as PipelineRun[]).map((run) => (
+                <TableRow
+                  key={run.id}
+                  className="cursor-pointer border-zinc-800 hover:bg-zinc-800/50"
+                  onClick={() => openDrawer("run_details", null, null, run.id)}
+                >
+                  <TableCell className="font-mono text-xs text-zinc-400 py-3">
+                    {run.id.slice(0, 8)}
+                  </TableCell>
+                  <TableCell className="py-3">
+                    <div className="flex items-center gap-2">
+                      <RunStatusIcon status={run.status} />
+                      <span className="capitalize text-sm font-medium">{run.status}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-zinc-300 py-3">
+                    {formatRelativeTime(run.startedAt ?? run.createdAt ?? "")}
+                  </TableCell>
+                  <TableCell className="text-sm text-zinc-300 py-3">
+                    {run.durationSeconds != null ? `${run.durationSeconds}s` : "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-zinc-300 py-3 tabular-nums">
+                    {run.rowsWritten?.toLocaleString() ?? "—"}
+                  </TableCell>
+                  <TableCell className="capitalize text-sm text-zinc-300 py-3">
+                    {run.triggerType ?? "manual"}
+                  </TableCell>
+                  <TableCell className="py-3">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-zinc-400 hover:text-zinc-100">
+                      Details →
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
