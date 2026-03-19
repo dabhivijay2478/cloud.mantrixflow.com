@@ -13,7 +13,6 @@ import {
   ChevronsUpDown,
   List,
   Plus,
-  Table,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -397,44 +396,6 @@ export function WorkspaceSidebar() {
                     <Link href="/workspace/data-pipelines">
                       <GitBranchIcon size={16} className="shrink-0" />
                       <span>Data Pipelines</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {/* Source Schemas - Visible to OWNER, ADMIN, EDITOR */}
-              {(currentUserRole === "OWNER" ||
-                currentUserRole === "ADMIN" ||
-                currentUserRole === "EDITOR") && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname?.startsWith("/workspace/source-schemas")}
-                    tooltip="Source Schemas"
-                    className="cursor-pointer"
-                  >
-                    <Link href="/workspace/source-schemas">
-                      <DatabaseIcon size={16} className="shrink-0" />
-                      <span>Source Schemas</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {/* Destination Schemas - Visible to OWNER, ADMIN, EDITOR */}
-              {(currentUserRole === "OWNER" ||
-                currentUserRole === "ADMIN" ||
-                currentUserRole === "EDITOR") && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname?.startsWith(
-                      "/workspace/destination-schemas",
-                    )}
-                    tooltip="Destination Schemas"
-                    className="cursor-pointer"
-                  >
-                    <Link href="/workspace/destination-schemas">
-                      <Table className="h-4 w-4" />
-                      <span>Destination Schemas</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
