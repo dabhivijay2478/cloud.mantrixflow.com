@@ -73,7 +73,7 @@ export function JoinPanel({ nodeId }: JoinPanelProps) {
           Configure join type and key columns
         </SheetDescription>
       </SheetHeader>
-      <div className="flex flex-1 flex-col gap-4 py-4">
+      <div className="flex flex-1 flex-col gap-5">
         <div className="space-y-2">
           <Label>Join Type</Label>
           <Select

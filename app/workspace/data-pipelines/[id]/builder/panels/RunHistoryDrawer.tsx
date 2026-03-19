@@ -80,8 +80,8 @@ export function RunHistoryDrawer() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <SheetHeader className="pb-4">
+    <div className="flex flex-col h-full gap-6">
+      <SheetHeader>
         <SheetTitle>Run History</SheetTitle>
       </SheetHeader>
 
@@ -90,16 +90,16 @@ export function RunHistoryDrawer() {
           No runs yet. Click "Run" to execute the pipeline.
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto -mx-6">
+        <div className="flex-1 overflow-y-auto rounded-lg border border-zinc-800">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Rows</TableHead>
-                <TableHead>Trigger</TableHead>
+              <TableRow className="border-zinc-800 hover:bg-transparent">
+                <TableHead className="text-zinc-400 text-xs font-medium">ID</TableHead>
+                <TableHead className="text-zinc-400 text-xs font-medium">Status</TableHead>
+                <TableHead className="text-zinc-400 text-xs font-medium">Started</TableHead>
+                <TableHead className="text-zinc-400 text-xs font-medium">Duration</TableHead>
+                <TableHead className="text-zinc-400 text-xs font-medium">Rows</TableHead>
+                <TableHead className="text-zinc-400 text-xs font-medium">Trigger</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -109,33 +109,33 @@ export function RunHistoryDrawer() {
                 return (
                   <TableRow
                     key={run.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer border-zinc-800 hover:bg-zinc-800/50"
                     onClick={() => openDrawer("run_details", null, null, run.id)}
                   >
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-xs text-zinc-400 py-3">
                       {run.id.slice(0, 8)}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-2">
                         <RunStatusIcon run={run} />
-                        <span className="capitalize text-sm">{d.status}</span>
+                        <span className="capitalize text-sm font-medium">{d.status}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm text-zinc-300 py-3">
                       {formatRelativeTime(d.startedAt)}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm text-zinc-300 py-3">
                       {d.durationSeconds != null ? `${d.durationSeconds}s` : "—"}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm text-zinc-300 py-3 tabular-nums">
                       {d.rowsWritten?.toLocaleString() ?? "—"}
                     </TableCell>
-                    <TableCell className="capitalize text-sm">
+                    <TableCell className="capitalize text-sm text-zinc-300 py-3">
                       {d.triggerType}
                     </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" className="h-7 px-2">
-                        Details
+                    <TableCell className="py-3">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-zinc-400 hover:text-zinc-100">
+                        Details →
                       </Button>
                     </TableCell>
                   </TableRow>

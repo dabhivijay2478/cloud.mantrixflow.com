@@ -87,7 +87,7 @@ export function PipelineSettingsDrawer() {
           Name, description, and danger zone
         </SheetDescription>
       </SheetHeader>
-      <div className="flex flex-1 flex-col gap-4 py-4">
+      <div className="flex flex-1 flex-col gap-5">
         <div className="space-y-2">
           <Label htmlFor="pipeline-name">Name</Label>
           <Input
@@ -107,8 +107,8 @@ export function PipelineSettingsDrawer() {
             rows={3}
           />
         </div>
-        <div className="mt-4 border-t pt-4">
-          <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
+        <div className="mt-2 rounded-lg border border-red-900/50 bg-red-950/20 p-4">
+          <h4 className="text-sm font-semibold text-red-400">Danger Zone</h4>
           <p className="mt-1 text-sm text-muted-foreground">
             Deleting this pipeline cannot be undone.
           </p>

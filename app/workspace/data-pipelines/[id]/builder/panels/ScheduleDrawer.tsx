@@ -53,7 +53,7 @@ export function ScheduleDrawer() {
           Configure automatic pipeline runs
         </SheetDescription>
       </SheetHeader>
-      <div className="flex-1 space-y-4 py-4">
+      <div className="flex-1 space-y-5">
         <ScheduleEditor
           scheduleType={scheduleConfig.scheduleType}
           scheduleValue={scheduleConfig.scheduleValue}

@@ -19,7 +19,7 @@ export function RunDetailsDrawer({ runId }: RunDetailsDrawerProps) {
           {runId ? `Run ID: ${runId.slice(0, 8)}` : "Run metrics and breakdown"}
         </SheetDescription>
       </SheetHeader>
-      <div className="flex-1 py-4">
+      <div className="flex-1">
         <p className="text-sm text-muted-foreground">
           Per-branch breakdown, schema changes. (To be implemented)
         </p>

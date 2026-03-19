@@ -90,7 +90,7 @@ export function DestinationPanel({ branchId, nodeId }: DestinationPanelProps) {
           {branch ? `Branch: ${branch.label}` : "Configure destination"}
         </SheetDescription>
       </SheetHeader>
-      <div className="flex flex-1 flex-col gap-4 py-4">
+      <div className="flex flex-1 flex-col gap-5">
         <div className="space-y-2">
           <Label>Connection</Label>
           <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">

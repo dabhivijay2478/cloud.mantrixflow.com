@@ -68,7 +68,7 @@ export function TransformPanel({ branchId, nodeId }: TransformPanelProps) {
           {branch ? `Branch: ${branch.label}` : "Configure transform script"}
         </SheetDescription>
       </SheetHeader>
-      <div className="flex flex-1 flex-col gap-4 py-4">
+      <div className="flex flex-1 flex-col gap-5">
         <div className="h-[300px] min-h-[200px] overflow-hidden rounded-lg border">
           <Editor
             height="100%"

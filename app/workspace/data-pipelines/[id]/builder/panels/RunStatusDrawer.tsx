@@ -31,7 +31,7 @@ export function RunStatusDrawer() {
             : "Per-branch progress"}
         </SheetDescription>
       </SheetHeader>
-      <div className="flex flex-1 flex-col gap-4 py-4">
+      <div className="flex flex-1 flex-col gap-5">
         {activeRun.branchProgress.map((branch) => (
           <div key={branch.branch_id} className="space-y-2">
             <div className="flex justify-between text-sm">

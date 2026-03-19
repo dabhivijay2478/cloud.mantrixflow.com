@@ -34,7 +34,7 @@ export function DrawerContainer() {
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[480px] overflow-y-auto"
+        className="w-full sm:max-w-[560px] flex flex-col overflow-y-auto p-6 pr-10 gap-6 [&_[data-slot=sheet-header]]:p-0 [&_[data-slot=sheet-footer]]:p-0 [&_[data-slot=sheet-footer]]:pt-4 [&_[data-slot=sheet-footer]]:border-t [&_[data-slot=sheet-footer]]:border-zinc-800"
       >
         {type === "source" && <SourcePanel />}
         {type === "transform" && (
