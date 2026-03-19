@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/table";
 import { usePipelineRuns } from "@/lib/api/hooks/use-data-pipelines";
 import type { PipelineRun } from "@/lib/api/types/data-pipelines";
+import type { MockRun } from "../store/pipelineStore";
 import { usePipelineBuilderStore } from "../store/pipelineStore";
-import { cn } from "@/lib/utils";
 
 function formatRelativeTime(dateStr: string) {
   const date = new Date(dateStr);
@@ -28,7 +28,7 @@ function formatRelativeTime(dateStr: string) {
   return date.toLocaleDateString();
 }
 
-function RunStatusIcon({ run }: { run: PipelineRun }) {
+function RunStatusIcon({ run }: { run: { status: string } }) {
   switch (run.status) {
     case "success":
       return <CheckCircle2 className="h-4 w-4 text-green-600" />;
@@ -47,14 +47,39 @@ export function RunHistoryPanel() {
   const pipelineId = usePipelineBuilderStore((s) => s.pipelineId);
   const pipeline = usePipelineBuilderStore((s) => s.pipeline);
   const openDrawer = usePipelineBuilderStore((s) => s.openDrawer);
+  const useMockData = usePipelineBuilderStore((s) => s.useMockData);
+  const runHistory = usePipelineBuilderStore((s) => s.runHistory);
   const organizationId = pipeline?.pipeline.organizationId;
 
-  const { data: runs } = usePipelineRuns(
-    organizationId ?? undefined,
-    pipelineId ?? undefined,
+  const { data: apiRuns } = usePipelineRuns(
+    useMockData ? undefined : organizationId ?? undefined,
+    useMockData ? undefined : pipelineId ?? undefined,
     10,
   );
+
+  const runs = useMockData ? runHistory : apiRuns;
   const lastRun = runs?.[0];
+
+  const getRunDisplay = (run: PipelineRun | MockRun) => {
+    if ("created_at" in run) {
+      return {
+        id: run.id,
+        status: run.status,
+        startedAt: run.created_at,
+        durationSeconds: run.duration_seconds,
+        rowsWritten: run.rows_written,
+        triggerType: run.triggered_by,
+      };
+    }
+    return {
+      id: run.id,
+      status: run.status,
+      startedAt: run.startedAt ?? "",
+      durationSeconds: run.durationSeconds,
+      rowsWritten: run.rowsWritten,
+      triggerType: run.triggerType ?? "manual",
+    };
+  };
 
   return (
     <div className="rounded-lg border">
@@ -66,13 +91,16 @@ export function RunHistoryPanel() {
       >
         <span>
           Run History
-          {lastRun && (
-            <span className="ml-2 text-muted-foreground font-normal">
-              · Last run: {lastRun.status === "success" && "✓"}
-              {lastRun.status === "failed" && "✗"} {formatRelativeTime(lastRun.startedAt ?? "")}
-              {lastRun.rowsWritten != null && ` · ${lastRun.rowsWritten.toLocaleString()} rows`}
-            </span>
-          )}
+          {lastRun && (() => {
+            const d = getRunDisplay(lastRun);
+            return (
+              <span className="ml-2 text-muted-foreground font-normal">
+                · Last run: {d.status === "success" && "✓"}
+                {d.status === "failed" && "✗"} {formatRelativeTime(d.startedAt)}
+                {d.rowsWritten != null && ` · ${d.rowsWritten.toLocaleString()} rows`}
+              </span>
+            );
+          })()}
         </span>
         {expanded ? (
           <ChevronDown className="h-4 w-4" />
@@ -95,7 +123,9 @@ export function RunHistoryPanel() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {runs.map((run) => (
+              {runs.map((run) => {
+                const d = getRunDisplay(run);
+                return (
                 <TableRow
                   key={run.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -104,21 +134,21 @@ export function RunHistoryPanel() {
                   <TableCell className="font-mono text-xs">
                     {run.id.slice(0, 8)}
                   </TableCell>
-                  <TableCell>{formatRelativeTime(run.startedAt ?? "")}</TableCell>
+                  <TableCell>{formatRelativeTime(d.startedAt)}</TableCell>
                   <TableCell>
-                    {run.durationSeconds != null
-                      ? `${run.durationSeconds}s`
+                    {d.durationSeconds != null
+                      ? `${d.durationSeconds}s`
                       : "-"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <RunStatusIcon run={run} />
-                      <span className="capitalize">{run.status}</span>
+                      <span className="capitalize">{d.status}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="capitalize">{run.triggerType}</TableCell>
+                  <TableCell className="capitalize">{d.triggerType}</TableCell>
                   <TableCell>
-                    {run.rowsWritten?.toLocaleString() ?? "-"}
+                    {d.rowsWritten?.toLocaleString() ?? "-"}
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm">
@@ -126,7 +156,8 @@ export function RunHistoryPanel() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>

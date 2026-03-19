@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/sheet";
 import { usePipelineBuilderStore } from "../store/pipelineStore";
 import { DestinationPanel } from "../panels/DestinationPanel";
+import { FilterPanel } from "../panels/FilterPanel";
+import { JoinPanel } from "../panels/JoinPanel";
 import { PipelineSettingsDrawer } from "../panels/PipelineSettingsDrawer";
 import { RunDetailsDrawer } from "../panels/RunDetailsDrawer";
 import { RunStatusDrawer } from "../panels/RunStatusDrawer";
@@ -40,6 +42,13 @@ export function DrawerContainer() {
             nodeId={drawerState.nodeId}
           />
         )}
+        {type === "filter" && (
+          <FilterPanel
+            branchId={drawerState.branchId}
+            nodeId={drawerState.nodeId}
+          />
+        )}
+        {type === "join" && <JoinPanel nodeId={drawerState.nodeId} />}
         {type === "destination" && (
           <DestinationPanel
             branchId={drawerState.branchId}

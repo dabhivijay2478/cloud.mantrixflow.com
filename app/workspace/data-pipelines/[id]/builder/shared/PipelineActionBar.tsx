@@ -19,29 +19,45 @@ interface PipelineActionBarProps {
 export function PipelineActionBar({
   pipelineId,
   organizationId,
-  activeRun,
+  activeRun: activeRunProp,
 }: PipelineActionBarProps) {
   const hasUnsavedChanges = usePipelineBuilderStore((s) => s.hasUnsavedChanges);
   const savePipeline = usePipelineBuilderStore((s) => s.savePipeline);
   const openDrawer = usePipelineBuilderStore((s) => s.openDrawer);
   const pipeline = usePipelineBuilderStore((s) => s.pipeline);
+  const useMockData = usePipelineBuilderStore((s) => s.useMockData);
+  const activeRunStore = usePipelineBuilderStore((s) => s.activeRun);
+  const triggerRun = usePipelineBuilderStore((s) => s.triggerRun);
 
   const runPipeline = useRunPipeline(organizationId, pipelineId);
   const isRunPending = runPipeline.isPending;
   const queryClient = useQueryClient();
 
+  const isRunning =
+    useMockData
+      ? activeRunStore.status === "running"
+      : !!activeRunProp;
+  const runComplete =
+    useMockData && activeRunStore.status === "success";
+
   const handleSave = async () => {
     try {
-      await savePipeline();
-      if (organizationId && pipelineId) {
-        await queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
-        });
-        await queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.full(organizationId, pipelineId),
-        });
+      if (useMockData) {
+        console.log("Mock save — pipeline_graph would be PATCHed");
+        usePipelineBuilderStore.getState().setHasUnsavedChanges(false);
+        toast.success("Saved", "Pipeline changes saved (mock).");
+      } else {
+        await savePipeline();
+        if (organizationId && pipelineId) {
+          await queryClient.invalidateQueries({
+            queryKey: dataPipelinesKeys.pipelines.detail(organizationId, pipelineId),
+          });
+          await queryClient.invalidateQueries({
+            queryKey: dataPipelinesKeys.pipelines.full(organizationId, pipelineId),
+          });
+        }
+        toast.success("Saved", "Pipeline changes saved successfully.");
       }
-      toast.success("Saved", "Pipeline changes saved successfully.");
     } catch (error) {
       toast.error(
         "Save failed",
@@ -51,6 +67,11 @@ export function PipelineActionBar({
   };
 
   const handleRun = async () => {
+    if (useMockData) {
+      triggerRun();
+      toast.success("Pipeline started", "Run simulation (8s).");
+      return;
+    }
     try {
       await runPipeline.mutateAsync(undefined);
       openDrawer("run_status", null, null, undefined);
@@ -73,10 +94,10 @@ export function PipelineActionBar({
       <Button
         size="sm"
         onClick={handleRun}
-        disabled={isRunPending || !!activeRun}
-        aria-busy={isRunPending}
+        disabled={isRunPending || isRunning}
+        aria-busy={isRunPending || isRunning}
       >
-        {isRunPending || activeRun ? (
+        {(isRunPending || isRunning) ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
         ) : (
           <Play className="h-4 w-4 mr-2" />

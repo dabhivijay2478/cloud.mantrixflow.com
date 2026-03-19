@@ -14,6 +14,9 @@ import {
 import { usePipelineRunsRealtime } from "@/lib/api/hooks/use-pipeline-runs-realtime";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
+/** Wave 1: Set to true to use mock data (no API calls). Set to false for real API. */
+const USE_MOCK_DATA = true;
+
 export default function PipelineBuilderPage() {
   const params = useParams();
   const router = useRouter();
@@ -22,26 +25,32 @@ export default function PipelineBuilderPage() {
   const organizationId = currentOrganization?.id;
 
   const { data: pipelineData, isLoading } = usePipelineWithSchemas(
-    organizationId,
-    pipelineId,
+    USE_MOCK_DATA ? undefined : organizationId,
+    USE_MOCK_DATA ? undefined : pipelineId,
   );
   const loadPipeline = usePipelineBuilderStore((s) => s.loadPipeline);
+  const loadMockPipeline = usePipelineBuilderStore((s) => s.loadMockPipeline);
   const reset = usePipelineBuilderStore((s) => s.reset);
 
-  usePipelineRunsRealtime(organizationId ?? undefined, pipelineId);
+  usePipelineRunsRealtime(
+    USE_MOCK_DATA ? undefined : organizationId ?? undefined,
+    USE_MOCK_DATA ? undefined : pipelineId,
+  );
 
   useEffect(() => {
-    if (pipelineData) {
+    if (USE_MOCK_DATA) {
+      loadMockPipeline();
+    } else if (pipelineData) {
       loadPipeline(pipelineData);
     }
     return () => reset();
-  }, [pipelineData, loadPipeline, reset]);
+  }, [USE_MOCK_DATA, pipelineData, loadPipeline, loadMockPipeline, reset]);
 
-  if (isLoading) {
+  if (!USE_MOCK_DATA && isLoading) {
     return <LoadingState fullScreen message="Loading pipeline..." />;
   }
 
-  if (!pipelineData) {
+  if (!USE_MOCK_DATA && !pipelineData) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">

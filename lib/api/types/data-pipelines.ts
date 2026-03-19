@@ -335,12 +335,30 @@ export interface PipelineGraphNodeData {
   dest_schema?: string;
   dest_table?: string;
   emit_method?: string;
+  // Filter node
+  filter_expression?: string;
+  filter_type?: "python" | "sql";
+  sql_where?: string;
+  rows_dropped_last_run?: number;
+  // Join node
+  join_type?: "inner" | "left" | "right" | "full";
+  left_key?: string;
+  right_key?: string;
+  left_label?: string;
+  right_label?: string;
   [key: string]: unknown;
 }
 
+export type PipelineGraphNodeType =
+  | "source"
+  | "transform"
+  | "filter"
+  | "join"
+  | "destination";
+
 export interface PipelineGraphNode {
   id: string;
-  type: "source" | "transform" | "destination";
+  type: PipelineGraphNodeType;
   branch_id?: string;
   data: PipelineGraphNodeData;
   position?: { x: number; y: number };
@@ -360,6 +378,7 @@ export interface PipelineGraphBranch {
   label: string;
   transform_node_id: string;
   destination_node_id: string;
+  colour_index?: number;
 }
 
 export interface PipelineGraph {

@@ -34,6 +34,9 @@ export function PipelineSettingsDrawer() {
   const updatePipelineMetadata = usePipelineBuilderStore(
     (s) => s.updatePipelineMetadata,
   );
+  const updatePipelineForMock = usePipelineBuilderStore(
+    (s) => s.updatePipelineForMock,
+  );
 
   const [name, setName] = useState(pipeline?.pipeline.name ?? "");
   const [description, setDescription] = useState(
@@ -42,6 +45,7 @@ export function PipelineSettingsDrawer() {
   const [saving, setSaving] = useState(false);
 
   const organizationId = pipeline?.pipeline.organizationId;
+  const useMockData = usePipelineBuilderStore((s) => s.useMockData);
   const deletePipeline = useDeletePipeline(organizationId ?? "");
 
   useEffect(() => {
@@ -54,14 +58,23 @@ export function PipelineSettingsDrawer() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updatePipelineMetadata({ name, description });
+      if (useMockData) {
+        updatePipelineForMock({ name, description: description || undefined });
+      } else {
+        await updatePipelineMetadata({ name, description });
+      }
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!pipelineId || !organizationId) return;
+    if (!pipelineId) return;
+    if (useMockData) {
+      router.push("/workspace/data-pipelines");
+      return;
+    }
+    if (!organizationId) return;
     await deletePipeline.mutateAsync(pipelineId);
     router.push("/workspace/data-pipelines");
   };
