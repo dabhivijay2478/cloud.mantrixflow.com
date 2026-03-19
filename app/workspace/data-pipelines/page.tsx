@@ -2,15 +2,17 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowRight,
+  Clock,
   Database,
+  GitBranch,
   Loader2,
-  MoreVertical,
-  Pause,
+  MoreHorizontal,
   Play,
   Plus,
-  RefreshCw,
   Search,
   Trash2,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,14 +30,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   dataPipelinesKeys,
   useDeletePipeline,
   usePipelinesPaginated,
@@ -44,8 +38,10 @@ import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service"
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { usePipelineRealtime } from "@/lib/hooks/use-pipeline-realtime";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { cn } from "@/lib/utils";
 import { toast } from "@/lib/utils/toast";
 import { MOCK_LIST_PIPELINES } from "./mockListData";
+import type { MockListPipeline } from "./mockListData";
 
 /** Use mock data for list when true; use API when false */
 const USE_MOCK_LIST = true;
@@ -53,7 +49,7 @@ const USE_MOCK_LIST = true;
 type FilterTab = "all" | "running" | "failed" | "scheduled";
 
 function formatRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "Never";
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -67,23 +63,14 @@ function formatRelativeTime(dateStr: string | null): string {
   return date.toLocaleDateString();
 }
 
-function formatCronNext(cron: string | null): string {
-  if (!cron) return "—";
-  if (cron === "*/30 * * * *") return "30m";
-  if (cron === "0 * * * *") return "1h";
-  return "scheduled";
+function formatCron(cron: string | null): string {
+  if (!cron) return "Manual";
+  if (cron === "*/30 * * * *") return "Every 30m";
+  if (cron === "0 * * * *") return "Every hour";
+  return "Scheduled";
 }
 
-/** Map API Pipeline to list row format */
-function pipelineToListRow(p: Pipeline): {
-  id: string;
-  name: string;
-  source: { connector_type: string; connection_name: string };
-  branches: Array<{ label: string; destination: { connector_type: string; connection_name: string } }>;
-  status: string;
-  last_run_at: string | null;
-  cron_schedule: string | null;
-} {
+function pipelineToListRow(p: Pipeline): MockListPipeline {
   const src = p.sourceSchema;
   const dest = p.destinationSchema;
   const graphBranches = p.pipelineGraph?.branches;
@@ -93,43 +80,159 @@ function pipelineToListRow(p: Pipeline): {
         destination: { connector_type: "postgres", connection_name: b.label },
       }))
     : dest
-      ? [
-          {
-            label: dest.name ?? `${dest.destinationSchema ?? "public"}.${dest.destinationTable ?? "?"}`,
-            destination: {
-              connector_type: "postgres",
-              connection_name: dest.name ?? "Destination",
-            },
-          },
-        ]
+      ? [{ label: dest.name ?? "Destination", destination: { connector_type: "postgres", connection_name: dest.name ?? "Destination" } }]
       : [];
 
   const status =
     p.status === "running" || p.status === "initializing" || p.status === "listening"
-      ? "running"
+      ? ("running" as const)
       : p.lastRunStatus === "success"
-        ? "success"
+        ? ("success" as const)
         : p.lastRunStatus === "failed"
-          ? "failed"
-          : "idle";
+          ? ("failed" as const)
+          : ("idle" as const);
 
   return {
     id: p.id,
     name: p.name,
-    source: {
-      connector_type: src?.sourceType ?? "postgres",
-      connection_name: src?.name ?? "Source",
-    },
+    source: { connector_type: src?.sourceType ?? "postgres", connection_name: src?.name ?? "Source" },
     branches,
     status,
     last_run_at: p.lastRunAt ?? null,
+    last_run_duration: null,
     cron_schedule:
       p.scheduleType && p.scheduleType !== "none"
-        ? p.scheduleType === "minutes"
-          ? `*/${p.scheduleValue ?? "30"} * * * *`
-          : "0 * * * *"
+        ? p.scheduleType === "minutes" ? `*/${p.scheduleValue ?? "30"} * * * *` : "0 * * * *"
         : null,
   };
+}
+
+function StatusBadge({ status }: { status: MockListPipeline["status"] }) {
+  if (status === "running") {
+    return (
+      <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 gap-1.5">
+        <span className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
+        Running
+      </Badge>
+    );
+  }
+  if (status === "success") {
+    return (
+      <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+        ✓ Success
+      </Badge>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+        ✗ Failed
+      </Badge>
+    );
+  }
+  return <Badge variant="secondary">○ Idle</Badge>;
+}
+
+interface PipelineCardRowProps {
+  row: MockListPipeline;
+  onOpen: () => void;
+  onRun: () => void;
+  onDelete: () => void;
+  isRunning: boolean;
+}
+
+function PipelineCardRow({ row, onOpen, onRun, onDelete, isRunning }: PipelineCardRowProps) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+      className="flex cursor-pointer items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {/* Icon */}
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+        <Zap className="size-5 text-muted-foreground" />
+      </div>
+
+      {/* Main info */}
+      <div className="min-w-0 flex-1 space-y-1.5">
+        {/* Name + status */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold leading-tight">{row.name}</span>
+          <StatusBadge status={row.status} />
+          {row.cron_schedule && (
+            <Badge variant="outline" className="text-xs gap-1">
+              <Clock className="size-3" />
+              {formatCron(row.cron_schedule)}
+            </Badge>
+          )}
+        </div>
+
+        {/* Source → destinations */}
+        <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+          <Database className="size-3.5 shrink-0" />
+          <span className="font-medium text-foreground/80">{row.source.connection_name}</span>
+          <span className="text-xs text-muted-foreground/60">({row.source.connector_type})</span>
+          <ArrowRight className="size-3 shrink-0" />
+          <div className="flex flex-wrap gap-1">
+            {row.branches.slice(0, 3).map((b, i) => (
+              <span key={i} className="inline-flex items-center gap-1">
+                <GitBranch className="size-3 shrink-0" />
+                {b.destination.connection_name}
+                {i < Math.min(row.branches.length, 3) - 1 && <span className="text-muted-foreground/40">,</span>}
+              </span>
+            ))}
+            {row.branches.length > 3 && (
+              <Badge variant="secondary" className="text-xs">+{row.branches.length - 3} more</Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Last run */}
+        <p className="text-xs text-muted-foreground">
+          Last run: {formatRelativeTime(row.last_run_at)}
+          {row.last_run_duration ? ` · ${row.last_run_duration}s` : ""}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          title="Run now"
+          disabled={row.status === "running" || isRunning}
+          onClick={(e) => { e.stopPropagation(); onRun(); }}
+        >
+          {isRunning || row.status === "running" ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Play className="size-4" />
+          )}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-8">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onOpen}>Open Builder</DropdownMenuItem>
+            <DropdownMenuItem onClick={onRun} disabled={row.status === "running"}>
+              Run Now
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+              <Trash2 className="mr-2 size-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
 }
 
 export default function DataPipelinesPage() {
@@ -142,6 +245,7 @@ export default function DataPipelinesPage() {
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
   const [mockPipelines, setMockPipelines] = useState(MOCK_LIST_PIPELINES);
+  const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
 
   const { data: paginatedResult, isLoading: pipelinesLoading } = usePipelinesPaginated(
     USE_MOCK_LIST ? undefined : organizationId,
@@ -157,15 +261,9 @@ export default function DataPipelinesPage() {
   const listRows = useMemo(() => {
     const raw = USE_MOCK_LIST ? mockPipelines : apiPipelines.map(pipelineToListRow);
     let filtered = raw;
-
-    if (filterTab === "running") {
-      filtered = filtered.filter((r) => r.status === "running");
-    } else if (filterTab === "failed") {
-      filtered = filtered.filter((r) => r.status === "failed");
-    } else if (filterTab === "scheduled") {
-      filtered = filtered.filter((r) => r.cron_schedule != null);
-    }
-
+    if (filterTab === "running") filtered = filtered.filter((r) => r.status === "running");
+    else if (filterTab === "failed") filtered = filtered.filter((r) => r.status === "failed");
+    else if (filterTab === "scheduled") filtered = filtered.filter((r) => r.cron_schedule != null);
     const q = search.trim().toLowerCase();
     if (q) {
       filtered = filtered.filter(
@@ -176,59 +274,25 @@ export default function DataPipelinesPage() {
       );
     }
     return filtered;
-  }, [USE_MOCK_LIST, mockPipelines, apiPipelines, filterTab, search]);
+  }, [mockPipelines, apiPipelines, filterTab, search]);
 
-  const runPipelineMutation = useMutation({
-    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
-      if (!organizationId && !USE_MOCK_LIST) throw new Error("Organization required");
-      return DataPipelinesService.runPipeline(organizationId ?? "mock", pipelineId, {});
-    },
-    onSuccess: (_, variables) => {
-      if (USE_MOCK_LIST) {
-        setMockPipelines((prev) =>
-          prev.map((p) =>
-            p.id === variables.pipelineId ? { ...p, status: "running" as const } : p,
-          ),
-        );
-        setTimeout(() => {
-          setMockPipelines((prev) =>
-            prev.map((p) =>
-              p.id === variables.pipelineId ? { ...p, status: "success" as const } : p,
-            ),
-          );
-        }, 3000);
-      } else if (organizationId) {
+  const handleRun = async (id: string, name: string) => {
+    if (USE_MOCK_LIST) {
+      setRunningIds((s) => new Set([...s, id]));
+      setMockPipelines((prev) => prev.map((p) => p.id === id ? { ...p, status: "running" as const } : p));
+      setTimeout(() => {
+        setMockPipelines((prev) => prev.map((p) => p.id === id ? { ...p, status: "success" as const, last_run_at: new Date().toISOString() } : p));
+        setRunningIds((s) => { const n = new Set(s); n.delete(id); return n; });
+      }, 3000);
+    } else {
+      try {
+        await DataPipelinesService.runPipeline(organizationId ?? "mock", id, {});
         queryClient.invalidateQueries({ queryKey: dataPipelinesKeys.pipelines.lists() });
+        toast.success("Pipeline started", `${name} is now running.`);
+      } catch (error) {
+        toast.error("Failed to run", error instanceof Error ? error.message : "Unknown error");
       }
-    },
-  });
-
-  const handleRunPipeline = async (pipelineId: string, pipelineName: string) => {
-    try {
-      if (USE_MOCK_LIST) {
-        setMockPipelines((prev) =>
-          prev.map((p) =>
-            p.id === pipelineId ? { ...p, status: "running" as const } : p,
-          ),
-        );
-        setTimeout(() => {
-          setMockPipelines((prev) =>
-            prev.map((p) =>
-              p.id === pipelineId ? { ...p, status: "success" as const } : p,
-            ),
-          );
-        }, 3000);
-      } else {
-        await runPipelineMutation.mutateAsync({ pipelineId });
-        toast.success("Pipeline started", `${pipelineName} is now running.`);
-      }
-    } catch (error) {
-      toast.error("Failed to run", error instanceof Error ? error.message : "Unknown error");
     }
-  };
-
-  const handleDeleteClick = (id: string, name: string) => {
-    setDeleteTarget({ id, name });
   };
 
   const handleDeleteConfirm = async () => {
@@ -247,14 +311,10 @@ export default function DataPipelinesPage() {
     }
   };
 
-  const handleRowClick = (id: string) => {
-    router.push(`/workspace/data-pipelines/${id}/builder`);
-  };
-
   const isLoading = pipelinesLoading && !USE_MOCK_LIST;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Pipelines"
         description="Manage your data synchronization pipelines."
@@ -268,6 +328,7 @@ export default function DataPipelinesPage() {
         }
       />
 
+      {/* Filters + search */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2">
           {(["all", "running", "failed", "scheduled"] as const).map((tab) => (
@@ -275,11 +336,12 @@ export default function DataPipelinesPage() {
               key={tab}
               type="button"
               onClick={() => setFilterTab(tab)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors",
                 filterTab === tab
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
             >
               {tab}
             </button>
@@ -288,7 +350,7 @@ export default function DataPipelinesPage() {
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Search pipelines..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -296,130 +358,40 @@ export default function DataPipelinesPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : listRows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-lg font-medium">No pipelines yet</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Create your first pipeline to start moving data from source to destination.
-            </p>
+      {/* List */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : listRows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border py-24 text-center">
+          <Zap className="mb-3 h-10 w-10 text-muted-foreground/40" />
+          <p className="text-lg font-medium">No pipelines found</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {search || filterTab !== "all"
+              ? "Try adjusting your search or filters."
+              : "Create your first pipeline to start moving data."}
+          </p>
+          {!search && filterTab === "all" && (
             <Button className="mt-4" asChild>
               <Link href="/workspace/data-pipelines/new">Create your first pipeline</Link>
             </Button>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Destination(s)</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Run</TableHead>
-                <TableHead>Next</TableHead>
-                <TableHead className="w-[60px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listRows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleRowClick(row.id)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{row.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">
-                      {row.source.connection_name}
-                    </span>
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      ({row.source.connector_type})
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5">
-                      {row.branches.slice(0, 2).map((b, i) => (
-                        <span key={i} className="text-sm">
-                          {b.destination.connection_name}
-                        </span>
-                      ))}
-                      {row.branches.length > 2 && (
-                        <Badge variant="secondary" className="w-fit text-xs">
-                          +{row.branches.length - 2} more
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {row.status === "success" && (
-                      <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-                        ✓ Success
-                      </Badge>
-                    )}
-                    {row.status === "failed" && (
-                      <Badge variant="destructive" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-                        ✗ Failed
-                      </Badge>
-                    )}
-                    {row.status === "running" && (
-                      <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
-                        <span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-blue-500" />
-                        Running
-                      </Badge>
-                    )}
-                    {(row.status === "idle" || !["success", "failed", "running"].includes(row.status)) && (
-                      <Badge variant="secondary">○ Idle</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatRelativeTime(row.last_run_at)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatCronNext(row.cron_schedule)}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleRowClick(row.id)}>
-                          Open Builder
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleRunPipeline(row.id, row.name)}
-                          disabled={row.status === "running"}
-                        >
-                          Run Now
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteClick(row.id, row.name)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {listRows.map((row) => (
+            <PipelineCardRow
+              key={row.id}
+              row={row}
+              isRunning={runningIds.has(row.id)}
+              onOpen={() => router.push(`/workspace/data-pipelines/${row.id}/builder`)}
+              onRun={() => handleRun(row.id, row.name)}
+              onDelete={() => setDeleteTarget({ id: row.id, name: row.name })}
+            />
+          ))}
+        </div>
+      )}
 
       <ConfirmationModal
         open={!!deleteTarget}
