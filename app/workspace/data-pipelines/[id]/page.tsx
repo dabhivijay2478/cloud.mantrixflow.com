@@ -1502,6 +1502,24 @@ export default function PipelineDetailPage() {
 
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
+                  <div className="font-medium">Pipeline Builder</div>
+                  <div className="text-sm text-muted-foreground">
+                    Card and canvas view for pipeline configuration
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    router.push(`/workspace/data-pipelines/${pipelineId}/builder`)
+                  }
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Builder
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
                   <div className="font-medium">Edit Pipeline</div>
                   <div className="text-sm text-muted-foreground">
                     Modify pipeline settings and mappings

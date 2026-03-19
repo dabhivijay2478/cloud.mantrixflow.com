@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { RoleToggle, type ConnectionRole } from "./role-toggle";
+import type { ConnectionRole } from "./role-toggle";
 import { DatabaseTypeGrid } from "./database-type-grid";
 import {
   getAvailableDatabases,
@@ -231,7 +231,7 @@ export function ConnectionWizard({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div>
         <h1 className="text-2xl font-semibold">
           {step === 1 && (role === "source" ? "New Source Connection" : "New Destination Connection")}
           {step === 2 && selectedDb && (
@@ -239,7 +239,6 @@ export function ConnectionWizard({
           )}
           {step === 3 && "Save and Name"}
         </h1>
-        <RoleToggle value={role} onChange={setRole} />
       </div>
 
       {step === 1 && (

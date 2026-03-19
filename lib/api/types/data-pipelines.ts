@@ -122,6 +122,9 @@ export interface UpdatePipelineDto {
   scheduleType?: ScheduleType;
   scheduleValue?: string;
   scheduleTimezone?: string;
+  // Pipeline Builder (MANTrixFlow)
+  pipelineGraph?: PipelineGraph;
+  builderViewMode?: "card" | "canvas";
 }
 
 export interface RunPipelineDto {
@@ -311,6 +314,58 @@ export interface Pipeline {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+  // Pipeline Builder (MANTrixFlow)
+  pipelineGraph?: PipelineGraph | null;
+  builderViewMode?: "card" | "canvas" | null;
+}
+
+// ============================================================================
+// PIPELINE GRAPH (Builder)
+// ============================================================================
+
+export interface PipelineGraphNodeData {
+  connection_id?: string;
+  connector_type?: string;
+  selected_streams?: string[];
+  stream_configs?: Record<string, unknown>;
+  replication_method?: string;
+  transform_type?: string;
+  transform_script?: string | null;
+  on_transform_error?: string;
+  dest_schema?: string;
+  dest_table?: string;
+  emit_method?: string;
+  [key: string]: unknown;
+}
+
+export interface PipelineGraphNode {
+  id: string;
+  type: "source" | "transform" | "destination";
+  branch_id?: string;
+  data: PipelineGraphNodeData;
+  position?: { x: number; y: number };
+}
+
+export interface PipelineGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  type: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+}
+
+export interface PipelineGraphBranch {
+  id: string;
+  label: string;
+  transform_node_id: string;
+  destination_node_id: string;
+}
+
+export interface PipelineGraph {
+  nodes: PipelineGraphNode[];
+  edges: PipelineGraphEdge[];
+  branches: PipelineGraphBranch[];
 }
 
 export interface PipelineWithSchemas {

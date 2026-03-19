@@ -3,17 +3,18 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import Link from "next/link";
-import { ConnectionCard } from "@/components/connections";
-import { ConfirmationModal, PageHeader } from "@/components/shared";
+import { ConnectionCard, ConnectionWizard } from "@/components/connections";
+import { ConfirmationModal, FormSheet, PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useConnections } from "@/lib/api";
+import { useConnections, useCreateConnection } from "@/lib/api";
+import { useTestConnection } from "@/lib/api/hooks/use-data-sources";
 import { ConnectionService } from "@/lib/api/services/connection.service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDeleteDataSource } from "@/lib/api/hooks/use-data-source";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { toast } from "@/lib/utils/toast";
+import type { ConnectionRole } from "@/components/connections";
 
 type RoleFilter = "all" | "source" | "destination";
 
@@ -94,6 +95,10 @@ export default function ConnectionsPage() {
     name?: string;
     pipelineCount?: number;
   }>({ open: false });
+  const [connectionSheetOpen, setConnectionSheetOpen] = useState(false);
+
+  const createConnection = useCreateConnection(organizationId, { showToastOnError: false });
+  const testConnectionHook = useTestConnection(organizationId);
 
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;
@@ -131,7 +136,7 @@ export default function ConnectionsPage() {
   };
 
   const handleEdit = (id: string) => {
-    window.location.href = `/workspace/connections/${id}`;
+    window.location.href = `/workspace/connections/${id}/edit`;
   };
 
   const handleDelete = (id: string) => {
@@ -156,6 +161,36 @@ export default function ConnectionsPage() {
     window.history.replaceState({}, "", url.toString());
   };
 
+  const initialRole: ConnectionRole =
+    roleFilter === "destination" ? "destination" : "source";
+
+  const handleCreateConnection = async (
+    data: Parameters<typeof createConnection.mutateAsync>[0],
+  ) => {
+    if (!organizationId) throw new Error("Organization required");
+    await createConnection.mutateAsync(data);
+    toast.success("Connection created");
+  };
+
+  const handleTestConnection = async (data: {
+    type: string;
+    config: Record<string, unknown>;
+  }) => {
+    const result = await testConnectionHook.mutateAsync({
+      type: data.type,
+      config: data.config,
+    } as never);
+    return {
+      success: result.success ?? !result.error,
+      error: result.error,
+    };
+  };
+
+  const handleConnectionSuccess = () => {
+    setConnectionSheetOpen(false);
+    queryClient.invalidateQueries({ queryKey: ["data-sources", "connections"] });
+  };
+
   if (!organizationId) {
     return null;
   }
@@ -166,11 +201,12 @@ export default function ConnectionsPage() {
         title="Connections"
         description="Manage your source and destination database connections"
         action={
-          <Button asChild className="cursor-pointer">
-            <Link href="/workspace/connections/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Connection
-            </Link>
+          <Button
+            className="cursor-pointer"
+            onClick={() => setConnectionSheetOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Connection
           </Button>
         }
       />
@@ -194,9 +230,9 @@ export default function ConnectionsPage() {
       ) : mappedConnections.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           <p className="mb-4">No connections yet.</p>
-          <Link href="/workspace/connections/new">
-            <Button>Create your first connection</Button>
-          </Link>
+          <Button onClick={() => setConnectionSheetOpen(true)}>
+            Create your first connection
+          </Button>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -233,6 +269,22 @@ export default function ConnectionsPage() {
         onConfirm={handleDeleteConfirm}
         isLoading={deleteDataSource.isPending}
       />
+
+      <FormSheet
+        open={connectionSheetOpen}
+        onOpenChange={setConnectionSheetOpen}
+        title="New Connection"
+        description="Add a new source or destination database connection"
+        maxWidth="2xl"
+      >
+        <ConnectionWizard
+          organizationId={organizationId!}
+          initialRole={initialRole}
+          onCreate={handleCreateConnection}
+          onTestConnection={handleTestConnection}
+          onSuccess={handleConnectionSuccess}
+        />
+      </FormSheet>
     </div>
   );
 }
