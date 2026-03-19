@@ -76,7 +76,7 @@ export function AIChatPanel({ pipelineId, onClose }: AIChatPanelProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (input.trim() && !isStreaming) {
+      if (input?.trim() && !isStreaming) {
         handleSubmit(e as unknown as React.FormEvent);
       }
     }
@@ -212,7 +212,7 @@ export function AIChatPanel({ pipelineId, onClose }: AIChatPanelProps) {
             />
             <button
               type="submit"
-              disabled={!input.trim() || isStreaming}
+              disabled={!input?.trim() || isStreaming}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="h-3.5 w-3.5" />
