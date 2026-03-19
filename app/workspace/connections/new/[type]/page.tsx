@@ -5,29 +5,27 @@ import { useParams, useSearchParams } from "next/navigation";
 import { CredentialForm } from "../../components/CredentialForm";
 import { RoleToggle } from "../../components/RoleToggle";
 import { getConnectorById } from "../../data/connectors";
-import { MOCK_CONNECTIONS } from "../../data/mockConnections";
 
-export default function EditConnectionPage() {
+export default function NewConnectionFormPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const id = params?.id as string;
+  const type = params?.type as string;
   const role =
     (searchParams.get("role") as "source" | "destination") ?? "source";
 
-  const connection = MOCK_CONNECTIONS.find((c) => c.id === id);
-  const connector = connection ? getConnectorById(connection.type) : null;
+  const connector = type ? getConnectorById(type) : null;
 
-  if (!connection || !connector) {
+  if (!connector || connector.wave > 1) {
     return (
       <div className="space-y-6">
         <Link
-          href="/workspace/connections"
+          href="/workspace/connections/new"
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
         >
-          ← Back to Connections
+          ← Choose connector
         </Link>
         <p className="text-muted-foreground">
-          Connection not found.
+          Connector &quot;{type}&quot; not found or not yet available.
         </p>
       </div>
     );
@@ -38,25 +36,20 @@ export default function EditConnectionPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link
-            href="/workspace/connections"
+            href="/workspace/connections/new"
             className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
           >
-            ← Back to Connections
+            ← Choose connector
           </Link>
           <h1 className="text-2xl font-semibold">
-            Edit {role === "source" ? "Source" : "Destination"} Connection —{" "}
+            New {role === "source" ? "Source" : "Destination"} Connection —{" "}
             {connector.displayName}
           </h1>
         </div>
         <RoleToggle value={role} />
       </div>
 
-      <CredentialForm
-        connector={connector}
-        role={role}
-        connectionId={connection.id}
-        isEdit
-      />
+      <CredentialForm connector={connector} role={role} />
     </div>
   );
 }

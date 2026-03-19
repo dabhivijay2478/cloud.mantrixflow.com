@@ -1,78 +1,22 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import { ConnectionWizard } from "@/components/connections";
-import { useCreateConnection } from "@/lib/api";
-import { useTestConnection } from "@/lib/api/hooks/use-data-sources";
-import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { getApiErrorMessage } from "@/lib/api/error-handler";
-import { showErrorToast, showSuccessToast } from "@/lib/utils/toast";
-import type { ConnectionRole } from "@/components/connections";
+import { ConnectorCatalog } from "../components/ConnectorCatalog";
 
-export default function NewConnectionPage() {
+export default function NewConnectionCatalogPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentOrganization } = useWorkspaceStore();
-  const organizationId = currentOrganization?.id;
-
-  const roleParam = searchParams.get("role");
-  const initialRole: ConnectionRole =
-    roleParam === "destination" ? "destination" : "source";
-
-  const createConnection = useCreateConnection(organizationId, {
-    showToastOnError: false,
-  });
-  const testConnection = useTestConnection(organizationId);
-
-  useEffect(() => {
-    if (!organizationId) {
-      showErrorToast(
-        "notFound",
-        "Organization",
-        "Please select an organization from the sidebar before adding a connection.",
-      );
-      router.replace("/workspace/connections");
-    }
-  }, [organizationId, router]);
-
-  const handleCreate = async (data: Parameters<typeof createConnection.mutateAsync>[0]) => {
-    if (!organizationId) throw new Error("Organization required");
-    await createConnection.mutateAsync(data);
-    showSuccessToast("connected", "Connection created");
-  };
-
-  const handleTestConnection = async (data: {
-    type: string;
-    config: Record<string, unknown>;
-  }) => {
-    const result = await testConnection.mutateAsync({
-      type: data.type,
-      config: data.config,
-    } as never);
-    return {
-      success: result.success ?? !result.error,
-      error: result.error,
-    };
-  };
-
-  const handleSuccess = () => {
-    router.push(`/workspace/connections?role=${initialRole}`);
-  };
-
-  if (!organizationId) {
-    return null;
-  }
+  const role =
+    (searchParams.get("role") as "source" | "destination") ?? "source";
 
   return (
-    <div className="max-w-2xl">
-      <ConnectionWizard
-        organizationId={organizationId}
-        initialRole={initialRole}
-        onCreate={handleCreate}
-        onTestConnection={handleTestConnection}
-        onSuccess={handleSuccess}
-      />
-    </div>
+    <ConnectorCatalog
+      role={role}
+      showRoleToggle
+      showBackButton
+      onBack={() => router.push("/workspace/connections")}
+      title="New Connection"
+      description="Choose the database or service to connect to."
+    />
   );
 }
