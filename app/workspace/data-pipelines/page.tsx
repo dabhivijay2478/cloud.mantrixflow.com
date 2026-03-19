@@ -1,25 +1,21 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import {
-  CheckCircle2,
+  Database,
   Loader2,
   MoreVertical,
   Pause,
   Play,
   Plus,
-  Radio,
   RefreshCw,
-  Settings,
-  TestTube,
+  Search,
   Trash2,
-  XCircle,
-  Zap,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { DataTable, PageHeader } from "@/components/shared";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/shared";
 import { ConfirmationModal } from "@/components/shared/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,868 +26,404 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   dataPipelinesKeys,
   useDeletePipeline,
   usePipelinesPaginated,
 } from "@/lib/api/hooks/use-data-pipelines";
-import { useUsers } from "@/lib/api/hooks/use-users";
 import { DataPipelinesService } from "@/lib/api/services/data-pipelines.service";
 import type { Pipeline } from "@/lib/api/types/data-pipelines";
 import { usePipelineRealtime } from "@/lib/hooks/use-pipeline-realtime";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { RunStatusBadge } from "@/components/pipeline/RunStatusBadge";
-import { SyncModeBadge } from "@/components/pipeline/SyncModeBadge";
 import { toast } from "@/lib/utils/toast";
+import { MOCK_LIST_PIPELINES } from "./mockListData";
+
+/** Use mock data for list when true; use API when false */
+const USE_MOCK_LIST = true;
+
+type FilterTab = "all" | "running" | "failed" | "scheduled";
+
+function formatRelativeTime(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
+function formatCronNext(cron: string | null): string {
+  if (!cron) return "—";
+  if (cron === "*/30 * * * *") return "30m";
+  if (cron === "0 * * * *") return "1h";
+  return "scheduled";
+}
+
+/** Map API Pipeline to list row format */
+function pipelineToListRow(p: Pipeline): {
+  id: string;
+  name: string;
+  source: { connector_type: string; connection_name: string };
+  branches: Array<{ label: string; destination: { connector_type: string; connection_name: string } }>;
+  status: string;
+  last_run_at: string | null;
+  cron_schedule: string | null;
+} {
+  const src = p.sourceSchema;
+  const dest = p.destinationSchema;
+  const graphBranches = p.pipelineGraph?.branches;
+  const branches = graphBranches?.length
+    ? graphBranches.map((b) => ({
+        label: b.label,
+        destination: { connector_type: "postgres", connection_name: b.label },
+      }))
+    : dest
+      ? [
+          {
+            label: dest.name ?? `${dest.destinationSchema ?? "public"}.${dest.destinationTable ?? "?"}`,
+            destination: {
+              connector_type: "postgres",
+              connection_name: dest.name ?? "Destination",
+            },
+          },
+        ]
+      : [];
+
+  const status =
+    p.status === "running" || p.status === "initializing" || p.status === "listening"
+      ? "running"
+      : p.lastRunStatus === "success"
+        ? "success"
+        : p.lastRunStatus === "failed"
+          ? "failed"
+          : "idle";
+
+  return {
+    id: p.id,
+    name: p.name,
+    source: {
+      connector_type: src?.sourceType ?? "postgres",
+      connection_name: src?.name ?? "Source",
+    },
+    branches,
+    status,
+    last_run_at: p.lastRunAt ?? null,
+    cron_schedule:
+      p.scheduleType && p.scheduleType !== "none"
+        ? p.scheduleType === "minutes"
+          ? `*/${p.scheduleValue ?? "30"} * * * *`
+          : "0 * * * *"
+        : null,
+  };
+}
 
 export default function DataPipelinesPage() {
   const { currentOrganization } = useWorkspaceStore();
   const organizationId = currentOrganization?.id;
-  const searchParams = useSearchParams();
-  const urlSearch = searchParams.get("search") || undefined;
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  // Delete confirmation modal state
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [filterTab, setFilterTab] = useState<FilterTab>("all");
+  const [search, setSearch] = useState("");
+  const [mockPipelines, setMockPipelines] = useState(MOCK_LIST_PIPELINES);
 
-  // Pagination state
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
-
-  // API hooks
-  const {
-    data: paginatedResult,
-    isLoading: pipelinesLoading,
-    isFetching: pipelinesFetching,
-  } = usePipelinesPaginated(organizationId, pagination);
-  const pipelines = paginatedResult?.data;
+  const { data: paginatedResult, isLoading: pipelinesLoading } = usePipelinesPaginated(
+    USE_MOCK_LIST ? undefined : organizationId,
+    { pageIndex: 0, pageSize: 50 },
+  );
+  const apiPipelines = paginatedResult?.data ?? [];
   const deletePipeline = useDeletePipeline(organizationId);
 
-  // Live pipeline run updates via Supabase Realtime
-  usePipelineRealtime(organizationId ?? undefined, () => {
-    queryClient.invalidateQueries({
-      queryKey: dataPipelinesKeys.pipelines.lists(),
-    });
+  usePipelineRealtime(USE_MOCK_LIST ? undefined : organizationId ?? undefined, () => {
+    queryClient.invalidateQueries({ queryKey: dataPipelinesKeys.pipelines.lists() });
   });
 
-  // Get user info for creators
-  const userIds =
-    pipelines?.map((pipeline) => pipeline.createdBy).filter(Boolean) || [];
-  const { usersMap } = useUsers(userIds);
+  const listRows = useMemo(() => {
+    const raw = USE_MOCK_LIST ? mockPipelines : apiPipelines.map(pipelineToListRow);
+    let filtered = raw;
 
-  // Mutation hooks for pipeline actions
-  const runPipelineMutation = useMutation({
-    mutationFn: ({
-      pipelineId,
-      batchSize,
-    }: {
-      pipelineId: string;
-      batchSize?: number;
-    }) => {
-      if (!organizationId) throw new Error("Organization ID is required");
-      return DataPipelinesService.runPipeline(organizationId, pipelineId, {
-        batchSize,
-      });
-    },
-    onSuccess: (_, variables) => {
-      if (organizationId) {
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            variables.pipelineId,
-          ),
-        });
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.lists(),
-        });
-      }
-    },
-  });
-
-  const pausePipelineMutation = useMutation({
-    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
-      if (!organizationId) throw new Error("Organization ID is required");
-      return DataPipelinesService.pausePipeline(organizationId, pipelineId);
-    },
-    onSuccess: (_, variables) => {
-      if (organizationId) {
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            variables.pipelineId,
-          ),
-        });
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.lists(),
-        });
-      }
-    },
-  });
-
-  const resumePipelineMutation = useMutation({
-    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
-      if (!organizationId) throw new Error("Organization ID is required");
-      return DataPipelinesService.resumePipeline(organizationId, pipelineId);
-    },
-    onSuccess: (_, variables) => {
-      if (organizationId) {
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.detail(
-            organizationId,
-            variables.pipelineId,
-          ),
-        });
-        queryClient.invalidateQueries({
-          queryKey: dataPipelinesKeys.pipelines.lists(),
-        });
-      }
-    },
-  });
-
-  const validatePipelineMutation = useMutation({
-    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
-      if (!organizationId) throw new Error("Organization ID is required");
-      return DataPipelinesService.validatePipeline(organizationId, pipelineId);
-    },
-  });
-
-  const dryRunPipelineMutation = useMutation({
-    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
-      if (!organizationId) throw new Error("Organization ID is required");
-      return DataPipelinesService.dryRunPipeline(organizationId, pipelineId, {
-        sampleSize: 10,
-      });
-    },
-  });
-
-  // Action handlers
-  const handleRunPipeline = async (
-    pipelineId: string,
-    pipelineName: string,
-  ) => {
-    try {
-      await runPipelineMutation.mutateAsync({ pipelineId });
-      toast.success("Pipeline started", `${pipelineName} is now running.`);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to start pipeline.";
-      toast.error("Failed to run pipeline", message);
+    if (filterTab === "running") {
+      filtered = filtered.filter((r) => r.status === "running");
+    } else if (filterTab === "failed") {
+      filtered = filtered.filter((r) => r.status === "failed");
+    } else if (filterTab === "scheduled") {
+      filtered = filtered.filter((r) => r.cron_schedule != null);
     }
-  };
 
-  const handlePausePipeline = async (
-    pipelineId: string,
-    pipelineName: string,
-  ) => {
-    try {
-      await pausePipelineMutation.mutateAsync({ pipelineId });
-      toast.success("Pipeline paused", `${pipelineName} has been paused.`);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to pause pipeline.";
-      toast.error("Failed to pause pipeline", message);
-    }
-  };
-
-  const handleResumePipeline = async (
-    pipelineId: string,
-    pipelineName: string,
-  ) => {
-    try {
-      await resumePipelineMutation.mutateAsync({ pipelineId });
-      toast.success("Pipeline resumed", `${pipelineName} has been resumed.`);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to resume pipeline.";
-      toast.error("Failed to resume pipeline", message);
-    }
-  };
-
-  const handleValidatePipeline = async (
-    pipelineId: string,
-    pipelineName: string,
-  ) => {
-    try {
-      const result = await validatePipelineMutation.mutateAsync({ pipelineId });
-      if (result.valid) {
-        toast.success(
-          "Validation passed",
-          `${pipelineName} configuration is valid.`,
-        );
-      } else {
-        toast.error("Validation failed", result.errors.join(", "));
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to validate pipeline.";
-      toast.error("Validation error", message);
-    }
-  };
-
-  const handleDryRunPipeline = async (
-    pipelineId: string,
-    pipelineName: string,
-  ) => {
-    try {
-      const result = await dryRunPipelineMutation.mutateAsync({ pipelineId });
-      toast.success(
-        "Dry run completed",
-        `${pipelineName}: Would write ${result.wouldWrite} rows from ${result.sourceRowCount || "?"} source rows.`,
+    const q = search.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.source.connection_name.toLowerCase().includes(q) ||
+          r.branches.some((b) => b.destination.connection_name.toLowerCase().includes(q)),
       );
+    }
+    return filtered;
+  }, [USE_MOCK_LIST, mockPipelines, apiPipelines, filterTab, search]);
+
+  const runPipelineMutation = useMutation({
+    mutationFn: ({ pipelineId }: { pipelineId: string }) => {
+      if (!organizationId && !USE_MOCK_LIST) throw new Error("Organization required");
+      return DataPipelinesService.runPipeline(organizationId ?? "mock", pipelineId, {});
+    },
+    onSuccess: (_, variables) => {
+      if (USE_MOCK_LIST) {
+        setMockPipelines((prev) =>
+          prev.map((p) =>
+            p.id === variables.pipelineId ? { ...p, status: "running" as const } : p,
+          ),
+        );
+        setTimeout(() => {
+          setMockPipelines((prev) =>
+            prev.map((p) =>
+              p.id === variables.pipelineId ? { ...p, status: "success" as const } : p,
+            ),
+          );
+        }, 3000);
+      } else if (organizationId) {
+        queryClient.invalidateQueries({ queryKey: dataPipelinesKeys.pipelines.lists() });
+      }
+    },
+  });
+
+  const handleRunPipeline = async (pipelineId: string, pipelineName: string) => {
+    try {
+      if (USE_MOCK_LIST) {
+        setMockPipelines((prev) =>
+          prev.map((p) =>
+            p.id === pipelineId ? { ...p, status: "running" as const } : p,
+          ),
+        );
+        setTimeout(() => {
+          setMockPipelines((prev) =>
+            prev.map((p) =>
+              p.id === pipelineId ? { ...p, status: "success" as const } : p,
+            ),
+          );
+        }, 3000);
+      } else {
+        await runPipelineMutation.mutateAsync({ pipelineId });
+        toast.success("Pipeline started", `${pipelineName} is now running.`);
+      }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to dry run pipeline.";
-      toast.error("Dry run failed", message);
+      toast.error("Failed to run", error instanceof Error ? error.message : "Unknown error");
     }
   };
 
-  const handleDeleteClick = (pipelineId: string, pipelineName: string) => {
-    setDeleteTarget({ id: pipelineId, name: pipelineName });
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteTarget({ id, name });
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      await deletePipeline.mutateAsync(deleteTarget.id);
-      setDeleteTarget(null);
-      toast.success(
-        "Pipeline deleted",
-        `${deleteTarget.name} has been deleted.`,
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to delete pipeline.";
-      toast.error("Failed to delete pipeline", message);
-    }
-  };
-
-  // Status badge renderer
-  const getStatusBadge = (pipeline: Pipeline) => {
-    const baseClasses = "flex items-center gap-1.5";
-
-    if (pipeline.status === "paused") {
-      return (
-        <Badge
-          variant="outline"
-          className="text-amber-600 border-amber-300 dark:border-amber-700"
-        >
-          <div className={baseClasses}>
-            <Pause className="h-3 w-3" />
-            Paused
-          </div>
-        </Badge>
-      );
-    }
-
-    if (pipeline.lastRunStatus === "success") {
-      return <RunStatusBadge status="completed" />;
-    }
-
-    if (pipeline.lastRunStatus === "failed") {
-      return <RunStatusBadge status="failed" />;
-    }
-
-    // Handle new lifecycle statuses
-    if (pipeline.status === "idle") {
-      // Check if auto-sync is enabled and has run before
-      const hasAutoSync =
-        pipeline.syncMode === "log_based" ||
-        (pipeline.scheduleType && pipeline.scheduleType !== "none");
-      const hasRun =
-        (pipeline.totalRowsProcessed && pipeline.totalRowsProcessed > 0) ||
-        pipeline.lastRunAt;
-
-      if (hasAutoSync && hasRun) {
-        return (
-          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-            <div className={baseClasses}>
-              <RefreshCw className="h-3 w-3" />
-              Auto-syncing
-            </div>
-          </Badge>
-        );
+      if (USE_MOCK_LIST) {
+        setMockPipelines((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+        setDeleteTarget(null);
+      } else {
+        await deletePipeline.mutateAsync(deleteTarget.id);
+        setDeleteTarget(null);
+        toast.success("Pipeline deleted", `${deleteTarget.name} has been deleted.`);
       }
-
-      return (
-        <Badge className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20">
-          <div className={baseClasses}>
-            <div className="h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-400" />
-            {hasAutoSync ? "Ready" : "Idle"}
-          </div>
-        </Badge>
-      );
+    } catch (error) {
+      toast.error("Failed to delete", error instanceof Error ? error.message : "Unknown error");
     }
-
-    if (pipeline.status === "running" || pipeline.status === "initializing") {
-      return <RunStatusBadge status="running" />;
-    }
-
-    if (pipeline.status === "listing") {
-      return (
-        <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20">
-          <div className={baseClasses}>
-            <RefreshCw className="h-3 w-3" />
-            Polling
-          </div>
-        </Badge>
-      );
-    }
-
-    if (pipeline.status === "listening") {
-      return (
-        <Badge className="bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20">
-          <div className={baseClasses}>
-            <Radio className="h-3 w-3" />
-            Listening
-          </div>
-        </Badge>
-      );
-    }
-
-    if (pipeline.status === "completed") {
-      return (
-        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-          <div className={baseClasses}>
-            <CheckCircle2 className="h-3 w-3" />
-            Completed
-          </div>
-        </Badge>
-      );
-    }
-
-    if (pipeline.status === "failed") {
-      return (
-        <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-          <div className={baseClasses}>
-            <XCircle className="h-3 w-3" />
-            Failed
-          </div>
-        </Badge>
-      );
-    }
-
-    if (pipeline.status === "paused") {
-      return (
-        <Badge className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20">
-          <div className={baseClasses}>
-            <Pause className="h-3 w-3" />
-            Paused
-          </div>
-        </Badge>
-      );
-    }
-
-    // Fallback for any unhandled status (should not happen in normal cases)
-    const statusText = String(pipeline.status || "unknown");
-    return (
-      <Badge variant="outline" className="text-muted-foreground">
-        {statusText.charAt(0).toUpperCase() + statusText.slice(1)}
-      </Badge>
-    );
   };
 
-  // Sync frequency badge
-  const getSyncFrequencyBadge = (pipeline: Pipeline) => {
-    const frequency = pipeline.syncFrequency;
-    const scheduleType = pipeline.scheduleType;
-    const scheduleValue = pipeline.scheduleValue;
-
-    const colors: Record<string, string> = {
-      manual: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
-      minutes: "bg-green-500/10 text-green-700 dark:text-green-400",
-      hourly: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-      daily: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
-      weekly: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400",
-    };
-
-    // Format display text
-    let displayText =
-      frequency?.charAt(0).toUpperCase() + frequency?.slice(1) || "Manual";
-    if (scheduleType === "minutes") {
-      displayText = `Every ${scheduleValue || "2"} min`;
-    } else if (scheduleType && scheduleType !== "none") {
-      displayText =
-        scheduleType.charAt(0).toUpperCase() + scheduleType.slice(1);
-    }
-
-    return (
-      <Badge className={colors[frequency || "manual"] || colors.manual}>
-        {displayText}
-      </Badge>
-    );
+  const handleRowClick = (id: string) => {
+    router.push(`/workspace/data-pipelines/${id}/builder`);
   };
 
-  // Table columns
-  const columns: ColumnDef<Pipeline>[] = [
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{row.original.name}</span>
-          {row.original.description && (
-            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-              {row.original.description}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "sourceSchema",
-      header: "Source",
-      cell: ({ row }) => {
-        const source = row.original.sourceSchema;
-        const sourceId = row.original.sourceSchemaId;
-
-        if (!source && !sourceId) {
-          return <span className="text-muted-foreground">-</span>;
-        }
-
-        const handleClick = (e: React.MouseEvent) => {
-          e.stopPropagation();
-          router.push(`/workspace/source-schemas?schemaId=${sourceId}`);
-        };
-
-        if (source) {
-          return (
-            <button
-              type="button"
-              onClick={handleClick}
-              className="text-left group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors"
-            >
-              <div className="flex items-center gap-1.5">
-                <div className="text-sm">
-                  <span className="font-medium text-primary group-hover:underline">
-                    {source.sourceType}
-                  </span>
-                  {source.sourceTable && (
-                    <span className="text-muted-foreground ml-1">
-                      ({source.sourceSchema || "public"}.{source.sourceTable})
-                    </span>
-                  )}
-                </div>
-              </div>
-              {source.name && (
-                <div className="text-xs text-muted-foreground truncate max-w-[180px]">
-                  {source.name}
-                </div>
-              )}
-            </button>
-          );
-        }
-
-        // Fallback: show just the ID as clickable
-        return (
-          <button
-            type="button"
-            onClick={handleClick}
-            className="text-sm text-primary hover:underline"
-          >
-            {sourceId.slice(0, 8)}...
-          </button>
-        );
-      },
-    },
-    {
-      accessorKey: "destinationSchema",
-      header: "Destination",
-      cell: ({ row }) => {
-        const dest = row.original.destinationSchema;
-        const destId = row.original.destinationSchemaId;
-
-        if (!dest && !destId) {
-          return <span className="text-muted-foreground">-</span>;
-        }
-
-        const handleClick = (e: React.MouseEvent) => {
-          e.stopPropagation();
-          router.push(`/workspace/destination-schemas?schemaId=${destId}`);
-        };
-
-        if (dest) {
-          return (
-            <button
-              type="button"
-              onClick={handleClick}
-              className="text-left group hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors"
-            >
-              <div className="text-sm">
-                <span className="font-medium text-primary group-hover:underline">
-                  {dest.destinationSchema || "public"}.{dest.destinationTable}
-                </span>
-              </div>
-              {dest.name && (
-                <div className="text-xs text-muted-foreground truncate max-w-[180px]">
-                  {dest.name}
-                </div>
-              )}
-            </button>
-          );
-        }
-
-        // Fallback: show just the ID as clickable
-        return (
-          <button
-            type="button"
-            onClick={handleClick}
-            className="text-sm text-primary hover:underline"
-          >
-            {destId.slice(0, 8)}...
-          </button>
-        );
-      },
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => getStatusBadge(row.original),
-    },
-    {
-      accessorKey: "syncMode",
-      header: "Sync Mode",
-      cell: ({ row }) => (
-        <SyncModeBadge mode={row.original.syncMode ?? "full"} />
-      ),
-    },
-    {
-      accessorKey: "syncFrequency",
-      header: "Schedule",
-      cell: ({ row }) => getSyncFrequencyBadge(row.original),
-    },
-    {
-      accessorKey: "totalRowsProcessed",
-      header: "Rows Processed",
-      cell: ({ row }) => {
-        const count = row.original.totalRowsProcessed;
-        return (
-          <span className="text-sm text-muted-foreground">
-            {count ? count.toLocaleString() : "-"}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: "lastRunAt",
-      header: "Last Run",
-      cell: ({ row }) => {
-        const date = row.original.lastRunAt;
-        return (
-          <span className="text-sm text-muted-foreground">
-            {date ? new Date(date).toLocaleDateString() : "-"}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: "createdBy",
-      header: "Created By",
-      cell: ({ row }) => {
-        const creatorId = row.original.createdBy;
-        if (!creatorId) return <span className="text-muted-foreground">-</span>;
-        const creator = usersMap.get(creatorId);
-        const displayName =
-          creator?.fullName || creator?.email?.split("@")[0] || "Unknown";
-        return (
-          <span className="text-sm text-muted-foreground">{displayName}</span>
-        );
-      },
-    },
-    {
-      id: "actions",
-      header: () => <div className="text-right">Actions</div>,
-      cell: ({ row }) => {
-        const pipeline = row.original;
-        const isPaused = pipeline.status === "paused";
-        const isRunning =
-          pipeline.status === "running" ||
-          pipeline.status === "initializing" ||
-          pipeline.status === "listening";
-        const isLoading =
-          runPipelineMutation.isPending ||
-          pausePipelineMutation.isPending ||
-          resumePipelineMutation.isPending;
-
-        // Check if auto-sync is enabled (log_based mode or has schedule)
-        const hasAutoSync =
-          pipeline.syncMode === "log_based" ||
-          (pipeline.scheduleType && pipeline.scheduleType !== "none");
-
-        // Check if first run completed (has processed rows or last run exists)
-        const hasRun =
-          (pipeline.totalRowsProcessed && pipeline.totalRowsProcessed > 0) ||
-          pipeline.lastRunAt;
-
-        return (
-          <div className="flex items-center justify-end gap-2">
-            <TooltipProvider>
-              {isPaused ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleResumePipeline(pipeline.id, pipeline.name);
-                      }}
-                      disabled={isLoading}
-                    >
-                      <Play className="h-4 w-4 mr-1" />
-                      Resume
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Resume auto-sync</TooltipContent>
-                </Tooltip>
-              ) : isRunning ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePausePipeline(pipeline.id, pipeline.name);
-                      }}
-                      disabled={isLoading}
-                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                    >
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      Running
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Pipeline is syncing</TooltipContent>
-                </Tooltip>
-              ) : hasAutoSync && hasRun ? (
-                // Auto-sync enabled and has run before - show Pause button
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePausePipeline(pipeline.id, pipeline.name);
-                      }}
-                      disabled={isLoading}
-                    >
-                      <Pause className="h-4 w-4 mr-1" />
-                      Pause
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Pause auto-sync (checking every 2 min)
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                // First time or manual mode - show Run button
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRunPipeline(pipeline.id, pipeline.name);
-                      }}
-                      disabled={isLoading}
-                    >
-                      <Zap className="h-4 w-4 mr-1" />
-                      {hasAutoSync ? "Start" : "Run"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {hasAutoSync
-                      ? "Start auto-sync (first full sync, then incremental)"
-                      : "Execute pipeline now"}
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </TooltipProvider>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/workspace/data-pipelines/${pipeline.id}`);
-                  }}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Configure
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleValidatePipeline(pipeline.id, pipeline.name);
-                  }}
-                  disabled={validatePipelineMutation.isPending}
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Validate
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDryRunPipeline(pipeline.id, pipeline.name);
-                  }}
-                  disabled={dryRunPipelineMutation.isPending}
-                >
-                  <TestTube className="mr-2 h-4 w-4" />
-                  Dry Run
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {isPaused ? (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleResumePipeline(pipeline.id, pipeline.name);
-                    }}
-                    className="text-green-600 focus:text-green-600"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Resume Auto-Sync
-                  </DropdownMenuItem>
-                ) : (
-                  !isRunning &&
-                  hasRun && (
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePausePipeline(pipeline.id, pipeline.name);
-                      }}
-                      className="text-amber-600 focus:text-amber-600"
-                    >
-                      <Pause className="mr-2 h-4 w-4" />
-                      Pause Auto-Sync
-                    </DropdownMenuItem>
-                  )
-                )}
-                {!isRunning && !hasRun && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRunPipeline(pipeline.id, pipeline.name);
-                    }}
-                  >
-                    <Zap className="mr-2 h-4 w-4" />
-                    Start Sync
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(pipeline.id, pipeline.name);
-                  }}
-                  className="text-red-600 focus:text-red-600"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        );
-      },
-    },
-  ];
+  const isLoading = pipelinesLoading && !USE_MOCK_LIST;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Data Pipelines"
-        description={
-          currentOrganization
-            ? `Connect any source to any destination for ${currentOrganization.name}`
-            : "Connect any source to any destination"
-        }
+        title="Pipelines"
+        description="Manage your data synchronization pipelines."
         action={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={pipelinesFetching}
-              aria-label="Refresh pipelines"
-              onClick={() =>
-                queryClient.invalidateQueries({
-                  queryKey: dataPipelinesKeys.pipelines.lists(),
-                })
-              }
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${pipelinesFetching ? "animate-spin" : ""}`}
-              />
-              {pipelinesFetching ? "Refreshing…" : "Refresh"}
-            </Button>
-            <Button
-              onClick={() => router.push("/workspace/data-pipelines/new")}
-            >
+          <Button asChild>
+            <Link href="/workspace/data-pipelines/new">
               <Plus className="mr-2 h-4 w-4" />
-              Create Pipeline
+              New Pipeline
+            </Link>
+          </Button>
+        }
+      />
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-2">
+          {(["all", "running", "failed", "scheduled"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setFilterTab(tab)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+                filterTab === tab
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : listRows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <p className="text-lg font-medium">No pipelines yet</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Create your first pipeline to start moving data from source to destination.
+            </p>
+            <Button className="mt-4" asChild>
+              <Link href="/workspace/data-pipelines/new">Create your first pipeline</Link>
             </Button>
           </div>
-        }
-      />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Destination(s)</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Run</TableHead>
+                <TableHead>Next</TableHead>
+                <TableHead className="w-[60px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {listRows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleRowClick(row.id)}
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{row.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">
+                      {row.source.connection_name}
+                    </span>
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({row.source.connector_type})
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-0.5">
+                      {row.branches.slice(0, 2).map((b, i) => (
+                        <span key={i} className="text-sm">
+                          {b.destination.connection_name}
+                        </span>
+                      ))}
+                      {row.branches.length > 2 && (
+                        <Badge variant="secondary" className="w-fit text-xs">
+                          +{row.branches.length - 2} more
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {row.status === "success" && (
+                      <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                        ✓ Success
+                      </Badge>
+                    )}
+                    {row.status === "failed" && (
+                      <Badge variant="destructive" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+                        ✗ Failed
+                      </Badge>
+                    )}
+                    {row.status === "running" && (
+                      <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
+                        <span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-blue-500" />
+                        Running
+                      </Badge>
+                    )}
+                    {(row.status === "idle" || !["success", "failed", "running"].includes(row.status)) && (
+                      <Badge variant="secondary">○ Idle</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatRelativeTime(row.last_run_at)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatCronNext(row.cron_schedule)}
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleRowClick(row.id)}>
+                          Open Builder
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleRunPipeline(row.id, row.name)}
+                          disabled={row.status === "running"}
+                        >
+                          Run Now
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(row.id, row.name)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
-      <DataTable
-        tableId={
-          organizationId
-            ? `data-pipelines-table-${organizationId}`
-            : "data-pipelines-table"
-        }
-        columns={columns}
-        data={pipelines || []}
-        isLoading={pipelinesLoading}
-        enableSorting
-        enableFiltering
-        externalFilter={urlSearch}
-        externalFilterColumnKey="name"
-        filterPlaceholder="Filter pipelines..."
-        defaultVisibleColumns={[
-          "name",
-          "sourceSchema",
-          "destinationSchema",
-          "status",
-          "syncFrequency",
-          "lastRunAt",
-          "actions",
-        ]}
-        fixedColumns={["name", "actions"]}
-        onRowClick={(row) => router.push(`/workspace/data-pipelines/${row.id}`)}
-        emptyMessage="No pipelines yet"
-        emptyDescription="Create your first data pipeline to start moving data from source to destination."
-        manualPagination
-        pagination={pagination}
-        onPaginationChange={setPagination}
-        totalCount={paginatedResult?.total ?? 0}
-      />
-
-      {/* Delete Confirmation Modal */}
       <ConfirmationModal
         open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
         action="delete"
         itemName="Pipeline"
         itemValue={deleteTarget?.name}

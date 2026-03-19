@@ -1,7 +1,6 @@
 "use client";
 
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { usePipelineBuilderStore } from "../store/pipelineStore";
 
 interface RunStatusBannerProps {
   isRunning: boolean;
@@ -24,11 +23,11 @@ export function RunStatusBanner({
 
   if (isRunning) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 px-4 py-2 text-sm">
-        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-        <span>
+      <div className="flex items-center gap-2.5 rounded-xl border border-blue-500/60 bg-zinc-900/95 px-4 py-2.5 text-sm shadow-lg shadow-blue-500/10">
+        <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+        <span className="text-blue-300 font-medium">
           Running — {rowsProcessed.toLocaleString()} rows synced
-          {duration ? ` — ${duration} elapsed` : ""}
+          {duration ? ` · ${duration}` : ""}
         </span>
       </div>
     );
@@ -36,9 +35,9 @@ export function RunStatusBanner({
 
   if (isSuccess) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-2 text-sm text-green-700 dark:text-green-400">
-        <CheckCircle2 className="h-4 w-4" />
-        <span>
+      <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/60 bg-zinc-900/95 px-4 py-2.5 text-sm shadow-lg shadow-emerald-500/10">
+        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+        <span className="text-emerald-300 font-medium">
           Completed — {rowsProcessed.toLocaleString()} rows
           {duration ? ` in ${duration}` : ""}
         </span>
@@ -48,9 +47,11 @@ export function RunStatusBanner({
 
   if (isFailed) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-2 text-sm text-red-700 dark:text-red-400">
-        <XCircle className="h-4 w-4" />
-        <span>Failed — {errorMessage ?? "Unknown error"}</span>
+      <div className="flex items-center gap-2.5 rounded-xl border border-red-500/60 bg-zinc-900/95 px-4 py-2.5 text-sm shadow-lg shadow-red-500/10">
+        <XCircle className="h-4 w-4 text-red-400" />
+        <span className="text-red-300 font-medium">
+          Failed — {errorMessage ?? "Unknown error"}
+        </span>
       </div>
     );
   }

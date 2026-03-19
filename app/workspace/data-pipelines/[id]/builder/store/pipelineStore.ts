@@ -30,6 +30,7 @@ export type DrawerType =
   | "join"
   | "destination"
   | "run_status"
+  | "run_history"
   | "run_details"
   | "schedule"
   | "settings"
@@ -86,7 +87,7 @@ interface PipelineBuilderState {
   nodes: PipelineGraphNode[];
   edges: PipelineGraphEdge[];
   branches: PipelineGraphBranch[];
-  viewMode: "card" | "canvas";
+  viewMode: "table" | "canvas";
   hasUnsavedChanges: boolean;
   drawerState: DrawerState;
   useMockData: boolean;
@@ -123,8 +124,9 @@ interface PipelineBuilderState {
     name?: string;
     description?: string;
   }) => Promise<void>;
-  setViewMode: (mode: "card" | "canvas") => void;
+  setViewMode: (mode: "table" | "canvas") => void;
   setHasUnsavedChanges: (value: boolean) => void;
+  applyFanOutLayout: (canvasHeight: number) => void;
   getBranchColor: (branchIndex: number) => string;
   getBranchColourEntry: (branchIndex: number) => ReturnType<
     typeof getBranchColourEntry
@@ -227,7 +229,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
   nodes: [],
   edges: [],
   branches: [],
-  viewMode: "card",
+  viewMode: "canvas",
   hasUnsavedChanges: false,
   drawerState: initialDrawerState,
   useMockData: false,
@@ -315,8 +317,13 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
       branches = built.branches;
     }
 
+    const raw = data.pipeline.builderViewMode as string | undefined;
     const viewMode =
-      (data.pipeline.builderViewMode as "card" | "canvas") ?? "card";
+      raw === "table" || raw === "canvas"
+        ? raw
+        : raw === "card"
+          ? "table"
+          : "canvas";
 
     set({
       pipelineId: data.pipeline.id,
@@ -374,11 +381,12 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
       position: { x: 700, y: 150 + branchIndex * 200 },
     };
 
-    const newBranch: PipelineGraphBranch = {
+    const newBranch = {
       id: branchId,
       label: `Branch ${branchIndex + 1}`,
       transform_node_id: transformId,
       destination_node_id: destinationId,
+      colour_index: branchIndex,
     };
 
     set({
@@ -546,14 +554,6 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
         branchProgress,
         elapsedSeconds: 0,
       },
-      drawerState: {
-        isOpen: true,
-        type: "run_status",
-        nodeId: null,
-        branchId: null,
-        runId,
-        hasUnsavedChanges: false,
-      },
     });
 
     let elapsed = 0;
@@ -706,12 +706,43 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
     });
   },
 
-  setViewMode: (mode: "card" | "canvas") => {
+  setViewMode: (mode: "table" | "canvas") => {
     set({ viewMode: mode, hasUnsavedChanges: true });
   },
 
   setHasUnsavedChanges: (value: boolean) => {
     set({ hasUnsavedChanges: value });
+  },
+
+  applyFanOutLayout: (canvasHeight: number) => {
+    const { nodes, branches } = get();
+    const sourceNode = nodes.find((n) => n.type === "source");
+    if (!sourceNode || branches.length === 0) return;
+
+    const h = canvasHeight || 600;
+    const centerY = h / 2;
+    const N = branches.length;
+    const verticalSpread = (N - 1) * 200;
+    const startY = centerY - verticalSpread / 2;
+
+    const updates: PipelineGraphNode[] = nodes.map((n) => {
+      if (n.type === "source") {
+        return { ...n, position: { x: 100, y: centerY } };
+      }
+      const branchIndex = branches.findIndex(
+        (b) => b.transform_node_id === n.id || b.destination_node_id === n.id,
+      );
+      if (branchIndex >= 0) {
+        const y = startY + branchIndex * 200;
+        return {
+          ...n,
+          position: n.type === "transform" ? { x: 420, y } : { x: 720, y },
+        };
+      }
+      return n;
+    });
+
+    set({ nodes: updates, hasUnsavedChanges: true });
   },
 
   getBranchColor: (branchIndex: number) => {
@@ -731,7 +762,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderState>((set, get) =
       nodes: [],
       edges: [],
       branches: [],
-      viewMode: "card",
+      viewMode: "canvas",
       hasUnsavedChanges: false,
       drawerState: initialDrawerState,
       useMockData: false,

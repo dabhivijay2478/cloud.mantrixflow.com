@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { PipelineBuilder } from "./PipelineBuilder";
@@ -69,14 +68,7 @@ export default function PipelineBuilderPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href={`/workspace/data-pipelines/${pipelineId}`}>
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-      </div>
+    <div className="h-[calc(100vh-4rem)]">
       <PipelineBuilder />
     </div>
   );

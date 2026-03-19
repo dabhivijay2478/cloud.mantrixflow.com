@@ -13,6 +13,7 @@ import { FilterPanel } from "../panels/FilterPanel";
 import { JoinPanel } from "../panels/JoinPanel";
 import { PipelineSettingsDrawer } from "../panels/PipelineSettingsDrawer";
 import { RunDetailsDrawer } from "../panels/RunDetailsDrawer";
+import { RunHistoryDrawer } from "../panels/RunHistoryDrawer";
 import { RunStatusDrawer } from "../panels/RunStatusDrawer";
 import { ScheduleDrawer } from "../panels/ScheduleDrawer";
 import { SourcePanel } from "../panels/SourcePanel";
@@ -56,6 +57,7 @@ export function DrawerContainer() {
           />
         )}
         {type === "run_status" && <RunStatusDrawer />}
+        {type === "run_history" && <RunHistoryDrawer />}
         {type === "run_details" && (
           <RunDetailsDrawer runId={drawerState.runId} />
         )}

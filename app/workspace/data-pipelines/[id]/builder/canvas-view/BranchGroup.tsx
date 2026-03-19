@@ -15,11 +15,14 @@ function BranchGroupNodeComponent({ data }: NodeProps) {
   const branch = branches.find((b) => b.id === branchId);
   if (!branch) return null;
 
-  const branchIndex = branches.findIndex((b) => b.id === branchId);
+  const branchIndex =
+    "colour_index" in branch
+      ? (branch.colour_index as number)
+      : branches.findIndex((b) => b.id === branchId);
   const colour = getBranchColour(branchIndex >= 0 ? branchIndex : 0);
 
-  const width = (data.width as number) ?? 400;
-  const height = (data.height as number) ?? 150;
+  const width = (data.width as number) ?? 380;
+  const height = (data.height as number) ?? 92;
 
   return (
     <div
@@ -27,17 +30,11 @@ function BranchGroupNodeComponent({ data }: NodeProps) {
       style={{
         width,
         height,
-        background: colour.bgOpacity,
-        border: `1px dashed ${colour.hex}4D`,
+        background: `${colour.hex}0D`,
+        border: `1px dashed ${colour.hex}33`,
+        zIndex: -1,
       }}
-    >
-      <span
-        className="absolute left-2 top-2 text-xs"
-        style={{ color: colour.hex }}
-      >
-        {branch.label}
-      </span>
-    </div>
+    />
   );
 }
 
