@@ -5,6 +5,11 @@ import { CanvasView } from "./canvas-view/CanvasView";
 import { DrawerContainer } from "./shared/DrawerContainer";
 import { AIChatPanel } from "./ai-panel/AIChatPanel";
 import { usePipelineBuilderStore } from "./store/pipelineStore";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 export function PipelineBuilder() {
   const pipelineId = usePipelineBuilderStore((s) => s.pipelineId);
@@ -23,21 +28,33 @@ export function PipelineBuilder() {
     return () => document.removeEventListener("keydown", handler);
   }, [aiAssist.isOpen, openAIAssist, closeAIAssist]);
 
+  if (aiAssist.isOpen && pipelineId) {
+    return (
+      <div className="h-full w-full overflow-hidden">
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="h-full w-full"
+        >
+          <ResizablePanel defaultSize="65%" minSize="40%" id="canvas">
+            <div className="h-full overflow-hidden">
+              <CanvasView />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize="35%" minSize="25%" maxSize="50%" id="ai-panel">
+            <AIChatPanel pipelineId={pipelineId} onClose={closeAIAssist} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+        <DrawerContainer />
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full w-full flex flex-row overflow-hidden">
-      {/* Main canvas — shrinks when AI panel opens */}
-      <div className="flex-1 overflow-hidden min-w-0">
+    <div className="h-full w-full overflow-hidden">
+      <div className="h-full overflow-hidden">
         <CanvasView />
       </div>
-
-      {/* AI Chat Panel — right side, not a drawer */}
-      {aiAssist.isOpen && pipelineId && (
-        <AIChatPanel
-          pipelineId={pipelineId}
-          onClose={closeAIAssist}
-        />
-      )}
-
       <DrawerContainer />
     </div>
   );

@@ -20,6 +20,7 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { cn } from "@/lib/utils";
 import { usePipelineBuilderStore } from "../store/pipelineStore";
 import { RunStatusBanner } from "../shared/RunStatusBanner";
 import { SourceNode } from "./nodes/SourceNode";
@@ -107,6 +108,7 @@ function CanvasViewInner() {
   const useMockData = usePipelineBuilderStore((s) => s.useMockData);
   const activeRunStore = usePipelineBuilderStore((s) => s.activeRun);
   const runHistory = usePipelineBuilderStore((s) => s.runHistory);
+  const aiPanelOpen = usePipelineBuilderStore((s) => s.aiAssist.isOpen);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -321,7 +323,7 @@ function CanvasViewInner() {
           <CanvasToolbar />
         </Panel>
 
-        {/* Search — top-center */}
+        {/* Search — top-center (narrower when AI panel open to avoid overlap) */}
         <Panel position="top-center" style={{ margin: 6 }}>
           <div className="relative flex items-center">
             <Search className="absolute left-2.5 h-3 w-3 text-zinc-500 pointer-events-none" />
@@ -330,7 +332,10 @@ function CanvasViewInner() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search nodes (/)"
-              className="h-7 w-72 min-w-[200px] pl-7 pr-7 rounded-lg border border-zinc-700 bg-zinc-900/95 text-zinc-200 placeholder:text-zinc-500 text-xs shadow-lg backdrop-blur-sm focus:outline-none focus:border-zinc-500"
+              className={cn(
+                "h-7 pl-7 pr-7 rounded-lg border border-zinc-700 bg-zinc-900/95 text-zinc-200 placeholder:text-zinc-500 text-xs shadow-lg backdrop-blur-sm focus:outline-none focus:border-zinc-500 transition-all",
+                aiPanelOpen ? "w-44 min-w-[140px]" : "w-72 min-w-[200px]"
+              )}
             />
             {searchQuery && (
               <button

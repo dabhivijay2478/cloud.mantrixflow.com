@@ -83,7 +83,7 @@ export function AIChatPanel({ pipelineId, onClose }: AIChatPanelProps) {
   };
 
   return (
-    <div className="flex flex-col h-full w-[380px] shrink-0 border-l border-zinc-800 bg-zinc-950 overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-zinc-950 overflow-hidden border-l border-zinc-800">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-2">
